@@ -1,0 +1,609 @@
+{
+  "campaign_id": "campaign_7e24056e",
+  "status": "completed",
+  "manifest": {
+    "campaign_id": "campaign_7e24056e",
+    "brief": {
+      "id": "hr-saas-001",
+      "product_description": "HR SaaS platform for employee onboarding automation",
+      "target_audience": "HR managers at 10-500 person companies",
+      "key_benefits": [
+        "faster onboarding",
+        "fewer errors",
+        "integrates with existing tools"
+      ],
+      "visual_style": "professional",
+      "platform": "meta"
+    },
+    "status": "completed",
+    "creatives": {
+      "headline": 30,
+      "description": 30,
+      "image": 10
+    },
+    "costs": {
+      "copybot": 0.02,
+      "imagebot": 0.8,
+      "total": 0.8200000000000001
+    },
+    "execution_times": {
+      "copybot_sec": 0.0001361370086669922,
+      "imagebot_sec": 4.410743713378906e-05,
+      "total_sec": 0.0008533000946044922
+    },
+    "errors": {
+      "copybot": null,
+      "imagebot": null
+    }
+  },
+  "creatives": [
+    {
+      "id": "h_fe941afc",
+      "type": "headline",
+      "theme": "speed",
+      "content": "Onboard 80% Faster",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.419615"
+    },
+    {
+      "id": "h_132a4f4c",
+      "type": "headline",
+      "theme": "speed",
+      "content": "Speed Up Hiring Process",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.492645"
+    },
+    {
+      "id": "h_54b80c65",
+      "type": "headline",
+      "theme": "speed",
+      "content": "Complete Setup in Days",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.542145"
+    },
+    {
+      "id": "h_084dbc7f",
+      "type": "headline",
+      "theme": "speed",
+      "content": "Instant New Hire Launch",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.593638"
+    },
+    {
+      "id": "h_06669dc3",
+      "type": "headline",
+      "theme": "speed",
+      "content": "Cut Admin Time in Half",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.658692"
+    },
+    {
+      "id": "h_d82f5630",
+      "type": "headline",
+      "theme": "speed",
+      "content": "Faster Employee Onboarding",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.734644"
+    },
+    {
+      "id": "h_e0a8c056",
+      "type": "headline",
+      "theme": "cost",
+      "content": "Cut Onboarding Costs 50%",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.808486"
+    },
+    {
+      "id": "h_a561d189",
+      "type": "headline",
+      "theme": "cost",
+      "content": "Save Money Per New Hire",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.883645"
+    },
+    {
+      "id": "h_f8a1b50f",
+      "type": "headline",
+      "theme": "cost",
+      "content": "Reduce HR Admin Spend",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.941657"
+    },
+    {
+      "id": "h_ec86eb26",
+      "type": "headline",
+      "theme": "cost",
+      "content": "Lower Onboarding Expenses",
+      "url": null,
+      "created_at": "2026-03-10 18:13:26.997244"
+    },
+    {
+      "id": "h_75309d82",
+      "type": "headline",
+      "theme": "cost",
+      "content": "Cut HR Overhead Costs",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.108820"
+    },
+    {
+      "id": "h_0c560408",
+      "type": "headline",
+      "theme": "cost",
+      "content": "Save Thousands Per Hire",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.166563"
+    },
+    {
+      "id": "h_9776386d",
+      "type": "headline",
+      "theme": "quality",
+      "content": "Eliminate Onboarding Errors",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.241350"
+    },
+    {
+      "id": "h_8b3af9e1",
+      "type": "headline",
+      "theme": "quality",
+      "content": "Ensure Automatic Compliance",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.316492"
+    },
+    {
+      "id": "h_ba3773f2",
+      "type": "headline",
+      "theme": "quality",
+      "content": "Perfect Employee Records",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.391172"
+    },
+    {
+      "id": "h_eec892f8",
+      "type": "headline",
+      "theme": "quality",
+      "content": "Zero Missed Onboarding Steps",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.471933"
+    },
+    {
+      "id": "h_307210ba",
+      "type": "headline",
+      "theme": "quality",
+      "content": "Consistent Onboarding Process",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.555215"
+    },
+    {
+      "id": "h_5940a583",
+      "type": "headline",
+      "theme": "quality",
+      "content": "Error Free New Hire Setup",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.616044"
+    },
+    {
+      "id": "h_d806b64a",
+      "type": "headline",
+      "theme": "integration",
+      "content": "Sync With Your Tools",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.674193"
+    },
+    {
+      "id": "h_7c94216d",
+      "type": "headline",
+      "theme": "integration",
+      "content": "Works With Everything",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.755264"
+    },
+    {
+      "id": "h_c726e954",
+      "type": "headline",
+      "theme": "integration",
+      "content": "Integrates Seamlessly",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.839411"
+    },
+    {
+      "id": "h_ee5db40c",
+      "type": "headline",
+      "theme": "integration",
+      "content": "Connect Your Platforms",
+      "url": null,
+      "created_at": "2026-03-10 18:13:27.926758"
+    },
+    {
+      "id": "h_36246054",
+      "type": "headline",
+      "theme": "integration",
+      "content": "Works With HRIS Systems",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.013280"
+    },
+    {
+      "id": "h_42b9c490",
+      "type": "headline",
+      "theme": "integration",
+      "content": "Unified Platform Integration",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.086495"
+    },
+    {
+      "id": "h_ba777152",
+      "type": "headline",
+      "theme": "socialproof",
+      "content": "Trusted by 5000+ Companies",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.177360"
+    },
+    {
+      "id": "h_d702db6b",
+      "type": "headline",
+      "theme": "socialproof",
+      "content": "Used by Industry Leaders",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.246138"
+    },
+    {
+      "id": "h_6786fe7e",
+      "type": "headline",
+      "theme": "socialproof",
+      "content": "Leading HR Teams Choose Us",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.312824"
+    },
+    {
+      "id": "h_e96b0a8f",
+      "type": "headline",
+      "theme": "socialproof",
+      "content": "Proven by Enterprise Teams",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.375349"
+    },
+    {
+      "id": "h_d84e5c90",
+      "type": "headline",
+      "theme": "socialproof",
+      "content": "Join Global Leaders",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.475197"
+    },
+    {
+      "id": "h_ce36627e",
+      "type": "headline",
+      "theme": "socialproof",
+      "content": "Preferred by HR Managers",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.590403"
+    },
+    {
+      "id": "d_5e33fe1d",
+      "type": "description",
+      "theme": "speed",
+      "content": "Cut onboarding time from weeks to days. New hires productive immediately.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.700545"
+    },
+    {
+      "id": "d_3ed3e9bd",
+      "type": "description",
+      "theme": "speed",
+      "content": "Automate repetitive tasks. Reduce setup time by 80% or more.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.779352"
+    },
+    {
+      "id": "d_183830a2",
+      "type": "description",
+      "theme": "speed",
+      "content": "Employees start contributing faster. Get to productivity in days not weeks.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.889732"
+    },
+    {
+      "id": "d_0fbb02e5",
+      "type": "description",
+      "theme": "speed",
+      "content": "Eliminate manual onboarding steps. Complete new hire setup in hours.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:28.998069"
+    },
+    {
+      "id": "d_31b21375",
+      "type": "description",
+      "theme": "speed",
+      "content": "Streamline workflows. Start new employees faster than competitors.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.078999"
+    },
+    {
+      "id": "d_942f15cb",
+      "type": "description",
+      "theme": "speed",
+      "content": "Save weeks of admin work per hire. Instant onboarding automation.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.153559"
+    },
+    {
+      "id": "d_9edacef7",
+      "type": "description",
+      "theme": "cost",
+      "content": "Eliminate manual data entry. Reduce onboarding spend per hire by 50%.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.286563"
+    },
+    {
+      "id": "d_368d2991",
+      "type": "description",
+      "theme": "cost",
+      "content": "Automate time consuming tasks. Cut HR administration costs significantly.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.389175"
+    },
+    {
+      "id": "d_f34b3459",
+      "type": "description",
+      "theme": "cost",
+      "content": "One platform replaces multiple tools. Reduce tech spending on onboarding.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.507996"
+    },
+    {
+      "id": "d_9985cb9b",
+      "type": "description",
+      "theme": "cost",
+      "content": "Less manual work means lower costs. Save thousands with automation.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.631510"
+    },
+    {
+      "id": "d_46dc7cd5",
+      "type": "description",
+      "theme": "cost",
+      "content": "Reduce HR resource requirements. Better ROI on each new hire.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.759496"
+    },
+    {
+      "id": "d_54b5bbf2",
+      "type": "description",
+      "theme": "cost",
+      "content": "Cut recruiting and onboarding expenses. Improve profitability.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.874605"
+    },
+    {
+      "id": "d_ce37fe2e",
+      "type": "description",
+      "theme": "quality",
+      "content": "Automated workflows ensure no missed steps. Reduce mistakes to near zero.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:29.983003"
+    },
+    {
+      "id": "d_0a09833f",
+      "type": "description",
+      "theme": "quality",
+      "content": "Standardized process across all hires. Eliminate inconsistencies and errors.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.091196"
+    },
+    {
+      "id": "d_8d88a4c4",
+      "type": "description",
+      "theme": "quality",
+      "content": "Compliance built in. Every onboarding follows legal requirements.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.201264"
+    },
+    {
+      "id": "d_e48d986a",
+      "type": "description",
+      "theme": "quality",
+      "content": "No more forgotten tasks. Complete, accurate setup every time.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.288419"
+    },
+    {
+      "id": "d_0863fdfc",
+      "type": "description",
+      "theme": "quality",
+      "content": "Consistent experience for every new employee. Reduce onboarding errors.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.379782"
+    },
+    {
+      "id": "d_32475410",
+      "type": "description",
+      "theme": "quality",
+      "content": "Audit trail included. Complete compliance documentation automatically.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.499894"
+    },
+    {
+      "id": "d_5676ecf5",
+      "type": "description",
+      "theme": "integration",
+      "content": "Integrates with Slack, HRIS, and 50+ platforms. No switching systems.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.638255"
+    },
+    {
+      "id": "d_df221765",
+      "type": "description",
+      "theme": "integration",
+      "content": "Works seamlessly with tools you already use. No manual data entry.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.722234"
+    },
+    {
+      "id": "d_1eb09eee",
+      "type": "description",
+      "theme": "integration",
+      "content": "Sync with your favorite HR platforms. Real time data flow.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.837871"
+    },
+    {
+      "id": "d_e77af62e",
+      "type": "description",
+      "theme": "integration",
+      "content": "Connects to Workday, ADP, BambooHR and more. Ecosystem fit.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:30.929275"
+    },
+    {
+      "id": "d_9bd89259",
+      "type": "description",
+      "theme": "integration",
+      "content": "Seamless integration with existing tools. Keep your current stack.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.004265"
+    },
+    {
+      "id": "d_ba6d7a59",
+      "type": "description",
+      "theme": "integration",
+      "content": "API integration available. Connect to custom systems easily.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.114910"
+    },
+    {
+      "id": "d_5410bcee",
+      "type": "description",
+      "theme": "socialproof",
+      "content": "Used by Fortune 500 companies and fast growing startups worldwide.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.231956"
+    },
+    {
+      "id": "d_4c175731",
+      "type": "description",
+      "theme": "socialproof",
+      "content": "Trusted by leading companies across industries. Proven solution.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.353828"
+    },
+    {
+      "id": "d_b7b990d3",
+      "type": "description",
+      "theme": "socialproof",
+      "content": "Join thousands of HR managers using our platform for success.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.472384"
+    },
+    {
+      "id": "d_49245b6e",
+      "type": "description",
+      "theme": "socialproof",
+      "content": "Industry leaders choose our platform for employee onboarding.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.595187"
+    },
+    {
+      "id": "d_3fcd9673",
+      "type": "description",
+      "theme": "socialproof",
+      "content": "Proven with 99% customer satisfaction. Join leading companies.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.711989"
+    },
+    {
+      "id": "d_ed2c5dcd",
+      "type": "description",
+      "theme": "socialproof",
+      "content": "Trusted by companies in every industry. Proven results.",
+      "url": null,
+      "created_at": "2026-03-10 18:13:31.811947"
+    },
+    {
+      "id": "i_9c6130a1",
+      "type": "image",
+      "theme": "speed",
+      "content": "A professional speed themed image for meta",
+      "url": "gs://mock-bucket/meta_speed_1200x628.png",
+      "created_at": "2026-03-10 18:13:31.862228"
+    },
+    {
+      "id": "i_3c719987",
+      "type": "image",
+      "theme": "speed",
+      "content": "A professional speed themed image for meta",
+      "url": "gs://mock-bucket/meta_speed_1080x1080.png",
+      "created_at": "2026-03-10 18:13:31.928530"
+    },
+    {
+      "id": "i_80eedd3a",
+      "type": "image",
+      "theme": "cost",
+      "content": "A professional cost themed image for meta",
+      "url": "gs://mock-bucket/meta_cost_1200x628.png",
+      "created_at": "2026-03-10 18:13:32.023651"
+    },
+    {
+      "id": "i_5a298dce",
+      "type": "image",
+      "theme": "cost",
+      "content": "A professional cost themed image for meta",
+      "url": "gs://mock-bucket/meta_cost_1080x1080.png",
+      "created_at": "2026-03-10 18:13:32.092325"
+    },
+    {
+      "id": "i_8a1f046b",
+      "type": "image",
+      "theme": "quality",
+      "content": "A professional quality themed image for meta",
+      "url": "gs://mock-bucket/meta_quality_1200x628.png",
+      "created_at": "2026-03-10 18:13:32.179724"
+    },
+    {
+      "id": "i_496cadc6",
+      "type": "image",
+      "theme": "quality",
+      "content": "A professional quality themed image for meta",
+      "url": "gs://mock-bucket/meta_quality_1080x1080.png",
+      "created_at": "2026-03-10 18:13:32.292427"
+    },
+    {
+      "id": "i_6f6e6bb6",
+      "type": "image",
+      "theme": "integration",
+      "content": "A professional integration themed image for meta",
+      "url": "gs://mock-bucket/meta_integration_1200x628.png",
+      "created_at": "2026-03-10 18:13:32.417936"
+    },
+    {
+      "id": "i_cfa7626c",
+      "type": "image",
+      "theme": "integration",
+      "content": "A professional integration themed image for meta",
+      "url": "gs://mock-bucket/meta_integration_1080x1080.png",
+      "created_at": "2026-03-10 18:13:32.492391"
+    },
+    {
+      "id": "i_b0e632c2",
+      "type": "image",
+      "theme": "social_proof",
+      "content": "A professional social_proof themed image for meta",
+      "url": "gs://mock-bucket/meta_social_proof_1200x628.png",
+      "created_at": "2026-03-10 18:13:32.584588"
+    },
+    {
+      "id": "i_b5bc9a54",
+      "type": "image",
+      "theme": "social_proof",
+      "content": "A professional social_proof themed image for meta",
+      "url": "gs://mock-bucket/meta_social_proof_1080x1080.png",
+      "created_at": "2026-03-10 18:13:32.668682"
+    }
+  ],
+  "stats": {
+    "copybot_time_sec": 0.0001361370086669922,
+    "copybot_cost": 0.02,
+    "imagebot_time_sec": 4.410743713378906e-05,
+    "imagebot_cost": 0.8,
+    "total_time_sec": 0.0008533000946044922,
+    "total_cost": 0.8200000000000001
+  }
+}

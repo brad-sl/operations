@@ -1,0 +1,24 @@
+{
+  "BTC-USD": {
+    "sentiment": -0.08333333333333337,
+    "positive_tweets": 11,
+    "negative_tweets": 13,
+    "total_tweets": 100,
+    "positive_ratio": 0.458,
+    "source": "X API v2",
+    "fetch_time": "2026-03-27T16:12:48.509319",
+    "age_minutes": 0,
+    "query": "(Bitcoin OR BTC) lang:en -is:retweet"
+  },
+  "XRP-USD": {
+    "sentiment": 0.41176470588235303,
+    "positive_tweets": 12,
+    "negative_tweets": 5,
+    "total_tweets": 100,
+    "positive_ratio": 0.706,
+    "source": "X API v2",
+    "fetch_time": "2026-03-27T16:12:49.042466",
+    "age_minutes": 0,
+    "query": "(XRP OR Ripple) lang:en -is:retweet"
+  }
+}

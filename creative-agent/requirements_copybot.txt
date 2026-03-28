@@ -1,0 +1,10 @@
+# CopyBot MVP Requirements
+
+# Required for API mode (Claude)
+anthropic>=0.39.0
+
+# Optional: For GPT-4 integration
+# openai>=1.0.0
+
+# Optional: For logging/monitoring
+# python-json-logger>=2.0.0

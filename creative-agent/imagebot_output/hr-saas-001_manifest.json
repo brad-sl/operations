@@ -1,0 +1,123 @@
+{
+  "brief_id": "hr-saas-001",
+  "campaign_name": "HR SaaS platform for employee onboarding automation",
+  "platform": "meta",
+  "mode": "full",
+  "generated_at": "2026-03-10T11:00:57.005728",
+  "images": [
+    {
+      "id": "img_speed_000_000",
+      "theme": "speed",
+      "platform": "meta",
+      "dimensions": "1200x628",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_speed_000_000_1200x628.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Speed theme",
+      "file_size_kb": 4.71,
+      "prompt_used": "[MOCK] SPEED theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_speed_000_001",
+      "theme": "speed",
+      "platform": "meta",
+      "dimensions": "1080x1080",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_speed_000_001_1080x1080.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Speed theme",
+      "file_size_kb": 6.68,
+      "prompt_used": "[MOCK] SPEED theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_cost_001_000",
+      "theme": "cost",
+      "platform": "meta",
+      "dimensions": "1200x628",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_cost_001_000_1200x628.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Cost theme",
+      "file_size_kb": 4.95,
+      "prompt_used": "[MOCK] COST theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_cost_001_001",
+      "theme": "cost",
+      "platform": "meta",
+      "dimensions": "1080x1080",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_cost_001_001_1080x1080.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Cost theme",
+      "file_size_kb": 6.89,
+      "prompt_used": "[MOCK] COST theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_quality_002_000",
+      "theme": "quality",
+      "platform": "meta",
+      "dimensions": "1200x628",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_quality_002_000_1200x628.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Quality theme",
+      "file_size_kb": 4.74,
+      "prompt_used": "[MOCK] QUALITY theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_quality_002_001",
+      "theme": "quality",
+      "platform": "meta",
+      "dimensions": "1080x1080",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_quality_002_001_1080x1080.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Quality theme",
+      "file_size_kb": 6.72,
+      "prompt_used": "[MOCK] QUALITY theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_integration_003_000",
+      "theme": "integration",
+      "platform": "meta",
+      "dimensions": "1200x628",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_integration_003_000_1200x628.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Integration theme",
+      "file_size_kb": 4.95,
+      "prompt_used": "[MOCK] INTEGRATION theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_integration_003_001",
+      "theme": "integration",
+      "platform": "meta",
+      "dimensions": "1080x1080",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_integration_003_001_1080x1080.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Integration theme",
+      "file_size_kb": 6.92,
+      "prompt_used": "[MOCK] INTEGRATION theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_social_proof_004_000",
+      "theme": "social_proof",
+      "platform": "meta",
+      "dimensions": "1200x628",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_social_proof_004_000_1200x628.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Social_proof theme",
+      "file_size_kb": 4.83,
+      "prompt_used": "[MOCK] SOCIAL_PROOF theme for HR SaaS platform for employee onboarding automation"
+    },
+    {
+      "id": "img_social_proof_004_001",
+      "theme": "social_proof",
+      "platform": "meta",
+      "dimensions": "1080x1080",
+      "url": "https://storage.googleapis.com/brad-creative-assets/creatives/hr-saas-001/images/img_social_proof_004_001_1080x1080.png",
+      "alt_text": "HR SaaS platform for employee onboarding automation - Social_proof theme",
+      "file_size_kb": 6.82,
+      "prompt_used": "[MOCK] SOCIAL_PROOF theme for HR SaaS platform for employee onboarding automation"
+    }
+  ],
+  "upload_status": "success",
+  "storage_location": "gs://gs://brad-creative-assets/creatives/hr-saas-001/images/",
+  "summary": {
+    "total_images": 10,
+    "themes": [
+      "quality",
+      "speed",
+      "cost",
+      "integration",
+      "social_proof"
+    ],
+    "total_size_mb": 0.06
+  },
+  "note": "\u26a0\ufe0f  MOCK MODE - Images are generated locally, not uploaded to GCS"
+}

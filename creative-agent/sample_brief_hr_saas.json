@@ -1,0 +1,17 @@
+{
+  "id": "hr-saas-001",
+  "product_name": "HR Onboarding Platform",
+  "product_description": "HR SaaS platform for employee onboarding automation with workflows, document management, and task automation",
+  "target_audience": "HR managers at 10-500 person companies",
+  "key_benefits": [
+    "faster onboarding (80% faster)",
+    "fewer errors (zero-error workflows)",
+    "integrates with existing tools (Workday, ADP, etc)",
+    "reduce onboarding costs by 50%",
+    "centralized document management"
+  ],
+  "visual_style": "professional, energetic, results-focused",
+  "platform": "multi",
+  "cta": "Start Free 14-Day Trial",
+  "tone": "Professional and enthusiastic"
+}

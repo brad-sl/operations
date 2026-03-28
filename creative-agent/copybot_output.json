@@ -1,0 +1,366 @@
+{
+  "headlines": [
+    {
+      "id": "h_speed_001",
+      "text": "Onboard 80% Faster",
+      "theme": "speed",
+      "char_count": 18
+    },
+    {
+      "id": "h_speed_002",
+      "text": "Speed Up Hiring Process",
+      "theme": "speed",
+      "char_count": 23
+    },
+    {
+      "id": "h_speed_003",
+      "text": "Complete Setup in Days",
+      "theme": "speed",
+      "char_count": 22
+    },
+    {
+      "id": "h_speed_004",
+      "text": "Instant New Hire Launch",
+      "theme": "speed",
+      "char_count": 23
+    },
+    {
+      "id": "h_speed_005",
+      "text": "Cut Admin Time in Half",
+      "theme": "speed",
+      "char_count": 22
+    },
+    {
+      "id": "h_speed_006",
+      "text": "Faster Employee Onboarding",
+      "theme": "speed",
+      "char_count": 26
+    },
+    {
+      "id": "h_cost_007",
+      "text": "Cut Onboarding Costs 50%",
+      "theme": "cost",
+      "char_count": 24
+    },
+    {
+      "id": "h_cost_008",
+      "text": "Save Money Per New Hire",
+      "theme": "cost",
+      "char_count": 23
+    },
+    {
+      "id": "h_cost_009",
+      "text": "Reduce HR Admin Spend",
+      "theme": "cost",
+      "char_count": 21
+    },
+    {
+      "id": "h_cost_010",
+      "text": "Lower Onboarding Expenses",
+      "theme": "cost",
+      "char_count": 25
+    },
+    {
+      "id": "h_cost_011",
+      "text": "Cut HR Overhead Costs",
+      "theme": "cost",
+      "char_count": 21
+    },
+    {
+      "id": "h_cost_012",
+      "text": "Save Thousands Per Hire",
+      "theme": "cost",
+      "char_count": 23
+    },
+    {
+      "id": "h_quality_013",
+      "text": "Eliminate Onboarding Errors",
+      "theme": "quality",
+      "char_count": 27
+    },
+    {
+      "id": "h_quality_014",
+      "text": "Ensure Automatic Compliance",
+      "theme": "quality",
+      "char_count": 27
+    },
+    {
+      "id": "h_quality_015",
+      "text": "Perfect Employee Records",
+      "theme": "quality",
+      "char_count": 24
+    },
+    {
+      "id": "h_quality_016",
+      "text": "Zero Missed Onboarding Steps",
+      "theme": "quality",
+      "char_count": 28
+    },
+    {
+      "id": "h_quality_017",
+      "text": "Consistent Onboarding Process",
+      "theme": "quality",
+      "char_count": 29
+    },
+    {
+      "id": "h_quality_018",
+      "text": "Error Free New Hire Setup",
+      "theme": "quality",
+      "char_count": 25
+    },
+    {
+      "id": "h_integration_019",
+      "text": "Sync With Your Tools",
+      "theme": "integration",
+      "char_count": 20
+    },
+    {
+      "id": "h_integration_020",
+      "text": "Works With Everything",
+      "theme": "integration",
+      "char_count": 21
+    },
+    {
+      "id": "h_integration_021",
+      "text": "Integrates Seamlessly",
+      "theme": "integration",
+      "char_count": 21
+    },
+    {
+      "id": "h_integration_022",
+      "text": "Connect Your Platforms",
+      "theme": "integration",
+      "char_count": 22
+    },
+    {
+      "id": "h_integration_023",
+      "text": "Works With HRIS Systems",
+      "theme": "integration",
+      "char_count": 23
+    },
+    {
+      "id": "h_integration_024",
+      "text": "Unified Platform Integration",
+      "theme": "integration",
+      "char_count": 28
+    },
+    {
+      "id": "h_social_proof_025",
+      "text": "Trusted by 5000+ Companies",
+      "theme": "socialproof",
+      "char_count": 26
+    },
+    {
+      "id": "h_social_proof_026",
+      "text": "Used by Industry Leaders",
+      "theme": "socialproof",
+      "char_count": 24
+    },
+    {
+      "id": "h_social_proof_027",
+      "text": "Leading HR Teams Choose Us",
+      "theme": "socialproof",
+      "char_count": 26
+    },
+    {
+      "id": "h_social_proof_028",
+      "text": "Proven by Enterprise Teams",
+      "theme": "socialproof",
+      "char_count": 26
+    },
+    {
+      "id": "h_social_proof_029",
+      "text": "Join Global Leaders",
+      "theme": "socialproof",
+      "char_count": 19
+    },
+    {
+      "id": "h_social_proof_030",
+      "text": "Preferred by HR Managers",
+      "theme": "socialproof",
+      "char_count": 24
+    }
+  ],
+  "descriptions": [
+    {
+      "id": "d_speed_001",
+      "text": "Cut onboarding time from weeks to days. New hires productive immediately.",
+      "theme": "speed",
+      "char_count": 73
+    },
+    {
+      "id": "d_speed_002",
+      "text": "Automate repetitive tasks. Reduce setup time by 80% or more.",
+      "theme": "speed",
+      "char_count": 60
+    },
+    {
+      "id": "d_speed_003",
+      "text": "Employees start contributing faster. Get to productivity in days not weeks.",
+      "theme": "speed",
+      "char_count": 75
+    },
+    {
+      "id": "d_speed_004",
+      "text": "Eliminate manual onboarding steps. Complete new hire setup in hours.",
+      "theme": "speed",
+      "char_count": 68
+    },
+    {
+      "id": "d_speed_005",
+      "text": "Streamline workflows. Start new employees faster than competitors.",
+      "theme": "speed",
+      "char_count": 66
+    },
+    {
+      "id": "d_speed_006",
+      "text": "Save weeks of admin work per hire. Instant onboarding automation.",
+      "theme": "speed",
+      "char_count": 65
+    },
+    {
+      "id": "d_cost_007",
+      "text": "Eliminate manual data entry. Reduce onboarding spend per hire by 50%.",
+      "theme": "cost",
+      "char_count": 69
+    },
+    {
+      "id": "d_cost_008",
+      "text": "Automate time consuming tasks. Cut HR administration costs significantly.",
+      "theme": "cost",
+      "char_count": 73
+    },
+    {
+      "id": "d_cost_009",
+      "text": "One platform replaces multiple tools. Reduce tech spending on onboarding.",
+      "theme": "cost",
+      "char_count": 73
+    },
+    {
+      "id": "d_cost_010",
+      "text": "Less manual work means lower costs. Save thousands with automation.",
+      "theme": "cost",
+      "char_count": 67
+    },
+    {
+      "id": "d_cost_011",
+      "text": "Reduce HR resource requirements. Better ROI on each new hire.",
+      "theme": "cost",
+      "char_count": 61
+    },
+    {
+      "id": "d_cost_012",
+      "text": "Cut recruiting and onboarding expenses. Improve profitability.",
+      "theme": "cost",
+      "char_count": 62
+    },
+    {
+      "id": "d_quality_013",
+      "text": "Automated workflows ensure no missed steps. Reduce mistakes to near zero.",
+      "theme": "quality",
+      "char_count": 73
+    },
+    {
+      "id": "d_quality_014",
+      "text": "Standardized process across all hires. Eliminate inconsistencies and errors.",
+      "theme": "quality",
+      "char_count": 76
+    },
+    {
+      "id": "d_quality_015",
+      "text": "Compliance built in. Every onboarding follows legal requirements.",
+      "theme": "quality",
+      "char_count": 65
+    },
+    {
+      "id": "d_quality_016",
+      "text": "No more forgotten tasks. Complete, accurate setup every time.",
+      "theme": "quality",
+      "char_count": 61
+    },
+    {
+      "id": "d_quality_017",
+      "text": "Consistent experience for every new employee. Reduce onboarding errors.",
+      "theme": "quality",
+      "char_count": 71
+    },
+    {
+      "id": "d_quality_018",
+      "text": "Audit trail included. Complete compliance documentation automatically.",
+      "theme": "quality",
+      "char_count": 70
+    },
+    {
+      "id": "d_integration_019",
+      "text": "Integrates with Slack, HRIS, and 50+ platforms. No switching systems.",
+      "theme": "integration",
+      "char_count": 69
+    },
+    {
+      "id": "d_integration_020",
+      "text": "Works seamlessly with tools you already use. No manual data entry.",
+      "theme": "integration",
+      "char_count": 66
+    },
+    {
+      "id": "d_integration_021",
+      "text": "Sync with your favorite HR platforms. Real time data flow.",
+      "theme": "integration",
+      "char_count": 58
+    },
+    {
+      "id": "d_integration_022",
+      "text": "Connects to Workday, ADP, BambooHR and more. Ecosystem fit.",
+      "theme": "integration",
+      "char_count": 59
+    },
+    {
+      "id": "d_integration_023",
+      "text": "Seamless integration with existing tools. Keep your current stack.",
+      "theme": "integration",
+      "char_count": 66
+    },
+    {
+      "id": "d_integration_024",
+      "text": "API integration available. Connect to custom systems easily.",
+      "theme": "integration",
+      "char_count": 60
+    },
+    {
+      "id": "d_social_proof_025",
+      "text": "Used by Fortune 500 companies and fast growing startups worldwide.",
+      "theme": "socialproof",
+      "char_count": 66
+    },
+    {
+      "id": "d_social_proof_026",
+      "text": "Trusted by leading companies across industries. Proven solution.",
+      "theme": "socialproof",
+      "char_count": 64
+    },
+    {
+      "id": "d_social_proof_027",
+      "text": "Join thousands of HR managers using our platform for success.",
+      "theme": "socialproof",
+      "char_count": 61
+    },
+    {
+      "id": "d_social_proof_028",
+      "text": "Industry leaders choose our platform for employee onboarding.",
+      "theme": "socialproof",
+      "char_count": 61
+    },
+    {
+      "id": "d_social_proof_029",
+      "text": "Proven with 99% customer satisfaction. Join leading companies.",
+      "theme": "socialproof",
+      "char_count": 62
+    },
+    {
+      "id": "d_social_proof_030",
+      "text": "Trusted by companies in every industry. Proven results.",
+      "theme": "socialproof",
+      "char_count": 55
+    }
+  ]
+}

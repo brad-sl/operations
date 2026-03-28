@@ -1,0 +1,37 @@
+{
+  "campaign_id": "campaign-30b77816dfa1",
+  "status": "failed",
+  "execution_time_sec": 0.68,
+  "total_cost_usd": 0,
+  "creatives_count": 0,
+  "headlines_count": 0,
+  "descriptions_count": 0,
+  "images_count": 0,
+  "validation_passed": false,
+  "validation_errors": [
+    "CopyBot failed: Output file not created: /home/brad/.openclaw/workspace/creative_output/campaign-30b77816dfa1_copybot.json",
+    "ImageBot failed: imagebot failed with code 1: Traceback (most recent call last):\n  File \"/home/brad/.openclaw/workspace/imagebot.py\", line 38, in <module>\n    from google.cloud import storage\nModuleNotFoundError: No module named 'google'\n"
+  ],
+  "timestamps": {
+    "created_at": "2026-03-11T00:54:38.349270",
+    "started_at": null,
+    "completed_at": "2026-03-11T00:54:39.345523"
+  },
+  "copybot": {
+    "status": "failed",
+    "duration_sec": 0.08,
+    "cost_usd": 0.0,
+    "error": "Output file not created: /home/brad/.openclaw/workspace/creative_output/campaign-30b77816dfa1_copybot.json"
+  },
+  "imagebot": {
+    "status": "failed",
+    "duration_sec": 0.55,
+    "cost_usd": 0.0,
+    "error": "imagebot failed with code 1: Traceback (most recent call last):\n  File \"/home/brad/.openclaw/workspace/imagebot.py\", line 38, in <module>\n    from google.cloud import storage\nModuleNotFoundError: No module named 'google'\n"
+  },
+  "creatives_by_type": {
+    "headlines": 0,
+    "descriptions": 0,
+    "images": 0
+  }
+}

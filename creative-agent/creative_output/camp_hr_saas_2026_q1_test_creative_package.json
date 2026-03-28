@@ -1,0 +1,618 @@
+{
+  "brief_id": "camp_hr_saas_2026_q1_test",
+  "campaign_name": "HR SaaS Onboarding Platform - Q1 2026",
+  "status": "ready",
+  "timestamp": "2026-03-13T20:46:28.055Z",
+  "research_insights": {
+    "themes": [
+      "Speed",
+      "Cost",
+      "Quality",
+      "Integration",
+      "Social Proof"
+    ],
+    "target_audience": "HR managers and recruiting teams at mid-market companies (100-5000 employees)",
+    "key_messages": [
+      "Automate employee onboarding, reduce costs, ensure compliance",
+      "Speed",
+      "Cost",
+      "Quality",
+      "Integration",
+      "Social Proof"
+    ]
+  },
+  "creatives": {
+    "headlines": [
+      {
+        "id": "h_speed_001",
+        "type": "headline",
+        "content": "Onboard 80% Faster",
+        "theme": "speed",
+        "char_count": 18
+      },
+      {
+        "id": "h_speed_002",
+        "type": "headline",
+        "content": "Speed Up Hiring Process",
+        "theme": "speed",
+        "char_count": 23
+      },
+      {
+        "id": "h_speed_003",
+        "type": "headline",
+        "content": "Complete Setup in Days",
+        "theme": "speed",
+        "char_count": 22
+      },
+      {
+        "id": "h_speed_004",
+        "type": "headline",
+        "content": "Instant New Hire Launch",
+        "theme": "speed",
+        "char_count": 23
+      },
+      {
+        "id": "h_speed_005",
+        "type": "headline",
+        "content": "Cut Admin Time in Half",
+        "theme": "speed",
+        "char_count": 22
+      },
+      {
+        "id": "h_speed_006",
+        "type": "headline",
+        "content": "Faster Employee Onboarding",
+        "theme": "speed",
+        "char_count": 26
+      },
+      {
+        "id": "h_cost_007",
+        "type": "headline",
+        "content": "Cut Onboarding Costs 50%",
+        "theme": "cost",
+        "char_count": 24
+      },
+      {
+        "id": "h_cost_008",
+        "type": "headline",
+        "content": "Save Money Per New Hire",
+        "theme": "cost",
+        "char_count": 23
+      },
+      {
+        "id": "h_cost_009",
+        "type": "headline",
+        "content": "Reduce HR Admin Spend",
+        "theme": "cost",
+        "char_count": 21
+      },
+      {
+        "id": "h_cost_010",
+        "type": "headline",
+        "content": "Lower Onboarding Expenses",
+        "theme": "cost",
+        "char_count": 25
+      },
+      {
+        "id": "h_cost_011",
+        "type": "headline",
+        "content": "Cut HR Overhead Costs",
+        "theme": "cost",
+        "char_count": 21
+      },
+      {
+        "id": "h_cost_012",
+        "type": "headline",
+        "content": "Save Thousands Per Hire",
+        "theme": "cost",
+        "char_count": 23
+      },
+      {
+        "id": "h_quality_013",
+        "type": "headline",
+        "content": "Eliminate Onboarding Errors",
+        "theme": "quality",
+        "char_count": 27
+      },
+      {
+        "id": "h_quality_014",
+        "type": "headline",
+        "content": "Ensure Automatic Compliance",
+        "theme": "quality",
+        "char_count": 27
+      },
+      {
+        "id": "h_quality_015",
+        "type": "headline",
+        "content": "Perfect Employee Records",
+        "theme": "quality",
+        "char_count": 24
+      },
+      {
+        "id": "h_quality_016",
+        "type": "headline",
+        "content": "Zero Missed Onboarding Steps",
+        "theme": "quality",
+        "char_count": 28
+      },
+      {
+        "id": "h_quality_017",
+        "type": "headline",
+        "content": "Consistent Onboarding Process",
+        "theme": "quality",
+        "char_count": 29
+      },
+      {
+        "id": "h_quality_018",
+        "type": "headline",
+        "content": "Error Free New Hire Setup",
+        "theme": "quality",
+        "char_count": 25
+      },
+      {
+        "id": "h_integration_019",
+        "type": "headline",
+        "content": "Sync With Your Tools",
+        "theme": "integration",
+        "char_count": 20
+      },
+      {
+        "id": "h_integration_020",
+        "type": "headline",
+        "content": "Works With Everything",
+        "theme": "integration",
+        "char_count": 21
+      },
+      {
+        "id": "h_integration_021",
+        "type": "headline",
+        "content": "Integrates Seamlessly",
+        "theme": "integration",
+        "char_count": 21
+      },
+      {
+        "id": "h_integration_022",
+        "type": "headline",
+        "content": "Connect Your Platforms",
+        "theme": "integration",
+        "char_count": 22
+      },
+      {
+        "id": "h_integration_023",
+        "type": "headline",
+        "content": "Works With HRIS Systems",
+        "theme": "integration",
+        "char_count": 23
+      },
+      {
+        "id": "h_integration_024",
+        "type": "headline",
+        "content": "Unified Platform Integration",
+        "theme": "integration",
+        "char_count": 28
+      },
+      {
+        "id": "h_social_proof_025",
+        "type": "headline",
+        "content": "Trusted by 5000+ Companies",
+        "theme": "socialproof",
+        "char_count": 26
+      },
+      {
+        "id": "h_social_proof_026",
+        "type": "headline",
+        "content": "Used by Industry Leaders",
+        "theme": "socialproof",
+        "char_count": 24
+      },
+      {
+        "id": "h_social_proof_027",
+        "type": "headline",
+        "content": "Leading HR Teams Choose Us",
+        "theme": "socialproof",
+        "char_count": 26
+      },
+      {
+        "id": "h_social_proof_028",
+        "type": "headline",
+        "content": "Proven by Enterprise Teams",
+        "theme": "socialproof",
+        "char_count": 26
+      },
+      {
+        "id": "h_social_proof_029",
+        "type": "headline",
+        "content": "Join Global Leaders",
+        "theme": "socialproof",
+        "char_count": 19
+      },
+      {
+        "id": "h_social_proof_030",
+        "type": "headline",
+        "content": "Preferred by HR Managers",
+        "theme": "socialproof",
+        "char_count": 24
+      }
+    ],
+    "descriptions": [
+      {
+        "id": "d_speed_001",
+        "type": "description",
+        "content": "Cut onboarding time from weeks to days. New hires productive immediately.",
+        "theme": "speed",
+        "char_count": 73
+      },
+      {
+        "id": "d_speed_002",
+        "type": "description",
+        "content": "Automate repetitive tasks. Reduce setup time by 80% or more.",
+        "theme": "speed",
+        "char_count": 60
+      },
+      {
+        "id": "d_speed_003",
+        "type": "description",
+        "content": "Employees start contributing faster. Get to productivity in days not weeks.",
+        "theme": "speed",
+        "char_count": 75
+      },
+      {
+        "id": "d_speed_004",
+        "type": "description",
+        "content": "Eliminate manual onboarding steps. Complete new hire setup in hours.",
+        "theme": "speed",
+        "char_count": 68
+      },
+      {
+        "id": "d_speed_005",
+        "type": "description",
+        "content": "Streamline workflows. Start new employees faster than competitors.",
+        "theme": "speed",
+        "char_count": 66
+      },
+      {
+        "id": "d_speed_006",
+        "type": "description",
+        "content": "Save weeks of admin work per hire. Instant onboarding automation.",
+        "theme": "speed",
+        "char_count": 65
+      },
+      {
+        "id": "d_cost_007",
+        "type": "description",
+        "content": "Eliminate manual data entry. Reduce onboarding spend per hire by 50%.",
+        "theme": "cost",
+        "char_count": 69
+      },
+      {
+        "id": "d_cost_008",
+        "type": "description",
+        "content": "Automate time consuming tasks. Cut HR administration costs significantly.",
+        "theme": "cost",
+        "char_count": 73
+      },
+      {
+        "id": "d_cost_009",
+        "type": "description",
+        "content": "One platform replaces multiple tools. Reduce tech spending on onboarding.",
+        "theme": "cost",
+        "char_count": 73
+      },
+      {
+        "id": "d_cost_010",
+        "type": "description",
+        "content": "Less manual work means lower costs. Save thousands with automation.",
+        "theme": "cost",
+        "char_count": 67
+      },
+      {
+        "id": "d_cost_011",
+        "type": "description",
+        "content": "Reduce HR resource requirements. Better ROI on each new hire.",
+        "theme": "cost",
+        "char_count": 61
+      },
+      {
+        "id": "d_cost_012",
+        "type": "description",
+        "content": "Cut recruiting and onboarding expenses. Improve profitability.",
+        "theme": "cost",
+        "char_count": 62
+      },
+      {
+        "id": "d_quality_013",
+        "type": "description",
+        "content": "Automated workflows ensure no missed steps. Reduce mistakes to near zero.",
+        "theme": "quality",
+        "char_count": 73
+      },
+      {
+        "id": "d_quality_014",
+        "type": "description",
+        "content": "Standardized process across all hires. Eliminate inconsistencies and errors.",
+        "theme": "quality",
+        "char_count": 76
+      },
+      {
+        "id": "d_quality_015",
+        "type": "description",
+        "content": "Compliance built in. Every onboarding follows legal requirements.",
+        "theme": "quality",
+        "char_count": 65
+      },
+      {
+        "id": "d_quality_016",
+        "type": "description",
+        "content": "No more forgotten tasks. Complete, accurate setup every time.",
+        "theme": "quality",
+        "char_count": 61
+      },
+      {
+        "id": "d_quality_017",
+        "type": "description",
+        "content": "Consistent experience for every new employee. Reduce onboarding errors.",
+        "theme": "quality",
+        "char_count": 71
+      },
+      {
+        "id": "d_quality_018",
+        "type": "description",
+        "content": "Audit trail included. Complete compliance documentation automatically.",
+        "theme": "quality",
+        "char_count": 70
+      },
+      {
+        "id": "d_integration_019",
+        "type": "description",
+        "content": "Integrates with Slack, HRIS, and 50+ platforms. No switching systems.",
+        "theme": "integration",
+        "char_count": 69
+      },
+      {
+        "id": "d_integration_020",
+        "type": "description",
+        "content": "Works seamlessly with tools you already use. No manual data entry.",
+        "theme": "integration",
+        "char_count": 66
+      },
+      {
+        "id": "d_integration_021",
+        "type": "description",
+        "content": "Sync with your favorite HR platforms. Real time data flow.",
+        "theme": "integration",
+        "char_count": 58
+      },
+      {
+        "id": "d_integration_022",
+        "type": "description",
+        "content": "Connects to Workday, ADP, BambooHR and more. Ecosystem fit.",
+        "theme": "integration",
+        "char_count": 59
+      },
+      {
+        "id": "d_integration_023",
+        "type": "description",
+        "content": "Seamless integration with existing tools. Keep your current stack.",
+        "theme": "integration",
+        "char_count": 66
+      },
+      {
+        "id": "d_integration_024",
+        "type": "description",
+        "content": "API integration available. Connect to custom systems easily.",
+        "theme": "integration",
+        "char_count": 60
+      },
+      {
+        "id": "d_social_proof_025",
+        "type": "description",
+        "content": "Used by Fortune 500 companies and fast growing startups worldwide.",
+        "theme": "socialproof",
+        "char_count": 66
+      },
+      {
+        "id": "d_social_proof_026",
+        "type": "description",
+        "content": "Trusted by leading companies across industries. Proven solution.",
+        "theme": "socialproof",
+        "char_count": 64
+      },
+      {
+        "id": "d_social_proof_027",
+        "type": "description",
+        "content": "Join thousands of HR managers using our platform for success.",
+        "theme": "socialproof",
+        "char_count": 61
+      },
+      {
+        "id": "d_social_proof_028",
+        "type": "description",
+        "content": "Industry leaders choose our platform for employee onboarding.",
+        "theme": "socialproof",
+        "char_count": 61
+      },
+      {
+        "id": "d_social_proof_029",
+        "type": "description",
+        "content": "Proven with 99% customer satisfaction. Join leading companies.",
+        "theme": "socialproof",
+        "char_count": 62
+      },
+      {
+        "id": "d_social_proof_030",
+        "type": "description",
+        "content": "Trusted by companies in every industry. Proven results.",
+        "theme": "socialproof",
+        "char_count": 55
+      }
+    ],
+    "images": [
+      {
+        "id": "img_speed_1",
+        "type": "image",
+        "content": "Modern sleek HR dashboard with a lightning bolt icon, candidates appearing instantly on screen, digital speed lines, clean minimalist design, tech-forward aesthetic",
+        "theme": "Speed",
+        "url": "https://placeholder.com/1024x1024?text=Speed+1",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_speed_2",
+        "type": "image",
+        "content": "Animated stopwatch counting down next to smiling recruiter reviewing candidates, bright blue and white color scheme, rapid motion blur effect, professional corporate setting",
+        "theme": "Speed",
+        "url": "https://placeholder.com/1024x1024?text=Speed+2",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_speed_3",
+        "type": "image",
+        "content": "Fast-moving conveyor belt of diverse candidate profiles sliding through a digital review system, instant checkmarks appearing, energetic and efficient visual metaphor",
+        "theme": "Speed",
+        "url": "https://placeholder.com/1024x1024?text=Speed+3",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_cost_1",
+        "type": "image",
+        "content": "Stack of money bills with a downward arrow overlay, professional finance chart showing cost reduction trend, green and gold tones, clear financial improvement visualization",
+        "theme": "Cost",
+        "url": "https://placeholder.com/1024x1024?text=Cost+1",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_cost_2",
+        "type": "image",
+        "content": "Piggy bank overflowing with coins positioned next to a small hiring team, representing budget savings, warm earthy palette, economy and value concept",
+        "theme": "Cost",
+        "url": "https://placeholder.com/1024x1024?text=Cost+2",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_cost_3",
+        "type": "image",
+        "content": "Budget spreadsheet with reduced line items highlighted in green, calculator and coins, modern flat design, clear ROI demonstration for cost-conscious buyers",
+        "theme": "Cost",
+        "url": "https://placeholder.com/1024x1024?text=Cost+3",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_quality_1",
+        "type": "image",
+        "content": "Gold trophy or premium badge with diverse high-performing employees standing proudly behind it, vibrant professional setting, excellence and achievement theme, premium feel",
+        "theme": "Quality",
+        "url": "https://placeholder.com/1024x1024?text=Quality+1",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_quality_2",
+        "type": "image",
+        "content": "Handpicked gemstones or diamonds being selected with precision, metaphor for quality candidate selection, sophisticated color palette, meticulous attention to excellence",
+        "theme": "Quality",
+        "url": "https://placeholder.com/1024x1024?text=Quality+2",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_quality_3",
+        "type": "image",
+        "content": "Five-star rating system with top-tier candidate profiles highlighted, checkmarks for key qualifications visible, premium presentation, quality assurance emphasis",
+        "theme": "Quality",
+        "url": "https://placeholder.com/1024x1024?text=Quality+3",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_integration_1",
+        "type": "image",
+        "content": "Multiple interconnected gears or puzzle pieces fitting together perfectly, HR systems flowing smoothly into each other, clean tech illustration, digital integration concept",
+        "theme": "Integration",
+        "url": "https://placeholder.com/1024x1024?text=Integration+1",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_integration_2",
+        "type": "image",
+        "content": "Connected nodes and lines forming a seamless network, representing integrated workflows, modern tech aesthetic, cloud-based connectivity visual, smooth flow of information",
+        "theme": "Integration",
+        "url": "https://placeholder.com/1024x1024?text=Integration+2",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_integration_3",
+        "type": "image",
+        "content": "Dashboard showing multiple HR tools unified in one interface, data flowing between modules, connected bubbles and arrows, unified ecosystem representation",
+        "theme": "Integration",
+        "url": "https://placeholder.com/1024x1024?text=Integration+3",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_social proof_1",
+        "type": "image",
+        "content": "Logos of well-known companies arranged in a circle around a central HR system, representing trusted partnerships, professional and corporate aesthetic, credibility badges",
+        "theme": "Social Proof",
+        "url": "https://placeholder.com/1024x1024?text=Social Proof+1",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_social proof_2",
+        "type": "image",
+        "content": "Five-star customer testimonials and logos surrounding a central platform, diverse companies of different sizes, trust and reputation emphasis, testimonial wall concept",
+        "theme": "Social Proof",
+        "url": "https://placeholder.com/1024x1024?text=Social Proof+2",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      },
+      {
+        "id": "img_social proof_3",
+        "type": "image",
+        "content": "Industry leader badges and certifications displayed prominently, professional team in background, authority and trust signals, corporate endorsement visualization",
+        "theme": "Social Proof",
+        "url": "https://placeholder.com/1024x1024?text=Social Proof+3",
+        "format": "jpg",
+        "dimensions": "1024x1024"
+      }
+    ]
+  },
+  "manifest": {
+    "total_assets": 75,
+    "asset_counts": {
+      "headlines": 30,
+      "descriptions": 30,
+      "images": 15
+    },
+    "platform_specs": {
+      "headline_max_length": 30,
+      "description_max_length": 90,
+      "image_dimensions": [
+        "1200x628",
+        "1200x1200"
+      ]
+    },
+    "checksums": {
+      "headlines_hash": "67ff0c2945fad04da94f54529da0a5ae543147b3abb3131386940f23550016b4",
+      "descriptions_hash": "d5c9d1adffaacfbf1742def52832bb655e4c71c1d011202472c6b7fb23da249e",
+      "images_hash": "71a45f2db5e458762d98009903860e9dee23a3b037f022224dbe26bee01cc049"
+    },
+    "generated_at": "2026-03-13T20:46:28.056Z",
+    "version": "1.0.0"
+  },
+  "validation_report": {
+    "all_valid": true,
+    "errors": [],
+    "warnings": []
+  },
+  "upload_status": {
+    "uploaded": false
+  }
+}

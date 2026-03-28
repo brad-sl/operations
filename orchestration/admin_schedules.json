@@ -1,0 +1,122 @@
+{
+  "email_accounts": [
+    {
+      "address": "admanbot@uncorkedcanvas.com",
+      "provider": "himalaya"
+    },
+    {
+      "address": "brad@personal.com",
+      "provider": "himalaya"
+    }
+  ],
+  "thresholds": [
+    {
+      "metric": "cpa",
+      "operator": "gt",
+      "value": 75,
+      "severity": "critical",
+      "description": "Cost per acquisition exceeds $75 threshold"
+    },
+    {
+      "metric": "daily_spend",
+      "operator": "gt",
+      "value": 150,
+      "severity": "warning",
+      "description": "Daily spend exceeds $150 threshold"
+    },
+    {
+      "metric": "ctr",
+      "operator": "lt",
+      "value": 0.005,
+      "severity": "warning",
+      "description": "Click-through rate drops below 0.5%"
+    },
+    {
+      "metric": "conversion_rate",
+      "operator": "lt",
+      "value": 0.01,
+      "severity": "info",
+      "description": "Conversion rate drops below 1%"
+    }
+  ],
+  "specialty_agents": [
+    {
+      "name": "GAM Monitor",
+      "schedule": "0 9 * * *",
+      "task": "Monitor Google Ad Manager performance, check ROAS trends, flag low-performing placements",
+      "enabled": true,
+      "config": {
+        "metrics_to_check": ["impressions", "clicks", "revenue", "eCPM"],
+        "lookback_days": 7,
+        "alert_threshold": 0.8,
+        "report_destination": "telegram"
+      }
+    },
+    {
+      "name": "Creative Optimizer",
+      "schedule": "0 18 * * 5",
+      "task": "Analyze ad creative performance, identify fatigue, suggest rotations, validate copy quality",
+      "enabled": true,
+      "config": {
+        "platforms": ["meta", "google_ads"],
+        "metrics_to_check": ["ctr", "cpc", "conversion_rate"],
+        "fatigue_threshold": 0.7,
+        "min_impressions": 1000,
+        "copy_validation": {
+          "enabled": true,
+          "quality_minimum": 40,
+          "filter_module": "./StopSlopFilter.ts",
+          "apply_to": ["headlines", "descriptions", "callouts", "primary_text"]
+        }
+      }
+    },
+    {
+      "name": "Budget Allocator",
+      "schedule": "0 12 * * 1",
+      "task": "Rebalance budgets across campaigns based on ROAS and performance",
+      "enabled": true,
+      "config": {
+        "optimization_mode": "target_roas",
+        "min_budget_shift": 10,
+        "max_budget_shift": 50,
+        "lookback_days": 14
+      }
+    },
+    {
+      "name": "Keyword Auditor",
+      "schedule": "0 6 * * 2",
+      "task": "Review search terms, identify new negative keywords, suggest bid adjustments",
+      "enabled": true,
+      "config": {
+        "platforms": ["google_ads"],
+        "lookback_days": 30,
+        "min_search_volume": 5,
+        "irrelevance_score_threshold": 0.6
+      }
+    }
+  ],
+  "telegram": {
+    "enabled": false,
+    "webhook_url": "https://api.telegram.org/bot<BOT_TOKEN>/sendMessage",
+    "chat_id": "",
+    "alert_levels": {
+      "critical": 1,
+      "warning": 2,
+      "info": 3
+    }
+  },
+  "polling_interval_ms": 300000,
+  "log_retention_days": 30,
+  "form_submission_config": {
+    "expected_fields": ["name", "email", "company", "message"],
+    "form_sources": ["admanbot@uncorkedcanvas.com"],
+    "parse_method": "regex"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "created_at": "2025-03-18T11:45:00Z",
+    "last_updated": "2025-03-18T11:45:00Z",
+    "author": "Brad",
+    "description": "Admin Agent orchestration configuration for multi-platform ad management"
+  }
+}

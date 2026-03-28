@@ -1,0 +1,354 @@
+{
+  "name": "Admin Agent Orchestrator",
+  "version": "1.0.0",
+  "description": "Persistent multi-platform ad account orchestration agent with email monitoring, threshold evaluation, and specialty agent spawning",
+  "created_at": "2025-03-18T11:45:00Z",
+  "status": "production-ready",
+  
+  "core_specification": {
+    "execution_model": {
+      "type": "event_loop",
+      "interval_ms": 300000,
+      "description": "Runs every 5 minutes in a persistent event loop",
+      "graceful_shutdown": true,
+      "signal_handling": ["SIGTERM", "SIGINT"]
+    },
+    
+    "state_machine": {
+      "states": [
+        {
+          "name": "idle",
+          "description": "Waiting for next poll cycle",
+          "transitions": ["checking_email"]
+        },
+        {
+          "name": "checking_email",
+          "description": "Fetching emails from configured accounts via himalaya",
+          "transitions": ["parsing_forms"]
+        },
+        {
+          "name": "parsing_forms",
+          "description": "Parsing form submissions from email bodies",
+          "transitions": ["evaluating_thresholds"]
+        },
+        {
+          "name": "evaluating_thresholds",
+          "description": "Checking performance metrics against configured thresholds",
+          "transitions": ["spawning_agents"]
+        },
+        {
+          "name": "spawning_agents",
+          "description": "Spawning specialty agents on schedule (if scheduled)",
+          "transitions": ["reporting"]
+        },
+        {
+          "name": "reporting",
+          "description": "Sending alerts and logging results",
+          "transitions": ["sleeping"]
+        },
+        {
+          "name": "sleeping",
+          "description": "Idle until next poll cycle",
+          "transitions": ["checking_email"]
+        }
+      ]
+    }
+  },
+
+  "interfaces": {
+    "configuration": {
+      "file": "admin_schedules.json",
+      "format": "JSON",
+      "schema": {
+        "email_accounts": {
+          "type": "array",
+          "description": "List of email accounts to monitor",
+          "items": {
+            "address": "string (email)",
+            "provider": "enum: himalaya, gmail_api"
+          }
+        },
+        "thresholds": {
+          "type": "array",
+          "description": "Performance metrics to monitor and alert on",
+          "items": {
+            "metric": "string (cpa, daily_spend, ctr, etc)",
+            "operator": "enum: gt, lt, eq",
+            "value": "number",
+            "severity": "enum: critical, warning, info"
+          }
+        },
+        "specialty_agents": {
+          "type": "array",
+          "description": "Agents to spawn on schedule",
+          "items": {
+            "name": "string",
+            "schedule": "string (cron format)",
+            "task": "string",
+            "enabled": "boolean",
+            "config": "object (agent-specific)"
+          }
+        },
+        "telegram": {
+          "type": "object",
+          "enabled": "boolean",
+          "webhook_url": "string (https)",
+          "chat_id": "string (numeric)"
+        },
+        "polling_interval_ms": {
+          "type": "number",
+          "default": 300000,
+          "minimum": 60000,
+          "description": "Minimum 1 minute between polls"
+        }
+      }
+    },
+
+    "logging": {
+      "format": "JSONL (newline-delimited JSON)",
+      "files": [
+        {
+          "name": "admin_activity.jsonl",
+          "description": "All agent events (structured log)",
+          "entry_format": {
+            "timestamp": "ISO8601",
+            "event_type": "string",
+            "status": "enum: success, error, warning, info, critical",
+            "details": "object",
+            "duration_ms": "number (optional)"
+          },
+          "retention": "30 days (configurable)"
+        },
+        {
+          "name": "leads.jsonl",
+          "description": "Form submissions parsed from email",
+          "entry_format": {
+            "timestamp": "ISO8601",
+            "email_from": "string",
+            "form_type": "string",
+            "data": "object"
+          }
+        }
+      ]
+    },
+
+    "api": {
+      "methods": [
+        {
+          "name": "start",
+          "description": "Start the agent event loop",
+          "returns": "Promise<void>",
+          "errors": ["Config not found", "Credentials invalid"]
+        },
+        {
+          "name": "stop",
+          "description": "Stop the agent and clean up resources",
+          "returns": "Promise<void>"
+        },
+        {
+          "name": "checkEmailAndProcess",
+          "description": "Check configured email accounts and parse forms",
+          "returns": "Promise<FormSubmission[]>",
+          "internal": true
+        },
+        {
+          "name": "evaluateThresholds",
+          "description": "Fetch metrics and check against thresholds",
+          "returns": "Promise<void>",
+          "internal": true
+        },
+        {
+          "name": "scheduleSpecialtyAgents",
+          "description": "Set up cron schedules for specialty agents",
+          "returns": "void",
+          "internal": true
+        }
+      ]
+    }
+  },
+
+  "error_handling": {
+    "strategy": "fail-safe",
+    "rules": [
+      {
+        "error": "Email fetch fails",
+        "action": "Log error, continue to next account",
+        "severity": "warning",
+        "retry": "next poll cycle"
+      },
+      {
+        "error": "Config file missing",
+        "action": "Fail fast with clear error message",
+        "severity": "critical",
+        "retry": "manual restart required"
+      },
+      {
+        "error": "Telegram webhook fails",
+        "action": "Log error, continue polling",
+        "severity": "warning",
+        "retry": "next threshold breach"
+      },
+      {
+        "error": "Ad platform API timeout",
+        "action": "Log error, skip threshold evaluation",
+        "severity": "warning",
+        "retry": "next poll cycle"
+      },
+      {
+        "error": "Unhandled exception in poll loop",
+        "action": "Log error, continue polling",
+        "severity": "error",
+        "retry": "automatic in 5 minutes"
+      }
+    ]
+  },
+
+  "integrations": [
+    {
+      "name": "Himalaya Email CLI",
+      "provider": "himalaya",
+      "purpose": "Email account access",
+      "commands": [
+        "himalaya --account <name> mailbox:list",
+        "himalaya --account <name> message:list",
+        "himalaya --account <name> message:read"
+      ],
+      "failure_mode": "graceful degradation"
+    },
+    {
+      "name": "Adspirer API",
+      "provider": "openclaw-adspirer",
+      "purpose": "Ad platform metrics and campaign management",
+      "tools": [
+        "get_campaign_performance",
+        "get_meta_campaign_performance",
+        "get_linkedin_campaign_performance",
+        "optimize_budget_allocation",
+        "pause_campaign",
+        "resume_campaign"
+      ],
+      "failure_mode": "retry with exponential backoff"
+    },
+    {
+      "name": "Telegram Bot API",
+      "provider": "https://api.telegram.org",
+      "purpose": "Alert notifications",
+      "endpoint": "POST /botTOKEN/sendMessage",
+      "failure_mode": "log and continue"
+    }
+  ],
+
+  "performance_characteristics": {
+    "memory": {
+      "idle": "~50 MB",
+      "during_poll": "~150 MB (peak)",
+      "limit": "500 MB (systemd configured)"
+    },
+    "cpu": {
+      "idle": "<1%",
+      "during_poll": "10-20%",
+      "quota": "50% (systemd configured)"
+    },
+    "poll_time": {
+      "email_fetch": "500-2000ms (per account)",
+      "threshold_evaluation": "1000-5000ms (varies by platform API)",
+      "agent_spawning": "100-500ms (depends on agents)",
+      "total": "2000-10000ms typical"
+    }
+  },
+
+  "security": {
+    "authentication": {
+      "himalaya": "Stored in ~/.config/himalaya/ (user home)",
+      "adspirer": "OAuth 2.1 with PKCE, server-side token storage",
+      "telegram": "Bot token in admin_schedules.json (should be in env var)"
+    },
+    "data_handling": {
+      "email_bodies": "Parsed in memory, not stored",
+      "form_submissions": "Stored in leads.jsonl (local disk)",
+      "metrics": "In-memory only, not persisted",
+      "sensitive_data": "Never logged to activity.jsonl"
+    },
+    "access_control": {
+      "file_permissions": "600 (owner read/write only)",
+      "process_user": "brad (non-root)",
+      "capabilities": "none"
+    }
+  },
+
+  "deployment": {
+    "runtime": "Node.js 18+ with TypeScript",
+    "entry_point": "AdminAgent.ts",
+    "environment_variables": {
+      "ADMIN_CONFIG": "Path to admin_schedules.json",
+      "ADMIN_LOG_DIR": "Path to logs directory",
+      "NODE_ENV": "production|development"
+    },
+    "startup": "ts-node AdminAgent.ts",
+    "systemd_service": "openclaw-admin-agent.service",
+    "working_directory": "/home/brad/.openclaw/workspace/operations/orchestration"
+  },
+
+  "monitoring": {
+    "health_checks": [
+      {
+        "check": "Poll cycle completes within 10 seconds",
+        "frequency": "every poll",
+        "alert_on": "timeout or crash"
+      },
+      {
+        "check": "Memory usage stays below 500 MB",
+        "frequency": "every 5 minutes",
+        "alert_on": "exceeded"
+      },
+      {
+        "check": "Email accounts accessible",
+        "frequency": "every hour",
+        "alert_on": "auth failure"
+      }
+    ],
+    "metrics_to_export": [
+      "poll_cycle_duration_ms",
+      "email_accounts_checked",
+      "forms_parsed",
+      "thresholds_breached",
+      "agents_spawned",
+      "alerts_sent"
+    ]
+  },
+
+  "future_enhancements": [
+    {
+      "feature": "Persistent state storage",
+      "description": "Store agent state in SQLite to survive restarts",
+      "complexity": "medium"
+    },
+    {
+      "feature": "Webhook receiver",
+      "description": "Accept incoming webhooks from ad platforms",
+      "complexity": "high"
+    },
+    {
+      "feature": "Multi-tenant support",
+      "description": "Support multiple client accounts",
+      "complexity": "high"
+    },
+    {
+      "feature": "Machine learning anomaly detection",
+      "description": "Detect unusual patterns in performance metrics",
+      "complexity": "high"
+    },
+    {
+      "feature": "Slack integration",
+      "description": "Send alerts to Slack channels",
+      "complexity": "low"
+    }
+  ],
+
+  "testing": {
+    "unit_tests": "test/AdminAgent.test.ts",
+    "integration_tests": "test/integration/email.test.ts, api.test.ts",
+    "mock_data": "test/fixtures/",
+    "coverage_target": "80%"
+  }
+}

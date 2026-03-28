@@ -1,0 +1,26 @@
+# Dependencies
+node_modules/
+*.venv/
+__pycache__/
+*.pyc
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Build
+dist/
+build/
+
+# Keep deliverables and memory
+!deliverables/
+!MEMORY.md

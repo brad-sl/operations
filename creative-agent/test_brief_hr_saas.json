@@ -1,0 +1,23 @@
+{
+  "campaign_id": "camp_hr_saas_2026_q1_test",
+  "campaign_name": "HR SaaS Onboarding Platform - Q1 2026",
+  "platform": "google_ads",
+  "business_name": "OnboardHQ",
+  "business_description": "Employee onboarding automation platform that reduces setup time by 80%, cuts onboarding costs by 50%, and ensures compliance",
+  "target_audience": "HR managers and recruiting teams at mid-market companies (100-5000 employees)",
+  "value_proposition": "Automate employee onboarding, reduce costs, ensure compliance",
+  "creative_requirements": {
+    "formats": ["headlines", "descriptions", "images"],
+    "styles": ["professional", "modern", "minimalist"],
+    "tone": "professional, approachable, solution-focused",
+    "themes": ["Speed", "Cost", "Quality", "Integration", "Social Proof"]
+  },
+  "budget": {
+    "total": 5000,
+    "currency": "USD"
+  },
+  "timeline": {
+    "start_date": "2026-04-01T00:00:00Z",
+    "end_date": "2026-06-30T23:59:59Z"
+  }
+}

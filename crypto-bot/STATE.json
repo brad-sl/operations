@@ -1,0 +1,30 @@
+{
+  "phase": 4,
+  "status": "READY_FOR_LAUNCH",
+  "decision": "GO",
+  "decision_date": "2026-03-27T18:35:00-07:00",
+  "capital_allocation": {
+    "total_usd": 1000,
+    "per_pair_usd": 500,
+    "pairs": ["BTC-USD", "XRP-USD"]
+  },
+  "risk_controls": {
+    "stop_loss_pct": 2.0,
+    "max_daily_loss_usd": 20,
+    "max_position_usd": 100,
+    "timeout_hours": 24
+  },
+  "backtest_evidence": {
+    "win_rate_pct": 58,
+    "sharpe_ratio": 1.04,
+    "total_pnl_usd": 486.13,
+    "max_drawdown_pct": -32,
+    "duration_days": 180
+  },
+  "live_test_status": {
+    "completed": false,
+    "reason": "crashed_at_40h_data_loss",
+    "backtest_substitute": true
+  },
+  "last_update": "2026-03-27T18:35:00-07:00"
+}

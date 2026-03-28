@@ -1,0 +1,28 @@
+{
+  "execution_start": "2026-03-12T12:13:00Z",
+  "session": "ImageBot-E2E-Test-20260312",
+  "total_images_planned": 15,
+  "completed": 0,
+  "images": [],
+  "failures": [
+    {
+      "error": "OPENAI_API_KEY not set",
+      "timestamp": "2026-03-12T12:13:45Z",
+      "recovery_step": 1,
+      "action": "Set OpenAI API key environment variable"
+    }
+  ],
+  "cost": {
+    "per_image": 0.04,
+    "total_allocated": 0.60,
+    "actual_spend": 0.00
+  },
+  "status": "pending_credentials",
+  "recovery_instructions": {
+    "step_1": "export OPENAI_API_KEY='your-openai-api-key-here'",
+    "step_2": "Verify API key has DALL-E 3 access at https://platform.openai.com/account/api-keys",
+    "step_3": "Run: /tmp/generate_dalle_images.sh",
+    "step_4": "Monitor: tail -f /home/brad/.openclaw/workspace/imagebot_checkpoint.json",
+    "resume_from": "checkpoint allows resuming from image 1 if needed"
+  }
+}

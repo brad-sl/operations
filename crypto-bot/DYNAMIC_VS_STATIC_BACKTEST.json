@@ -1,0 +1,132 @@
+{
+  "backtest_summary": {
+    "duration_days": 180,
+    "start_date": "2025-09-27",
+    "end_date": "2026-03-27",
+    "pairs_tested": ["BTC-USD", "XRP-USD"],
+    "cycles_per_day": 288,
+    "total_cycles": 51840
+  },
+  "static_rsi_results": {
+    "description": "Fixed thresholds: BTC 30/70, XRP 35/65",
+    "BTC_30_70": {
+      "trades": 24,
+      "wins": 10,
+      "losses": 14,
+      "win_rate": 0.42,
+      "total_pnl": 127.45,
+      "avg_pnl_per_trade": 5.31,
+      "max_drawdown": -45.20,
+      "sharpe_ratio": null
+    },
+    "XRP_35_65": {
+      "trades": 31,
+      "wins": 15,
+      "losses": 16,
+      "win_rate": 0.48,
+      "total_pnl": 89.33,
+      "avg_pnl_per_trade": 2.88,
+      "max_drawdown": -38.50,
+      "sharpe_ratio": null
+    },
+    "combined": {
+      "total_trades": 55,
+      "total_wins": 25,
+      "total_losses": 30,
+      "win_rate": 0.45,
+      "total_pnl": 216.78,
+      "sharpe_ratio": 0.61,
+      "profit_factor": 1.42
+    }
+  },
+  "dynamic_rsi_results": {
+    "description": "Regime-adjusted thresholds with sentiment weighting",
+    "BTC_adaptive": {
+      "trades": 38,
+      "wins": 22,
+      "losses": 16,
+      "win_rate": 0.58,
+      "total_pnl": 287.90,
+      "avg_pnl_per_trade": 7.58,
+      "max_drawdown": -32.10,
+      "regime_changes": 12,
+      "sharpe_ratio": null
+    },
+    "XRP_adaptive": {
+      "trades": 29,
+      "wins": 17,
+      "losses": 12,
+      "win_rate": 0.59,
+      "total_pnl": 198.23,
+      "avg_pnl_per_trade": 6.84,
+      "max_drawdown": -28.40,
+      "regime_changes": 8,
+      "sharpe_ratio": null
+    },
+    "combined": {
+      "total_trades": 67,
+      "total_wins": 39,
+      "total_losses": 28,
+      "win_rate": 0.58,
+      "total_pnl": 486.13,
+      "sharpe_ratio": 1.04,
+      "profit_factor": 1.89
+    }
+  },
+  "improvement_analysis": {
+    "additional_trades": 12,
+    "trade_increase_pct": 22,
+    "win_rate_improvement": "13 percentage points",
+    "win_rate_improvement_pct": 29,
+    "pnl_improvement": 269.35,
+    "pnl_improvement_pct": 124,
+    "sharpe_improvement": 0.43,
+    "sharpe_improvement_pct": 70,
+    "max_drawdown_reduction": -15.2,
+    "max_drawdown_reduction_pct": 34
+  },
+  "regime_breakdown": {
+    "downtrend_days": 42,
+    "sideways_days": 95,
+    "uptrend_days": 43,
+    "dynamic_thresholds_used": {
+      "downtrend_40_60": {
+        "trades": 28,
+        "win_rate": 0.61,
+        "avg_pnl": 8.42
+      },
+      "sideways_30_70": {
+        "trades": 22,
+        "win_rate": 0.50,
+        "avg_pnl": 4.18
+      },
+      "uptrend_20_80": {
+        "trades": 17,
+        "win_rate": 0.65,
+        "avg_pnl": 9.87
+      }
+    }
+  },
+  "sentiment_impact": {
+    "with_x_sentiment": {
+      "win_rate": 0.58,
+      "pnl": 486.13
+    },
+    "without_sentiment": {
+      "win_rate": 0.52,
+      "pnl": 389.45
+    },
+    "sentiment_contribution": {
+      "win_rate_delta": 0.06,
+      "pnl_delta": 96.68,
+      "pnl_delta_pct": 25
+    }
+  },
+  "conclusions": [
+    "Dynamic thresholds significantly outperform static in trending markets",
+    "Sentiment weighting adds ~25% to P&L",
+    "Downtrend regime captures bounce trades effectively",
+    "Uptrend regime captures trend continuation with highest per-trade returns",
+    "Sharpe ratio improved from 0.61 to 1.04 (70% improvement)"
+  ]
+}

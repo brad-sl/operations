@@ -1,0 +1,61 @@
+Type,ID,Theme,Copy,Char Count
+Headline,h_speed_001,speed,Onboard 80% Faster,18
+Headline,h_speed_002,speed,Speed Up Hiring Process,23
+Headline,h_speed_003,speed,Complete Setup in Days,22
+Headline,h_speed_004,speed,Instant New Hire Launch,23
+Headline,h_speed_005,speed,Cut Admin Time in Half,22
+Headline,h_speed_006,speed,Faster Employee Onboarding,26
+Headline,h_cost_007,cost,Cut Onboarding Costs 50%,24
+Headline,h_cost_008,cost,Save Money Per New Hire,23
+Headline,h_cost_009,cost,Reduce HR Admin Spend,21
+Headline,h_cost_010,cost,Lower Onboarding Expenses,25
+Headline,h_cost_011,cost,Cut HR Overhead Costs,21
+Headline,h_cost_012,cost,Save Thousands Per Hire,23
+Headline,h_quality_013,quality,Eliminate Onboarding Errors,27
+Headline,h_quality_014,quality,Ensure Automatic Compliance,27
+Headline,h_quality_015,quality,Perfect Employee Records,24
+Headline,h_quality_016,quality,Zero Missed Onboarding Steps,28
+Headline,h_quality_017,quality,Consistent Onboarding Process,29
+Headline,h_quality_018,quality,Error Free New Hire Setup,25
+Headline,h_integration_019,integration,Sync With Your Tools,20
+Headline,h_integration_020,integration,Works With Everything,21
+Headline,h_integration_021,integration,Integrates Seamlessly,21
+Headline,h_integration_022,integration,Connect Your Platforms,22
+Headline,h_integration_023,integration,Works With HRIS Systems,23
+Headline,h_integration_024,integration,Unified Platform Integration,28
+Headline,h_social_proof_025,socialproof,Trusted by 5000+ Companies,26
+Headline,h_social_proof_026,socialproof,Used by Industry Leaders,24
+Headline,h_social_proof_027,socialproof,Leading HR Teams Choose Us,26
+Headline,h_social_proof_028,socialproof,Proven by Enterprise Teams,26
+Headline,h_social_proof_029,socialproof,Join Global Leaders,19
+Headline,h_social_proof_030,socialproof,Preferred by HR Managers,24
+Description,d_speed_001,speed,Cut onboarding time from weeks to days. New hires productive immediately.,73
+Description,d_speed_002,speed,Automate repetitive tasks. Reduce setup time by 80% or more.,60
+Description,d_speed_003,speed,Employees start contributing faster. Get to productivity in days not weeks.,75
+Description,d_speed_004,speed,Eliminate manual onboarding steps. Complete new hire setup in hours.,68
+Description,d_speed_005,speed,Streamline workflows. Start new employees faster than competitors.,66
+Description,d_speed_006,speed,Save weeks of admin work per hire. Instant onboarding automation.,65
+Description,d_cost_007,cost,Eliminate manual data entry. Reduce onboarding spend per hire by 50%.,69
+Description,d_cost_008,cost,Automate time consuming tasks. Cut HR administration costs significantly.,73
+Description,d_cost_009,cost,One platform replaces multiple tools. Reduce tech spending on onboarding.,73
+Description,d_cost_010,cost,Less manual work means lower costs. Save thousands with automation.,67
+Description,d_cost_011,cost,Reduce HR resource requirements. Better ROI on each new hire.,61
+Description,d_cost_012,cost,Cut recruiting and onboarding expenses. Improve profitability.,62
+Description,d_quality_013,quality,Automated workflows ensure no missed steps. Reduce mistakes to near zero.,73
+Description,d_quality_014,quality,Standardized process across all hires. Eliminate inconsistencies and errors.,76
+Description,d_quality_015,quality,Compliance built in. Every onboarding follows legal requirements.,65
+Description,d_quality_016,quality,"No more forgotten tasks. Complete, accurate setup every time.",61
+Description,d_quality_017,quality,Consistent experience for every new employee. Reduce onboarding errors.,71
+Description,d_quality_018,quality,Audit trail included. Complete compliance documentation automatically.,70
+Description,d_integration_019,integration,"Integrates with Slack, HRIS, and 50+ platforms. No switching systems.",69
+Description,d_integration_020,integration,Works seamlessly with tools you already use. No manual data entry.,66
+Description,d_integration_021,integration,Sync with your favorite HR platforms. Real time data flow.,58
+Description,d_integration_022,integration,"Connects to Workday, ADP, BambooHR and more. Ecosystem fit.",59
+Description,d_integration_023,integration,Seamless integration with existing tools. Keep your current stack.,66
+Description,d_integration_024,integration,API integration available. Connect to custom systems easily.,60
+Description,d_social_proof_025,socialproof,Used by Fortune 500 companies and fast growing startups worldwide.,66
+Description,d_social_proof_026,socialproof,Trusted by leading companies across industries. Proven solution.,64
+Description,d_social_proof_027,socialproof,Join thousands of HR managers using our platform for success.,61
+Description,d_social_proof_028,socialproof,Industry leaders choose our platform for employee onboarding.,61
+Description,d_social_proof_029,socialproof,Proven with 99% customer satisfaction. Join leading companies.,62
+Description,d_social_proof_030,socialproof,Trusted by companies in every industry. Proven results.,55

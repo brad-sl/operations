@@ -1,0 +1,44 @@
+{
+  "themes": {
+    "Speed": {
+      "description": "Faster hiring, quick candidate screening",
+      "prompts": [
+        "Modern sleek HR dashboard with a lightning bolt icon, candidates appearing instantly on screen, digital speed lines, clean minimalist design, tech-forward aesthetic",
+        "Animated stopwatch counting down next to smiling recruiter reviewing candidates, bright blue and white color scheme, rapid motion blur effect, professional corporate setting",
+        "Fast-moving conveyor belt of diverse candidate profiles sliding through a digital review system, instant checkmarks appearing, energetic and efficient visual metaphor"
+      ]
+    },
+    "Cost": {
+      "description": "Reduce hiring spend, cost efficiency",
+      "prompts": [
+        "Stack of money bills with a downward arrow overlay, professional finance chart showing cost reduction trend, green and gold tones, clear financial improvement visualization",
+        "Piggy bank overflowing with coins positioned next to a small hiring team, representing budget savings, warm earthy palette, economy and value concept",
+        "Budget spreadsheet with reduced line items highlighted in green, calculator and coins, modern flat design, clear ROI demonstration for cost-conscious buyers"
+      ]
+    },
+    "Quality": {
+      "description": "Better candidates, higher-quality hires",
+      "prompts": [
+        "Gold trophy or premium badge with diverse high-performing employees standing proudly behind it, vibrant professional setting, excellence and achievement theme, premium feel",
+        "Handpicked gemstones or diamonds being selected with precision, metaphor for quality candidate selection, sophisticated color palette, meticulous attention to excellence",
+        "Five-star rating system with top-tier candidate profiles highlighted, checkmarks for key qualifications visible, premium presentation, quality assurance emphasis"
+      ]
+    },
+    "Integration": {
+      "description": "Seamless workflow, system integration",
+      "prompts": [
+        "Multiple interconnected gears or puzzle pieces fitting together perfectly, HR systems flowing smoothly into each other, clean tech illustration, digital integration concept",
+        "Connected nodes and lines forming a seamless network, representing integrated workflows, modern tech aesthetic, cloud-based connectivity visual, smooth flow of information",
+        "Dashboard showing multiple HR tools unified in one interface, data flowing between modules, connected bubbles and arrows, unified ecosystem representation"
+      ]
+    },
+    "Social Proof": {
+      "description": "Trusted by industry leaders, credibility",
+      "prompts": [
+        "Logos of well-known companies arranged in a circle around a central HR system, representing trusted partnerships, professional and corporate aesthetic, credibility badges",
+        "Five-star customer testimonials and logos surrounding a central platform, diverse companies of different sizes, trust and reputation emphasis, testimonial wall concept",
+        "Industry leader badges and certifications displayed prominently, professional team in background, authority and trust signals, corporate endorsement visualization"
+      ]
+    }
+  }
+}

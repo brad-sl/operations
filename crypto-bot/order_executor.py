@@ -265,6 +265,11 @@ class OrderExecutor:
                 )
 
             # Build execution result
+            # BUGFIX #001: transaction_cost is now the ACTUAL FEE (0.4% maker rate),
+            # not the gross notional. Gross = quantity * current_price; Fee = Gross * rate
+            gross_notional = quantity * current_price
+            transaction_cost = gross_notional * self.config.COINBASE_MAKER_FEE_RATE
+            
             result = ExecutionResult(
                 signal_id=signal_id,
                 signal_type=signal_type,
@@ -274,7 +279,7 @@ class OrderExecutor:
                 price_executed=current_price,
                 quantity=quantity,
                 timestamp=timestamp,
-                transaction_cost=quantity * current_price,
+                transaction_cost=transaction_cost,
             )
 
             # Track spend on success

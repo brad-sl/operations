@@ -24,6 +24,10 @@ class TradingConfig:
     order_type: str
     sandbox_mode: bool
     approval_required: bool
+    
+    # Coinbase fee rates (fixed per exchange policy)
+    COINBASE_MAKER_FEE_RATE: float = 0.004  # 0.4% for maker orders (limit orders)
+    COINBASE_TAKER_FEE_RATE: float = 0.006  # 0.6% for taker orders (market orders)
 
 class ConfigLoader:
     """Loads and validates trading_config.json"""

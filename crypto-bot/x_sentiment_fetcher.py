@@ -3,7 +3,8 @@
 X (Twitter) Sentiment Fetcher — Real X API v2 Integration
 Fetches BTC/XRP mentions from X API, calculates sentiment scores
 Uses bearer token from .env directly (no xurl CLI dependency)
-Cache: 6 hours per pair (minimize API calls, preserve freshness)
+Cache: 1 hour per pair by default (configurable via cache_hours param)
+CRITICAL SPEC: See PHASE4B_X_SENTIMENT_SPECIFICATION.md
 """
 
 import json
@@ -24,11 +25,16 @@ load_dotenv(env_path)
 
 
 class XSentimentFetcher:
-    """Fetch and cache X (Twitter) sentiment for crypto pairs"""
+    """Fetch and cache X (Twitter) sentiment for crypto pairs
     
-    def __init__(self, cache_dir: str = "."):
+    CRITICAL: Real X API v2 only. NOT synthesized or mocked.
+    See: PHASE4B_X_SENTIMENT_SPECIFICATION.md
+    """
+    
+    def __init__(self, cache_dir: str = ".", cache_hours: int = 1):
         self.cache_dir = Path(cache_dir)
         self.cache_file = self.cache_dir / "x_sentiment_cache.json"
+        self.cache_hours = max(1, int(cache_hours))  # Enforce minimum 1 hour
         self.cache = self._load_cache()
         
         # Get bearer token from .env
@@ -51,13 +57,13 @@ class XSentimentFetcher:
             json.dump(self.cache, f, indent=2)
     
     def _is_cache_fresh(self, pair: str) -> bool:
-        """Check if cached sentiment is <6 hours old"""
+        """Check if cached sentiment is < cache_hours old"""
         if pair not in self.cache:
             return False
         fetch_time = datetime.fromisoformat(self.cache[pair]['fetch_time'])
         age = datetime.utcnow() - fetch_time
-        is_fresh = age < timedelta(hours=6)
-        logger.debug(f"{pair} cache age: {age.total_seconds()/3600:.1f}h, fresh: {is_fresh}")
+        is_fresh = age < timedelta(hours=self.cache_hours)
+        logger.debug(f"{pair} cache age: {age.total_seconds()/3600:.1f}h (threshold: {self.cache_hours}h), fresh: {is_fresh}")
         return is_fresh
     
     def _fetch_from_x_api(self, pair: str) -> Tuple[Optional[float], Optional[Dict]]:

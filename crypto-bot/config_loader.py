@@ -25,9 +25,11 @@ class TradingConfig:
     sandbox_mode: bool
     approval_required: bool
     
-    # Coinbase fee rates (fixed per exchange policy)
-    COINBASE_MAKER_FEE_RATE: float = 0.004  # 0.4% for maker orders (limit orders)
-    COINBASE_TAKER_FEE_RATE: float = 0.006  # 0.6% for taker orders (market orders)
+    # Coinbase fee rates (Tier: Advanced 1 = 0.25% maker, 0.40% taker)
+    # Source: https://help.coinbase.com/en/exchange/trading-and-funding/exchange-fees
+    # Note: Actual rates are volume-tiered. Use API /fees endpoint for real-time rates.
+    COINBASE_MAKER_FEE_RATE: float = 0.0025  # 0.25% for maker orders (limit orders)
+    COINBASE_TAKER_FEE_RATE: float = 0.0040  # 0.40% for taker orders (market orders)
 
 class ConfigLoader:
     """Loads and validates trading_config.json"""

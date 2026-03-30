@@ -1,5 +1,5 @@
 """
-Order Executor — Module 6 of Crypto Bot Phase 2
+Order Executor - Module 6 of Crypto Bot Phase 2
 
 Takes trading signals from Module 5 (Signal Generator) and executes orders
 via Coinbase API (paper trading first).
@@ -15,7 +15,7 @@ Features:
 Usage:
     from order_executor import OrderExecutor, ExecutionResult
     from coinbase_wrapper import CoinbaseWrapper
-    
+
     wrapper = CoinbaseWrapper(api_key, private_key, passphrase, sandbox=True)
     signals = [{"id": "sig-1", "signal": "BUY", "confidence": 0.85, ...}, ...]
     executor = OrderExecutor(signals, wrapper, product_id="BTC-USD")
@@ -80,7 +80,7 @@ class SpendTracker:
 class ExecutionResult:
     """
     Result of executing a single trading signal.
-    
+
     Attributes:
         signal_id: Unique identifier for the signal
         signal_type: BUY, SELL, or HOLD
@@ -108,7 +108,7 @@ class ExecutionResult:
 class OrderExecutor:
     """
     Executes trading signals by creating orders on Coinbase.
-    
+
     Workflow:
     1. Initialize with signals and Coinbase wrapper
     2. Call execute_all_signals()
@@ -158,7 +158,7 @@ class OrderExecutor:
         # Initialize checkpointer
         session_id = os.getenv("SESSION_ID", f"order-exec-{int(time.time())}")
         self.checkpoint_interval = 10  # Save checkpoint every 10 orders
-        
+
         output_dir = Path(
             f"/home/brad/.openclaw/workspace/projects/orchestrator/agents/{session_id}"
         )
@@ -269,7 +269,7 @@ class OrderExecutor:
             # not the gross notional. Gross = quantity * current_price; Fee = Gross * rate
             gross_notional = quantity * current_price
             transaction_cost = gross_notional * self.config.COINBASE_MAKER_FEE_RATE
-            
+
             result = ExecutionResult(
                 signal_id=signal_id,
                 signal_type=signal_type,

@@ -13,6 +13,14 @@ from pathlib import Path
 from typing import Dict, Any, List
 from dataclasses import dataclass
 
+# Phase 4 Constants
+MIN_POSITION_HOLD_MINUTES = 5  # Minimum hold time before exit allowed
+RSI_CONFIRMATION_BARS = 2      # RSI must cross threshold for 2 consecutive cycles
+NOTIONAL_ALLOCATION = {
+    'BTC-USD': 500.0,  # $500 fractional BTC
+    'XRP-USD': 500.0,  # $500 fractional XRP
+}
+
 @dataclass
 class TradingConfig:
     """Validated trading configuration."""

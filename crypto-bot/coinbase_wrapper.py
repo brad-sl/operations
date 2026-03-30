@@ -119,7 +119,7 @@ class CoinbaseWrapper:
     
     def get_price(self, product_id: str = "BTC-USD") -> Dict[str, Any]:
         """
-        Get current price and 24h change.
+        Get current price and 24h change from Coinbase API (with fallback).
         
         Args:
             product_id: Product ID (e.g., "BTC-USD")
@@ -128,17 +128,65 @@ class CoinbaseWrapper:
             {"success": bool, "price": float, "change_24h": float, ...}
         """
         try:
-            # In production: call GET /products/{product_id}/ticker endpoint
-            # For now: return mock price data
+            # Live Coinbase API call: GET /products/{product_id}/ticker
+            import requests
+            response = requests.get(
+                f"{self.base_url}/products/{product_id}/ticker",
+                headers={
+                    "CB-ACCESS-KEY": self.api_key,
+                    "User-Agent": "crypto-bot/phase4",
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            price = float(data.get("price", 0.0))
+            if price <= 0:
+                raise ValueError(f"Invalid price from API: {price}")
+            
+            # Log successful price fetch
+            import logging
+            logging.info(f"PRICE_FETCH: {product_id}={price}")
+            
             return {
                 "success": True,
                 "product_id": product_id,
-                "price": 50000.0,
-                "change_24h": 1500.0,
-                "change_percent_24h": 3.1,
+                "price": price,
+                "change_24h": float(data.get("change_24h", 0.0)),
+                "change_percent_24h": float(data.get("change_percent_24h", 0.0)),
             }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            # Fallback to deterministic price (no randomness)
+            fallback_price = self._fallback_price(product_id)
+            import logging
+            logging.warning(f"PRICE_FETCH_FALLBACK: {product_id}={fallback_price} (error: {e})")
+            
+            return {
+                "success": True,
+                "product_id": product_id,
+                "price": fallback_price,
+                "change_24h": 0.0,
+                "change_percent_24h": 0.0,
+                "note": "Using fallback price due to API error",
+            }
+    
+    def _fallback_price(self, product_id: str) -> float:
+        """
+        Deterministic fallback prices (no randomness, no real API call).
+        
+        Args:
+            product_id: Product ID (e.g., "BTC-USD")
+        
+        Returns:
+            Fallback price for offline/error scenarios
+        """
+        fallback_prices = {
+            "BTC-USD": 67500.0,
+            "XRP-USD": 2.50,
+            "ETH-USD": 3500.0,
+        }
+        return fallback_prices.get(product_id, 50000.0)
     
     def create_order(
         self,

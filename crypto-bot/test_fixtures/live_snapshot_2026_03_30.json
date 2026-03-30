@@ -1,0 +1,14 @@
+{
+  "BTC-USD": {
+    "product_id": "BTC-USD",
+    "price": 67500.00,
+    "change_24h": 1250.00,
+    "change_percent_24h": 1.89
+  },
+  "XRP-USD": {
+    "product_id": "XRP-USD",
+    "price": 2.50,
+    "change_24h": 0.05,
+    "change_percent_24h": 2.04
+  }
+}

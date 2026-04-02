@@ -54,7 +54,7 @@ class Phase4bOrchestrator:
         self._init_database()
         
         self.winner_strategy = phase4_winner_strategy
-        self.sentiment_fetcher = XSentimentFetcher(cache_dir='.', cache_hours=1)
+        self.sentiment_fetcher = XSentimentFetcher(cache_dir='.')  # cache_hours loaded from config/sentiment_config.json (default: 4h)
         
         # FIX #1: Load Coinbase credentials from .env (CRITICAL: never commit .env)
         coinbase_api_key = os.getenv('COINBASE_API_KEY_ID', '')

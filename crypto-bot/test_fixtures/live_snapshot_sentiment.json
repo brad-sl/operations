@@ -1,0 +1,5 @@
+{
+  "BTC-USD": {"sentiment_score": 0.30, "source": "UTC_HOUR_FALLBACK"},
+  "XRP-USD": {"sentiment_score": 0.10, "source": "UTC_HOUR_FALLBACK"}
+}
+}

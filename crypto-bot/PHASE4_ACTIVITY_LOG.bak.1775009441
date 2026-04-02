@@ -1,0 +1,48 @@
+[
+  {
+    "cycle": 1,
+    "timestamp": "2026-04-01T01:54:58.291478",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67888.41,
+        "rsi": 32.719716702273914,
+        "sentiment": 0.30434782608695654,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3351,
+        "rsi": 28.865979381443424,
+        "sentiment": 0.8,
+        "position": false,
+        "signals": [
+          "BUY_SIGNAL"
+        ]
+      }
+    }
+  },
+  {
+    "cycle": 2,
+    "timestamp": "2026-04-01T01:59:59.505585",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67723.58,
+        "rsi": 39.70834964487465,
+        "sentiment": 0.30434782608695654,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.334,
+        "rsi": 36.70212765957411,
+        "sentiment": 0.8,
+        "position": true,
+        "signals": []
+      }
+    }
+  }
+]

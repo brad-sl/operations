@@ -2,6 +2,10 @@
 Coinbase Advanced Trade API Wrapper
 Handles authentication, order execution, and portfolio queries.
 Supports both sandbox (paper trading) and live modes.
+
+CRITICAL: Production code uses REAL Coinbase API only.
+Test code must use test_price_wrapper.py with PRICE_SOURCE environment variable.
+NO synthetic fallback prices allowed in production code.
 """
 
 from dataclasses import dataclass
@@ -35,6 +39,9 @@ class CoinbaseWrapper:
     - Live trading (sandbox=False, requires manual approval)
     - Order management (create, cancel, history)
     - Account queries (balance, prices)
+    
+    PRODUCTION RULE: get_price() MUST use real API or raise exception.
+    Test harnesses MUST use test_price_wrapper.py with PRICE_SOURCE environment variable.
     """
     
     def __init__(
@@ -58,12 +65,18 @@ class CoinbaseWrapper:
         self.passphrase = passphrase
         self.sandbox = sandbox
         
-        # Base URLs
-        self.base_url = (
-            "https://api-sandbox.coinbase.com"
-            if sandbox
-            else "https://api.coinbase.com"
-        )
+        # Base URLs: Sandbox uses REST API v3 (different from v1)
+        # v1 endpoints: /products (deprecated)
+        # v3 endpoints: /api/v3/brokerage/ (current standard)
+        if sandbox:
+            # Sandbox REST API v3 endpoint
+            self.base_url = "https://api-sandbox.coinbase.com"
+            self.api_version = "v3"
+        else:
+            # Production REST API v3 endpoint
+            self.base_url = "https://api.coinbase.com"
+            self.api_version = "v3"
+        
         self.product_id = "BTC-USD"
     
     def _generate_signature(self, method: str, path: str, body: str = "") -> tuple:
@@ -105,7 +118,7 @@ class CoinbaseWrapper:
             {"success": bool, "currency": str, "balance": float, ...}
         """
         try:
-            # In production: call GET /accounts endpoint
+            # In production: call GET /api/v3/brokerage/accounts endpoint
             # For now: return mock response
             return {
                 "success": True,
@@ -119,26 +132,72 @@ class CoinbaseWrapper:
     
     def get_price(self, product_id: str = "BTC-USD") -> Dict[str, Any]:
         """
-        Get current price and 24h change.
+        Get current price from Coinbase API (REAL PRICES ONLY).
+        
+        Production code uses real Coinbase Advanced Trade API v3.
+        Test code must use test_price_wrapper.py with PRICE_SOURCE environment variable.
         
         Args:
-            product_id: Product ID (e.g., "BTC-USD")
+            product_id: Product ID (e.g., "BTC-USD", "ETH-USD")
         
         Returns:
-            {"success": bool, "price": float, "change_24h": float, ...}
+            {
+                "success": bool,
+                "product_id": str,
+                "price": float,
+                "change_24h": float,
+                "change_percent_24h": float
+            }
+        
+        Raises:
+            ValueError: If API call fails (no fallback, fail-fast principle)
         """
         try:
-            # In production: call GET /products/{product_id}/ticker endpoint
-            # For now: return mock price data
+            import requests
+            
+            # Coinbase Advanced Trade API v3: GET /api/v3/brokerage/products/{product_id}
+            # Returns full product info including current price
+            endpoint = f"{self.base_url}/api/v3/brokerage/products/{product_id}"
+            
+            response = requests.get(
+                endpoint,
+                headers={
+                    "CB-ACCESS-KEY": self.api_key,
+                    "User-Agent": "crypto-bot/phase4b",
+                },
+                timeout=10
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            # Extract price from API response
+            # v3 returns: {"product_id": "...", "price": "...", ...}
+            price = float(data.get("price", 0.0))
+            if price <= 0:
+                raise ValueError(f"Invalid price from API: {price}")
+            
+            # Log successful price fetch
+            import logging
+            logging.info(f"PRICE_FETCH: {product_id}=${price:.2f}")
+            
             return {
                 "success": True,
                 "product_id": product_id,
-                "price": 50000.0,
-                "change_24h": 1500.0,
-                "change_percent_24h": 3.1,
+                "price": price,
+                "change_24h": float(data.get("price_percentage_change_24h", 0.0)),
+                "change_percent_24h": float(data.get("price_percentage_change_24h", 0.0)),
             }
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            # PRODUCTION RULE: NO FALLBACK
+            # Fail fast. Test code must provide PRICE_SOURCE=snapshot.
+            import logging
+            logging.error(f"❌ PRICE_FETCH FAILED: {product_id} - {str(e)}")
+            raise ValueError(
+                f"Cannot fetch real price for {product_id} from Coinbase API. "
+                f"Check API connectivity and credentials. "
+                f"For testing, set PRICE_SOURCE=snapshot environment variable "
+                f"and use test_price_wrapper.py."
+            ) from e
     
     def create_order(
         self,
@@ -165,7 +224,7 @@ class CoinbaseWrapper:
             if not self.sandbox:
                 raise SystemExit(
                     "\n" + "="*70 +
-                    "\n🚨 LIVE TRADING BLOCKED: Phase 3 NOT APPROVED\n" +
+                    "\n🚨 LIVE TRADING BLOCKED: Phase 4B NOT APPROVED\n" +
                     "Create wrapper with sandbox=True for paper trading.\n" +
                     "="*70
                 )
@@ -176,7 +235,7 @@ class CoinbaseWrapper:
             if order_type != "limit":
                 raise ValueError("Only limit orders supported")
             
-            # In production: call POST /orders endpoint
+            # In production: call POST /api/v3/brokerage/orders endpoint
             # For now: return mock order
             return OrderResponse(
                 success=True,
@@ -206,7 +265,7 @@ class CoinbaseWrapper:
             OrderResponse confirmation
         """
         try:
-            # In production: call DELETE /orders/{order_id} endpoint
+            # In production: call DELETE /api/v3/brokerage/orders/{order_id} endpoint
             # For now: return mock cancellation
             return OrderResponse(
                 success=True,
@@ -238,7 +297,7 @@ class CoinbaseWrapper:
             List of order dictionaries
         """
         try:
-            # In production: call GET /orders endpoint with filters
+            # In production: call GET /api/v3/brokerage/orders/historical/batch endpoint
             # For now: return empty list (no orders in mock)
             return []
         except Exception as e:

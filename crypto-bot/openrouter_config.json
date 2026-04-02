@@ -1,0 +1,10 @@
+{
+  "provider": "openrouter",
+  "model": "anthropic/claude-3.5-sonnet",
+  "api_key_env": "OPENROUTER_API_KEY",
+  "temperature": 0.7,
+  "max_tokens": 4000,
+  "timeout_seconds": 30,
+  "retry_attempts": 3,
+  "description": "Advanced Claude 3.5 Sonnet for code review and modification of crypto trading bot"
+}

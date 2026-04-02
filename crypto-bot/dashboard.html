@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phase 4b — Live Bot Monitor</title>
+<style>
+  body { font-family: monospace; background: #0e1117; color: #e0e0e0; margin: 0; padding: 20px; }
+  h1 { color: #00d4ff; margin-bottom: 4px; }
+  .ts { color: #666; font-size: 12px; margin-bottom: 16px; }
+  .controls { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; padding: 12px 16px; background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; }
+  .controls label { color: #888; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+  select { background: #2a2d3a; color: #e0e0e0; border: 1px solid #3a3d4a; border-radius: 4px; padding: 6px 10px; font-size: 13px; cursor: pointer; }
+  .refresh-btn { background: #00d4ff22; color: #00d4ff; border: 1px solid #00d4ff44; border-radius: 4px; padding: 6px 14px; cursor: pointer; font-size: 12px; }
+  .refresh-btn:hover { background: #00d4ff44; }
+  .env-badge { padding: 3px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+  .env-prod { background: #0cce6b22; color: #0cce6b; border: 1px solid #0cce6b44; }
+  .env-test { background: #ff7b2222; color: #ff9944; border: 1px solid #ff794444; }
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 20px; }
+  .card { background: #1a1d27; border: 1px solid #2a2d3a; border-radius: 8px; padding: 14px; }
+  .card .label { color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+  .card .value { font-size: 24px; font-weight: bold; margin-top: 4px; }
+  .pos { color: #0cce6b; } .neg { color: #ff4454; } .neutral { color: #e0e0e0; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+  .badge-running { background: #00d4ff22; color: #00d4ff; border: 1px solid #00d4ff44; }
+  .badge-done { background: #0cce6b22; color: #0cce6b; border: 1px solid #0cce6b44; }
+  table { width: 100%; border-collapse: collapse; background: #1a1d27; border-radius: 8px; overflow: hidden; }
+  th { background: #2a2d3a; padding: 8px 12px; text-align: left; font-size: 11px; color: #888; text-transform: uppercase; }
+  td { padding: 7px 12px; border-bottom: 1px solid #2a2d3a; font-size: 13px; }
+  tr:last-child td { border-bottom: none; }
+  .BUY { color: #0cce6b; font-weight: bold; }
+  .SELL { color: #ff4454; font-weight: bold; }
+  .HOLD { color: #888; }
+  .section { margin-bottom: 24px; }
+  h2 { color: #aaa; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid #2a2d3a; padding-bottom: 6px; margin-bottom: 12px; }
+  .source { font-size: 11px; color: #555; margin-top: 4px; }
+</style>
+</head>
+<body>
+<script>
+let currentEnv = localStorage.getItem('botEnv') || 'prod';
+let refreshTimer;
+
+function saveEnv(v) {
+  currentEnv = v;
+  localStorage.setItem('botEnv', v);
+}
+
+async function loadLog(env) {
+  try {
+    const r = await fetch('/log?env=' + env);
+    return r.ok ? await r.text() : null;
+  } catch(e) { return null; }
+}
+
+function parseLog(text) {
+  if (!text) return { cycles:[], trades:[], pnl:{BTC:0,XRP:0}, complete:false };
+  const cycles = [], trades = [];
+  let pnl = {BTC:0, XRP:0}, complete = false;
+  const cr = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?Pair: ([\w-]+) \| Price: ([\d.]+) \| RSI: ([\d.]+) \| Regime: (\w+) \| Thresholds: ([\w=/]+) \| Sig: (\w+) \(conf=([\d.]+)\) \| Mult: ([\d.]+)x \| Weighted: ([\d.]+) \| Sentiment: ([+-]?[\d.]+)/;
+  const or_ = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?OPEN BUY ([\w-]+) @ \$([\d.]+)/;
+  const er = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?EXIT \[(\w+)\] ([\w-]+) @ \$([\d.]+) \| PnL=\$([+-]?[\d.]+)/;
+  const pr = /Final Daily PnL: BTC=\$([+-]?[\d.]+) \| XRP=\$([+-]?[\d.]+)/;
+  for (const line of text.split('\n')) {
+    let m;
+    if ((m=cr.exec(line))) cycles.push({ts:m[1],pair:m[2],price:+m[3],rsi:+m[4],regime:m[5],signal:m[7],conf:+m[8],weighted:+m[10],sentiment:+m[11]});
+    else if ((m=or_.exec(line))) trades.push({ts:m[1],pair:m[2],type:'OPEN',price:+m[3]});
+    else if ((m=er.exec(line))) trades.push({ts:m[1],type:'EXIT',reason:m[2],pair:m[3],price:+m[4],pnl:+m[5]});
+    else if ((m=pr.exec(line))) { pnl.BTC=+m[1]; pnl.XRP=+m[2]; }
+    if (line.includes('SMOKE TEST COMPLETE')) complete=true;
+  }
+  return {cycles, trades, pnl, complete};
+}
+
+function pc(v) { return v>0?'pos':v<0?'neg':'neutral'; }
+function fmt(v,d=2) { return (v>=0?'+':'')+v.toFixed(d); }
+
+async function render() {
+  const env = currentEnv;
+  const isProd = env === 'prod';
+  const raw = await loadLog(env);
+  const {cycles, trades, pnl, complete} = parseLog(raw);
+  const exits = trades.filter(t=>t.type==='EXIT');
+  const wins = exits.filter(t=>t.pnl>0);
+  const total = pnl.BTC + pnl.XRP;
+  const cycleCount = new Set(cycles.map(c=>c.ts.slice(0,16)+c.pair)).size;
+  const envLabel = isProd
+    ? '<span class="env-badge env-prod">🟢 PRODUCTION</span>'
+    : '<span class="env-badge env-test">🟠 TEST</span>';
+  const status = complete ? '<span class="badge badge-done">✅ Complete</span>' : '<span class="badge badge-running">🔄 Running</span>';
+  const sourceFile = isProd ? 'phase4b_24h_run.txt' : 'PHASE4B_SMOKE_TEST.log';
+  const now = new Date().toLocaleTimeString();
+
+  document.getElementById('app').innerHTML = `
+    <h1>📊 Phase 4b — Live Bot Monitor</h1>
+    <div class="ts">Source: ${sourceFile} · Last updated: ${now}</div>
+
+    <div class="controls">
+      <label>Environment</label>
+      ${envLabel}
+      <select id="envSelect" onchange="switchEnv(this.value)">
+        <option value="prod" ${isProd?'selected':''}>🟢 Production (24h run)</option>
+        <option value="test" ${!isProd?'selected':''}>🟠 Test (smoke test log)</option>
+      </select>
+      <button class="refresh-btn" onclick="render()">⟳ Refresh now</button>
+      <span style="color:#555;font-size:11px">Auto-refreshes every 30s</span>
+    </div>
+
+    <div class="grid">
+      <div class="card"><div class="label">Status</div><div class="value" style="font-size:18px;margin-top:8px">${status}</div></div>
+      <div class="card"><div class="label">Total PnL</div><div class="value ${pc(total)}">${fmt(total)}</div></div>
+      <div class="card"><div class="label">Cycles</div><div class="value neutral">${cycleCount}</div></div>
+      <div class="card"><div class="label">Trades</div><div class="value neutral">${exits.length}</div></div>
+      <div class="card"><div class="label">BTC-USD PnL</div><div class="value ${pc(pnl.BTC)}">${fmt(pnl.BTC)}</div></div>
+      <div class="card"><div class="label">XRP-USD PnL</div><div class="value ${pc(pnl.XRP)}">${fmt(pnl.XRP)}</div></div>
+      <div class="card"><div class="label">Win Rate</div><div class="value neutral">${exits.length?Math.round(wins.length/exits.length*100)+'%':'N/A'}</div></div>
+      <div class="card"><div class="label">W / L</div><div class="value neutral">${wins.length}W / ${exits.length-wins.length}L</div></div>
+    </div>
+
+    <div class="section">
+      <h2>📋 Recent Cycles (last 20)</h2>
+      <table>
+        <tr><th>Time</th><th>Pair</th><th>Price</th><th>RSI</th><th>Regime</th><th>Signal</th><th>Weighted</th><th>Sentiment</th></tr>
+        ${cycles.slice(-20).reverse().map(c=>`
+          <tr><td>${c.ts.slice(11,16)}</td><td>${c.pair}</td><td>$${c.price.toFixed(2)}</td><td>${c.rsi.toFixed(1)}</td><td>${c.regime}</td><td class="${c.signal}">${c.signal}</td><td>${c.weighted.toFixed(1)}</td><td>${fmt(c.sentiment,2)}</td></tr>`).join('')||'<tr><td colspan="8" style="color:#555">No cycles yet</td></tr>'}
+      </table>
+    </div>
+
+    <div class="section">
+      <h2>💱 Trades</h2>
+      ${trades.length ? `<table>
+        <tr><th>Time</th><th>Type</th><th>Pair</th><th>Price</th><th>P&L</th></tr>
+        ${trades.slice().reverse().map(t=>`
+          <tr><td>${t.ts.slice(11,16)}</td><td class="${t.type==='OPEN'?'BUY':'SELL'}">${t.type}${t.reason?' ['+t.reason+']':''}</td><td>${t.pair}</td><td>$${t.price.toFixed(2)}</td><td class="${t.pnl!==undefined?pc(t.pnl):''}">${t.pnl!==undefined?fmt(t.pnl):'—'}</td></tr>`).join('')}
+      </table>` : '<p style="color:#555">No trades yet — waiting for RSI crossover (BTC&lt;30 or XRP&lt;35)</p>'}
+    </div>
+
+    ${!raw?'<p style="color:#ff4454">⚠️ Log file not found. Is the bot running?</p>':''}
+  `;
+}
+
+function switchEnv(v) {
+  saveEnv(v);
+  render();
+}
+
+function startAutoRefresh() {
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(render, 30000);
+}
+
+render();
+startAutoRefresh();
+</script>
+<div id="app">Loading...</div>
+</body>
+</html>

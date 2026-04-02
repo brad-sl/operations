@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""Generates dashboard.py with Phase 3 / Phase 4b toggle."""
+from pathlib import Path
+
+CODE = r'''#!/usr/bin/env python3
 """
 Streamlit Dashboard - Phase 3 / Phase 4b toggle
 """
@@ -8,6 +12,7 @@ import json, re
 from pathlib import Path
 from datetime import datetime
 from collections import defaultdict
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Crypto Bot", page_icon="📊", layout="wide", initial_sidebar_state="expanded")
 st.markdown('<style>.positive{color:#0cce6b;font-weight:bold}.negative{color:#ff4454;font-weight:bold}</style>', unsafe_allow_html=True)
@@ -90,14 +95,18 @@ def render_4b():
         st.dataframe(df, use_container_width=True, height=320)
     else:
         st.info("No cycles yet.")
-    st.subheader("📈 RSI Over Time (BTC=orange / XRP=blue | buy<30/35, sell>70)")
+    st.subheader("📈 RSI Over Time")
     if cycles:
-        btc_rsi = {c["ts"]: c["rsi"] for c in cycles if c["pair"]=="BTC-USD"}
-        xrp_rsi = {c["ts"]: c["rsi"] for c in cycles if c["pair"]=="XRP-USD"}
-        all_ts = sorted(set(btc_rsi) | set(xrp_rsi))
-        chart_df = pd.DataFrame({"BTC-USD RSI": [btc_rsi.get(t) for t in all_ts], "XRP-USD RSI": [xrp_rsi.get(t) for t in all_ts]}, index=all_ts)
-        st.line_chart(chart_df, height=280)
-        st.caption("Thresholds: BTC buy<30 / XRP buy<35 / Sell>70")
+        fig = go.Figure()
+        for pair, color, label in [("BTC-USD","#f7931a","BTC buy=30"),("XRP-USD","#346aa9","XRP buy=35")]:
+            pts = [(c["ts"],c["rsi"]) for c in cycles if c["pair"]==pair]
+            if pts:
+                fig.add_trace(go.Scatter(x=[p[0] for p in pts],y=[p[1] for p in pts],mode="lines",name=f"{pair} RSI",line=dict(color=color)))
+        fig.add_hline(y=30,line_dash="dash",line_color="green",annotation_text="BTC buy=30")
+        fig.add_hline(y=35,line_dash="dot",line_color="#346aa9",annotation_text="XRP buy=35")
+        fig.add_hline(y=70,line_dash="dash",line_color="red",annotation_text="sell=70")
+        fig.update_layout(height=320,xaxis_title="Time",yaxis_title="RSI",hovermode="x unified")
+        st.plotly_chart(fig, use_container_width=True)
     st.subheader("💱 Trades")
     if trades:
         st.dataframe(pd.DataFrame(trades), use_container_width=True, height=220)
@@ -136,3 +145,8 @@ else:
     render_p3()
 
 st.markdown(f'<meta http-equiv="refresh" content="{refresh}">', unsafe_allow_html=True)
+'''
+
+out = Path(__file__).parent / "dashboard.py"
+out.write_text(CODE)
+print(f"Written {out.stat().st_size} bytes to {out}")

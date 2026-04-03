@@ -78,7 +78,7 @@ class TestPriceWrapper:
             {"BTC-USD": {"sentiment_score": 0.3, ...}, "XRP-USD": {...}}
         """
         try:
-            sentiment_file = self.snapshot_dir / 'live_snapshot_sentiment.json'
+            sentiment_file = self.snapshot_dir / 'sentiment_snapshot.json'
             if not sentiment_file.exists():
                 logger.warning(f"No sentiment snapshot found, using empty dict")
                 return {}

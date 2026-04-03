@@ -1,14 +1,26 @@
 {
   "BTC-USD": {
     "product_id": "BTC-USD",
-    "price": 67500.00,
-    "change_24h": 1250.00,
+    "price": 67500.0,
+    "change_24h": 1250.0,
     "change_percent_24h": 1.89
   },
   "XRP-USD": {
     "product_id": "XRP-USD",
-    "price": 2.50,
+    "price": 2.5,
     "change_24h": 0.05,
     "change_percent_24h": 2.04
+  },
+  "DOGE-USD": {
+    "product_id": "DOGE-USD",
+    "price": 0.165,
+    "change_24h": 0.002,
+    "change_percent_24h": 1.2
+  },
+  "ETH-USD": {
+    "product_id": "ETH-USD",
+    "price": 3450.0,
+    "change_24h": 45.0,
+    "change_percent_24h": 1.3
   }
 }

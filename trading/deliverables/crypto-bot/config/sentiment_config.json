@@ -1,86 +1,19 @@
 {
-  "_comment": "Sentiment provider configuration. Edit freely — no code changes needed.",
-
-  "cache": {
-    "hours": 4,
-    "min_hours": 1,
-    "stale_warning_hours": 12
-  },
-
-  "providers": {
-    "x": {
-      "enabled": true,
-      "priority": 1,
-      "max_tweets": 100,
-      "timeout_seconds": 10,
-      "credits_warn_threshold": 50,
-      "pair_queries": {
-        "BTC-USD": "(Bitcoin OR BTC) lang:en -is:retweet",
-        "XRP-USD": "(XRP OR Ripple) lang:en -is:retweet",
-        "ETH-USD": "(Ethereum OR ETH) lang:en -is:retweet",
-        "SOL-USD": "(Solana OR SOL) lang:en -is:retweet",
-        "DOGE-USD": "(Dogecoin OR DOGE) lang:en -is:retweet",
-        "_default": "({symbol}) lang:en -is:retweet"
-      }
-    },
-
-    "lunarcrush": {
-      "enabled": true,
-      "priority": 2,
-      "timeout_seconds": 10,
-      "calibrate_against_x": true,
-      "pair_symbols": {
-        "BTC-USD": "BTC",
-        "XRP-USD": "XRP",
-        "ETH-USD": "ETH",
-        "SOL-USD": "SOL",
-        "DOGE-USD": "DOGE",
-        "_default_strip": "-USD"
-      }
-    },
-
-    "cryptopanic": {
-      "enabled": true,
-      "priority": 3,
-      "timeout_seconds": 10,
-      "use_free_tier": true,
-      "calibrate_against_x": true,
-      "pair_currencies": {
-        "BTC-USD": "BTC",
-        "XRP-USD": "XRP",
-        "ETH-USD": "ETH",
-        "SOL-USD": "SOL",
-        "DOGE-USD": "DOGE",
-        "_default_strip": "-USD"
-      }
-    },
-
-    "stale_cache": {
-      "enabled": true,
-      "priority": 99,
-      "max_age_hours": 24,
-      "comment": "Last resort — always falls back to most recent real data"
+    "sources": {
+        "x_api": {
+            "enabled": true,
+            "weight": 0.4,
+            "cache_duration": 3600
+        },
+        "reddit": {
+            "enabled": true,
+            "weight": 0.3,
+            "subreddits": ["CryptoCurrency", "Bitcoin", "CryptoMarkets"]
+        },
+        "news_api": {
+            "enabled": true,
+            "weight": 0.3,
+            "sources": ["CoinDesk", "CryptoSlate", "The Block"]
+        }
     }
-  },
-
-  "sentiment_scoring": {
-    "positive_words": ["bullish", "pump", "moon", "hodl", "buy", "long", "bull", "gain", "breakout", "rally", "ath", "accumulate"],
-    "negative_words": ["bearish", "dump", "crash", "sell", "short", "bear", "loss", "risk", "rug", "scam", "correction", "collapse"],
-    "neutral_score": 0.0,
-    "score_range": [-1.0, 1.0]
-  },
-
-  "calibration": {
-    "enabled": true,
-    "log_file": "sentiment_calibration.jsonl",
-    "min_samples_for_correlation": 20,
-    "correlation_warn_threshold": 0.5,
-    "comment": "Logs x_score vs backup_score side-by-side when X is healthy"
-  },
-
-  "alerting": {
-    "credits_depleted_log": true,
-    "stale_cache_age_warn_minutes": 120,
-    "all_providers_failed_log": true
-  }
 }

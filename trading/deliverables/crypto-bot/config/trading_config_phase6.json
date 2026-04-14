@@ -10,15 +10,11 @@
         "stop_loss_pct": 2.0,
         "take_profit_pct": 5.0
     },
-    "sentiment": {
-        "sources": ["x_api", "reddit", "news_api"],
-        "weight": 0.4
-    },
-    "phase_5_specific": {
-        "entry_conditions": {
-            "rsi_periods": [14, 21],
-            "sentiment_threshold": 0.3,
-            "volatility_filter": true
+    "phase_6_specific": {
+        "expansion_rules": {
+            "max_pairs": 12,
+            "correlation_threshold": 0.3,
+            "reserve_min_pct": 0.2
         }
     }
 }

@@ -1,0 +1,232 @@
+[
+  {
+    "cycle": 1,
+    "timestamp": "2026-04-01T02:10:41.852282",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67770.0,
+        "rsi": 46.95825644606237,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3354,
+        "rsi": 47.90697674418572,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 2,
+    "timestamp": "2026-04-01T02:15:42.849531",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67730.33,
+        "rsi": 49.98301269800864,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.335,
+        "rsi": 49.75845410628022,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 3,
+    "timestamp": "2026-04-01T02:20:43.524652",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67848.5,
+        "rsi": 50.28142989885634,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3361,
+        "rsi": 45.28301886792445,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 4,
+    "timestamp": "2026-04-01T02:25:44.381224",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67690.65,
+        "rsi": 58.47585484112457,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3334,
+        "rsi": 57.47126436781607,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 5,
+    "timestamp": "2026-04-01T02:30:45.104987",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67622.0,
+        "rsi": 53.42513531319019,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3325,
+        "rsi": 55.421686746988115,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 6,
+    "timestamp": "2026-04-01T02:35:50.033768",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67572.42,
+        "rsi": 55.4431925256465,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.332,
+        "rsi": 57.499999999999964,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 7,
+    "timestamp": "2026-04-01T02:40:50.722225",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67634.0,
+        "rsi": 55.9046688701842,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3327,
+        "rsi": 62.83783783783819,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 8,
+    "timestamp": "2026-04-01T02:45:51.590005",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67608.95,
+        "rsi": 61.71067392012323,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3328,
+        "rsi": 64.51612903225825,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 9,
+    "timestamp": "2026-04-01T02:50:52.534691",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67604.56,
+        "rsi": 57.979062248344526,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3336,
+        "rsi": 64.28571428571449,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  },
+  {
+    "cycle": 10,
+    "timestamp": "2026-04-01T02:55:53.711472",
+    "pairs": {
+      "BTC-USD": {
+        "pair": "BTC-USD",
+        "price": 67575.17,
+        "rsi": 55.11299295948009,
+        "sentiment": 0.04,
+        "position": false,
+        "signals": []
+      },
+      "XRP-USD": {
+        "pair": "XRP-USD",
+        "price": 1.3336,
+        "rsi": 61.68831168831212,
+        "sentiment": 0.03,
+        "position": false,
+        "signals": []
+      }
+    },
+    "data_sources": {}
+  }
+]

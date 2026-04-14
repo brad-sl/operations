@@ -1,0 +1,37 @@
+{
+  "_comment": "Phase 5 StochRSI + 2×ATR config. Tune params here, no code changes.",
+  "pairs": [
+    "BTC-USD",
+    "XRP-USD",
+    "DOGE-USD",
+    "ETH-USD"
+  ],
+  "cycle_interval_seconds": 300,
+  "stochrsi": {
+    "rsi_period": 14,
+    "k_smooth": 3,
+    "d_smooth": 3,
+    "oversold_threshold": 0.2,
+    "sentiment_weight": 0.6
+  },
+  "atr": {
+    "period": 14,
+    "multiple": 2.0,
+    "min_sl_pct": -0.02,
+    "max_sl_pct": -0.05
+  },
+  "exit": {
+    "take_profit_pct": 0.05,
+    "min_hold_cycles": 3
+  },
+  "risk": {
+    "daily_loss_cap_usd": 50,
+    "capital_per_pair_usd": 250,
+    "total_capital_usd": 1000
+  },
+  "notes": {
+    "week_2_tuning": "Test oversold_threshold 0.25/0.3, atr_multiple 1.5/2.5, sentiment_weight 0.5/0.7",
+    "comparison": "Compare against Phase 4d (config/trading_config.json) in parallel run",
+    "success_gate": "Sharpe >= 1.8 && win_rate >= 70%"
+  }
+}

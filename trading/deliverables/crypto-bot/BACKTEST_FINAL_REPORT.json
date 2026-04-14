@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-03-29T20:13:57.219557+00:00",
+  "backtest_period": "3 days (2026-03-26T06:30:45.532446 to 2026-03-29T06:30:45.532446)",
+  "fee_rate_maker": 0.0025,
+  "fee_rate_taker": 0.004,
+  "trades": {
+    "total": 14,
+    "btc": 5,
+    "xrp": 9
+  },
+  "performance": {
+    "wins": 9,
+    "losses": 5,
+    "win_rate_pct": 64.3
+  },
+  "pnl": {
+    "reported": 99.27,
+    "fees_deducted": 831.92,
+    "net": -732.65
+  },
+  "go_decision": false,
+  "go_reason": "Threshold not met"
+}

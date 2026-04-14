@@ -1,0 +1,191 @@
+# Phase 5 — StochRSI Upgrade (Business Requirements Document)
+# Version: 1.0 (2026-04-06)
+# Status: APPROVED (backtest +12.1% Sharpe)
+# Modular format — easy to fork for Phase 5a/5b variants
+
+---
+
+metadata:
+  version: "1.0"
+  phase: 5
+  created: "2026-04-06T19:24:00-07:00"
+  status: "APPROVED"
+  author: "Brad Slusher"
+  approval_gate: "Backtest validation (Sharpe +12.1%)"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PROBLEM STATEMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+problem:
+  title: "Phase 4d DynamicRSI has higher whipsaw risk in ranging markets"
+  evidence:
+    - "Phase 4d Sharpe: 1.82 (aggregate)"
+    - "Max drawdown: -8.2% (high in low-volatility)"
+    - "Win rate: 68% (decent, but improvable)"
+  constraint: "Fixed 2% SL doesn't adapt to market volatility"
+  opportunity: "StochRSI crossover detects reversals earlier; 2×ATR SL adapts to vol"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VISION & SUCCESS CRITERIA
+# ─────────────────────────────────────────────────────────────────────────────
+
+vision: |
+  Deploy StochRSI-based trading harness with adaptive stops, achieving:
+  - Sharpe ratio ≥1.8 (vs Phase 4d: 1.82)
+  - Win rate ≥70% (vs Phase 4d: 68%)
+  - Max drawdown ≤6.5% (vs Phase 4d: -8.2%)
+  - Decision gate: Sharpe ≥0.9 before live $1K
+
+success_criteria:
+  - "Backtest Sharpe +8% improvement over Phase 4d ✅ DONE (+12.1%)"
+  - "Live paper 2-week run: Sharpe ≥1.8"
+  - "Win rate ≥70% consistent across all 4 pairs"
+  - "No API errors, no data misses"
+  - "Dashboard displays live P&L in real-time"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# REQUIREMENTS (by category)
+# ─────────────────────────────────────────────────────────────────────────────
+
+functional_requirements:
+  signal_generation:
+    - "Compute StochRSI (14,3,3) from OHLCV data"
+    - "Detect %K > %D crossover while StochRSI < 0.2 (oversold buy)"
+    - "Optional: Sentiment filter (60/40 weighted) for confirmation"
+    - "Log all signals with confidence score"
+  
+  entry_execution:
+    - "BUY: StochRSI crossover + oversold (<0.2) + positive sentiment (optional)"
+    - "Limit 1 position per pair"
+    - "Log entry price, time, signal confidence"
+  
+  exit_execution:
+    - "TP: +5% fixed (same as Phase 4d)"
+    - "SL: 2×ATR (adaptive per market volatility)"
+    - "Min hold: 3 cycles (15 minutes)"
+    - "Log exit price, P&L, reason (TP/SL)"
+  
+  data_sources:
+    - "Coinbase Exchange API (public, no auth)"
+    - "X API for sentiment (cached 4h)"
+    - "All prices in real-time (1h candles)"
+
+non_functional_requirements:
+  performance:
+    - "Signal computation: <100ms per cycle"
+    - "Database writes: <50ms per trade"
+    - "Memory: <100MB resident"
+  
+  reliability:
+    - "Uptime: 99.5% (6+ months target)"
+    - "Fail-loud on API errors (no silent data miss per NO_FAKE_DATA_POLICY)"
+    - "Graceful recovery on network brief outage"
+  
+  monitoring:
+    - "Alerts on trade close ±5%"
+    - "Alerts on daily loss cap breach ($50/pair)"
+    - "Dashboard update ≤5s after trade close"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DEPENDENCIES & CONSTRAINTS
+# ─────────────────────────────────────────────────────────────────────────────
+
+dependencies:
+  code:
+    - "indicators/stochrsi_strategy.py (new module)"
+    - "phase5_multi_pair.py (new harness)"
+    - "Existing: x_sentiment_fetcher.py, coinbase_wrapper.py"
+  
+  infrastructure:
+    - "Coinbase Exchange API (already tested)"
+    - "SQLite phase4_trades.db (reuse schema)"
+    - "HTTP dashboard (already running)"
+  
+  knowledge:
+    - "Backtest results (Sharpe +12.1%) ✅"
+    - "Phase 4d architecture patterns ✅"
+
+constraints:
+  - "Do NOT modify Phase 4d while running (live until decision gate)"
+  - "Paper-only until 2-week validation complete"
+  - "Capital: $1K ($250/pair) max"
+  - "Daily loss cap: $50/pair (enforced in code)"
+  - "NO_FAKE_DATA_POLICY: Fail loudly if sentiment missing"
+
+infrastructure_notes:
+  current_setup: "HP 8000 workstation, Python venv, systemd services"
+  planned_upgrade: "Dedicated Linux server (post Phase 4d validation) — separate config"
+  ui_roadmap: "UI design phase (post Phase 5 validation) — separate spec"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TIMELINE & GATES
+# ─────────────────────────────────────────────────────────────────────────────
+
+timeline:
+  week_1:
+    start: "2026-04-07"
+    milestone: "Implement + unit test StochRSI module"
+    deliverable: "phase5_multi_pair.py harness ready"
+  
+  week_2_3:
+    start: "2026-04-14"
+    milestone: "Run parallel paper (Phase 4d + Phase 5 simultaneous)"
+    deliverable: "2-week live results + Sharpe comparison"
+  
+  decision_gate:
+    condition: "If Phase 5 Sharpe ≥1.8 AND win% ≥70%"
+    outcome_pass: "Phase 5 becomes primary; Phase 4d archived"
+    outcome_fail: "Keep Phase 4d; document Phase 5 learnings"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# RISK MITIGATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+risks:
+  - risk: "StochRSI oversold threshold (0.2) too strict → missed entries"
+    mitigation: "A/B test 0.2 vs 0.3 threshold in week 2"
+    owner: "Brad"
+  
+  - risk: "2×ATR SL too wide in low-vol → large losses"
+    mitigation: "Min SL: 2%, Max SL: 5% (bounds on ATR multiple)"
+    owner: "Code validation"
+  
+  - risk: "Sentiment missing → trade without filter"
+    mitigation: "Enable backup sentiment provider(s) (X API → CoinGecko Fear/Greed → etc.); if all fail, halt trade per NO_FAKE_DATA_POLICY"
+    backup_providers: ["X_API", "CoinGecko_Fear_Greed", "Glassnode_Sentiment"]
+    owner: "x_sentiment_fetcher.py (fallback chain)"
+  
+  - risk: "Database corruption during parallel Phase 4d/5 run"
+    mitigation: "Separate tables (trades_phase4d vs trades_phase5) or timestamp key"
+    owner: "Database schema"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MODIFICATIONS & VERSIONING
+# ─────────────────────────────────────────────────────────────────────────────
+
+modification_points:
+  stochrsi_params: "14,3,3 — tunable in config/trading_config_phase5.json"
+  oversold_threshold: "0.2 — easy to test 0.3, 0.25 in week 2"
+  atr_multiple: "2.0 — bounds 1.5-3.0 for market testing"
+  tp_pct: "0.05 — keep 5% to match Phase 4d for comparison"
+  sentiment_weight: "0.6/0.4 — optional filter, tune in config"
+
+variant_planning:
+  "Phase 5a": "Current spec (StochRSI + 2×ATR)"
+  "Phase 5b": "If 5a passes → add sentiment hard-gate (skip trade if missing)"
+  "Phase 5c": "Post-server-migration → longer timeframes (4h instead of 1h)"
+  "UI v1": "Phase 5 validation complete → React dashboard with chart"
+
+# ─────────────────────────────────────────────────────────────────────────────
+# APPROVAL & SIGN-OFF
+# ─────────────────────────────────────────────────────────────────────────────
+
+approvals:
+  - stakeholder: "Brad Slusher"
+    backtest_sharpe_improvement: "+12.1% (exceeds 8% threshold)"
+    approval: "✅ APPROVED"
+    date: "2026-04-06T19:24:00-07:00"
+    condition: "Keep Phase 4d running; deploy Phase 5 in parallel"
+
+next_review: "2026-04-13 (post week 1 implementation)"

@@ -16,13 +16,17 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.serve_file(BASE / 'dashboard.html', 'text/html')
         elif path == '/log':
             env = params.get('env', ['prod'])[0]
-            if env == 'test':
-                log = BASE / 'PHASE4B_SMOKE_TEST.log'
+            if env == '4c':
+                log_path = BASE / 'logs' / 'phase4c_run.log'
+                jsonl_path = BASE / 'logs' / 'phase4c_run.jsonl'
+                path_file = jsonl_path if (jsonl_path.exists() and jsonl_path.stat().st_mtime > (log_path.stat().st_mtime if log_path.exists() else 0)) else log_path
+            elif env == 'test':
+                path_file = BASE / 'PHASE4B_SMOKE_TEST.log'
             else:
-                log = BASE / 'phase4b_24h_run.txt'
-                if not log.exists():
-                    log = BASE / 'PHASE4B_SMOKE_TEST.log'
-            self.serve_file(log, 'text/plain')
+                path_file = BASE / 'phase4b_24h_run.txt'
+                if not path_file.exists():
+                    path_file = BASE / 'PHASE4B_SMOKE_TEST.log'
+            self.serve_file(path_file, 'text/plain')
         elif path == '/loglist':
             # Returns available log files as JSON
             files = []

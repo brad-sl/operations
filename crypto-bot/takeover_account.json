@@ -1,0 +1,11 @@
+{
+  "cash_reserve": 450.0,
+  "positions": [
+    {"pair": "BTC-USD", "entry_price": 71492, "unreal_pnl_pct": 0.001},
+    {"pair": "ETH-USD", "entry_price": 3450, "unreal_pnl_pct": 0.0025}
+  ],
+  "price_history": {
+    "BTC-USD": [71492, 71520, 71480, 71510],
+    "ETH-USD": [3450, 3458, 3445, 3460]
+  }
+}

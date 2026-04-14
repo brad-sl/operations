@@ -6,7 +6,10 @@
   "capital_allocation": {
     "total_usd": 1000,
     "per_pair_usd": 500,
-    "pairs": ["BTC-USD", "XRP-USD"]
+    "pairs": [
+      "BTC-USD",
+      "XRP-USD"
+    ]
   },
   "risk_controls": {
     "stop_loss_pct": 2.0,
@@ -26,5 +29,6 @@
     "reason": "crashed_at_40h_data_loss",
     "backtest_substitute": true
   },
-  "last_update": "2026-03-27T18:35:00-07:00"
+  "last_update": "2026-03-27T18:35:00-07:00",
+  "live_ready": true
 }

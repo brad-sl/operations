@@ -158,6 +158,7 @@ def log_trade(pair: str, entry_px: float, exit_px: float,
 
 class Phase4cOrchestrator:
     def __init__(self, cfg: dict):
+        self.early_entry = cfg.get('early_entry', False)
         self.cfg = cfg
         self.pairs = cfg["pairs"]
         self.cycle_interval = cfg["cycle_interval_seconds"]
@@ -287,6 +288,13 @@ class Phase4cOrchestrator:
             logger.warning(f"[{pair}] Daily loss cap hit (${self.daily_pnl[pair]:.2f}), skipping entry")
             return
 
+        # Early entry override
+        if self.early_entry and rsi < 40 and ctx.confidence > 0.3 and ctx.signal != "SELL":
+            logger.info(f"[{pair}] 🔥 EARLY ENTRY BUY OVERRIDE: RSI={rsi:.1f}<40 conf={ctx.confidence:.2f}>0.3")
+            ctx.signal = "BUY"
+            ctx.position_size_multiplier = min(2.33, ctx.position_size_multiplier * 2.33)  # Pyramid $150->~$350 equiv
+            ctx.weighted_signal = 1.0
+
         # 8. Entry
         if ctx.signal == "BUY":
             self.open_positions[pair] = {
@@ -333,16 +341,30 @@ class Phase4cOrchestrator:
 def main():
     parser = argparse.ArgumentParser(description="Phase 4c Multi-Pair Trading Harness")
     parser.add_argument("--cycles", type=int, default=None, help="Override total cycles (default from config)")
+    parser.add_argument("--paper-early", action="store_true", help="Enable early entry paper test: BUY if RSI<40 & conf>0.3, pyramid sizing")
     parser.add_argument("--seed-entries", action="store_true", help="Seed one open position per pair at start (smoke test only)")
     args = parser.parse_args()
 
     init_db()
     cfg = load_config()
 
+    cfg['early_entry'] = args.paper_early
+    if args.paper_early:
+        LOG_FILE = LOG_DIR / 'early_entry_paper.log'
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.FileHandler(LOG_FILE),
+                logging.StreamHandler(sys.stdout),
+            ]
+        )
+        logger = logging.getLogger(__name__)
+        logger.info("EARLY ENTRY PAPER TEST MODE ACTIVATED")
+
     if args.cycles:
         cfg["total_cycles"] = args.cycles
-        cfg["cycle_interval_seconds"] = 0  # No sleep in short test runs
-        logger.info(f"Cycles overridden to {args.cycles} (interval=0s)")
+        logger.info(f"Cycles overridden to {args.cycles} (interval={cfg['cycle_interval_seconds']}s)")
 
     orchestrator = Phase4cOrchestrator(cfg)
 

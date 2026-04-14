@@ -183,6 +183,30 @@ class TestPriceWrapper:
         }
 
 
+class PublicExchangePriceWrapper:
+    """
+    Fetches real prices from Coinbase Exchange public REST API.
+    No authentication required — same endpoint Phase 4b used successfully.
+    URL: https://api.exchange.coinbase.com/products/{product_id}/ticker
+    """
+
+    EXCHANGE_URL = "https://api.exchange.coinbase.com"
+
+    def get_price(self, product_id: str) -> dict:
+        import requests
+        url = f"{self.EXCHANGE_URL}/products/{product_id}/ticker"
+        try:
+            resp = requests.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json()
+            price = float(data.get("price", 0.0))
+            logger.info(f"PRICE_FETCH: {product_id}=${price:.4f} [exchange public]")
+            return {"success": True, "product_id": product_id, "price": price}
+        except Exception as e:
+            logger.error(f"PublicExchangePriceWrapper error for {product_id}: {e}")
+            raise ValueError(f"Cannot fetch price for {product_id}: {e}")
+
+
 def get_price_wrapper() -> 'TestPriceWrapper':
     """
     Factory function: Returns appropriate price wrapper based on PRICE_SOURCE.
@@ -201,12 +225,7 @@ def get_price_wrapper() -> 'TestPriceWrapper':
         logger.info("Using TestPriceWrapper (snapshot mode)")
         return TestPriceWrapper()
     elif price_source == 'coinbase':
-        logger.info("Using CoinbaseWrapper (real API mode)")
-        from coinbase_wrapper import CoinbaseWrapper
-        # Get credentials from env
-        api_key = os.getenv('COINBASE_API_KEY', '')
-        private_key = os.getenv('COINBASE_PRIVATE_KEY', '')
-        passphrase = os.getenv('COINBASE_PASSPHRASE', '')
-        return CoinbaseWrapper(api_key, private_key, passphrase, sandbox=True)
+        logger.info("Using PublicExchangePriceWrapper (real prices, no auth)")
+        return PublicExchangePriceWrapper()
     else:
         raise ValueError(f"Invalid PRICE_SOURCE: {price_source}. Use 'coinbase' or 'snapshot'.")

@@ -55,7 +55,7 @@ async function loadLog(env) {
 function parseLog(text) {
   if (!text) return { cycles:[], trades:[], pnl:{BTC:0,XRP:0}, complete:false };
   const cycles = [], trades = [];
-  let pnl = {BTC:0, XRP:0}, complete = false;
+  let pnl = {BTC:0, XRP:0, DOGE:0, ETH:0}, complete = false;
   const cr = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?Pair: ([\w-]+) \| Price: ([\d.]+) \| RSI: ([\d.]+) \| Regime: (\w+) \| Thresholds: ([\w=/]+) \| Sig: (\w+) \(conf=([\d.]+)\) \| Mult: ([\d.]+)x \| Weighted: ([\d.]+) \| Sentiment: ([+-]?[\d.]+)/;
   const or_ = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?OPEN BUY ([\w-]+) @ \$([\d.]+)/;
   const er = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?EXIT \[(\w+)\] ([\w-]+) @ \$([\d.]+) \| PnL=\$([+-]?[\d.]+)/;
@@ -76,6 +76,7 @@ function fmt(v,d=2) { return (v>=0?'+':'')+v.toFixed(d); }
 
 async function render() {
   const env = currentEnv;
+  const is4c = env === '4c';
   const isProd = env === 'prod';
   const raw = await loadLog(env);
   const {cycles, trades, pnl, complete} = parseLog(raw);
@@ -83,11 +84,13 @@ async function render() {
   const wins = exits.filter(t=>t.pnl>0);
   const total = pnl.BTC + pnl.XRP;
   const cycleCount = new Set(cycles.map(c=>c.ts.slice(0,16)+c.pair)).size;
-  const envLabel = isProd
+  const envLabel = is4c
+    ? '<span class="env-badge env-prod">🟢 Phase 4c</span>'
+    : isProd
     ? '<span class="env-badge env-prod">🟢 PRODUCTION</span>'
     : '<span class="env-badge env-test">🟠 TEST</span>';
   const status = complete ? '<span class="badge badge-done">✅ Complete</span>' : '<span class="badge badge-running">🔄 Running</span>';
-  const sourceFile = isProd ? 'phase4b_24h_run.txt' : 'PHASE4B_SMOKE_TEST.log';
+  const sourceFile = is4c ? 'logs/phase4c_run.log' : isProd ? 'phase4b_24h_run.txt' : 'PHASE4B_SMOKE_TEST.log';
   const now = new Date().toLocaleTimeString();
 
   document.getElementById('app').innerHTML = `
@@ -98,8 +101,9 @@ async function render() {
       <label>Environment</label>
       ${envLabel}
       <select id="envSelect" onchange="switchEnv(this.value)">
-        <option value="prod" ${isProd?'selected':''}>🟢 Production (24h run)</option>
-        <option value="test" ${!isProd?'selected':''}>🟠 Test (smoke test log)</option>
+        <option value="4c">🟢 Phase 4c 24h Test</option>
+        <option value="prod" ${isProd?'selected':''}>🔵 Production (24h run)</option>
+        <option value="test" ${!isProd?'selected':''}>🟣 Test (smoke test log)</option>
       </select>
       <button class="refresh-btn" onclick="render()">⟳ Refresh now</button>
       <span style="color:#555;font-size:11px">Auto-refreshes every 30s</span>

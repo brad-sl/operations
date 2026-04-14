@@ -16,11 +16,53 @@ BASE_DIR = Path(__file__).parent
 
 with st.sidebar:
     st.title("⚙️ Environment")
-    env = st.radio("Select:", ["🔵 Phase 4b — Live Test", "🟣 Phase 3 — Historical"], index=0)
+    env = st.radio("Select:", ["🟢 Phase 4c — Short Test", "🟢 Phase 4c — 24h Test", "🔵 Phase 4b — Live Test", "🟣 Phase 3 — Historical"], index=0)
     st.divider()
     refresh = st.slider("Auto-refresh (s)", 5, 60, 10)
 
+IS_4C_SHORT = env.startswith("🟢 Phase 4c — Short")
+IS_4C_LONG = env.startswith("🟢 Phase 4c — 24h")
 IS_4B = env.startswith("🔵")
+IS_4C = IS_4C_SHORT or IS_4C_LONG
+
+@st.cache_data(ttl=10)
+def load_4c_short():
+    """Load Phase 4c short test data."""
+    log = BASE_DIR / "phase4c_short_test_*.log"
+    import glob
+    paths = glob.glob(str(BASE_DIR / "phase4c_short_test_*.log"))
+    path = sorted(paths)[-1] if paths else None
+    if not path:
+        return {"cycles":[], "trades":[], "pnl":{"BTC-USD":0.0,"XRP-USD":0.0,"DOGE-USD":0.0,"ETH-USD":0.0}, "complete":False, "path":"No short test log"}
+    path = paths[-1]
+    if not path.exists():
+        return {"cycles":[], "trades":[], "pnl":{"BTC-USD":0.0,"XRP-USD":0.0,"DOGE-USD":0.0,"ETH-USD":0.0}, "complete":False, "path":str(path)}
+    cycles, trades = [], []
+    pnl = {"BTC-USD":0.0, "XRP-USD":0.0, "DOGE-USD":0.0, "ETH-USD":0.0}
+    complete = False
+    cr = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?Pair: ([\w-]+) \| Price: ([\d.]+) \| RSI: ([\d.]+) \| Regime: (\w+) \| Thresholds: ([\w=/]+) \| Sig: (\w+) \(conf=([\d.]+)\) \| Mult: ([\d.]+)x \| Weighted: ([\d.]+) \| Sentiment: ([+-]?[\d.]+)")
+    or_ = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?OPEN BUY ([\w-]+) @ \$([\d.]+) \| notional=\$([\d.]+)")
+    er  = re.compile(r"(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}).*?EXIT \[(\w+)\] ([\w-]+) @ \$([\d.]+) \| PnL=\$([+-]?[\d.]+)")
+    pr  = re.compile(r"Final Daily PnL: BTC=\$([+-]?[\d.]+) \| XRP=\$([+-]?[\d.]+) \| DOGE=\$([+-]?[\d.]+) \| ETH=\$([+-]?[\d.]+)")
+    for line in path.read_text().splitlines():
+        m = cr.search(line)
+        if m:
+            cycles.append({"ts":m.group(1),"pair":m.group(2),"price":float(m.group(3)),"rsi":float(m.group(4)),"regime":m.group(5),"signal":m.group(7),"conf":float(m.group(8)),"weighted":float(m.group(10)),"sentiment":float(m.group(11))})
+            continue
+        m = or_.search(line)
+        if m:
+            trades.append({"ts":m.group(1),"pair":m.group(2),"type":"OPEN","price":float(m.group(3)),"notional":float(m.group(4)),"pnl":None})
+            continue
+        m = er.search(line)
+        if m:
+            trades.append({"ts":m.group(1),"type":"EXIT","reason":m.group(2),"pair":m.group(3),"price":float(m.group(4)),"pnl":float(m.group(5))})
+            continue
+        m = pr.search(line)
+        if m:
+            pnl = {"BTC-USD":float(m.group(1)),"XRP-USD":float(m.group(2)),"DOGE-USD":float(m.group(3)),"ETH-USD":float(m.group(4))}
+        if "PHASE 4C COMPLETE" in line:
+            complete = True
+    return {"cycles":cycles,"trades":trades,"pnl":pnl,"complete":complete,"path":str(path)}
 
 @st.cache_data(ttl=10)
 def load_4b():
@@ -130,7 +172,50 @@ def render_p3():
         st.info("No trades in EVENT_LOG.json.")
     st.caption(f"🔄 {datetime.now().strftime('%H:%M:%S')}")
 
-if IS_4B:
+if IS_4C:
+    # Phase 4c — 24h test
+    d = load_4c()
+    cycles, trades, pnl, complete = d["cycles"], d["trades"], d["pnl"], d["complete"]
+    st.title("📊 Phase 4c — 24h Test Monitor")
+    st.caption(f"Source: `{d['path']}`")
+    exits = [t for t in trades if t["type"]=="EXIT"]
+    wins  = [t for t in exits if (t.get("pnl") or 0) > 0]
+    c1,c2,c3,c4 = st.columns(4)
+    c1.metric("Status", "✅ Done" if complete else "🔄 Running")
+    c2.metric("Total PnL", f"${sum(pnl.values()):+.2f}")
+    c3.metric("Cycles", len(set((c["ts"][:16],c["pair"]) for c in cycles)))
+    c4.metric("Trades", len(exits))
+    st.divider()
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("BTC-USD PnL", f"${pnl.get('BTC-USD',0):+.2f}")
+    col2.metric("XRP-USD PnL", f"${pnl.get('XRP-USD',0):+.2f}")
+    col3.metric("DOGE-USD PnL", f"${pnl.get('DOGE-USD',0):+.2f}")
+    col4.metric("ETH-USD PnL", f"${pnl.get('ETH-USD',0):+.2f}")
+    if exits:
+        st.metric("Win Rate", f"{len(wins)/len(exits):.1%}", f"{len(wins)}W / {len(exits)-len(wins)}L")
+    st.divider()
+    st.subheader("📋 Recent Cycles")
+    if cycles:
+        df = pd.DataFrame(cycles[-50:])[["ts","pair","price","rsi","regime","signal","weighted","sentiment"]]
+        df.columns = ["Time","Pair","Price","RSI","Regime","Signal","Weighted","Sentiment"]
+        st.dataframe(df, use_container_width=True, height=320)
+    else:
+        st.info("No cycles yet.")
+    st.subheader("📈 RSI Over Time (Dynamic Thresholds)")
+    if cycles:
+        all_pairs = list(set(c["pair"] for c in cycles))
+        chart_data = {pair: {c["ts"]: c["rsi"] for c in cycles if c["pair"]==pair} for pair in all_pairs}
+        all_ts = sorted(set().union(*(cd.keys() for cd in chart_data.values())))
+        chart_df = pd.DataFrame({pair: [chart_data[pair].get(t) for t in all_ts] for pair in all_pairs}, index=all_ts)
+        st.line_chart(chart_df, height=280)
+        st.caption("Dynamic RSI Thresholds applied per regime")
+    st.subheader("💱 Trades")
+    if trades:
+        st.dataframe(pd.DataFrame(trades), use_container_width=True, height=220)
+    else:
+        st.info("No trades yet — waiting for RSI crossover signals.")
+    st.caption(f"🔄 {datetime.now().strftime('%H:%M:%S')} | refresh={refresh}s | 24h test in progress")
+elif IS_4B:
     render_4b()
 else:
     render_p3()

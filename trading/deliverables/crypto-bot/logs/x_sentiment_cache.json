@@ -1,0 +1,46 @@
+{
+  "BTC-USD": {
+    "sentiment": 0.46153846153846145,
+    "positive_tweets": 19,
+    "negative_tweets": 7,
+    "total_tweets": 99,
+    "positive_ratio": 0.731,
+    "source": "X API v2",
+    "fetch_time": "2026-04-08T18:43:23.027948",
+    "age_minutes": 0,
+    "query": "(Bitcoin OR BTC) lang:en -is:retweet"
+  },
+  "XRP-USD": {
+    "sentiment": 0.33333333333333326,
+    "positive_tweets": 6,
+    "negative_tweets": 3,
+    "total_tweets": 99,
+    "positive_ratio": 0.667,
+    "source": "X API v2",
+    "fetch_time": "2026-04-08T18:43:23.893054",
+    "age_minutes": 0,
+    "query": "(XRP OR Ripple) lang:en -is:retweet"
+  },
+  "DOGE-USD": {
+    "sentiment": 0.33333333333333326,
+    "positive_tweets": 6,
+    "negative_tweets": 3,
+    "total_tweets": 99,
+    "positive_ratio": 0.667,
+    "source": "X API v2",
+    "fetch_time": "2026-04-08T18:43:24.596597",
+    "age_minutes": 0,
+    "query": "(XRP OR Ripple) lang:en -is:retweet"
+  },
+  "ETH-USD": {
+    "sentiment": 0.33333333333333326,
+    "positive_tweets": 6,
+    "negative_tweets": 3,
+    "total_tweets": 99,
+    "positive_ratio": 0.667,
+    "source": "X API v2",
+    "fetch_time": "2026-04-08T18:43:25.411583",
+    "age_minutes": 0,
+    "query": "(XRP OR Ripple) lang:en -is:retweet"
+  }
+}

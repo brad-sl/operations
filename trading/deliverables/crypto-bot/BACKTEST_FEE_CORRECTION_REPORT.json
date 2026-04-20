@@ -1,0 +1,24 @@
+{
+  "timestamp": "2026-03-29T19:59:40.003119+00:00",
+  "backtest_period": "3 days (2026-03-26T06:30:45.532446 to 2026-03-29T06:30:45.532446)",
+  "total_trades": 14,
+  "btc_trades": 5,
+  "xrp_trades": 9,
+  "fee_model": {
+    "old_phantom_total": 332767.28,
+    "new_actual_total": 1331.07,
+    "delta_overstated": 331436.21,
+    "inflation_ratio": 250.0
+  },
+  "pnl": {
+    "reported_with_phantom_fees": 99.27,
+    "corrected_with_actual_fees": 331535.48,
+    "improvement_from_bugfix": 331436.21
+  },
+  "win_rates": {
+    "btc": 60.0,
+    "xrp": 66.7,
+    "overall": 64.3
+  },
+  "phase4_status": "GO"
+}

@@ -1,0 +1,19 @@
+{
+    "sources": {
+        "x_api": {
+            "enabled": true,
+            "weight": 0.4,
+            "cache_duration": 3600
+        },
+        "reddit": {
+            "enabled": true,
+            "weight": 0.3,
+            "subreddits": ["CryptoCurrency", "Bitcoin", "CryptoMarkets"]
+        },
+        "news_api": {
+            "enabled": true,
+            "weight": 0.3,
+            "sources": ["CoinDesk", "CryptoSlate", "The Block"]
+        }
+    }
+}

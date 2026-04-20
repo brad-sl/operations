@@ -1,0 +1,24 @@
+{
+    "global_settings": {
+        "total_capital": 1000,
+        "pairs": ["BTC-USD", "XRP-USD", "ETH-USD", "DOGE-USD", "ADA-USD", "SOL-USD"],
+        "cycle_interval_seconds": 1800
+    },
+    "risk_management": {
+        "max_daily_loss_pct": 2.0,
+        "var_threshold": 0.015,
+        "stop_loss_pct": 2.0,
+        "take_profit_pct": 5.0
+    },
+    "sentiment": {
+        "sources": ["x_api", "reddit", "news_api"],
+        "weight": 0.4
+    },
+    "phase_5_specific": {
+        "entry_conditions": {
+            "rsi_periods": [14, 21],
+            "sentiment_threshold": 0.3,
+            "volatility_filter": true
+        }
+    }
+}

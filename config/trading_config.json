@@ -1,0 +1,18 @@
+{
+  "_comment": "Phase 4c trading parameters. Edit here \u2014 never hardcode in scripts.",
+  "pairs": [
+    "BTC-USD",
+    "XRP-USD",
+    "DOGE-USD",
+    "ETH-USD"
+  ],
+  "cycle_interval_seconds": 300,
+  "rsi_period": 14,
+  "price_history_window": 50,
+  "min_hold_cycles": 3,
+  "stop_loss_pct": -0.02,
+  "take_profit_pct": 0.05,
+  "daily_loss_cap_usd": 50,
+  "paper_capital_usd": 1000,
+  "total_cycles": 288
+}

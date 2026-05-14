@@ -1,0 +1,18 @@
+[Unit]
+Description=Phase 5 Cryptocurrency Trading Bot
+After=network.target
+
+[Service]
+Type=simple
+User=brad
+WorkingDirectory=/home/brad/.openclaw/workspace/operations/crypto-bot
+Environment="PATH=/home/brad/.openclaw/workspace/operations/crypto-bot/venv/bin"
+Environment="SANDBOX_MODE=False"
+ExecStart=/home/brad/.openclaw/workspace/operations/crypto-bot/venv/bin/python3 phase5_multi_pair.py --cycles 288
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/brad/.openclaw/workspace/operations/crypto-bot/logs/phase5_systemd.log
+StandardError=append:/home/brad/.openclaw/workspace/operations/crypto-bot/logs/phase5_systemd.log
+
+[Install]
+WantedBy=multi-user.target

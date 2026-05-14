@@ -1,0 +1,14 @@
+{
+  "BTC-USD": {
+    "sentiment": 0.03,
+    "timestamp": "2026-04-18T21:07:39.849188Z",
+    "source": "X API v2 (search/recent)",
+    "query": "bitcoin BTC price -scam"
+  },
+  "XRP-USD": {
+    "sentiment": 0.1,
+    "timestamp": "2026-04-18T21:07:39.849235Z",
+    "source": "X API v2 (search/recent)",
+    "query": "XRP ripple price -scam"
+  }
+}

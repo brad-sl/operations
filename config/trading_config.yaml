@@ -1,0 +1,18 @@
+trading_pairs:
+  - BTC-USD
+  - ETH-USD
+  - XRP-USD
+
+rsi:
+  period: 14
+  oversold: 30
+  overbought: 70
+
+risk:
+  max_position_size_pct: 0.1  # 10% of capital per trade
+  stop_loss_pct: 0.02  # 2%
+  take_profit_pct: 0.04  # 4%
+
+sentiment:
+  weight: 0.3  # 30% weight in signal
+  threshold: 0.5

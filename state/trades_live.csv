@@ -1,0 +1,4 @@
+timestamp,pair,side,quantity,price,usd_amount,order_id,sl_order_id,status,trade_id,notes
+2026-04-30T21:11:15.000Z,ETH-USD,BUY,0.03651111,2283.23,83.33,,,EXECUTED,ETH-USD_BUY_2026-04-30T21:11:15.000Z_1777609808832,Real trade executed on Apr 30. Order ID needs to be recovered from Coinbase
+2026-04-30T21:11:20.000Z,SOL-USD,BUY,0.95694,87.04,83.33,,,EXECUTED,SOL-USD_BUY_2026-04-30T21:11:20.000Z_1777609808832,Real trade executed on Apr 30. Order ID needs to be recovered from Coinbase
+2026-04-30T21:11:22.452Z,XRP-USD,BUY,58.24,1.4307,83.33,,,EXECUTED,XRP-USD_BUY_2026-04-30T21:11:22.452Z_1777609808833,Real trade executed on Apr 30. Order ID needs to be recovered from Coinbase

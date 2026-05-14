@@ -1,0 +1,66 @@
+{
+  "trading_pairs": [
+    "XRP-USD",
+    "BTC-USD"
+  ],
+  "limits": {
+    "daily_spend_usd": 1000,
+    "max_position_size": {
+      "BTC-USD": 0.05,
+      "ETH-USD": 0.5,
+      "SOL-USD": 10.0,
+      "XRP-USD": 200.0
+    },
+    "max_daily_loss_usd": 200,
+    "max_single_order_usd": 100
+  },
+  "settings": {
+    "order_type": "limit",
+    "sandbox_mode": true,
+    "approval_required": true
+  },
+  "signals": {
+    "xrp": {
+      "strategy": "stochastic_rsi",
+      "stochastic_threshold_oversold": 35,
+      "stochastic_threshold_overbought": 65,
+      "sentiment_weight": 0.8,
+      "rsi_weight": 0.2,
+      "x_sentiment_weight": 4.0,
+      "backtest_period_days": 90
+    },
+    "btc": {
+      "strategy": "rsi_standard",
+      "rsi_threshold_oversold": 30,
+      "rsi_threshold_overbought": 70,
+      "sentiment_weight": 0.3,
+      "rsi_weight": 0.7
+    }
+  },
+  "dynamic_rsi_config": {
+    "enabled": true,
+    "regime_threshold_pct": 2.0,
+    "check_interval_hours": 6,
+    "sentiment_weight": 0.6,
+    "rsi_weight": 0.4,
+    "thresholds": {
+      "DOWNTREND": {"buy": 40, "sell": 60, "position_size": 0.75},
+      "UPTREND": {"buy": 20, "sell": 80, "position_size": 1.25},
+      "SIDEWAYS": {"buy": 30, "sell": 70, "position_size": 1.0}
+    },
+    "position_sizing": {
+      "atr_period": 14,
+      "max_position_pct": 0.1,
+      "high_volatility_reduction": 0.5,
+      "low_volatility_boost": 1.25
+    }
+  },
+  "metadata": {
+    "created": "2026-03-23",
+    "version": "2.0",
+    "notes": "Phase 3 EXTENDED: Dynamic RSI orchestrator (deployed 2026-03-27). Auto-detects market regime, adjusts thresholds. 72-hour test (48h original + 24h extension)",
+    "execution_start": "2026-03-26T03:05:00Z",
+    "trial_duration_hours": 72,
+    "deployed_at": "2026-03-27T17:12:00Z"
+  }
+}

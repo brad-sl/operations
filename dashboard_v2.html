@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <script src="chart.umd.js"></script>
+</head>
+<body style="font-family:monospace;background:#0e1117;color:#e0e0e0;padding:20px">
+  <h1>🟢 Phase 4c Live (Cycle 190+)</h1>
+  <select id="env" onchange="loadData()">
+    <option value="4c">Phase 4c</option>
+  </select>
+  <canvas id="rsiChart" height="200"></canvas>
+  <table id="cycles" border="1" style="width:100%;border-collapse:collapse;background:#1a1d27">
+    <tr><th>Time</th><th>Pair</th><th>Price</th><th>RSI</th><th>Sig</th><th>Sent</th></tr>
+  </table>
+  <script>
+    let chart;
+    async function loadData() {
+      const env = document.getElementById('env').value;
+      try {
+        const resp = await fetch(`/log?env=${env}`);
+        if (!resp.ok) return;
+        const text = await resp.text();
+        const lines = text.split('\n').filter(l => l.includes('RSI'));
+        const data = lines.slice(-20).reverse().map(l => {
+          const m = l.match(/\\[(\\w+-USD)\\] \\$([\\d.]+) \\| RSI=([\\d.]+) \\| .*Sig=(\\w+) .*Sent=([+-][\\d.]+)/);
+          return m ? {pair:m[1], price:+m[2], rsi:+m[3], sig:m[4], sent:+m[5], ts:l.split(' ')[0]} : null;
+        }).filter(Boolean);
+        document.querySelector('#cycles tbody').innerHTML = data.map(d => `<tr><td>${d.ts.slice(11,16)}</td><td>${d.pair}</td><td>$${d.price.toFixed(2)}</td><td>${d.rsi.toFixed(1)}</td><td>${d.sig}</td><td>${d.sent.toFixed(2)}</td></tr>`).join('');
+        const ctx = document.getElementById('rsiChart').getContext('2d');
+        if (chart) chart.destroy();
+        chart = new Chart(ctx, {
+          type: 'line',
+          data: { labels: data.map(d => d.ts.slice(11)), datasets: [{label: 'RSI', data: data.map(d => d.rsi), borderColor: '#0cce6b', fill: false}] },
+          options: {scales: {y: {min: 0, max: 100}}}
+        });
+      } catch(e) { console.error(e); }
+    }
+    setInterval(loadData, 30000);
+    loadData();
+  </script>
+</body>
+</html>

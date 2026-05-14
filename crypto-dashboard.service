@@ -1,0 +1,17 @@
+[Unit]
+Description=Crypto Trading Bot Dashboard
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=brad
+WorkingDirectory=/home/brad/.openclaw/workspace/operations/crypto-bot
+ExecStart=/usr/bin/python3 serve_dashboard_phase4d.py
+Restart=always
+RestartSec=5
+StandardOutput=append:/home/brad/.openclaw/workspace/operations/crypto-bot/logs/dashboard.log
+StandardError=append:/home/brad/.openclaw/workspace/operations/crypto-bot/logs/dashboard.log
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,25 @@
+{
+  "decay_params": {
+    "twitter_half_life_minutes": 60,
+    "reddit_half_life_minutes": 240
+  },
+  "backtest_period": "2025-04-20 to 2026-04-20",
+  "metrics": {
+    "total_trades": 7,
+    "winning_trades": 5,
+    "losing_trades": 2,
+    "win_rate_pct": 71.43,
+    "total_pnl_dollars": 966.22,
+    "total_pnl_pct": 96.62,
+    "avg_win_dollars": 367.16,
+    "avg_loss_dollars": -434.79,
+    "sharpe_ratio": 4.59,
+    "profit_factor": 2.11
+  },
+  "sentiment_stats": {
+    "avg_twitter_weight": 0.52,
+    "avg_reddit_weight": 0.48,
+    "twitter_half_life_minutes": 60,
+    "reddit_half_life_minutes": 240
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "version": "6.01",
+  "created_at": "2026-04-30T19:47:00Z",
+  "last_updated": "2026-04-30T19:47:00Z",
+  "liquidation_history": [],
+  "last_pain_score_calc": {
+    "timestamp": null,
+    "value": null,
+    "pairs_monitored": []
+  },
+  "positions_monitored": [],
+  "trading_cycles": 0,
+  "total_liquidations": 0,
+  "session_start": "2026-04-30T19:47:00Z",
+  "config_hash": null
+}

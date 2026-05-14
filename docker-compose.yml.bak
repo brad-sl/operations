@@ -1,0 +1,26 @@
+version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - bot
+  grafana:
+    image: grafana/grafana-oss:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+  bot:
+    build: .
+    ports:
+      - "8502:8502"
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    command: bash -c "pip install -r requirements.txt && source venv/bin/activate && python phase5_multi_pair.py"

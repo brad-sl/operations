@@ -1,0 +1,49 @@
+{
+  "timestamp": "2026-04-20T23:29:36.204209",
+  "status": "PARTIAL",
+  "executed": 3,
+  "failed": 2,
+  "orders": [
+    {
+      "pair": "BTC-USD",
+      "order_id": "aca8e907-cf42-415e-a627-83fcbd15bb86",
+      "amount_usd": 160.61185468451245,
+      "qty": 0.002571847152674339,
+      "tracking_id": "ord-1776752974713",
+      "timestamp": "2026-04-20T23:29:34.717854"
+    },
+    {
+      "pair": "ETH-USD",
+      "order_id": "3cad68df-e5c6-41b0-a5b7-55b83acdd6d2",
+      "amount_usd": 116.63479923518165,
+      "qty": 0.049843931297086176,
+      "tracking_id": "ord-1776752975047",
+      "timestamp": "2026-04-20T23:29:35.054162"
+    },
+    {
+      "pair": "SOL-USD",
+      "order_id": "57654ee1-1542-4484-bb89-877202086f18",
+      "amount_usd": 202.19885277246652,
+      "qty": 1.4189393177015195,
+      "tracking_id": "ord-1776752975480",
+      "timestamp": "2026-04-20T23:29:35.482483"
+    }
+  ],
+  "errors": [
+    {
+      "pair": "XRP-USD",
+      "error": "INVALID_SIZE_PRECISION",
+      "tracking_id": "ord-1776752975805",
+      "timestamp": "2026-04-20T23:29:35.820017"
+    },
+    {
+      "pair": "DOGE-USD",
+      "error": "INVALID_SIZE_PRECISION",
+      "tracking_id": "ord-1776752976183",
+      "timestamp": "2026-04-20T23:29:36.187020"
+    }
+  ],
+  "deployed": 479.4455066921606,
+  "reserve": 250.0,
+  "total_capital": 1000.0
+}

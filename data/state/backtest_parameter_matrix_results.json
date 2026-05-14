@@ -1,0 +1,167 @@
+[
+  {
+    "rebalance_freq_days": 1,
+    "pain_threshold": 20,
+    "initial_value": 57571.29,
+    "final_value": 62270.10901837763,
+    "total_return_pct": 8.161740024198922,
+    "total_trades": 982,
+    "liquidations": 490,
+    "buys": 492,
+    "sells": 0
+  },
+  {
+    "rebalance_freq_days": 1,
+    "pain_threshold": 25,
+    "initial_value": 57571.29,
+    "final_value": 62270.10901837763,
+    "total_return_pct": 8.161740024198922,
+    "total_trades": 982,
+    "liquidations": 490,
+    "buys": 492,
+    "sells": 0
+  },
+  {
+    "rebalance_freq_days": 1,
+    "pain_threshold": 30,
+    "initial_value": 57571.29,
+    "final_value": 62270.10901837763,
+    "total_return_pct": 8.161740024198922,
+    "total_trades": 982,
+    "liquidations": 490,
+    "buys": 492,
+    "sells": 0
+  },
+  {
+    "rebalance_freq_days": 1,
+    "pain_threshold": 35,
+    "initial_value": 57571.29,
+    "final_value": 62270.10901837763,
+    "total_return_pct": 8.161740024198922,
+    "total_trades": 982,
+    "liquidations": 490,
+    "buys": 492,
+    "sells": 0
+  },
+  {
+    "rebalance_freq_days": 1,
+    "pain_threshold": 40,
+    "initial_value": 57571.29,
+    "final_value": 62270.10901837763,
+    "total_return_pct": 8.161740024198922,
+    "total_trades": 982,
+    "liquidations": 490,
+    "buys": 492,
+    "sells": 0
+  },
+  {
+    "rebalance_freq_days": 7,
+    "pain_threshold": 20,
+    "initial_value": 57571.29,
+    "final_value": 58495.5797205354,
+    "total_return_pct": 1.605469880100658,
+    "total_trades": 254,
+    "liquidations": 106,
+    "buys": 128,
+    "sells": 20
+  },
+  {
+    "rebalance_freq_days": 7,
+    "pain_threshold": 25,
+    "initial_value": 57571.29,
+    "final_value": 58495.5797205354,
+    "total_return_pct": 1.605469880100658,
+    "total_trades": 254,
+    "liquidations": 106,
+    "buys": 128,
+    "sells": 20
+  },
+  {
+    "rebalance_freq_days": 7,
+    "pain_threshold": 30,
+    "initial_value": 57571.29,
+    "final_value": 58495.5797205354,
+    "total_return_pct": 1.605469880100658,
+    "total_trades": 254,
+    "liquidations": 104,
+    "buys": 128,
+    "sells": 22
+  },
+  {
+    "rebalance_freq_days": 7,
+    "pain_threshold": 35,
+    "initial_value": 57571.29,
+    "final_value": 58508.41585772145,
+    "total_return_pct": 1.6277659536922773,
+    "total_trades": 254,
+    "liquidations": 102,
+    "buys": 128,
+    "sells": 24
+  },
+  {
+    "rebalance_freq_days": 7,
+    "pain_threshold": 40,
+    "initial_value": 57571.29,
+    "final_value": 58514.431410564044,
+    "total_return_pct": 1.6382148299335368,
+    "total_trades": 254,
+    "liquidations": 98,
+    "buys": 128,
+    "sells": 28
+  },
+  {
+    "rebalance_freq_days": 30,
+    "pain_threshold": 20,
+    "initial_value": 57571.29,
+    "final_value": 56872.772041536235,
+    "total_return_pct": -1.2133095479774143,
+    "total_trades": 158,
+    "liquidations": 28,
+    "buys": 80,
+    "sells": 50
+  },
+  {
+    "rebalance_freq_days": 30,
+    "pain_threshold": 25,
+    "initial_value": 57571.29,
+    "final_value": 56872.772041536235,
+    "total_return_pct": -1.2133095479774143,
+    "total_trades": 158,
+    "liquidations": 28,
+    "buys": 80,
+    "sells": 50
+  },
+  {
+    "rebalance_freq_days": 30,
+    "pain_threshold": 30,
+    "initial_value": 57571.29,
+    "final_value": 56872.772041536235,
+    "total_return_pct": -1.2133095479774143,
+    "total_trades": 158,
+    "liquidations": 28,
+    "buys": 80,
+    "sells": 50
+  },
+  {
+    "rebalance_freq_days": 30,
+    "pain_threshold": 35,
+    "initial_value": 57571.29,
+    "final_value": 56872.772041536235,
+    "total_return_pct": -1.2133095479774143,
+    "total_trades": 158,
+    "liquidations": 28,
+    "buys": 80,
+    "sells": 50
+  },
+  {
+    "rebalance_freq_days": 30,
+    "pain_threshold": 40,
+    "initial_value": 57571.29,
+    "final_value": 56803.58400907317,
+    "total_return_pct": -1.3334875611208785,
+    "total_trades": 158,
+    "liquidations": 26,
+    "buys": 80,
+    "sells": 52
+  }
+]

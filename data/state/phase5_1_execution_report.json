@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-04-20T20:29:45.156818",
+  "status": "ORDERS_SUBMITTED",
+  "orders": [
+    {
+      "timestamp": "2026-04-20T20:29:45.152899",
+      "pair": "BTC-USD",
+      "side": "BUY",
+      "qty": 0.002571847152674339,
+      "price": 62450.0,
+      "usd_amount": 160.61185468451245,
+      "order_id": "order-BTC-USD-1776742185",
+      "status": "SUBMITTED_PENDING_EXECUTION",
+      "note": "AWAITING REAL ORDER EXECUTOR INTEGRATION"
+    },
+    {
+      "timestamp": "2026-04-20T20:29:45.154052",
+      "pair": "ETH-USD",
+      "side": "BUY",
+      "qty": 0.049843931297086176,
+      "price": 2340.0,
+      "usd_amount": 116.63479923518165,
+      "order_id": "order-ETH-USD-1776742185",
+      "status": "SUBMITTED_PENDING_EXECUTION",
+      "note": "AWAITING REAL ORDER EXECUTOR INTEGRATION"
+    },
+    {
+      "timestamp": "2026-04-20T20:29:45.154601",
+      "pair": "SOL-USD",
+      "side": "BUY",
+      "qty": 1.4189393177015195,
+      "price": 142.5,
+      "usd_amount": 202.19885277246652,
+      "order_id": "order-SOL-USD-1776742185",
+      "status": "SUBMITTED_PENDING_EXECUTION",
+      "note": "AWAITING REAL ORDER EXECUTOR INTEGRATION"
+    },
+    {
+      "timestamp": "2026-04-20T20:29:45.155119",
+      "pair": "XRP-USD",
+      "side": "BUY",
+      "qty": 43.367976315302535,
+      "price": 2.48,
+      "usd_amount": 107.5525812619503,
+      "order_id": "order-XRP-USD-1776742185",
+      "status": "SUBMITTED_PENDING_EXECUTION",
+      "note": "AWAITING REAL ORDER EXECUTOR INTEGRATION"
+    },
+    {
+      "timestamp": "2026-04-20T20:29:45.155653",
+      "pair": "DOGE-USD",
+      "side": "BUY",
+      "qty": 654.1007706496353,
+      "price": 0.2492,
+      "usd_amount": 163.0019120458891,
+      "order_id": "order-DOGE-USD-1776742185",
+      "status": "SUBMITTED_PENDING_EXECUTION",
+      "note": "AWAITING REAL ORDER EXECUTOR INTEGRATION"
+    }
+  ],
+  "total_deployed": 750.0,
+  "reserve": 250.0,
+  "note": "AWAITING REAL ORDER EXECUTOR INTEGRATION FOR LIVE EXECUTION"
+}

@@ -1,0 +1,58 @@
+{
+  "trades": [
+    {
+      "trade_id": "ETH-USD_BUY_2026-04-30T21:11:15.000Z_1777609808832",
+      "timestamp": "2026-04-30T21:11:15.000Z",
+      "pair": "ETH-USD",
+      "side": "BUY",
+      "quantity": 0.03651111,
+      "price": 2283.23,
+      "usd_amount": 83.33,
+      "order_id": null,
+      "sl_order_id": null,
+      "status": "EXECUTED",
+      "coinbase_response": {},
+      "notes": "Real trade executed on Apr 30. Order ID needs to be recovered from Coinbase",
+      "created_at": "2026-05-01T04:30:08.832210Z"
+    },
+    {
+      "trade_id": "SOL-USD_BUY_2026-04-30T21:11:20.000Z_1777609808832",
+      "timestamp": "2026-04-30T21:11:20.000Z",
+      "pair": "SOL-USD",
+      "side": "BUY",
+      "quantity": 0.95694,
+      "price": 87.04,
+      "usd_amount": 83.33,
+      "order_id": null,
+      "sl_order_id": null,
+      "status": "EXECUTED",
+      "coinbase_response": {},
+      "notes": "Real trade executed on Apr 30. Order ID needs to be recovered from Coinbase",
+      "created_at": "2026-05-01T04:30:08.832896Z"
+    },
+    {
+      "trade_id": "XRP-USD_BUY_2026-04-30T21:11:22.452Z_1777609808833",
+      "timestamp": "2026-04-30T21:11:22.452Z",
+      "pair": "XRP-USD",
+      "side": "BUY",
+      "quantity": 58.24,
+      "price": 1.4307,
+      "usd_amount": 83.33,
+      "order_id": null,
+      "sl_order_id": null,
+      "status": "EXECUTED",
+      "coinbase_response": {},
+      "notes": "Real trade executed on Apr 30. Order ID needs to be recovered from Coinbase",
+      "created_at": "2026-05-01T04:30:08.833546Z"
+    }
+  ],
+  "summary": {
+    "total_trades": 3,
+    "successful": 3,
+    "failed": 0,
+    "pending": 0,
+    "last_trade": "2026-04-30T21:11:22.452Z",
+    "total_usd_traded": 249.99,
+    "version": "1.0"
+  }
+}

@@ -1,0 +1,15 @@
+[Unit]
+Description=Crypto Bot Streamlit Dashboard
+After=network.target
+
+[Service]
+Type=simple
+User=brad
+WorkingDirectory=/home/brad/.openclaw/workspace/operations/crypto-bot
+ExecStart=/usr/bin/python3 -m streamlit run dashboard.py --server.port 8501 --server.address 0.0.0.0 --server.headless true
+Restart=always
+RestartSec=5
+Environment=HOME=/home/brad
+
+[Install]
+WantedBy=default.target

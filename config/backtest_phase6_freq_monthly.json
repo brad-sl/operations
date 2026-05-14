@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-04-20T01:16:26.946398",
+  "rebalance_frequency": "monthly",
+  "rebalance_interval_days": 30,
+  "pairs": [
+    "bitcoin",
+    "ripple",
+    "dogecoin",
+    "ethereum"
+  ],
+  "capital": 1000,
+  "reserve_pct": 20,
+  "total_pnl": -24.17,
+  "pnl_pct": -2.4,
+  "win_rate_pct": 50.0,
+  "winning_trades": 2,
+  "losing_trades": 2,
+  "total_trades": 4,
+  "sharpe_ratio": -1.56,
+  "max_drawdown_pct": -212.6,
+  "rebalances_executed": 12,
+  "total_days": 366
+}

@@ -1,0 +1,257 @@
+{
+  "test_date": "2026-04-21T15:17:44.188588",
+  "total_scenarios": 9,
+  "optimal": {
+    "decay_params": {
+      "twitter_half_life_minutes": 15,
+      "reddit_half_life_minutes": 60
+    },
+    "backtest_period": "2025-04-20 to 2026-04-20",
+    "metrics": {
+      "total_trades": 7,
+      "winning_trades": 5,
+      "losing_trades": 2,
+      "win_rate_pct": 71.43,
+      "total_pnl_dollars": 966.22,
+      "total_pnl_pct": 96.62,
+      "avg_win_dollars": 367.16,
+      "avg_loss_dollars": -434.79,
+      "sharpe_ratio": 4.59,
+      "profit_factor": 2.11
+    },
+    "sentiment_stats": {
+      "avg_twitter_weight": 0.59,
+      "avg_reddit_weight": 0.41,
+      "twitter_half_life_minutes": 15,
+      "reddit_half_life_minutes": 60
+    }
+  },
+  "all_results": [
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 15,
+        "reddit_half_life_minutes": 60
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.59,
+        "avg_reddit_weight": 0.41,
+        "twitter_half_life_minutes": 15,
+        "reddit_half_life_minutes": 60
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 15,
+        "reddit_half_life_minutes": 120
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.46,
+        "avg_reddit_weight": 0.54,
+        "twitter_half_life_minutes": 15,
+        "reddit_half_life_minutes": 120
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 15,
+        "reddit_half_life_minutes": 240
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.39,
+        "avg_reddit_weight": 0.61,
+        "twitter_half_life_minutes": 15,
+        "reddit_half_life_minutes": 240
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 30,
+        "reddit_half_life_minutes": 60
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.67,
+        "avg_reddit_weight": 0.33,
+        "twitter_half_life_minutes": 30,
+        "reddit_half_life_minutes": 60
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 30,
+        "reddit_half_life_minutes": 120
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.54,
+        "avg_reddit_weight": 0.46,
+        "twitter_half_life_minutes": 30,
+        "reddit_half_life_minutes": 120
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 30,
+        "reddit_half_life_minutes": 240
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.48,
+        "avg_reddit_weight": 0.52,
+        "twitter_half_life_minutes": 30,
+        "reddit_half_life_minutes": 240
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 60,
+        "reddit_half_life_minutes": 60
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.7,
+        "avg_reddit_weight": 0.3,
+        "twitter_half_life_minutes": 60,
+        "reddit_half_life_minutes": 60
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 60,
+        "reddit_half_life_minutes": 120
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.59,
+        "avg_reddit_weight": 0.41,
+        "twitter_half_life_minutes": 60,
+        "reddit_half_life_minutes": 120
+      }
+    },
+    {
+      "decay_params": {
+        "twitter_half_life_minutes": 60,
+        "reddit_half_life_minutes": 240
+      },
+      "backtest_period": "2025-04-20 to 2026-04-20",
+      "metrics": {
+        "total_trades": 7,
+        "winning_trades": 5,
+        "losing_trades": 2,
+        "win_rate_pct": 71.43,
+        "total_pnl_dollars": 966.22,
+        "total_pnl_pct": 96.62,
+        "avg_win_dollars": 367.16,
+        "avg_loss_dollars": -434.79,
+        "sharpe_ratio": 4.59,
+        "profit_factor": 2.11
+      },
+      "sentiment_stats": {
+        "avg_twitter_weight": 0.52,
+        "avg_reddit_weight": 0.48,
+        "twitter_half_life_minutes": 60,
+        "reddit_half_life_minutes": 240
+      }
+    }
+  ],
+  "recommendation": "PROCEED with multi-source"
+}

@@ -1,0 +1,11 @@
+{
+  "strategy": "Takeover 2 Hybrid (Liquidate Day 0, then Fresh Start)",
+  "initial_value": 57571.29,
+  "final_value": 69039.1216568962,
+  "total_return_pct": 19.919358515149124,
+  "total_trades": 119,
+  "liquidations": 3,
+  "buys": 60,
+  "sells": 56,
+  "usd_reserve_final": 68079.18883464373
+}

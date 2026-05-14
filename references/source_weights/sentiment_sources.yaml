@@ -1,0 +1,23 @@
+sentiment_sources:
+  twitter:
+    lambda_multiplier: 1.0
+    priority: high
+    decay_rate: fast
+  
+  reddit:
+    lambda_multiplier: 0.7
+    priority: medium
+    decay_rate: moderate
+  
+  news:
+    lambda_multiplier: 0.85
+    priority: medium
+    decay_rate: slow
+
+current_strategy:
+  version: 1.2.0
+  last_updated: 2026-04-16
+  active_sources:
+    - twitter
+    - reddit
+    - news

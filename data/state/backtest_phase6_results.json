@@ -1,0 +1,32 @@
+[
+  {
+    "scenario": "Fresh Start",
+    "final_value": 8592.152128053634,
+    "total_return_pct": 71.84304256107269,
+    "trades": 28,
+    "win_rate": 33.33333333333333,
+    "total_trades": 52
+  },
+  {
+    "scenario": "Takeover 1",
+    "final_value": 2000.0,
+    "total_return_pct": -94.13167752746449,
+    "trades": 356,
+    "sl_hits": 356,
+    "tp_hits": 0
+  },
+  {
+    "scenario": "Takeover 2",
+    "final_value": 41339.066,
+    "total_return_pct": -28.1949978887046,
+    "usd_raised": 11514.258000000002,
+    "trades": 1
+  },
+  {
+    "scenario": "Ready to Start",
+    "final_value": 0.0,
+    "total_return_pct": 0.0,
+    "trades": 0,
+    "missed_signals": 123
+  }
+]

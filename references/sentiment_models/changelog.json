@@ -1,0 +1,29 @@
+{
+    "versions": [
+        {
+            "version": "1.2.0",
+            "date": "2026-04-16",
+            "changes": [
+                "Multi-source sentiment integration",
+                "Reddit live sentiment added",
+                "Decay mechanism refinement"
+            ]
+        },
+        {
+            "version": "1.1.0", 
+            "date": "2026-04-15",
+            "changes": [
+                "Implemented exponential decay",
+                "Source-specific half-life parameters"
+            ]
+        },
+        {
+            "version": "1.0.0",
+            "date": "2026-04-14", 
+            "changes": [
+                "Initial static sentiment weighting",
+                "Basic multi-source collection"
+            ]
+        }
+    ]
+}

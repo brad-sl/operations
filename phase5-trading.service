@@ -1,0 +1,30 @@
+[Unit]
+Description=Phase 5 Multi-Pair Crypto Trading (Live + Paper)
+After=network.target
+StartLimitIntervalSec=600
+StartLimitBurst=3
+
+[Service]
+Type=simple
+WorkingDirectory=/home/brad/.openclaw/workspace/operations/crypto-bot
+ExecStart=/home/brad/.openclaw/workspace/operations/crypto-bot/venv/bin/python3 phase5_multi_pair.py
+Restart=always
+RestartSec=5
+StartLimitAction=reboot
+
+User=brad
+StandardOutput=journal
+StandardError=journal
+StandardOutputFile=/home/brad/.openclaw/workspace/operations/crypto-bot/logs/phase5_systemd.log
+StandardErrorFile=/home/brad/.openclaw/workspace/operations/crypto-bot/logs/phase5_systemd.err
+
+# Safety limits
+MemoryMax=1G
+CPUQuota=80%
+
+# Environment
+Environment="SANDBOX_MODE=True"
+Environment="SANDBOX_TRADING=True"
+
+[Install]
+WantedBy=multi-user.target

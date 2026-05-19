@@ -2,27 +2,23 @@
 
 **Date:** 2026-05-18
 
-## Progress
+## Naming Normalization Applied
 
-- [x] All critical modules migrated into `phase6/core/`
-- [x] `stop_loss_manager.py` added (from `sl_placement_module.py`)
-- [x] Package imports verified and working
+- [x] `SLPlacement` → `StopLossManager` (class name normalization)
+- [x] Updated import in `phase6_runner.py`
+- [x] Exported `StopLossManager` from `phase6.core`
 
-## Current Canonical Modules in `phase6/core/`
+## Current Canonical Modules (Normalized)
 
-| Module                    | Status     | Notes |
-|---------------------------|------------|-------|
-| `phase6_runner.py`        | ✅ Core    | Main orchestrator |
-| `allocation_engine.py`    | ✅ Core    | Rebalancing logic |
-| `stop_loss_manager.py`    | ✅ Core    | SLPlacement class (mandatory) |
-| `sentiment_scorer.py`     | ✅ Core    | Sentiment weighting |
-| `live_portfolio_manager.py` | ✅ Core  | Portfolio tracking |
-| `config_loader.py`        | ✅ Core    | Config handling |
+| File                        | Primary Export         | Status     |
+|----------------------------|------------------------|------------|
+| `phase6_runner.py`         | `Phase6Runner`         | ✅ Active  |
+| `allocation_engine.py`     | Functions              | ✅ Active  |
+| `stop_loss_manager.py`     | `StopLossManager`      | ✅ Active  |
+| `sentiment_scorer.py`      | Functions              | ✅ Active  |
+| `live_portfolio_manager.py`| `LivePortfolioManager` | ✅ Active  |
+| `config_loader.py`         | `ConfigLoader`         | ✅ Active  |
 
-## Remaining
+All naming now follows consistent `*_manager.py` / `*_engine.py` / `*_runner.py` pattern with matching PascalCase class names.
 
-- `exchange_client.py` — Not developed (pair swapping for fee savings). Can be deprioritized.
-
-**Next:** Clean up import references in `phase6_runner.py` to match actual class names (`SLPlacement` instead of `StopLossManager`).
-
-**Owner:** Scotty (agent)
+**Next:** Continue normalization on other modules if needed, then begin deprecation of old scattered files.

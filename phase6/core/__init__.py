@@ -14,10 +14,12 @@ from .allocation_engine import (
     plan_static_allocations,
     rebalance_plan,
 )
+from .stop_loss_manager import StopLossManager
 
 __all__ = [
     "Phase6Runner",
     "compute_inverse_vol_allocations",
     "plan_static_allocations",
     "rebalance_plan",
+    "StopLossManager",
 ]

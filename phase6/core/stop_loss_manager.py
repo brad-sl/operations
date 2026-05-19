@@ -10,7 +10,7 @@ from typing import Dict, Any, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
-class SLPlacement:
+class StopLossManager:
     """Handle stop-loss order placement via Coinbase Advanced Orders API"""
     
     def __init__(self, cb_client):

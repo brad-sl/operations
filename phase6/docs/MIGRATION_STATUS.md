@@ -2,23 +2,26 @@
 
 **Date:** 2026-05-18
 
-## Naming Normalization Applied
+## Cleanup & Deprecation Complete
 
-- [x] `SLPlacement` → `StopLossManager` (class name normalization)
-- [x] Updated import in `phase6_runner.py`
-- [x] Exported `StopLossManager` from `phase6.core`
+- [x] Moved old `scripts/phase6/` directory to `phase6/archive/scripts_phase6_old`
+- [x] Archived backup files (`phase6.py.backup.*`, old dashboards)
+- [x] Added `archive/README.md` with clear deprecation notice
 
-## Current Canonical Modules (Normalized)
+## Current State
 
-| File                        | Primary Export         | Status     |
-|----------------------------|------------------------|------------|
-| `phase6_runner.py`         | `Phase6Runner`         | ✅ Active  |
-| `allocation_engine.py`     | Functions              | ✅ Active  |
-| `stop_loss_manager.py`     | `StopLossManager`      | ✅ Active  |
-| `sentiment_scorer.py`      | Functions              | ✅ Active  |
-| `live_portfolio_manager.py`| `LivePortfolioManager` | ✅ Active  |
-| `config_loader.py`         | `ConfigLoader`         | ✅ Active  |
+**Active Development Location:** `phase6/core/`
 
-All naming now follows consistent `*_manager.py` / `*_engine.py` / `*_runner.py` pattern with matching PascalCase class names.
+**Deprecated Locations (do not use for new work):**
+- `scripts/phase6/` → now in `archive/`
+- Root-level `phase6*.py` backups → now in `archive/`
+- Old dashboard HTML files → now in `archive/`
 
-**Next:** Continue normalization on other modules if needed, then begin deprecation of old scattered files.
+## Naming Normalization
+
+All modules in `phase6/core/` now follow consistent naming:
+- `*_runner.py` → `Phase6Runner`
+- `*_manager.py` → `StopLossManager`, `LivePortfolioManager`
+- `*_engine.py`, `*_scorer.py`, `*_loader.py`
+
+**Next:** Update any remaining references in docs or configs that point to old locations.

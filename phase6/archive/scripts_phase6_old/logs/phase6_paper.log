@@ -1,0 +1,25 @@
+2026-05-18 19:56:24,920 - INFO: ✅ Coinbase SDK initialized (Sandbox Mode: False)
+2026-05-18 19:56:24,920 - INFO: ✅ Coinbase Advanced Trade initialized (sandbox=False)
+2026-05-18 19:56:24,921 - INFO: ✅ Phase 6 Ready: LIVE mode, 6 pairs, 1800s cycles
+2026-05-18 19:56:24,921 - INFO: ================================================================================
+2026-05-18 19:56:24,921 - INFO: PHASE 6 TRADING LOOP STARTED - LIVE mode
+2026-05-18 19:56:24,921 - INFO: Pairs: ['BTC-USD', 'XRP-USD', 'ETH-USD', 'DOGE-USD', 'ADA-USD', 'SOL-USD']
+2026-05-18 19:56:24,921 - INFO: Cycle interval: 1800s
+2026-05-18 19:56:24,921 - INFO: ================================================================================
+2026-05-18 19:56:24,921 - INFO: 
+================================================================================
+2026-05-18 19:56:24,922 - INFO: CYCLE 1 — 2026-05-19T02:56:24.922053
+2026-05-18 19:56:24,922 - INFO: ================================================================================
+2026-05-18 19:56:25,112 - INFO: CYCLE 1: BTC-USD Price=$76577.4500 RSI=50.0 Sentiment=0.50
+2026-05-18 19:56:25,112 - INFO: CYCLE 1: XRP-USD Price=$1.3782 RSI=50.0 Sentiment=0.50
+2026-05-18 19:56:25,113 - INFO: CYCLE 1: ETH-USD Price=$2121.7900 RSI=50.0 Sentiment=0.50
+2026-05-18 19:56:25,113 - INFO: CYCLE 1: DOGE-USD Price=$0.1041 RSI=50.0 Sentiment=0.50
+2026-05-18 19:56:25,113 - INFO: CYCLE 1: ADA-USD Price=$0.2506 RSI=50.0 Sentiment=0.50
+2026-05-18 19:56:25,113 - INFO: CYCLE 1: SOL-USD Price=$84.7700 RSI=50.0 Sentiment=0.50
+2026-05-18 19:56:25,113 - INFO: CYCLE 1 STATS:
+2026-05-18 19:56:25,113 - INFO:   Prices fetched: 6
+2026-05-18 19:56:25,113 - INFO:   Sentiment: 0.50 (neutral)
+2026-05-18 19:56:25,113 - INFO:   Open positions: 0
+2026-05-18 19:56:25,113 - INFO:   Trades executed: 0
+2026-05-18 19:56:25,113 - INFO:   Cycle time: 0.19s
+2026-05-18 19:56:25,113 - INFO: Sleeping 1799.8s until next cycle...

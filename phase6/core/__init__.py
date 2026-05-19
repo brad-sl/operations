@@ -7,3 +7,17 @@ All modules here are considered the single source of truth for Phase 6.
 Do not modify files in scripts/phase6/ or root-level Phase 6 files without first
 migrating changes here.
 """
+
+from .phase6_runner import Phase6Runner
+from .allocation_engine import (
+    compute_inverse_vol_allocations,
+    plan_static_allocations,
+    rebalance_plan,
+)
+
+__all__ = [
+    "Phase6Runner",
+    "compute_inverse_vol_allocations",
+    "plan_static_allocations",
+    "rebalance_plan",
+]

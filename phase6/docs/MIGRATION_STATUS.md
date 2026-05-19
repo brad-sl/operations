@@ -4,29 +4,25 @@
 
 ## Progress
 
-- [x] Created dedicated `phase6/` working directory
-- [x] Established `phase6/core/` as canonical module location
-- [x] Migrated key modules into `core/`
-- [x] Made `phase6.core` importable as a package
-- [x] Fixed imports (relative + commented missing modules)
-- [x] Verified successful import test
+- [x] All critical modules migrated into `phase6/core/`
+- [x] `stop_loss_manager.py` added (from `sl_placement_module.py`)
+- [x] Package imports verified and working
 
-## Import Test Result
+## Current Canonical Modules in `phase6/core/`
 
-✅ `from phase6.core import Phase6Runner, compute_inverse_vol_allocations` works
+| Module                    | Status     | Notes |
+|---------------------------|------------|-------|
+| `phase6_runner.py`        | ✅ Core    | Main orchestrator |
+| `allocation_engine.py`    | ✅ Core    | Rebalancing logic |
+| `stop_loss_manager.py`    | ✅ Core    | SLPlacement class (mandatory) |
+| `sentiment_scorer.py`     | ✅ Core    | Sentiment weighting |
+| `live_portfolio_manager.py` | ✅ Core  | Portfolio tracking |
+| `config_loader.py`        | ✅ Core    | Config handling |
 
-## Current Canonical Files
+## Remaining
 
-- `phase6/core/phase6_runner.py` (with updated relative imports)
-- `phase6/core/allocation_engine.py`
-- `phase6/core/config_loader.py`
-- `phase6/core/sentiment_scorer.py`
-- `phase6/core/live_portfolio_manager.py`
+- `exchange_client.py` — Not developed (pair swapping for fee savings). Can be deprioritized.
 
-## Remaining Work
-
-- Locate or implement `stop_loss_manager.py` and `exchange_client.py`
-- Clean up commented imports once those modules are added
-- Begin deprecating old files in `scripts/phase6/`
+**Next:** Clean up import references in `phase6_runner.py` to match actual class names (`SLPlacement` instead of `StopLossManager`).
 
 **Owner:** Scotty (agent)

@@ -25,12 +25,12 @@ import requests
 from datetime import datetime, date, time as dt_time
 from typing import Dict, List, Optional, Any
 
-from config_loader import ConfigLoader
-from allocation_engine import compute_inverse_vol_allocations, rebalance_plan
-from sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
-from stop_loss_manager import StopLossManager
-from exchange_client import CoinbaseExchangeClient
-from live_portfolio_manager import LivePortfolioManager
+from .config_loader import ConfigLoader
+from .allocation_engine import compute_inverse_vol_allocations, rebalance_plan
+from .sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
+# from stop_loss_manager import StopLossManager  # TODO: migrate
+# from exchange_client import CoinbaseExchangeClient  # TODO: migrate
+from .live_portfolio_manager import LivePortfolioManager
 
 logging.basicConfig(
     level=logging.INFO,

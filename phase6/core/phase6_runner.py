@@ -29,8 +29,9 @@ from .config_loader import ConfigLoader
 from .allocation_engine import compute_inverse_vol_allocations, rebalance_plan
 from .sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
 from .stop_loss_manager import StopLossManager  # TODO: migrate
-# from exchange_client import CoinbaseExchangeClient  # TODO: migrate
+from .exchange_client import CoinbaseExchangeClient  # TODO: migrate
 from .live_portfolio_manager import LivePortfolioManager
+from .trade_ledger import TradeLedger
 
 logging.basicConfig(
     level=logging.INFO,
@@ -70,6 +71,7 @@ class Phase6Runner:
         self.stop_loss_manager = StopLossManager(
             self.exchange, self.config_dict, mode=self.mode
         )
+        self.trade_ledger = TradeLedger()
 
         # Scheduler
         scheduler = self.config_dict.get("scheduler", {})
@@ -219,18 +221,62 @@ class Phase6Runner:
 
         deploy_pct = self.config_dict.get("risk_management", {}).get("deploy_pct", 0.72)
 
+        logger.info(f"Fresh start: cash=${cash:.2f} | deploy_pct={deploy_pct} | universe={self.FIXED_UNIVERSE}")
+        logger.info(f"Computed weights: {weights}")
+
+        buy_attempts = 0
+        successful_buys = 0
+        skipped = []
+
         for pair, weight in weights.items():
             usd_amount = round(cash * weight * deploy_pct, 2)
             if usd_amount < 20:
+                skip_reason = f"below minimum ($20 threshold): ${usd_amount:.2f}"
+                logger.info(f"[SKIP] {pair}: {skip_reason}")
+                skipped.append({"pair": pair, "reason": skip_reason})
                 continue
+
+            buy_attempts += 1
+            logger.info(f"[ATTEMPT {buy_attempts}] {pair}: weight={weight:.4f} | attempting BUY ${usd_amount:.2f}")
 
             if self.shadow_mode:
                 logger.info(f"[SHADOW] Would BUY ${usd_amount:.2f} {pair}")
+                successful_buys += 1  # simulate success in shadow
             else:
-                resp = self.exchange.place_market_buy(pair, usd_amount)
-                if getattr(resp, "success", False):
-                    entry_price = self.exchange.get_price(pair)
-                    self.stop_loss_manager.attach_stop_loss(pair, entry_price)
+                try:
+                    resp = self.exchange.place_market_buy(pair, usd_amount)
+                    success = resp.get("success", False) if isinstance(resp, dict) else getattr(resp, "success", False)
+                    if success:
+                        entry_price = self.exchange.get_price(pair)
+                        size = usd_amount / entry_price if entry_price > 0 else 0
+                        sl_success = self.stop_loss_manager.attach_stop_loss(pair, entry_price, size)
+                        if sl_success:
+                            logger.info(f"[SUCCESS] {pair}: bought ${usd_amount:.2f} @ ${entry_price} | SL attached")
+                        else:
+                            logger.warning(f"[PARTIAL] {pair}: bought ${usd_amount:.2f} @ ${entry_price} | SL attachment FAILED")
+                        successful_buys += 1
+                        # Log to trade ledger
+                        try:
+                            self.trade_ledger.log_trade(
+                                pair=pair,
+                                side="buy",
+                                qty=usd_amount / entry_price if entry_price else 0,
+                                entry_price=entry_price,
+                                usd_value=usd_amount
+                            )
+                        except Exception as e:
+                            logger.warning(f"Ledger logging failed for {pair}: {e}")
+                    else:
+                        error_msg = resp.get("error", "unknown error") if isinstance(resp, dict) else "response indicated failure"
+                        logger.error(f"[FAILURE] {pair}: buy failed - {error_msg}")
+                        skipped.append({"pair": pair, "reason": f"buy failed: {error_msg}"})
+                except Exception as e:
+                    logger.exception(f"[EXCEPTION] {pair}: unexpected error during buy: {e}")
+                    skipped.append({"pair": pair, "reason": f"exception: {str(e)}"})
+
+        logger.info(f"Fresh start summary: attempts={buy_attempts} | successful={successful_buys} | skipped={len(skipped)}")
+        if skipped:
+            logger.info(f"Skipped pairs: {skipped}")
 
         self.last_rebalance_date = date.today()
         self._save_state()

@@ -1,21 +1,20 @@
 """
 Stop Loss Manager for Phase 6
 
-Handles stop-loss placement at the Coinbase level using native orders.
+Handles stop-loss (and take-profit) placement at the Coinbase level using native orders.
 This is mandatory before going live.
 """
 
+import time
+import logging
 from typing import Optional, Any
-import uuid
+
+logger = logging.getLogger(__name__)
 
 
 class StopLossManager:
     """
-    Manage stop-loss orders for Phase 6 using native Coinbase stop-limit orders.
-
-    Recommended approach (from PHASE_6_NATIVE_SL_SPEC.md):
-    - Use stop_limit_stop_limit_gtc orders
-    - Fixed 3% or ATR-based stop
+    Manage stop-loss and take-profit orders for Phase 6 using native Coinbase stop-limit orders.
     """
 
     def __init__(self, exchange_client: Any, config: dict, mode: str = "shadow"):
@@ -26,66 +25,63 @@ class StopLossManager:
 
         # Default risk parameters (can be overridden by config)
         self.default_sl_pct = config.get("risk_management", {}).get("stop_loss_pct", 0.03)
+        self.default_tp_pct = config.get("risk_management", {}).get("take_profit_pct", 0.06)
 
-    def attach_stop_loss(self, pair: str, entry_price: float, size: float = None) -> bool:
+    def attach_stop_loss(self, pair: str, entry_price: float, size: float, sl_pct: float = None) -> bool:
         """
-        Attach a stop loss to a newly opened position.
+        Attach a native stop-loss order with retry logic.
 
-        Args:
-            pair: Trading pair (e.g. "BTC-USD")
-            entry_price: Price at which the position was entered
-            size: Position size in base currency (optional for now)
-
-        Returns:
-            True if stop loss was successfully attached (or logged in shadow)
+        Returns True on successful placement (or shadow success).
         """
-        stop_price = round(entry_price * (1 - self.default_sl_pct), 2)
-        limit_price = round(stop_price * 0.995, 2)  # 0.5% buffer
+        pct = sl_pct if sl_pct is not None else self.default_sl_pct
+        stop_price = round(entry_price * (1 - pct), 2)
+        limit_price = round(stop_price * 0.995, 2)
 
         if self.shadow_mode:
             print(f"[SHADOW] Would attach native SL for {pair}")
-            print(f"         Entry: ${entry_price:.2f} | Stop: ${stop_price:.2f} | Limit: ${limit_price:.2f}")
+            print(f"         Entry: ${entry_price:.2f} | Stop: ${stop_price:.2f} | Limit: ${limit_price:.2f} | SL%: {pct*100:.1f}% | size: {size}")
             return True
 
-        # Live mode - place native stop-limit order
-        try:
-            success = self.exchange.place_stop_limit_sell(
-                product_id=pair,
-                qty=size or 0.001,  # placeholder size
-                stop_price=stop_price,
-                limit_price=limit_price
-            )
-            if success:
-                print(f"[LIVE] Native stop-limit SL placed for {pair} @ ${stop_price}")
-            return success
-        except Exception as e:
-            print(f"[ERROR] Failed to place native SL for {pair}: {e}")
-            return False
+        # Live mode with retry
+        max_retries = 3
+        for attempt in range(1, max_retries + 1):
+            try:
+                result = self.exchange.place_stop_limit_sell(
+                    product_id=pair,
+                    qty=size,
+                    stop_price=stop_price,
+                    limit_price=limit_price
+                )
+                if result:
+                    logger.info(f"Stop-loss successfully attached for {pair}")
+                    return True
+                else:
+                    logger.warning(f"SL attempt {attempt}/{max_retries} failed for {pair}")
+            except Exception as e:
+                logger.error(f"SL attempt {attempt}/{max_retries} exception for {pair}: {e}")
 
-    def place_stop_limit_sell(
-        self,
-        product_id: str,
-        qty: float,
-        stop_price: float,
-        limit_price: Optional[float] = None
-    ) -> bool:
+            if attempt < max_retries:
+                sleep_time = 2 ** attempt
+                logger.info(f"Retrying SL attachment for {pair} in {sleep_time}s...")
+                time.sleep(sleep_time)
+
+        logger.error(f"Failed to attach stop-loss for {pair} after {max_retries} attempts")
+        return False
+
+    def attach_take_profit(self, pair: str, entry_price: float, size: float, tp_pct: float = None) -> bool:
         """
-        Lower-level method to place a native stop-limit sell order.
-        Delegates to the exchange client.
+        Attach a native take-profit limit sell order.
         """
+        pct = tp_pct if tp_pct is not None else self.default_tp_pct
+        tp_price = round(entry_price * (1 + pct), 2)
+
         if self.shadow_mode:
-            print(f"[SHADOW] place_stop_limit_sell {product_id} @ stop=${stop_price}")
+            print(f"[SHADOW] Would attach native TP for {pair}")
+            print(f"         Entry: ${entry_price:.2f} | TP: ${tp_price:.2f} | TP%: {pct*100:.1f}% | size: {size}")
             return True
 
-        # In real implementation, this would call the exchange client's method
-        # For now we delegate
-        if hasattr(self.exchange, "place_stop_limit_sell"):
-            return self.exchange.place_stop_limit_sell(
-                product_id=product_id,
-                qty=qty,
-                stop_price=stop_price,
-                limit_price=limit_price
-            )
-
-        print(f"[TODO] Real native stop-limit order not yet wired for {product_id}")
+        # Use a simple limit sell for TP
+        if hasattr(self.exchange, "place_limit_sell"):
+            return self.exchange.place_limit_sell(pair, size, tp_price)
+        print("[TODO] place_limit_sell not yet implemented on exchange client")
         return False

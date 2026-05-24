@@ -7,7 +7,7 @@ This is mandatory before going live.
 
 import time
 import logging
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -85,3 +85,185 @@ class StopLossManager:
             return self.exchange.place_limit_sell(pair, size, tp_price)
         print("[TODO] place_limit_sell not yet implemented on exchange client")
         return False
+
+    def detect_active_protective_orders(
+        self, basket: Optional[List[str]] = None
+    ) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Detect and return active SL/TP protective orders for pairs in the basket.
+
+        Queries via exchange_client.get_open_orders() and filters for
+        stop-loss and take-profit style orders. Returns structured mapping
+        per pair for use before rebalance.
+
+        Logs detected orders.
+        """
+        active: Dict[str, List[Dict[str, Any]]] = {}
+        try:
+            open_orders = self.exchange.get_open_orders() or []
+            for order in open_orders:
+                product_id = order.get("product_id") or order.get("pair")
+                if basket and product_id not in basket:
+                    continue
+                order_type = str(order.get("type", "")).lower()
+                side = str(order.get("side", "")).upper()
+                has_stop = bool(order.get("stop_price")) or "stop" in order_type
+
+                protective_type = None
+                if has_stop:
+                    protective_type = "SL"
+                elif side == "SELL" and "limit" in order_type:
+                    protective_type = "TP"  # potential TP (limit sell)
+
+                if protective_type:
+                    if product_id not in active:
+                        active[product_id] = []
+                    order_info = dict(order)  # copy
+                    order_info["protective_type"] = protective_type
+                    active[product_id].append(order_info)
+
+            if active:
+                summary = {k: len(v) for k, v in active.items()}
+                logger.info(f"[CR-03.1] Detected active protective orders: {summary}")
+            else:
+                logger.info("[CR-03.1] No active SL/TP protective orders detected for basket.")
+
+        except Exception as e:
+            logger.error(f"[CR-03.1] Error detecting active protective orders: {e}")
+            active = {}
+
+        return active
+
+    def suspend_active_protective_orders(
+        self, active_stops: Dict[str, List[Dict[str, Any]]]
+    ) -> Dict[str, List[str]]:
+        """
+        CR-03.2: Suspend/cancel all active SL/TP protective orders for pairs being rebalanced.
+
+        After detection (CR-03.1), cancel the orders via exchange client.
+        Records which stops were suspended with their order IDs for audit trail.
+
+        Returns: {pair: [order_id, ...], ...} for logging/verification.
+        """
+        suspended: Dict[str, List[str]] = {}
+        total_suspended = 0
+
+        for pair, orders in (active_stops or {}).items():
+            suspended[pair] = []
+            for order in orders:
+                order_id = order.get("id") or order.get("order_id")
+                ptype = order.get("protective_type", "PROTECTIVE")
+                if not order_id:
+                    logger.warning(f"[CR-03.2] Order without ID for {pair}: {order}")
+                    continue
+
+                if self.shadow_mode:
+                    print(f"[SHADOW][CR-03.2] Would cancel {ptype} order {order_id} for {pair}")
+                    suspended[pair].append(order_id)
+                    total_suspended += 1
+                    continue
+
+                try:
+                    success = self.exchange.cancel_order(order_id)
+                    if success:
+                        logger.info(f"[CR-03.2] Suspended {ptype} order {order_id} for {pair}")
+                        suspended[pair].append(order_id)
+                        total_suspended += 1
+                    else:
+                        logger.warning(f"[CR-03.2] Failed to cancel {ptype} order {order_id} for {pair}")
+                except Exception as e:
+                    logger.error(f"[CR-03.2] Exception canceling {order_id} for {pair}: {e}")
+
+        if total_suspended > 0:
+            summary = {k: v for k, v in suspended.items() if v}
+            logger.info(f"[CR-03.2] Suspended {total_suspended} protective orders across {len(summary)} pairs: {summary}")
+        else:
+            logger.info("[CR-03.2] No active protective orders required suspension.")
+
+        return suspended
+
+    def verify_reconciliation(
+        self,
+        basket: Optional[List[str]] = None,
+        suspended: Optional[Dict[str, List[str]]] = None,
+    ) -> Dict[str, Any]:
+        """
+        CR-03.5: Verification method confirming end-to-end
+        suspend → rebalance → re-attach sequence.
+
+        - Detects any orphaned protective orders on zero-balance pairs
+        - Reports active protective orders post-rebalance vs holdings
+        - Includes suspended order ID audit trail in report
+        - Structured logging of verification outcome with order details
+
+        Returns: report dict with 'success', 'orphaned_stops', 'active_protective_after',
+                 'suspended_tracked', 'details'
+        """
+        report: Dict[str, Any] = {
+            "success": False,
+            "timestamp": time.time(),
+            "orphaned_stops": {},
+            "active_protective_after": {},
+            "zero_balance_with_stops": [],
+            "details": "",
+            "suspended_tracked": suspended or {},
+        }
+        try:
+            holdings = self.exchange.get_holdings() or {}
+            open_orders = self.exchange.get_open_orders() or []
+
+            # Re-detect active protective orders after re-attach
+            active_after: Dict[str, List[str]] = {}
+            for order in open_orders:
+                product_id = order.get("product_id") or order.get("pair")
+                if basket and product_id not in basket:
+                    continue
+                order_type = str(order.get("type", "")).lower()
+                side = str(order.get("side", "")).upper()
+                has_stop = bool(order.get("stop_price")) or "stop" in order_type
+                is_protective = has_stop or (side == "SELL" and "limit" in order_type)
+                if is_protective:
+                    if product_id not in active_after:
+                        active_after[product_id] = []
+                    oid = order.get("id") or order.get("order_id")
+                    if oid:
+                        active_after[product_id].append(oid)
+
+            report["active_protective_after"] = active_after
+
+            # Identify orphans: protective orders where current holding <= 0
+            orphans: Dict[str, List[str]] = {}
+            for pid, oids in active_after.items():
+                asset = pid.split("-")[0] if "-" in pid else pid
+                bal = holdings.get(asset, holdings.get(pid, 0))
+                try:
+                    bal = float(bal) if bal is not None else 0.0
+                except (TypeError, ValueError):
+                    bal = 0.0
+                if bal <= 0:
+                    orphans[pid] = oids
+
+            report["orphaned_stops"] = orphans
+            report["zero_balance_with_stops"] = list(orphans.keys())
+
+            if orphans:
+                report["details"] = (
+                    f"FAILED: {len(orphans)} orphaned protective orders on zero-balance pairs"
+                )
+                logger.warning(
+                    f"[CR-03.5] Verification FAILED - orphaned stops: {orphans}"
+                )
+            else:
+                report["success"] = True
+                report["details"] = (
+                    f"SUCCESS: {len(active_after)} pairs have protective orders; "
+                    f"no orphans on zero-balance holdings. "
+                    f"Tracked suspended order IDs: {list((suspended or {}).values())}"
+                )
+                logger.info(f"[CR-03.5] Verification SUCCESS: {report['details']}")
+
+        except Exception as e:
+            logger.error(f"[CR-03.5] Verification exception: {e}")
+            report["details"] = f"ERROR: {str(e)}"
+
+        return report

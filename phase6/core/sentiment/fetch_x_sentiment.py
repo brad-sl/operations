@@ -4,7 +4,7 @@ Phase 6 - X (Twitter) Sentiment Fetcher
 Ported and adapted from Phase 4/5 (fetch_x_sentiment.py)
 - Separate module (X only)
 - 30-minute frequency target (expensive API)
-- Outputs cache with timestamp for 15-minute half-life decay in scorer
+- Outputs cache with timestamp for 15-minute half-life decay + 2h staleness zeroing in scorer (t_ceb0da78)
 - Paths updated for Phase 6 structure
 """
 
@@ -15,6 +15,8 @@ from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 from typing import List, Dict, Any, Optional
+
+from textblob import TextBlob
 
 # Phase 6 paths
 PHASE6_DIR = Path("/home/brad/projects/crypto-trading-bot/phase6")
@@ -128,28 +130,33 @@ def distribute_posts_to_pairs(posts: List[Dict], keywords: Dict[str, str]) -> Di
 
 
 def calculate_sentiment(posts: List[Dict]) -> float:
-    """Engagement-based sentiment score (-1.0 to 1.0)."""
+    """
+    Calculate sentiment using TextBlob polarity analysis on post text.
+    Returns average polarity in [-1.0, 1.0].
+    Falls back to 0.0 on errors (matches Phase 4 archived implementation).
+    Engagement metrics are available but not used for primary scoring
+    (restored to original TextBlob behavior per handoff).
+    """
     if not posts:
         return 0.0
 
-    total_engagement = 0
-    sentiment_score = 0
-
+    polarities = []
     for post in posts:
-        metrics = post.get("public_metrics", {})
-        engagement = (
-            metrics.get("like_count", 0) +
-            metrics.get("retweet_count", 0) * 1.5 +
-            metrics.get("reply_count", 0) * 0.5
-        )
-        total_engagement += engagement
-        sentiment_score += engagement
+        text = post.get("text", "")
+        if not text or not text.strip():
+            continue
+        try:
+            polarity = TextBlob(text).sentiment.polarity
+            polarities.append(polarity)
+        except Exception:
+            # Graceful fallback as in archived Phase 4 code
+            continue
 
-    if total_engagement == 0:
+    if not polarities:
         return 0.0
 
-    avg = sentiment_score / len(posts)
-    return max(-1.0, min(1.0, avg / 1000.0))
+    avg_polarity = sum(polarities) / len(polarities)
+    return max(-1.0, min(1.0, avg_polarity))
 
 
 def main():

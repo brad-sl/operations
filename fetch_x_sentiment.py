@@ -8,30 +8,49 @@ Handles dozens/hundreds of pairs efficiently with a single API call
 import requests
 import json
 import os
+import logging
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import unquote
 from typing import List, Dict, Any, Optional
 
+try:
+    from textblob import TextBlob
+    TEXTBLOB_AVAILABLE = True
+except ImportError:
+    TEXTBLOB_AVAILABLE = False
+    TextBlob = None
+
 BASE_DIR = Path("/home/brad/.openclaw/workspace/operations/crypto-bot")
 CACHE_FILE = BASE_DIR / "sentiment_cache.json"
 
 def load_bearer_token():
-    """Load X API Bearer token from .env"""
-    env_vars = {}
+    """Load X API Bearer token from .env (more robust parsing)"""
     env_file = BASE_DIR / ".env"
-    
+
     if not env_file.exists():
         print("❌ ERROR: .env file not found")
         return None
-    
-    with open(env_file) as f:
-        for line in f:
-            if '=' in line and not line.startswith('#'):
-                k, v = line.strip().split('=', 1)
-                env_vars[k] = v
-    
-    token = unquote(env_vars.get("X_API_BEARER", ""))
+
+    token = None
+    try:
+        with open(env_file) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' not in line:
+                    continue
+                k, v = line.split('=', 1)
+                k = k.strip()
+                v = v.strip().strip('"\'')
+                if k == "X_API_BEARER":
+                    token = unquote(v)
+                    break
+    except Exception as e:
+        print(f"Error reading .env: {e}")
+        return None
+
     return token if token else None
 
 def fetch_x_posts_for_sentiment_analysis(
@@ -143,12 +162,26 @@ def distribute_posts_to_pairs(posts: List[Dict], keywords: Dict[str, str]) -> Di
     
     return pair_posts
 
+def analyze_sentiment(text: str) -> float:
+    """
+    Calculate sentiment polarity using TextBlob.
+    Restored from archived implementation.
+    Returns polarity in range [-1.0, 1.0]
+    """
+    if not TEXTBLOB_AVAILABLE or not text:
+        return 0.0
+    try:
+        return float(TextBlob(text).sentiment.polarity)
+    except Exception:
+        return 0.0
+
+
 def calculate_sentiment(posts: List[Dict]) -> float:
     """
-    Calculate sentiment from posts based on public metrics.
+    Calculate sentiment from posts based on public metrics + TextBlob polarity.
     
     Args:
-        posts: List of posts with public_metrics
+        posts: List of posts with public_metrics and text
     
     Returns:
         Sentiment score (-1.0 to 1.0)
@@ -159,24 +192,50 @@ def calculate_sentiment(posts: List[Dict]) -> float:
     total_engagement = 0
     sentiment_score = 0
     
+    total_polarity = 0.0
+    posts_with_text = 0
+    
     for post in posts:
         metrics = post.get("public_metrics", {})
         like_count = metrics.get("like_count", 0)
         retweet_count = metrics.get("retweet_count", 0)
         reply_count = metrics.get("reply_count", 0)
+        text = post.get("text", "")
         
         # Engagement-based sentiment: retweets+replies indicate agreement/interest
         engagement = like_count + (retweet_count * 1.5) + (reply_count * 0.5)
         total_engagement += engagement
         sentiment_score += engagement
+        
+        # TextBlob polarity analysis (restored)
+        if text:
+            polarity = analyze_sentiment(text)
+            total_polarity += polarity
+            posts_with_text += 1
     
-    if total_engagement == 0:
+    if total_engagement == 0 and posts_with_text == 0:
         return 0.0
     
-    # Normalize to -1.0 to 1.0 range
-    avg_engagement = sentiment_score / len(posts)
-    # Cap at reasonable levels (avoid extreme outliers)
-    return max(-1.0, min(1.0, avg_engagement / 1000.0))
+    # Calculate engagement-based component
+    engagement_component = 0.0
+    if total_engagement > 0:
+        avg_engagement = sentiment_score / len(posts)
+        engagement_component = max(-1.0, min(1.0, avg_engagement / 1000.0))
+    
+    # Calculate TextBlob polarity component
+    polarity_component = 0.0
+    if posts_with_text > 0:
+        polarity_component = total_polarity / posts_with_text
+    
+    # Hybrid: 50% engagement, 50% TextBlob polarity (when both available)
+    if total_engagement > 0 and posts_with_text > 0:
+        final_score = 0.5 * engagement_component + 0.5 * polarity_component
+    elif posts_with_text > 0:
+        final_score = polarity_component
+    else:
+        final_score = engagement_component
+    
+    return max(-1.0, min(1.0, final_score))
 
 def main():
     """Fetch X sentiment for all pairs and save to cache."""
@@ -239,3 +298,51 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+def fetch_x_sentiment_apify(query: str = "bitcoin OR ethereum OR solana OR dogecoin OR xrp", max_items: int = 50) -> Dict[str, float]:
+    """Fetch X sentiment using Apify Twitter Search Scraper as fallback."""
+    try:
+        from apify_client import ApifyClient
+    except ImportError:
+        print("⚠️ apify_client not installed. Skipping Apify X fetch.")
+        return {}
+
+    token = os.getenv("APIFY_API_TOKEN")
+    if not token:
+        print("⚠️ No APIFY_API_TOKEN found")
+        return {}
+
+    client = ApifyClient(token)
+
+    run_input = {
+        "searchTerms": [query],
+        "maxItems": max_items,
+        "sort": "Latest",
+    }
+
+    try:
+        run = client.actor("apify/twitter-search-scraper").call(run_input=run_input)
+        dataset = client.dataset(run["defaultDatasetId"])
+        items = list(dataset.iterate_items())
+
+        # Very basic sentiment (count positive/negative keywords as proxy)
+        scores = {}
+        positive_words = {"bullish", "moon", "buy", "up", "good", "great", "pump"}
+        negative_words = {"bearish", "dump", "sell", "down", "bad", "crash", "scam"}
+
+        for item in items:
+            text = (item.get("text") or "").lower()
+            pos = sum(1 for w in positive_words if w in text)
+            neg = sum(1 for w in negative_words if w in text)
+            if pos > neg:
+                scores["sentiment"] = scores.get("sentiment", 0) + 0.1
+            elif neg > pos:
+                scores["sentiment"] = scores.get("sentiment", 0) - 0.1
+
+        avg = scores.get("sentiment", 0.0) / max(len(items), 1)
+        print(f"✅ Apify X: analyzed {len(items)} posts, avg sentiment ≈ {avg:.2f}")
+        return {"X_SENTIMENT": round(avg, 3)}
+    except Exception as e:
+        print(f"⚠️ Apify X failed: {e}")
+        return {}
+

@@ -1,0 +1,75 @@
+2026-05-19 13:54:48,249 - __main__ - ERROR - ❌ OPENROUTER_API_KEY not set
+2026-05-19 13:54:48,253 - __main__ - ERROR - ❌ Reviewer failed: Missing OPENROUTER_API_KEY
+2026-05-19 14:05:18,737 - __main__ - ERROR - ❌ OPENROUTER_API_KEY not set
+2026-05-19 14:05:18,738 - __main__ - ERROR - ❌ Reviewer failed: Missing OPENROUTER_API_KEY
+2026-05-19 14:05:23,794 - __main__ - ERROR - ❌ OPENROUTER_API_KEY not set
+2026-05-19 14:05:23,795 - __main__ - ERROR - ❌ Reviewer failed: Missing OPENROUTER_API_KEY
+2026-05-19 14:05:55,510 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:05:55,510 - __main__ - INFO -    Model: anthropic/claude-3.5-sonnet
+2026-05-19 14:05:55,511 - __main__ - INFO -    Smart read: 214 lines → reduced to ~154 lines
+2026-05-19 14:05:55,511 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:05:55,511 - __main__ - INFO -    Size: 5814 chars (~1938 tokens)
+2026-05-19 14:05:55,725 - __main__ - INFO - 📡 Calling OpenRouter (anthropic/claude-3.5-sonnet, max_tokens=3500)
+2026-05-19 14:05:55,866 - __main__ - ERROR - ❌ API error: 404 Client Error: Not Found for url: https://openrouter.ai/api/v1/chat/completions
+2026-05-19 14:05:55,870 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:13:23,407 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:13:23,409 - __main__ - INFO -    Model: anthropic/claude-3.5-sonnet-20240620
+2026-05-19 14:13:23,410 - __main__ - INFO -    Smart read: 214 lines → reduced to ~154 lines
+2026-05-19 14:13:23,410 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:13:23,410 - __main__ - INFO -    Size: 5814 chars (~1938 tokens)
+2026-05-19 14:13:23,619 - __main__ - INFO - 📡 Calling OpenRouter (anthropic/claude-3.5-sonnet-20240620, max_tokens=3500)
+2026-05-19 14:13:24,598 - __main__ - ERROR - ❌ API error: 404 Client Error: Not Found for url: https://openrouter.ai/api/v1/chat/completions
+2026-05-19 14:13:24,601 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:18:30,960 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:18:30,960 - __main__ - INFO -    Model: anthropic/claude-sonnet-latest
+2026-05-19 14:18:30,960 - __main__ - INFO -    Smart read: 214 lines → reduced to ~154 lines
+2026-05-19 14:18:30,961 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:18:30,961 - __main__ - INFO -    Size: 5814 chars (~1938 tokens)
+2026-05-19 14:18:31,081 - __main__ - INFO - 📡 Calling OpenRouter (anthropic/claude-sonnet-latest, max_tokens=3500)
+2026-05-19 14:18:31,197 - __main__ - WARNING - ⚠️ Context length exceeded. Try --quick mode or smaller file.
+2026-05-19 14:18:31,200 - __main__ - ERROR - ❌ API error: 400 Client Error: Bad Request for url: https://openrouter.ai/api/v1/chat/completions
+2026-05-19 14:18:31,203 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:20:29,164 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:20:29,164 - __main__ - INFO -    Model: anthropic/claude-sonnet-latest
+2026-05-19 14:20:29,165 - __main__ - INFO -    Smart read: 214 lines → reduced to ~154 lines
+2026-05-19 14:20:29,165 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:20:29,165 - __main__ - INFO -    Size: 5814 chars (~1938 tokens)
+2026-05-19 14:20:29,290 - __main__ - INFO - 📡 Calling OpenRouter (anthropic/claude-sonnet-latest, max_tokens=2500)
+2026-05-19 14:20:29,405 - __main__ - WARNING - ⚠️ Context length exceeded. Try --quick mode or smaller file.
+2026-05-19 14:20:29,405 - __main__ - ERROR - ❌ API error: 400 Client Error: Bad Request for url: https://openrouter.ai/api/v1/chat/completions
+2026-05-19 14:20:29,407 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:24:02,931 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:24:02,931 - __main__ - INFO -    Model: anthropic/claude-sonnet-latest
+2026-05-19 14:24:02,932 - __main__ - INFO -    Smart read: 214 lines → reduced to ~154 lines
+2026-05-19 14:24:02,932 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:24:02,933 - __main__ - INFO -    Size: 5814 chars (~1938 tokens)
+2026-05-19 14:24:03,073 - __main__ - INFO - 📡 Calling OpenRouter (anthropic/claude-sonnet-latest, max_tokens=2500)
+2026-05-19 14:24:03,206 - __main__ - WARNING - ⚠️ Context length exceeded. Try --quick mode or smaller file.
+2026-05-19 14:24:03,206 - __main__ - ERROR - ❌ API error: 400 Client Error: Bad Request for url: https://openrouter.ai/api/v1/chat/completions
+2026-05-19 14:24:03,208 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:30:19,141 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:30:19,143 - __main__ - INFO -    Model: openai/gpt-5.1-codex-mini
+2026-05-19 14:30:19,143 - __main__ - INFO -    Smart read: 214 lines -> reduced to ~54 lines
+2026-05-19 14:30:19,143 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:30:19,143 - __main__ - INFO -    Size: 1673 chars (~557 tokens)
+2026-05-19 14:30:19,282 - __main__ - INFO - 📡 Calling OpenRouter (openai/gpt-5.1-codex-mini, max_tokens=2500)
+2026-05-19 14:31:03,102 - __main__ - ERROR - ❌ API call failed: object of type 'NoneType' has no len()
+2026-05-19 14:31:03,107 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:34:48,928 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:34:48,930 - __main__ - INFO -    Model: openai/gpt-5.1-codex-mini
+2026-05-19 14:34:48,931 - __main__ - INFO -    Smart read: 214 lines -> reduced to ~54 lines
+2026-05-19 14:34:48,931 - __main__ - INFO - 🔍 Analyzing src/core/live_portfolio_manager.py (quick mode)
+2026-05-19 14:34:48,931 - __main__ - INFO -    Size: 1673 chars (~557 tokens)
+2026-05-19 14:34:49,125 - __main__ - INFO - 📡 Calling OpenRouter (openai/gpt-5.1-codex-mini, max_tokens=2500)
+2026-05-19 14:35:04,490 - __main__ - INFO - ✅ Response received (2538 chars)
+2026-05-19 14:35:04,493 - __main__ - INFO - 📄 Report saved: src/core/live_portfolio_manager.py_review.md
+2026-05-19 14:37:00,391 - __main__ - ERROR - ❌ OPENROUTER_API_KEY not set
+2026-05-19 14:37:00,392 - __main__ - ERROR - ❌ Reviewer failed: Missing OPENROUTER_API_KEY
+2026-05-19 14:38:14,534 - __main__ - INFO - ✅ Code Reviewer Agent initialized
+2026-05-19 14:38:14,534 - __main__ - INFO -    Model: openai/gpt-5.1-codex-mini
+2026-05-19 14:38:14,535 - __main__ - INFO -    Smart read: 309 lines -> reduced to ~54 lines
+2026-05-19 14:38:14,535 - __main__ - INFO - 🔍 Analyzing phase6/core/phase6_runner.py (quick mode)
+2026-05-19 14:38:14,535 - __main__ - INFO -    Size: 1633 chars (~544 tokens)
+2026-05-19 14:38:14,672 - __main__ - INFO - 📡 Calling OpenRouter (openai/gpt-5.1-codex-mini, max_tokens=2500)
+2026-05-19 14:38:25,352 - __main__ - INFO - ✅ Response received (1683 chars)
+2026-05-19 14:38:25,355 - __main__ - INFO - 📄 Report saved: phase6/core/phase6_runner.py_review.md

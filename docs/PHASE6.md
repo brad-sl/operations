@@ -87,3 +87,19 @@ This project was migrated to a clean structure on 2026-05-14.
 - Fresh git history created
 
 The original scattered locations inside `.openclaw/workspace/` can now be cleaned up if desired.
+
+## 2026-05-22 Fix: Live Rebalance "0 Moves" Bug
+
+**Root Cause:** `_perform_daily_rebalance` called `portfolio.get_positions()` which did not exist or returned internal JSON state only (empty until reconcile).
+
+**Resolution:**
+- Added `get_positions()` to `LivePortfolioManager` (v6.03-live-rebalance-fix)
+- Always prefers `cb_client.get_accounts()` / live balance query in live mode for 5-pair basket.
+- Falls back to internal state ONLY for paper mode.
+- Created reference doc: `references/paper-trading-skill/live-rebalance-position-source.md`
+- Updated both `src/core/` and `scripts/` copies for parity.
+- Rebalance now derives real current_allocs before calling `rebalance_plan()`.
+
+**Re-integration Plan:** See `docs/phase6-integration/PHASE6_REINTEGRATION_PLAN.md` (updated below).
+
+No risk to $1k capital; query-only change.

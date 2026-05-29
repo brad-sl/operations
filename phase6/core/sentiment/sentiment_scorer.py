@@ -19,6 +19,10 @@ PHASE6_DIR = Path("/home/brad/projects/crypto-trading-bot/phase6")
 X_CACHE = PHASE6_DIR / "data" / "sentiment" / "x_sentiment_cache.json"
 REDDIT_CACHE = PHASE6_DIR / "data" / "sentiment" / "reddit_sentiment_cache.json"
 
+# Staleness thresholds (Grok Build review intent: zero instead of decayed old values)
+X_STALENESS_THRESHOLD_MIN = 120      # 2h for X
+REDDIT_STALENESS_THRESHOLD_MIN = 240  # 4h for Reddit
+
 
 def _parse_timestamp(ts: str) -> Optional[datetime]:
     """Parse various timestamp formats to UTC datetime."""
@@ -31,9 +35,10 @@ def _parse_timestamp(ts: str) -> Optional[datetime]:
         return None
 
 
-def _exponential_decay(last_ts: str, half_life_minutes: float) -> float:
+def _exponential_decay(last_ts: str, half_life_minutes: float, staleness_threshold_min: Optional[float] = None) -> float:
     """
     Calculate decay factor (0.0 - 1.0) using exponential half-life.
+    If age > staleness_threshold_min, return 0.0 (neutral/zero per review intent).
     half_life_minutes: 15 for X, 60 for Reddit.
     """
     ts = _parse_timestamp(last_ts)
@@ -43,6 +48,9 @@ def _exponential_decay(last_ts: str, half_life_minutes: float) -> float:
     age_minutes = (datetime.now(timezone.utc) - ts).total_seconds() / 60.0
     if age_minutes <= 0:
         return 1.0
+
+    if staleness_threshold_min is not None and age_minutes > staleness_threshold_min:
+        return 0.0
 
     # decay = 0.5 ^ (age / half_life)
     decay = math.pow(0.5, age_minutes / half_life_minutes)
@@ -96,8 +104,8 @@ def load_sentiment_scores(pairs: Optional[list] = None) -> Dict[str, Dict[str, A
         x_ts = x_entry.get("timestamp", "") if isinstance(x_entry, dict) else ""
         reddit_ts = reddit_entry.get("timestamp", "") if isinstance(reddit_entry, dict) else ""
 
-        x_decay = _exponential_decay(x_ts, 15)      # 15 min half-life
-        reddit_decay = _exponential_decay(reddit_ts, 60)  # 60 min half-life
+        x_decay = _exponential_decay(x_ts, 15, X_STALENESS_THRESHOLD_MIN)      # 15 min half-life, 2h staleness
+        reddit_decay = _exponential_decay(reddit_ts, 60, REDDIT_STALENESS_THRESHOLD_MIN)  # 60 min half-life, 4h staleness
 
         x_decayed = x_raw * x_decay
         reddit_decayed = reddit_raw * reddit_decay

@@ -12,6 +12,13 @@ import logging
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 
+try:
+    from textblob import TextBlob
+    TEXTBLOB_AVAILABLE = True
+except ImportError:
+    TEXTBLOB_AVAILABLE = False
+    TextBlob = None
+
 class XSentimentFetcher:
     """
     Sentiment data retrieval and analysis from X API v2.
@@ -141,9 +148,23 @@ class XSentimentFetcher:
                 'error': str(e)
             }
 
+    def analyze_sentiment(self, text: str) -> float:
+        """
+        Calculate sentiment polarity using TextBlob.
+        Restored from archived implementation.
+        Returns polarity in range [-1.0, 1.0]
+        """
+        if not TEXTBLOB_AVAILABLE or not text:
+            return 0.0
+        try:
+            return float(TextBlob(text).sentiment.polarity)
+        except Exception as e:
+            self.logger.warning(f"TextBlob sentiment analysis failed for text: {text[:50]}... Error: {e}")
+            return 0.0  # graceful degradation to neutral
+
     def _extract_sentiment(self, tweets: List[Dict[str, Any]]) -> float:
         """
-        Extract sentiment score from tweets using keyword-based approach.
+        Extract sentiment score from tweets using TextBlob polarity + keyword fallback.
         
         Args:
             tweets (List[Dict]): List of tweet dictionaries
@@ -154,7 +175,7 @@ class XSentimentFetcher:
         if not tweets:
             return 0.0
         
-        # Keyword-based sentiment scoring
+        # Keyword-based sentiment scoring (fallback)
         sentiment_keywords = {
             'positive': ['bullish', 'buy', 'moon', 'pump', 'strong', 'gain', 'rise', 'breakthrough'],
             'negative': ['bearish', 'sell', 'crash', 'dump', 'weak', 'loss', 'fall', 'decline']
@@ -162,14 +183,25 @@ class XSentimentFetcher:
         
         scores = []
         for tweet in tweets:
-            text = tweet.get('text', '').lower()
+            text = tweet.get('text', '')
+            text_lower = text.lower()
             
-            # Basic sentiment calculation
-            positive_matches = sum(1 for keyword in sentiment_keywords['positive'] if keyword in text)
-            negative_matches = sum(1 for keyword in sentiment_keywords['negative'] if keyword in text)
+            # TextBlob polarity (primary method - restored)
+            polarity = self.analyze_sentiment(text)
             
-            # Weighted score calculation
-            tweet_score = (positive_matches - negative_matches) / (positive_matches + negative_matches + 1)
+            # Keyword fallback for robustness
+            positive_matches = sum(1 for keyword in sentiment_keywords['positive'] if keyword in text_lower)
+            negative_matches = sum(1 for keyword in sentiment_keywords['negative'] if keyword in text_lower)
+            keyword_score = 0.0
+            if positive_matches + negative_matches > 0:
+                keyword_score = (positive_matches - negative_matches) / (positive_matches + negative_matches + 1)
+            
+            # Hybrid: 70% TextBlob polarity, 30% keyword matching
+            if TEXTBLOB_AVAILABLE:
+                tweet_score = 0.7 * polarity + 0.3 * keyword_score
+            else:
+                tweet_score = keyword_score
+            
             scores.append(tweet_score)
         
         # Calculate overall sentiment

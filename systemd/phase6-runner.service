@@ -1,0 +1,17 @@
+[Unit]
+Description=Phase 6 Crypto Trading Bot Runner
+After=network.target
+
+[Service]
+Type=simple
+User=brad
+WorkingDirectory=/home/brad/projects/crypto-trading-bot
+Environment=PYTHONPATH=/home/brad/projects/crypto-trading-bot
+ExecStart=/usr/bin/python3 -m phase6.core.phase6_runner --mode live --confirm-live
+Restart=always
+RestartSec=30
+StandardOutput=append:/home/brad/projects/crypto-trading-bot/logs/phase6_runner.log
+StandardError=append:/home/brad/projects/crypto-trading-bot/logs/phase6_runner_error.log
+
+[Install]
+WantedBy=multi-user.target

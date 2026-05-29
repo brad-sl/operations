@@ -160,8 +160,9 @@ Phase 6.01 implements a **30-minute persistent trading loop** that:
 #### Position Manager
 - **State:** In-memory dict + persistent CSV
 - **Open Tracking:** Pair → entry price, quantity, timestamp
-- **Close Logic:** Stop-loss (-2%), take-profit (+5%), or RSI signal
+- **Close Logic:** Stop-loss (-2%), take-profit (+5%)(see note), or RSI signal
 - **P&L Calculation:** (exit_price - entry_price) * quantity
+(note: backtesting determined that a "let it ride" strategy resulted in much better overall return)
 
 #### Logger
 - **Console:** INFO level, formatted per-cycle summaries
@@ -810,4 +811,4 @@ Before deploying to live trading:
 ---
 
 **End of Documentation**  
-Questions? Contact: brad@example.com
+Questions? Contact: bradsl@live.com

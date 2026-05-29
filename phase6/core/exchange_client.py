@@ -6,7 +6,7 @@ Unified interface for Phase 6.
 - Live: delegates to real Coinbase Advanced Trade via CoinbaseWrapper
 """
 
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import os
 import time
 import logging
@@ -199,3 +199,46 @@ class CoinbaseExchangeClient:
         except Exception as e:
             logger.error(f"Live stop-limit failed: {e}")
             return False
+
+    def get_holdings(self) -> Dict[str, float]:
+        """Return current crypto holdings as {asset: amount} e.g. {'BTC': 0.0123}.
+        Uses live exchange balances for accurate rebalance after SL triggers.
+        """
+        if self.shadow_mode:
+            return self._positions.copy()
+
+        holdings = {}
+        if not self.real_client:
+            return holdings
+        try:
+            accounts = self.real_client.get_accounts()
+            for acc in accounts.get("accounts", []):
+                currency = acc.get("currency", "")
+                if currency and currency != "USD":
+                    bal = float(acc.get("available_balance", {}).get("value", 0.0))
+                    if bal > 0:
+                        holdings[currency] = bal
+            return holdings
+        except Exception as e:
+            logger.error(f"Failed to fetch live holdings: {e}")
+            return {}
+
+    def get_open_orders(self, product_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch open orders, optionally filtered by product. Placeholder for live.
+        In live would query /api/v3/brokerage/orders?status=OPEN
+        """
+        if self.shadow_mode:
+            # In shadow, we don't track open orders yet; return []
+            return []
+        # Live stub - prevents crash, real impl would delegate
+        logger.info(f"[LIVE] get_open_orders called for {product_id or 'all'} (stub)")
+        return []
+
+    def cancel_order(self, order_id: str) -> bool:
+        """Cancel a specific order by ID. Placeholder.
+        """
+        if self.shadow_mode:
+            print(f"[SHADOW] Would cancel order {order_id}")
+            return True
+        logger.info(f"[LIVE] cancel_order({order_id}) stub - not yet wired to real API")
+        return False

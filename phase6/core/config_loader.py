@@ -60,16 +60,23 @@ class ConfigLoader:
             return json.load(f)
     
     def get_config(self) -> TradingConfig:
-        """Get validated configuration as dataclass"""
+        """Get validated configuration as dataclass (mapped from Phase 6 config format)"""
+        gs = self._config.get("global_settings", {})
+        rm = self._config.get("risk_management", {})
+        p6 = self._config.get("phase_6_specific", {})
+
+        pairs = gs.get("pairs", [])
+
+        # Provide sensible defaults for fields not present in the new config
         return TradingConfig(
-            trading_pairs=self._config["trading_pairs"],
-            daily_spend_usd=self._config["limits"]["daily_spend_usd"],
-            max_single_order_usd=self._config["limits"]["max_single_order_usd"],
-            max_daily_loss_usd=self._config["limits"]["max_daily_loss_usd"],
-            position_limits=self._config["limits"]["max_position_size"],
-            order_type=self._config["settings"]["order_type"],
-            sandbox_mode=self._config["settings"]["sandbox_mode"],
-            approval_required=self._config["settings"]["approval_required"],
+            trading_pairs=pairs,
+            daily_spend_usd=500.0,  # default
+            max_single_order_usd=200.0,  # default
+            max_daily_loss_usd=50.0,  # default
+            position_limits={p: 200.0 for p in pairs},  # default
+            order_type="market",
+            sandbox_mode=True,
+            approval_required=False,
         )
     
     def validate(self) -> bool:

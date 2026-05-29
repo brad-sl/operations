@@ -34,6 +34,13 @@ except ImportError:
     NUMPY_AVAILABLE = False
     np = None
 
+try:
+    from textblob import TextBlob
+    TEXTBLOB_AVAILABLE = True
+except ImportError:
+    TEXTBLOB_AVAILABLE = False
+    TextBlob = None
+
 logger = logging.getLogger(__name__)
 
 # Configuration
@@ -56,6 +63,20 @@ BEARISH_KEYWORDS = [
     'terrible', 'bad', 'scam', 'bearish', 'short',
     'risk', 'warning', 'caution', 'trap', 'fraud', 'rug'
 ]
+
+
+def analyze_sentiment(text: str) -> float:
+    """
+    Calculate sentiment polarity using TextBlob.
+    Falls back to 0.0 if TextBlob unavailable or on error.
+    Returns polarity in range [-1.0, 1.0]
+    """
+    if not TEXTBLOB_AVAILABLE or not text:
+        return 0.0
+    try:
+        return float(TextBlob(text).sentiment.polarity)
+    except Exception:
+        return 0.0
 
 
 class RedditSentimentFetcher:
@@ -150,7 +171,7 @@ class RedditSentimentFetcher:
         Calculate sentiment from Reddit posts.
         
         Weights: 
-        - Text analysis (bullish/bearish keywords): 50%
+        - Text analysis (TextBlob polarity + keywords): 50%
         - Upvote direction: 30%
         - Comment engagement: 20%
         """
@@ -171,13 +192,19 @@ class RedditSentimentFetcher:
                 # Combine text for analysis
                 text_content = title + ' ' + selftext
                 
-                # Text sentiment: count bullish vs bearish keywords
+                # Text sentiment: hybrid of keyword matching + TextBlob polarity
                 bullish_count = sum(1 for word in BULLISH_KEYWORDS if word in text_content)
                 bearish_count = sum(1 for word in BEARISH_KEYWORDS if word in text_content)
                 
-                text_sentiment = 0.0
+                keyword_sentiment = 0.0
                 if bullish_count + bearish_count > 0:
-                    text_sentiment = (bullish_count - bearish_count) / (bullish_count + bearish_count)
+                    keyword_sentiment = (bullish_count - bearish_count) / (bullish_count + bearish_count)
+                
+                # TextBlob polarity analysis (restored from archived implementation)
+                polarity = analyze_sentiment(text_content)
+                
+                # Hybrid: 60% TextBlob polarity, 40% keyword matching for robustness
+                text_sentiment = 0.6 * polarity + 0.4 * keyword_sentiment
                 
                 # Upvote sentiment (positive upvotes = bullish)
                 upvote_sentiment = 1.0 if upvotes > 0 else -1.0

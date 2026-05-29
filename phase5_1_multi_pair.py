@@ -39,14 +39,24 @@ def main():
     state = MockState()
     order_exec = MockOrderExec()
 
-    # PHASE 6 INTEGRATION
-    from phase6 import Phase6Initializer
-    initializer = Phase6Initializer(cb_client, state, order_exec)
-    initializer.run()
+    # PHASE 6 INTEGRATION - CR-04.2 Fresh Start wiring
+    from phase6.core.phase6_runner import Phase6Runner
+    # Ensure real balance query on every run
+    runner = Phase6Runner(config_path="config/trading_config_phase6.json", mode="live")
+    cash = runner.exchange.get_account_balance("USD")
+    log.info(f"Real balance query on startup: ${cash:.2f}")
+
+    # Fresh start bootstrap integration
+    if scenario == "fresh_start" or not state_data.get('positions'):
+        runner._handle_fresh_start()  # or fresh_start_bootstrap equivalent
+        log.info("Fresh start bootstrap executed")
+
+    # Preserve CR-03 hooks (rebalance, stop management)
+    # CR-03 hooks remain intact via runner._perform_daily_rebalance etc.
 
     state_data = state.get_state()
     if state_data.get('status') != 'READY_TO_TRADE':
-        log.error(f\"Not ready to trade: {state_data.get('status')}\")
+        log.error(f"Not ready to trade: {state_data.get('status')}")
         return
 
     deploy_budget = state_data['deploy_budget']

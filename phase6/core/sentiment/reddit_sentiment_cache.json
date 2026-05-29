@@ -1,0 +1,38 @@
+{
+  "BTC-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-05-28T05:36:17.631010Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ETH-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-05-28T05:36:17.631036Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "SOL-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-05-28T05:36:17.631043Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "XRP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-05-28T05:36:17.631050Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "DOGE-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-05-28T05:36:17.631057Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ADA-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-05-28T05:36:17.631072Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  }
+}

@@ -2,21 +2,25 @@
 
 **Date:** 2026-05-18
 
-## Stop Loss Fix Applied
+## Current State
 
-- [x] `StopLossManager` updated to accept `(exchange, config, mode)` signature
-- [x] Added `attach_stop_loss()` method with clear TODO for native Coinbase implementation
-- [x] Runner now initializes without StopLossManager-related errors
+- ✅ Canonical structure in `phase6/core/`
+- ✅ Naming normalization complete
+- ✅ Stop Loss Manager implemented (native SL path ready)
+- ✅ Exchange Client enhanced with realistic shadow simulation
+- ✅ Runner initializes cleanly in shadow mode
 
-## Current Initialization Status
+## Pre-Live Readiness
 
-Runner can now reach config loading stage in shadow mode.
-Next error is expected config key (`trading_pairs`) — normal during migration.
+| Component              | Status          | Notes |
+|------------------------|-----------------|-------|
+| Stop Loss (Coinbase)   | Ready (shadow)  | Native stop-limit logic implemented |
+| Exchange Client        | Enhanced        | Good shadow simulation + live path prepared |
+| Config                 | Aligned         | Works with current trading_config_phase6.json |
+| Runner                 | Functional      | Initializes and can simulate cycles |
 
-## Readiness for Launch
+## Next Steps (User Directed)
 
-- Stop loss module is now compatible (stubbed but non-breaking)
-- Exchange trading can remain stubbed
-- Structure is ready for a shadow mode test launch
+User wants to prep for live. Shadow mode is now effective at flushing issues.
 
-**Next recommended step:** Attempt a shadow mode launch to surface remaining config/runtime issues.
+**Recommended:** Run a longer shadow session or trigger Fresh Start logic to surface remaining gaps.

@@ -1,0 +1,32 @@
+{
+  "BTC-USD": {
+    "sentiment": 0.004648936170212766,
+    "timestamp": "2026-05-28T05:00:23.187895",
+    "post_count": 47
+  },
+  "ETH-USD": {
+    "sentiment": 0.02903846153846154,
+    "timestamp": "2026-05-28T05:00:23.187895",
+    "post_count": 13
+  },
+  "SOL-USD": {
+    "sentiment": 0.2151216216216216,
+    "timestamp": "2026-05-28T05:00:23.187895",
+    "post_count": 37
+  },
+  "XRP-USD": {
+    "sentiment": 0.00035714285714285714,
+    "timestamp": "2026-05-28T05:00:23.187895",
+    "post_count": 7
+  },
+  "DOGE-USD": {
+    "sentiment": 0.16041666666666665,
+    "timestamp": "2026-05-28T05:00:23.187895",
+    "post_count": 6
+  },
+  "ADA-USD": {
+    "sentiment": 0.2085,
+    "timestamp": "2026-05-28T05:00:23.187895",
+    "post_count": 1
+  }
+}

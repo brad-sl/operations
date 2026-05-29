@@ -108,9 +108,11 @@ def rebalance_plan(current_allocs: Dict[str, float], target_allocs_pct: Dict[str
     # In a real system, this would be split into multiple smaller trades to respect liquidity; here we provide a straightforward plan
     for coin, diff in moves:
         if diff < 0:
-            plan.append({"from_coin": coin, "to_coin": 'USD', "amount_usd": min(-diff, total_capital * 0.25)})
+            # Sell to reduce position
+            plan.append({"pair": coin, "action": "SELL", "usd_amount": min(-diff, total_capital * 0.25)})
         else:
-            plan.append({"from_coin": 'USD', "to_coin": coin, "amount_usd": min(diff, total_capital * 0.25)})
+            # Buy to increase position
+            plan.append({"pair": coin, "action": "BUY", "usd_amount": min(diff, total_capital * 0.25)})
     return plan
 
 # Simple convenience for quick testing in interactive sessions

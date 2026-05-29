@@ -220,6 +220,16 @@ class Phase6Runner:
             logger.warning(f"Insufficient cash for Fresh Start: ${cash:.2f}")
             return
 
+        # Wire CR-03 suspend/re-attach logic around Fresh Start rebalancing (CR-04.3)
+        logger.info("[CR-03 START] Fresh Start: Detect(03.1) → Suspend(03.2) → Buy+Re-attach(03.4) → Verify(03.5)")
+        basket = self.FIXED_UNIVERSE
+        active_stops = self.stop_loss_manager.detect_active_protective_orders(basket)
+        logger.info(f"[CR-03.1] Active protective orders returned: {len(active_stops)} pairs affected")
+        suspended = self.stop_loss_manager.suspend_active_protective_orders(active_stops)
+        suspended_count = sum(len(v) for v in suspended.values())
+        suspended_ids = {k: v for k, v in suspended.items() if v}
+        logger.info(f"[CR-03.2] Suspended {suspended_count} protective orders. Order IDs by pair: {suspended_ids}")
+
         # Load sentiment and compute base inverse-vol weights, then adjust
         dummy_vols = {p: 0.65 for p in self.FIXED_UNIVERSE}
         base_weights = compute_inverse_vol_allocations(dummy_vols)
@@ -313,9 +323,12 @@ class Phase6Runner:
         sentiment_scores = load_sentiment_scores(universe=self.FIXED_UNIVERSE)
         target_weights = get_sentiment_adjusted_weights(base_weights, sentiment_scores)
 
+        # Convert to percentage format expected by rebalance_plan / plan_static_allocations
+        target_weights_pct = {k: round(v * 100, 4) for k, v in target_weights.items()}
+
         # Generate rebalance plan
         total_capital = cash + sum(current_positions.values()) if current_positions else cash
-        plan = rebalance_plan(current_positions, target_weights, total_capital=total_capital)
+        plan = rebalance_plan(current_positions, target_weights_pct, total_capital=total_capital)
 
         logger.info(f"Daily Rebalance: cash=${cash:.2f} | target_weights={target_weights}")
 
@@ -387,7 +400,7 @@ class Phase6Runner:
             verification = self.stop_loss_manager.verify_reconciliation(
                 basket=basket, suspended=suspended
             )
-            logger.info(f"[CR-03.5] Verification result: success={verification.get("success")} | details={verification.get("details")} | orphans={verification.get("orphaned_stops")}")
+            logger.info("[CR-03.5] Verification result: success=%s | details=%s | orphans=%s" % (verification.get("success"), verification.get("details"), verification.get("orphaned_stops")))
             if verification.get("success"):
                 logger.info("[CR-03 COMPLETE] End-to-end sequence verified: no orphaned stops, fresh stops attached.")
             else:

@@ -27,7 +27,7 @@ from typing import Dict, List, Optional, Any
 from pathlib import Path
 
 
-__version__ = "6.02-hardened"
+__version__ = "6.03-live-rebalance-fix"
 
 
 @dataclass
@@ -211,4 +211,49 @@ class LivePortfolioManager:
 
 
 if __name__ == "__main__":
-    print("LivePortfolioManager + RiskEngine v6.02-hardened ready. Import and use in phase6 loop.")
+    print("LivePortfolioManager + RiskEngine v6.03-live-rebalance-fix ready. Import and use in phase6 loop.")
+    def get_positions(self) -> Dict[str, float]:
+        """
+        Return current positions as {pair: usd_value} for rebalance_plan.
+        LIVE MODE: ALWAYS query real exchange balances FIRST via cb_client.
+        PAPER/SHADOW: fallback to internal state.
+        Implements pattern from references/paper-trading-skill/live-rebalance-position-source.md
+        """
+        positions_usd: Dict[str, float] = {}
+        try:
+            if hasattr(self.cb_client, 'get_accounts') or hasattr(self.cb_client, 'get_account_balances'):
+                accounts = None
+                if hasattr(self.cb_client, 'get_accounts'):
+                    accounts = self.cb_client.get_accounts()
+                elif hasattr(self.cb_client, 'get_account_balances'):
+                    accounts = self.cb_client.get_account_balances()
+                if accounts:
+                    acc_list = accounts.get("accounts", []) if isinstance(accounts, dict) else accounts
+                    for acc in acc_list:
+                        currency = acc.get("currency") or acc.get("asset", "")
+                        if currency in ["USD", "USDC"]:
+                            continue
+                        for pair in ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]:
+                            base = pair.split("-")[0]
+                            if currency == base:
+                                bal = float(acc.get("available_balance", {}).get("value", 0) or acc.get("balance", 0))
+                                price = 0.0
+                                if hasattr(self.cb_client, 'get_price'):
+                                    try:
+                                        price = self.cb_client.get_price(pair)
+                                    except Exception:
+                                        price = 0.0
+                                usd_val = bal * price
+                                if usd_val > 0.01:
+                                    positions_usd[pair] = usd_val
+                    if positions_usd:
+                        self.logger.info(f"Live positions sourced from exchange: {positions_usd}")
+                        return positions_usd
+            for pair, pos in self.positions.items():
+                usd_val = pos.qty * getattr(pos, 'current_price', 0)
+                if usd_val > 0.01:
+                    positions_usd[pair] = usd_val
+            self.logger.info(f"Positions from internal state (paper fallback): {positions_usd}")
+        except Exception as e:
+            self.logger.error(f"get_positions failed, returning empty: {e}")
+        return positions_usd

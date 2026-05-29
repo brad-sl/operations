@@ -1,0 +1,3 @@
+timestamp,action,pair,usd_amount,price,note
+2026-05-15T20:13:10.575648+00:00,BUY,BTC-USD,2000.00,65000.00,test rebalance
+2026-05-15T20:13:10.575866+00:00,BUY,ETH-USD,1500.00,3200.00,test rebalance

@@ -1,46 +1,18 @@
 #!/usr/bin/env python3
 """
-Reddit Sentiment Fetcher for Crypto Trading Bot
-
-Fetches sentiment from Reddit r/crypto, r/bitcoin, r/ethereum communities
-using Apify Reddit actor (replaces direct PRAW API).
-
-Grid-validated parameters:
-- Half-life: 60 minutes (exponential decay)
-- Sources: r/CryptoCurrency, r/Bitcoin, r/ethereum via Apify
-- Metrics: Upvotes, comments, sentiment keywords
-- Output: reddit_sentiment_cache.json
-
-NO FAKE DATA: Real Reddit data only via Apify actor.
+Reddit Sentiment Fetcher (Production)
+Uses TwqHBuZZPHJxiQrTU with native sentiment when available,
+falls back to keyword scoring.
 """
 
 import logging
-import requests
 import os
 import json
-import os
-from pathlib import Path
-
-from .direct_reddit_fetcher import DirectRedditFetcher
-from .praw_reddit_fetcher import PrawRedditFetcher
-
-def _load_env():
-    env_file = Path("/home/brad/projects/crypto-trading-bot/.env")
-    if env_file.exists():
-        for line in env_file.read_text().splitlines():
-            if "=" in line and not line.strip().startswith("#"):
-                k, v = line.split("=", 1)
-                k = k.strip()
-                v = v.strip().strip('"\'')
-                if k not in os.environ:
-                    os.environ[k] = v
-_load_env()
-
 from datetime import datetime
 from pathlib import Path
+from dotenv import load_dotenv
 
-from .direct_reddit_fetcher import DirectRedditFetcher
-from .praw_reddit_fetcher import PrawRedditFetcher
+load_dotenv()
 
 try:
     from apify_client import ApifyClient
@@ -49,376 +21,157 @@ except Exception:
     APIFY_AVAILABLE = False
     ApifyClient = None
 
-try:
-    import numpy as np
-    NUMPY_AVAILABLE = True
-except Exception:
-    NUMPY_AVAILABLE = False
-    np = None
-import time
-import random
-
-class DirectRedditFetcher:
-    """Direct Reddit JSON API fetcher (no Apify, more reliable for production)."""
-
-    def __init__(self):
-        self.session = requests.Session()
-        # Reddit requires a unique, descriptive User-Agent
-        self.session.headers.update({
-            "User-Agent": "HermesTradeBot/1.0 (by u/hermestradebot)"
-        })
-        self.base_url = "https://www.reddit.com"
-
-    def fetch_subreddit_posts(self, subreddit: str, keyword: str = None, limit: int = 25) -> list:
-        """Fetch recent posts from a subreddit, optionally filtered by keyword."""
-        try:
-            url = f"{self.base_url}/r/{subreddit}/hot.json"
-            params = {"limit": min(limit, 100)}
-
-            resp = self.session.get(url, params=params, timeout=15)
-            if resp.status_code != 200:
-                logger.warning(f"Reddit API returned {resp.status_code} for r/{subreddit}")
-                return []
-
-            data = resp.json()
-            posts = data.get("data", {}).get("children", [])
-
-            results = []
-            for post in posts:
-                p = post.get("data", {})
-                title = p.get("title", "").lower()
-                selftext = p.get("selftext", "").lower()
-
-                if keyword and keyword.lower() not in title and keyword.lower() not in selftext:
-                    continue
-
-                results.append({
-                    "title": p.get("title", ""),
-                    "selftext": p.get("selftext", ""),
-                    "upvotes": p.get("ups", 0),
-                    "num_comments": p.get("num_comments", 0),
-                    "created_utc": p.get("created_utc", 0),
-                })
-
-            time.sleep(1.2)  # Basic rate limiting
-            return results
-
-        except Exception as e:
-            logger.error(f"Direct Reddit fetch error for r/{subreddit}: {e}")
-            return []
-
-
 logger = logging.getLogger(__name__)
 
-# Configuration
 REDDIT_CACHE_FILE = Path(__file__).parent / 'reddit_sentiment_cache.json'
-APIFY_USER_ID = os.getenv('APIFY_USER_ID')
 APIFY_API_TOKEN = os.getenv('APIFY_API_TOKEN')
 
-# Apify Reddit actor ID (working paid actor)
-REDDIT_ACTOR_ID = 'fatihtahta/reddit-scraper-search-fast'  # Fast paid actor
+# Production actor with best parameters found
+REDDIT_ACTOR_ID = 'TwqHBuZZPHJxiQrTU'
 
-# Sentiment keywords
 BULLISH_KEYWORDS = [
-    'moon', 'pump', 'buy', 'bull', 'gain', 'surge', 'spike',
-    'awesome', 'great', 'excellent', 'amazing', 'bullish',
-    'long', 'hold', 'hodl', 'strong', 'opportunity', 'gem'
+    'moon', 'pump', 'buy', 'bull', 'gain', 'surge', 'hodl', 'strong',
+    'opportunity', 'gem', 'rocket', 'green', 'up', 'ath'
 ]
-
 BEARISH_KEYWORDS = [
-    'crash', 'dump', 'sell', 'bear', 'loss', 'drop', 'fall',
-    'terrible', 'bad', 'scam', 'bearish', 'short',
-    'risk', 'warning', 'caution', 'trap', 'fraud', 'rug'
+    'crash', 'dump', 'sell', 'bear', 'loss', 'scam', 'rug', 'warning',
+    'red', 'down', 'dip', 'fear'
 ]
 
+PAIR_KEYWORDS = {
+    'BTC-USD': ['bitcoin', 'btc'],
+    'ETH-USD': ['ethereum', 'eth'],
+    'SOL-USD': ['solana', 'sol'],
+    'XRP-USD': ['ripple', 'xrp'],
+    'DOGE-USD': ['dogecoin', 'doge'],
+    'ADA-USD': ['cardano', 'ada'],
+}
 
 
-class DirectRedditFetcher:
-    """Direct Reddit JSON API fetcher - fallback when Apify is unavailable or failing."""
+def _normalize_post(post):
+    """Handle both string and dict output from the actor."""
+    if isinstance(post, str):
+        return {"title": post, "body": "", "score": 0}
+    if not isinstance(post, dict):
+        return {"title": "", "body": "", "score": 0}
+    return {
+        "title": str(post.get("title") or post.get("query") or ""),
+        "body": str(post.get("body") or post.get("selftext") or ""),
+        "score": int(post.get("score") or 0),
+    }
 
-    def __init__(self):
-        self.session = requests.Session()
-        self.session.headers.update({
-            "User-Agent": "HermesTradeBot/1.0 (by u/hermestradebot) - Sentiment Analysis"
-        })
 
-    def fetch_pair_sentiment(self, pair, subreddits=None):
-        if subreddits is None:
-            subreddits = ['CryptoCurrency', 'Bitcoin', 'ethereum']
-        
-        keywords = {
-            'BTC-USD': ['bitcoin', 'btc'],
-            'ETH-USD': ['ethereum', 'eth'],
-            'SOL-USD': ['solana', 'sol'],
-            'XRP-USD': ['ripple', 'xrp'],
-            'DOGE-USD': ['dogecoin', 'doge'],
-        }.get(pair, [pair.split('-')[0].lower()])
+def _calculate_sentiment(posts):
+    """Keyword-based fallback scorer."""
+    if not posts:
+        return 0.0
 
-        all_posts = []
-        for subreddit in subreddits:
-            for keyword in keywords[:1]:
-                try:
-                    url = f"https://www.reddit.com/r/{subreddit}/search.json"
-                    params = {"q": keyword, "restrict_sr": "on", "sort": "new", "limit": 25}
-                    resp = self.session.get(url, params=params, timeout=12)
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        posts = data.get("data", {}).get("children", [])
-                        all_posts.extend(posts)
-                    time.sleep(1.0)
-                except Exception:
-                    continue
+    total = 0.0
+    count = 0
 
-        if not all_posts:
-            return 0.0
+    for p in posts:
+        p = _normalize_post(p)
+        text = (p["title"] + " " + p["body"]).lower()
+        bull = sum(1 for w in BULLISH_KEYWORDS if w in text)
+        bear = sum(1 for w in BEARISH_KEYWORDS if w in text)
+        if bull + bear > 0:
+            total += (bull - bear) / (bull + bear)
+            count += 1
 
-        # Simple sentiment scoring (reusing existing keyword logic)
-        bullish = 0
-        bearish = 0
-        for post in all_posts:
-            text = (post.get("data", {}).get("title", "") + " " + 
-                   post.get("data", {}).get("selftext", "")).lower()
-            for word in ['moon', 'pump', 'bull', 'buy', 'gain', 'hodl']:
-                if word in text: bullish += 1
-            for word in ['crash', 'dump', 'bear', 'sell', 'scam', 'rug']:
-                if word in text: bearish += 1
+    return round(total / count, 4) if count > 0 else 0.0
 
-        total = bullish + bearish
-        if total == 0:
-            return 0.0
-        return (bullish - bearish) / total
 
 class RedditSentimentFetcher:
-    """Fetch real sentiment from Reddit for crypto pairs via Apify."""
-    
     def __init__(self):
-        """Initialize Apify client."""
         self.client = None
-        self.praw_fetcher = PrawRedditFetcher()
-        self.pair_keywords = {
-            'BTC-USD': ['bitcoin', 'btc'],
-            'ETH-USD': ['ethereum', 'eth'],
-            'SOL-USD': ['solana', 'sol'],
-            'XRP-USD': ['ripple', 'xrp'],
-            'DOGE-USD': ['dogecoin', 'doge'],
-            'ADA-USD': ['cardano', 'ada']
-        }
-        
-        if not APIFY_AVAILABLE:
-            logger.warning("⚠️  ApifyClient not installed. Reddit sentiment disabled.")
+        if not APIFY_AVAILABLE or not APIFY_API_TOKEN:
+            logger.warning("Apify not available")
             return
-        
-        if not APIFY_USER_ID or not APIFY_API_TOKEN:
-            logger.warning("⚠️  APIFY_USER_ID or APIFY_API_TOKEN not found in environment")
-            return
-        
         try:
             self.client = ApifyClient(APIFY_API_TOKEN)
-            logger.info("✅ Apify client initialized for Reddit sentiment")
         except Exception as e:
-            logger.error(f"❌ Apify init failed: {e}")
-            self.client = None
-        self.praw_fetcher = PrawRedditFetcher()
-    
-    def fetch_pair_sentiment(self, pair, subreddits=None):
-        """
-        Fetch sentiment for a specific pair from Reddit via Apify.
-        
-        Args:
-            pair: Trading pair (e.g., 'BTC-USD')
-            subreddits: List of subreddits to search (default: standard crypto subs)
-        
-        Returns: sentiment_score (-1.0 to 1.0)
-        """
-        # Primary: Try Apify
-        if self.client:
-            try:
-                # ... existing Apify logic continues below ...
-                pass  # placeholder for structure
-            except Exception as e:
-                logger.warning(f"Apify failed for {pair}: {e}. Using direct Reddit fallback.")
+            logger.error(f"Apify init failed: {e}")
 
-        # Fallback: Direct Reddit JSON API
+    def fetch_pair(self, pair):
+        if not self.client:
+            return 0.0
+
+        keywords = PAIR_KEYWORDS.get(pair, [pair.split('-')[0].lower()])
+        keyword = keywords[0]
+
+        run_input = {
+            "queries": [keyword],
+            "subredditName": "CryptoCurrency",
+            "sort": "relevance",
+            "timeframe": "week",
+            "maxPosts": 20,
+            "sentiment_analysis": True,
+            "scrapeComments": False,
+            "maximize_coverage": True,
+        }
+
         try:
-            direct = DirectRedditFetcher()
-            return direct.fetch_pair_sentiment(pair, subreddits)
+            run = self.client.actor(REDDIT_ACTOR_ID).call(run_input=run_input)
+            output = getattr(run, "output", {}) or {}
+            items = output.get("results", [])
+
+            # Try native sentiment first
+            scores = []
+            for item in items:
+                if isinstance(item, dict):
+                    if "sentiment_score_normalized" in item:
+                        scores.append(float(item["sentiment_score_normalized"]))
+                    elif "sentiment_label" in item:
+                        label = str(item["sentiment_label"]).lower()
+                        if label == "positive":
+                            scores.append(0.75)
+                        elif label == "negative":
+                            scores.append(-0.75)
+
+            if scores:
+                return round(sum(scores) / len(scores), 4)
+
+            # Fallback
+            return _calculate_sentiment(items)
+
         except Exception as e:
-            logger.error(f"Direct Reddit fallback also failed for {pair}: {e}")
+            logger.warning(f"Reddit fetch failed for {pair}: {e}")
             return 0.0
-        
-        if subreddits is None:
-            subreddits = ['CryptoCurrency', 'Bitcoin', 'ethereum']
-        
-        keywords = self.pair_keywords.get(pair, [pair.split('-')[0].lower()])
-        
-        try:
-            all_posts = []
-            
-            for subreddit in subreddits:
-                for keyword in keywords[:1]:  # Limit to 1 keyword per subreddit to avoid rate limit
-                    logger.info(f"  Fetching {pair} from r/{subreddit} (keyword: {keyword})...")
-                    
-                    # Build Apify actor input - using format proven with trudax/reddit-scraper-lite
-                    run_input = {
-                        "startUrls": [
-                            {"url": f"https://www.reddit.com/r/{subreddit}/"}
-                        ],
-                        "searchPosts": True,
-                        "searchComments": False,
-                        "searchTerms": [keyword],
-                        "maxPosts": 25,
-                        "maxPostAgeDays": 7,
-                        "proxy": {
-                            "useApifyProxy": True,
-                            "apifyProxyGroups": ["RESIDENTIAL"],
-                            "apifyProxyCountry": "US"
-                        }
-                    }
-                    
-                    # Execute actor
-                    run = self.client.actor(REDDIT_ACTOR_ID).call(run_input=run_input)
-                    
-                    # Extract posts from results
-                    if 'output' in run and 'posts' in run['output']:
-                        posts = run['output']['posts']
-                        all_posts.extend(posts)
-                        logger.debug(f"    Got {len(posts)} posts from r/{subreddit}")
-            
-            if all_posts:
-                sentiment = self._calculate_sentiment(all_posts)
-                logger.info(f"  {pair}: sentiment={sentiment:.4f} ({len(all_posts)} posts)")
-                return sentiment
-            else:
-                logger.warning(f"  {pair}: No posts found")
-                return 0.0
-                
-        except Exception as e:
-            logger.error(f"Error fetching sentiment for {pair}: {e}")
-            return 0.0
-    
-    @staticmethod
-    def _calculate_sentiment(posts):
-        """
-        Calculate sentiment from Reddit posts.
-        
-        Weights: 
-        - Text analysis (bullish/bearish keywords): 50%
-        - Upvote direction: 30%
-        - Comment engagement: 20%
-        """
-        if not posts:
-            return 0.0
-        
-        total_sentiment = 0.0
-        total_weight = 0.0
-        
-        for post in posts:
-            try:
-                if not isinstance(post, dict):
-                    continue  # Skip non-dict items returned by some actors
-                # Extract post data
-                upvotes = int(post.get('upvotes', 0)) or 1
-                comments = int(post.get('nComments', 0)) or int(post.get('comments', 0)) or 1
-                title = post.get('title', '').lower()
-                selftext = post.get('selftext', '').lower() if post.get('selftext') else ''
-                
-                # Combine text for analysis
-                text_content = title + ' ' + selftext
-                
-                # Text sentiment: count bullish vs bearish keywords
-                bullish_count = sum(1 for word in BULLISH_KEYWORDS if word in text_content)
-                bearish_count = sum(1 for word in BEARISH_KEYWORDS if word in text_content)
-                
-                text_sentiment = 0.0
-                if bullish_count + bearish_count > 0:
-                    text_sentiment = (bullish_count - bearish_count) / (bullish_count + bearish_count)
-                
-                # Upvote sentiment (positive upvotes = bullish)
-                upvote_sentiment = 1.0 if upvotes > 0 else -1.0
-                
-                # Comment sentiment (high engagement = confidence)
-                comment_sentiment = 1.0 if comments > 5 else (0.0 if comments == 1 else 0.5)
-                
-                # Weighted combined sentiment
-                post_sentiment = (
-                    0.5 * text_sentiment +
-                    0.3 * upvote_sentiment +
-                    0.2 * comment_sentiment
-                )
-                
-                # Weight by engagement (log scale)
-                if NUMPY_AVAILABLE:
-                    weight = np.log1p(upvotes) + 0.3 * np.log1p(comments)
-                else:
-                    weight = (upvotes ** 0.5) + 0.3 * (comments ** 0.5)
-                
-                total_sentiment += post_sentiment * weight
-                total_weight += weight
-                
-            except Exception as e:
-                logger.debug(f"Error processing post: {e}")
-                continue
-        
-        # Normalize to [-1, 1]
-        if total_weight > 0:
-            result = total_sentiment / total_weight
-            if NUMPY_AVAILABLE:
-                return float(np.clip(result, -1.0, 1.0))
-            else:
-                return max(-1.0, min(1.0, result))
-        else:
-            return 0.0
-    
+
     def run(self):
-        """Fetch sentiment for all trading pairs."""
-        sentiments = {}
-        
-        for pair in self.pair_keywords.keys():
-            sentiment = self.fetch_pair_sentiment(pair)
-            sentiments[pair] = sentiment
-        
-        return sentiments
+        results = {}
+        for pair in PAIR_KEYWORDS:
+            score = self.fetch_pair(pair)
+            results[pair] = score
+            logger.info(f"{pair}: {score}")
+        return results
 
 
 def save_cache(sentiments):
-    """Save Reddit sentiment to cache file."""
-    cache_data = {
+    cache = {
         pair: {
-            'sentiment': score,
-            'timestamp': datetime.utcnow().isoformat() + 'Z',
-            'source': 'Apify Reddit Actor',
-            'subreddits': 'r/CryptoCurrency, r/Bitcoin, r/ethereum'
+            "sentiment": score,
+            "timestamp": datetime.utcnow().isoformat() + "Z",
+            "source": "TwqHBuZZPHJxiQrTU + fallback"
         }
         for pair, score in sentiments.items()
     }
-    
-    with open(REDDIT_CACHE_FILE, 'w') as f:
-        json.dump(cache_data, f, indent=2)
-    
-    logger.info(f"💾 Reddit sentiment cache saved to {REDDIT_CACHE_FILE}")
-    return cache_data
+    with open(REDDIT_CACHE_FILE, "w") as f:
+        json.dump(cache, f, indent=2)
+    return cache
 
 
 def main():
-    """Run Reddit sentiment fetching."""
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(levelname)s: %(message)s'
-    )
-    
-    logger.info("🚀 Starting Reddit sentiment fetch (Apify)...")
-    
+    logging.basicConfig(level=logging.INFO)
+    logger.info("Starting Reddit sentiment (TwqHBuZZPHJxiQrTU)")
+
     fetcher = RedditSentimentFetcher()
     sentiments = fetcher.run()
-    
+
     if sentiments:
-        cache_data = save_cache(sentiments)
-        print("\n✅ Reddit sentiment aggregation complete")
-        print(json.dumps(cache_data, indent=2), flush=True)
-    else:
-        logger.warning("❌ No Reddit sentiment fetched (Apify may be unavailable)")
-        print(json.dumps({}, indent=2), flush=True)
+        cache = save_cache(sentiments)
+        print(json.dumps(cache, indent=2))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -28,11 +28,17 @@ from typing import Dict, List, Optional, Any
 from .config_loader import ConfigLoader
 from .allocation_engine import compute_inverse_vol_allocations, rebalance_plan
 from .sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
-from .stop_loss_manager import StopLossManager  # TODO: migrate
-from .exchange_client import CoinbaseExchangeClient  # TODO: migrate
+from .stop_loss_manager import StopLossManager
+from .exchange_client import CoinbaseExchangeClient
 from .live_portfolio_manager import LivePortfolioManager
+from pathlib import Path
 from .trade_ledger import TradeLedger
+
+CACHE_PATH = Path("/home/brad/projects/crypto-trading-bot/data/state/phase6_live_state.json")
 from .order_executor import OrderExecutor
+from .error_notifier import Phase6Notifier
+from .stop_loss_coordinator import StopLossCoordinator
+from phase6.scripts.deploy_capital import deploy_capital
 
 logging.basicConfig(
     level=logging.INFO,
@@ -72,13 +78,26 @@ class Phase6Runner:
         self.stop_loss_manager = StopLossManager(
             self.exchange, self.config_dict, mode=self.mode
         )
+        self.stop_loss_coordinator = StopLossCoordinator(
+            self.stop_loss_manager,
+            exchange_client=self.exchange,
+            config=self.config_dict,
+        )
+        # Structured logging initialization
+        self.notifier = Phase6Notifier(log_dir="logs/phase6")
         self.trade_ledger = TradeLedger()
+        self.price_history = PriceHistoryManager(max_history=100, persist_path="data/state/price_history.json")
+        self.rsi_values = {}
         self.order_executor = OrderExecutor(
             exchange=self.exchange,
             stop_loss_manager=self.stop_loss_manager,
             mode=self.mode,
             logger=logger,
         )
+        self.logger = logger
+        
+        # New: Structured event logger
+        self.event_log_path = Path("logs/phase6/events.jsonl")
 
         # Scheduler
         scheduler = self.config_dict.get("scheduler", {})
@@ -168,7 +187,32 @@ class Phase6Runner:
         else:
             logger.info("Takeover scenario detected — existing holdings respected.")
 
+        # One-time dashboard cache write on startup
+        self._write_dashboard_cache()
+
         cycle = 0
+
+    def _update_price_history_and_calculate_rsi(self):
+        """Fetch current prices and update RSI (if available)."""
+        if not RSI_AVAILABLE:
+            return
+
+        for pair in self.FIXED_UNIVERSE:
+            try:
+                price = self.exchange.get_price(pair)
+                if price and price > 0:
+                    self.price_history.add_price(pair, price)
+                    if self.price_history.has_enough_data(pair, 15):
+                        prices = self.price_history.get_prices(pair)
+                        rsi_series = calculate_rsi(prices, period=14)
+                        if rsi_series and len(rsi_series) > 0:
+                            self.rsi_values[pair] = round(rsi_series[-1], 2)
+            except Exception as e:
+                logger.debug(f"RSI update failed for {pair}: {e}")
+
+        # Persist occasionally
+        if len(self.rsi_values) > 0:
+            self.price_history.flush()
         while True:
             try:
                 cycle += 1
@@ -184,6 +228,7 @@ class Phase6Runner:
     def _run_cycle(self, cycle_num: int):
         now = datetime.now()
         rebalance_needed = self._should_rebalance(now)
+        self._update_price_history_and_calculate_rsi()
 
         logger.info(f"[CYCLE {cycle_num}] {now.isoformat(timespec='seconds')} | "
                     f"rebalance_needed={rebalance_needed} | "
@@ -192,6 +237,9 @@ class Phase6Runner:
         if rebalance_needed:
             self._perform_daily_rebalance()
             self._save_state()
+
+        # Always write dashboard cache at end of cycle (even if no rebalance)
+        self._write_dashboard_cache()
 
     def _should_rebalance(self, now: datetime) -> bool:
         current_date = now.date()
@@ -237,6 +285,11 @@ class Phase6Runner:
         weights = get_sentiment_adjusted_weights(base_weights, sentiment_scores)
 
         deploy_pct = self.config_dict.get("risk_management", {}).get("deploy_pct", 0.72)
+        # Withdrawal reserve guard (safety for $1000 account)
+        min_reserve = self.config_dict.get("risk_management", {}).get("min_reserve_usd", 200.0)
+        deployable_cash = max(0, cash - min_reserve)
+        if deployable_cash < cash * 0.1:
+            logger.warning(f"Reserve guard active: only ${deployable_cash:.2f} deployable after ${min_reserve} reserve")
 
         logger.info(f"Fresh start: cash=${cash:.2f} | deploy_pct={deploy_pct} | universe={self.FIXED_UNIVERSE}")
         logger.info(f"Computed weights: {weights}")
@@ -262,13 +315,15 @@ class Phase6Runner:
                     successful_buys += 1
                     # Log to trade ledger
                     try:
-                        self.trade_ledger.log_trade(
-                            pair=pair,
-                            side="buy",
-                            qty=result.get('size', 0),
-                            entry_price=result.get('price', 0),
-                            usd_value=usd_amount
-                        )
+                        trade_record = {
+                            "pair": pair,
+                            "side": "buy",
+                            "qty": result.get("size", 0),
+                            "entry_price": result.get("price", 0),
+                            "usd_value": usd_amount,
+                            "signal_source": "phase6_fresh_start"
+                        }
+                        self.trade_ledger.log_trade(trade_record)
                     except Exception as e:
                         logger.warning(f"Ledger logging failed for {pair}: {e}")
                     if result.get('sl_attached'):
@@ -299,115 +354,81 @@ class Phase6Runner:
     # ------------------------------------------------------------------
     def _perform_daily_rebalance(self):
         logger.info("=== Daily Rebalance ===")
-        logger.info("[CR-03 START] Full CR-03 flow: Detect(03.1) → Suspend(03.2) → Rebalance(03.3) → Re-attach(03.4) → Verify(03.5)")
 
-        # CR-03.1: Detect active SL/TP orders before rebalance
         basket = getattr(self, "FIXED_UNIVERSE", [])
-        active_stops = self.stop_loss_manager.detect_active_protective_orders(basket)
-        logger.info(f"[CR-03.1] Active protective orders returned: {len(active_stops)} pairs affected")
+        current_positions = getattr(self, "portfolio", None) and self.portfolio.get_enriched_positions() or {}
 
-        # CR-03.2: Suspend active stops before rebalance executes
-        suspended = self.stop_loss_manager.suspend_active_protective_orders(active_stops)
-        suspended_count = sum(len(v) for v in suspended.values())
-        suspended_ids = {k: v for k, v in suspended.items() if v}
-        logger.info(f"[CR-03.2] Suspended {suspended_count} protective orders. Order IDs by pair: {suspended_ids}")
+        # Wrap core rebalance logic (order changes) inside suspend_reattach_context
+        # Context entered before any order changes; exited after (handles suspend + reattach)
+        with self.stop_loss_coordinator.suspend_reattach_context(basket, current_positions):
+            logger.info("[CR-03] Entered suspend_reattach_context - performing rebalance body")
 
-        # CR-03.3: Execute rebalance after suspension using live balances
-        # Get real capital and current positions (live balances post any liquidation)
-        cash = self.exchange.get_account_balance("USD")
-        current_positions = getattr(self, "portfolio", None) and self.portfolio.get_positions() or {}
+            # CR-03.3: Execute rebalance inside protected context
+            cash = self.exchange.get_account_balance("USD")
 
-        # Compute target weights using inverse volatility + sentiment
-        dummy_vols = {p: 0.65 for p in self.FIXED_UNIVERSE}
-        base_weights = compute_inverse_vol_allocations(dummy_vols)
-        sentiment_scores = load_sentiment_scores(universe=self.FIXED_UNIVERSE)
-        target_weights = get_sentiment_adjusted_weights(base_weights, sentiment_scores)
-
-        # Convert to percentage format expected by rebalance_plan / plan_static_allocations
-        target_weights_pct = {k: round(v * 100, 4) for k, v in target_weights.items()}
-
-        # Generate rebalance plan
-        total_capital = cash + sum(current_positions.values()) if current_positions else cash
-        plan = rebalance_plan(current_positions, target_weights_pct, total_capital=total_capital)
-
-        logger.info(f"Daily Rebalance: cash=${cash:.2f} | target_weights={target_weights}")
-
-        executed = 0
-        skipped = []
-
-        for move in plan:
-            pair = move.get("pair")
-            action = move.get("action", "").upper()
-            usd_amount = float(move.get("usd_amount", 0))
-
-            if not pair or usd_amount < 20:
-                skipped.append({"pair": pair, "reason": "below minimum or invalid"})
-                continue
-
-            if self.shadow_mode:
-                logger.info(f"[SHADOW] {action} ${usd_amount:.2f} {pair}")
-                executed += 1
-                continue
-
-            try:
-                if action == "BUY":
-                    result = self.order_executor.execute_buy(pair, usd_amount)
-                    if result.get('success'):
-                        executed += 1
-                        if result.get('sl_attached'):
-                            logger.info(f"[REBALANCE BUY] {pair}: ${usd_amount:.2f} | SL attached | order_id={result.get('order_id')}")
-                        else:
-                            logger.warning(f"[REBALANCE BUY] {pair}: ${usd_amount:.2f} | SL failed")
-                    else:
-                        skipped.append({"pair": pair, "reason": f"buy failed: {result.get('error')}"})
-
-                elif action == "SELL":
-                    result = self.order_executor.execute_sell(pair, usd_amount)
-                    logger.info(f"[REBALANCE SELL] {pair}: stub executed")
-                    executed += 1
-
-            except Exception as e:
-                logger.exception(f"[REBALANCE ERROR] {pair}: {e}")
-                skipped.append({"pair": pair, "reason": str(e)})
-
-        # CR-03.4: Re-attach Fresh Stops Post-Rebalance
-        # After rebalance completes, attach new stop-loss orders on resulting positions
-        # using current RiskEngine / config risk parameters (via StopLossManager)
-        logger.info("[CR-03.4] Re-attaching fresh protective stops to resulting positions")
-        try:
-            holdings = self.exchange.get_holdings()
-            reattached = 0
-            for asset, size in holdings.items():
-                if size <= 0:
-                    continue
-                pair = f"{asset}-USD" if "-USD" not in asset else asset
-                if pair not in basket:
-                    continue
-                price = self.exchange.get_price(pair)
-                if price > 0:
-                    attached = self.stop_loss_manager.attach_stop_loss(pair, price, float(size))
-                    if attached:
-                        reattached += 1
-                        logger.info(f"[CR-03.4] Fresh SL attached | {pair} size={size:.8f} ref_price=${price:.2f}")
-                    else:
-                        logger.warning(f"[CR-03.4] SL attach failed for {pair}")
-            logger.info(f"[CR-03.4] Re-attachment complete. Stops re-attached: {reattached}")
-        except Exception as e:
-            logger.exception(f"[CR-03.4 ERROR] Failed during stop re-attachment: {e}")
-
-        # CR-03.5: Verification of full suspend → rebalance → re-attach sequence
-        try:
-            verification = self.stop_loss_manager.verify_reconciliation(
-                basket=basket, suspended=suspended
+            # Compute target weights using inverse volatility + sentiment
+            sentiment_scores = load_sentiment_scores(universe=self.FIXED_UNIVERSE)
+            
+            # Use deploy_capital to handle both capital deployment rules and static allocation
+            # For daily rebalance, all cash is potentially available
+            total_cash = cash + sum(current_positions.values())
+            
+            # Apply deployment rules
+            new_allocations = deploy_capital(
+                current_allocations=current_positions,
+                new_capital=0.0, # Adjusting total, not just deploying new
+                sentiment_scores=sentiment_scores,
+                source="reserve",
+                candidate_pairs=self.FIXED_UNIVERSE
             )
-            logger.info("[CR-03.5] Verification result: success=%s | details=%s | orphans=%s" % (verification.get("success"), verification.get("details"), verification.get("orphaned_stops")))
-            if verification.get("success"):
-                logger.info("[CR-03 COMPLETE] End-to-end sequence verified: no orphaned stops, fresh stops attached.")
-            else:
-                logger.warning("[CR-03 WARNING] Verification reported issues - check for orphans or missing stops.")
-        except Exception as ve:
-            logger.exception(f"[CR-03.5 ERROR] Verification failed to run: {ve}")
+            
+            # Generate rebalance plan based on new allocations
+            target_weights_pct = {k: round(v / total_cash * 100, 4) for k, v in new_allocations.items()}
+            plan = rebalance_plan(current_positions, target_weights_pct, total_capital=total_cash)
 
+            logger.info(f"Daily Rebalance: cash=${cash:.2f} | target_weights={new_allocations}")
+
+            executed = 0
+            skipped = []
+
+            for move in plan:
+                pair = move.get("pair")
+                action = move.get("action", "").upper()
+                usd_amount = float(move.get("usd_amount", 0))
+
+                if not pair or usd_amount < 20:
+                    skipped.append({"pair": pair, "reason": "below minimum or invalid"})
+                    continue
+
+                if self.shadow_mode:
+                    logger.info(f"[SHADOW] {action} ${usd_amount:.2f} {pair}")
+                    executed += 1
+                    continue
+
+                try:
+                    if action == "BUY":
+                        result = self.order_executor.execute_buy(pair, usd_amount)
+                        if result.get('success'):
+                            executed += 1
+                            if result.get('sl_attached'):
+                                logger.info(f"[REBALANCE BUY] {pair}: ${usd_amount:.2f} | SL attached | order_id={result.get('order_id')}")
+                            else:
+                                logger.warning(f"[REBALANCE BUY] {pair}: ${usd_amount:.2f} | SL failed")
+                        else:
+                            skipped.append({"pair": pair, "reason": f"buy failed: {result.get('error')}"})
+
+                    elif action == "SELL":
+                        result = self.order_executor.execute_sell(pair, usd_amount)
+                        logger.info(f"[REBALANCE SELL] {pair}: stub executed")
+                        executed += 1
+
+                except Exception as e:
+                    logger.exception(f"[REBALANCE ERROR] {pair}: {e}")
+                    skipped.append({"pair": pair, "reason": str(e)})
+
+            logger.info(f"[CR-03] Rebalance body completed inside context. Executed={executed}, Skipped={len(skipped)}")
+
+        # Post-context: state update and digest (context already handled re-attach)
         self.last_rebalance_date = date.today()
         self._save_state()
         logger.info(f"Daily rebalance completed. Executed={executed}, Skipped={len(skipped)}")
@@ -415,6 +436,91 @@ class Phase6Runner:
         # Telegram digest
         details = f"Rebalance completed.\nExecuted: {executed} moves\nSkipped: {len(skipped)}"
         self._send_telegram_digest("Daily Rebalance Complete", details)
+
+    # ------------------------------------------------------------------
+    # Structured Logging & Alerts (Observability)
+    # ------------------------------------------------------------------
+    def _write_dashboard_cache(self):
+        """Write current live state to the dashboard cache file.
+        This is the single source of truth for the web UI.
+        Produces the rich schema defined in Handoff_Dashboard_Dataflow_Fix.md
+        """
+        try:
+            usd = self.exchange.get_account_balance("USD")
+            try:
+                usdc = self.exchange.get_account_balance("USDC")
+            except Exception:
+                usdc = 0.0
+
+            enriched = {}
+            try:
+                enriched = self.exchange.get_enriched_positions()
+            except Exception:
+                pass
+
+            positions = []
+            total_holdings_value = 0.0
+            for currency, data in enriched.items():
+                if currency in ("USD", "USDC"):
+                    continue
+                value = data.get("value_usd", 0)
+                positions.append({
+                    "pair": f"{currency}-USD",
+                    "amount": data.get("amount", 0),
+                    "current_price": data.get("current_price", data.get("price", 0)),
+                    "value_usd": round(value, 2),
+                    "entry_price": data.get("entry_price", data.get("price", 0)),
+                    "unrealized_pnl_pct": data.get("unrealized_pnl_pct", round(data.get("pnl", 0), 2)),
+                    "side": data.get("side", "long"),
+                })
+                total_holdings_value += value
+
+            total_usd = round(usd + usdc + total_holdings_value, 2)
+
+            # Recent activity from TradeLedger
+            recent_trades = self.trade_ledger.get_recent_trades(6)
+            bought_recently = []
+            sold_recently = []
+            for t in reversed(recent_trades):
+                side = t.get("side", "").upper()
+                if side == "BUY":
+                    bought_recently.append(t.get("pair"))
+                elif side == "SELL":
+                    sold_recently.append(t.get("pair"))
+
+            state = {
+                "balances": [
+                    {"currency": "USD", "balance": round(usd, 2), "available": round(usd, 2), "hold": 0},
+                    {"currency": "USDC", "balance": round(usdc, 2), "available": round(usdc, 2), "hold": 0}
+                ],
+                "positions": positions,
+                "active_positions": len(positions),
+                "bought_indicators": bought_recently[:3],
+                "sold_indicators": sold_recently[:3],
+                "total_usd": total_usd,
+                "total_holdings_value": round(total_holdings_value, 2),
+                "cash_usd": round(usd, 2),
+                "last_updated": datetime.now().isoformat(),
+                "rsi": self.rsi_values,
+                "performance_metrics": {
+                    "daily_pnl_est": 0.0,
+                    "win_rate": 0.0,
+                    "total_trades": len(recent_trades)
+                }
+            }
+
+            CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with open(CACHE_PATH, "w") as f:
+                json.dump(state, f, indent=2)
+
+            self.logger.info(f"[DASHBOARD] Cache written: {len(positions)} positions, total=${total_usd:.2f}")
+        except Exception as e:
+            self.logger.warning(f"[DASHBOARD] Failed to write cache: {e}")
+
+
+    def log_critical(self, error_type: str, message: str, context: Optional[Dict[str, Any]] = None):
+        """Wrapper for critical notifications."""
+        self.notifier.notify_critical(error_type, message, context)
 
 
 def main():

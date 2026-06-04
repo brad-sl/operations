@@ -20,7 +20,67 @@ Deployment path: Paper → Sandbox → Limited Live (10%) → Full Production.
 
 ---
 
-## 2. Environment & Infrastructure
+## 2. System Dependencies (Master List)
+
+**Critical ordering note:** Sentiment system **must launch first** — multiple downstream components (allocation, rebalancing decisions, signal quality) depend on fresh sentiment scores.
+
+### 2.1 Core Dependency Graph
+
+```
+Sentiment Layer (highest priority)
+├── fetch_x_sentiment.py          (X/Twitter, 30-min cadence, Bearer token)
+├── fetch_reddit_sentiment.py     (Apify actor, 60-min half-life)
+├── sentiment_scorer.py           (load_sentiment_scores, time-decay, get_sentiment_adjusted_weights)
+├── sentiment_cache/*.json
+└── Cron: twice-daily-trading-intelligence → now 0,30 * * * * (delivers to this chat)
+
+Allocation & Decision Layer
+├── allocation_engine.py          (compute_inverse_vol_allocations, rebalance_plan)
+├── sentiment-adjusted weights    (from scorer)
+└── phase6_runner.py              (orchestrator, 5-min cycle)
+
+Risk & Execution Layer
+├── stop_loss_manager.py
+├── stop_loss_coordinator.py
+├── order_executor.py
+├── exchange_client.py            (Coinbase Advanced Trade)
+├── live_portfolio_manager.py
+└── trade_ledger.py
+
+State & Observability
+├── phase6_runner_state.json
+├── TradeLedger (log_trade signature)
+├── Phase6Notifier + error_notifier.py
+├── phase6_monitor.db
+└── dashboard (serve_dashboard.py)
+
+Infrastructure & Config
+├── .env                          (xAI + Coinbase credentials)
+├── cron/jobs.json                (sentiment job + any others)
+├── config.yaml / trading_config_phase6.json
+├── logs/ (phase6_runner.log, error.log)
+└── kanban.db + MASTER_TASK_TRACKING.md (file-based source of truth)
+```
+
+### 2.2 Launch Order (Mandatory)
+
+1. Sentiment fetchers + scorer + cron job (this chat delivery)
+2. Allocation engine + sentiment scorer integration
+3. Stop-loss coordinator + rebalance logic
+4. Full phase6_runner (shadow → paper → live)
+5. Dashboard + monitoring
+
+### 2.3 External Service Dependencies
+
+- **xAI / Grok** — for intelligence reports and subagent work (creds in .env)
+- **Coinbase Advanced Trade API** — execution + stop-limit orders
+- **Apify** — Reddit sentiment scraping
+- **X API v2** — Twitter sentiment (Bearer token)
+- **Telegram** — delivery target (current DM chat 1617763347)
+
+---
+
+## 3. Environment & Infrastructure
 
 ### 2.1 Environments
 
@@ -222,3 +282,33 @@ Deployment considered successful when:
 **Document saved to:** `/home/brad/projects/crypto-trading-bot/docs/PHASE_6_1_PRODUCTION_DEPLOYMENT_PLAN.md`
 
 Ready for kanban_complete.
+---
+
+## 8. RSI Signal Pipeline Restoration (Added 2026-06-04)
+
+**Status**: Integrated into `phase6_runner.py`
+
+### Overview
+Restored RSI as the **primary signal driver** per the original Phase 6.01 architecture documented in `TRADING_BOT_DOCS.md`.
+
+### Components Added
+- `phase6/core/price_history_manager.py` — Rolling price history with persistence
+- Integration in `Phase6Runner._update_price_history_and_calculate_rsi()`
+- RSI values (`rsi` dict) now written to `phase6_live_state.json` every cycle
+
+### Signal Philosophy
+- **Primary**: RSI (14-period)
+- **Secondary**: Sentiment as conviction multiplier (not hard AND gate)
+- Graceful degradation when NumPy/RSI unavailable
+
+### Files Modified
+- `phase6/core/phase6_runner.py`
+- `run_sentiment_system.py` (enhanced to surface RSI)
+
+### Validation
+- Runner continues to function in shadow/live mode
+- `phase6_live_state.json` now contains `"rsi": { "BTC-USD": xx.xx, ... }`
+- Trading Intelligence Report can now consume fresh RSI values
+
+**Commit**: `f08c6d3` — "feat: Integrate PriceHistoryManager + RSI calculation into Phase6Runner"
+

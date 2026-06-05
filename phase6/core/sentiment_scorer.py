@@ -2,7 +2,7 @@
 """
 Basic Sentiment Scorer Module
 
-Loads sentiment scores from ~/.trading-bot/sentiment_cache.json
+Loads sentiment scores from /home/brad/projects/crypto-trading-bot/phase6/data/sentiment/unified_sentiment_cache.json
 and provides scores for the fixed trading universe.
 """
 
@@ -13,7 +13,7 @@ from typing import Dict, List
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CACHE_PATH = os.path.expanduser("~/.trading-bot/sentiment_cache.json")
+DEFAULT_CACHE_PATH = os.path.expanduser("/home/brad/projects/crypto-trading-bot/phase6/data/sentiment/unified_sentiment_cache.json")
 
 
 def load_sentiment_scores(
@@ -84,3 +84,53 @@ def get_sentiment_adjusted_weights(
     if total > 0:
         adjusted = {k: v / total for k, v in adjusted.items()}
     return adjusted
+
+
+# ============================================================
+# Report Formatting Helpers (for Trading Intelligence Report)
+# ============================================================
+
+def format_rsi_label(rsi: float) -> str:
+    """Return human-readable label for RSI value."""
+    if rsi < 30:
+        return "Oversold"
+    elif rsi < 45:
+        return "Weak"
+    elif rsi < 55:
+        return "Neutral"
+    elif rsi < 70:
+        return "Strong"
+    else:
+        return "Overbought"
+
+
+def format_sentiment_label(score: float) -> str:
+    """Return human-readable label + emoji for sentiment score."""
+    if score > 0.3:
+        return "Bullish"
+    elif score > 0.1:
+        return "Slightly Bullish"
+    elif score > -0.1:
+        return "Neutral"
+    elif score > -0.3:
+        return "Slightly Bearish"
+    else:
+        return "Bearish"
+
+
+def format_sentiment_for_report(scores: dict) -> str:
+    """Format sentiment dict for the intelligence report."""
+    lines = []
+    for pair, score in scores.items():
+        label = format_sentiment_label(score)
+        lines.append(f"{pair.replace('-USD','')}: {score:+.2f} ({label})")
+    return " | ".join(lines)
+
+
+def format_rsi_for_report(rsi_values: dict) -> str:
+    """Format RSI dict for the intelligence report with labels."""
+    lines = []
+    for pair, rsi in rsi_values.items():
+        label = format_rsi_label(rsi)
+        lines.append(f"{pair.replace('-USD','')}: {rsi:.1f} ({label})")
+    return " | ".join(lines)

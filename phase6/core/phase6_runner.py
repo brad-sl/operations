@@ -27,12 +27,39 @@ from typing import Dict, List, Optional, Any
 
 from .config_loader import ConfigLoader
 from .allocation_engine import compute_inverse_vol_allocations, rebalance_plan
+from .rebalancing.hybrid_rebalancer import HybridRebalancer, RebalanceDecision
+from .risk.atr_calculator import ATRCalculator
+from .risk.regime_detector import RegimeDetector
+from .signal_generator import SignalGenerator
+from .price_history_manager import PriceHistoryManager
 from .sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
 from .stop_loss_manager import StopLossManager
 from .exchange_client import CoinbaseExchangeClient
 from .live_portfolio_manager import LivePortfolioManager
 from pathlib import Path
 from .trade_ledger import TradeLedger
+
+
+def calculate_rsi(prices, period=14):
+    """Wilder's RSI - pure Python, no external deps."""
+    if len(prices) < period + 1:
+        return []
+    deltas = [prices[i+1] - prices[i] for i in range(len(prices)-1)]
+    gains = [max(d, 0) for d in deltas]
+    losses = [max(-d, 0) for d in deltas]
+    avg_gain = sum(gains[:period]) / period
+    avg_loss = sum(losses[:period]) / period
+    rsi_values = []
+    for i in range(period, len(deltas)):
+        if avg_loss == 0:
+            rsi = 100.0
+        else:
+            rs = avg_gain / avg_loss
+            rsi = 100 - (100 / (1 + rs))
+        rsi_values.append(round(rsi, 2))
+        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
+        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
+    return rsi_values
 
 CACHE_PATH = Path("/home/brad/projects/crypto-trading-bot/data/state/phase6_live_state.json")
 from .order_executor import OrderExecutor
@@ -72,6 +99,12 @@ class Phase6Runner:
         cfg_loader = ConfigLoader(config_path)
         self.config_dict = cfg_loader._config          # raw dict for convenience
         self.config = cfg_loader.get_config()
+
+        # Hybrid Rebalancer (new primary rebalancing engine)
+        self.hybrid_rebalancer = HybridRebalancer(config=self.config_dict)
+        self.atr_calculator = ATRCalculator()
+        self.regime_detector = RegimeDetector()
+        self.signal_generator = SignalGenerator()
 
         self.exchange = CoinbaseExchangeClient(mode=self.mode)
         self.portfolio = LivePortfolioManager(self.exchange, initial_capital=1000.0)
@@ -190,34 +223,28 @@ class Phase6Runner:
         # One-time dashboard cache write on startup
         self._write_dashboard_cache()
 
-        cycle = 0
-
-    def _update_price_history_and_calculate_rsi(self):
-        """Fetch current prices and update RSI (if available)."""
-        if not RSI_AVAILABLE:
-            return
-
+        # Pre-seed price history with recent candles so RSI is available immediately
+        logger.info("[RSI] Pre-seeding price history from exchange (lookback)...")
+        seeded = 0
         for pair in self.FIXED_UNIVERSE:
             try:
-                price = self.exchange.get_price(pair)
-                if price and price > 0:
-                    self.price_history.add_price(pair, price)
-                    if self.price_history.has_enough_data(pair, 15):
-                        prices = self.price_history.get_prices(pair)
-                        rsi_series = calculate_rsi(prices, period=14)
-                        if rsi_series and len(rsi_series) > 0:
-                            self.rsi_values[pair] = round(rsi_series[-1], 2)
+                recent = self.exchange.get_recent_prices(pair, limit=20)
+                if recent:
+                    for price in recent:
+                        self.price_history.add_price(pair, price)
+                    seeded += 1
+                    logger.info(f"[RSI] {pair}: seeded {len(recent)} historical prices")
             except Exception as e:
-                logger.debug(f"RSI update failed for {pair}: {e}")
+                logger.warning(f"[RSI] Failed to seed {pair}: {e}")
+        logger.info(f"[RSI] Pre-seeding complete for {seeded} pairs")
 
-        # Persist occasionally
-        if len(self.rsi_values) > 0:
-            self.price_history.flush()
+        cycle = 0
         while True:
             try:
                 cycle += 1
                 self._run_cycle(cycle)
-                time.sleep(300)
+                self._write_dashboard_cache()
+                time.sleep(60)
             except KeyboardInterrupt:
                 logger.info("Shutdown requested")
                 break
@@ -225,10 +252,77 @@ class Phase6Runner:
                 logger.exception(f"Cycle error: {e}")
                 time.sleep(60)
 
+    def _update_price_history_and_calculate_rsi(self):
+        """Fetch current prices and update RSI using 15-minute candles when possible.
+        Prefers exchange client 15m candles for relevant trading signals.
+        """
+        for pair in self.FIXED_UNIVERSE:
+            try:
+                price = self.exchange.get_price(pair)
+                if price and price > 0:
+                    self.price_history.add_price(pair, price)
+
+                # Primary path: use 15-minute candles from exchange when history is short
+                if not self.price_history.has_enough_data(pair, 15):
+                    try:
+                        # 900 seconds = 15 minutes
+                        candles = self.exchange.get_recent_prices(pair, limit=30, granularity=900)
+                        if candles and len(candles) >= 15:
+                            rsi_series = calculate_rsi(candles, period=14)
+                            if rsi_series and len(rsi_series) > 0:
+                                self.rsi_values[pair] = rsi_series[-1]
+                                continue
+                    except Exception:
+                        pass  # fall through to price_history
+
+                # Fallback to accumulated price history
+                if self.price_history.has_enough_data(pair, 15):
+                    prices = self.price_history.get_prices(pair)
+                    rsi_series = calculate_rsi(prices, period=14)
+                    if rsi_series and len(rsi_series) > 0:
+                        self.rsi_values[pair] = rsi_series[-1]
+
+            except Exception as e:
+                logger.debug(f"RSI update failed for {pair}: {e}")
+                if pair not in self.rsi_values:
+                    self.rsi_values[pair] = 50.0
+
+        # Persist occasionally
+        if len(self.rsi_values) > 0:
+            self.price_history.flush()
+
     def _run_cycle(self, cycle_num: int):
         now = datetime.now()
-        rebalance_needed = self._should_rebalance(now)
+        rebalance_needed = self._should_rebalance(now) or self._evaluate_hybrid_rebalance()
         self._update_price_history_and_calculate_rsi()
+
+        # === New RSI Pipeline Integration (GAP-001/002/003) ===
+        try:
+            # Calculate ATR on recent prices
+            recent_prices = []
+            for pair in self.FIXED_UNIVERSE:
+                prices = self.price_history.get_prices(pair, n=20)
+                if prices:
+                    recent_prices.append(prices[-1])
+
+            if len(recent_prices) >= 14:
+                # Simple ATR approximation using close prices
+                atr = self.atr_calculator.calculate_atr(
+                    recent_prices, recent_prices, recent_prices, period=14
+                )
+                regime = self.regime_detector.detect(recent_prices, atr)
+                # Generate signals for each pair (using cached RSI if available)
+                for pair in self.FIXED_UNIVERSE:
+                    rsi_val = self.rsi_values.get(pair, 50.0)
+                    sentiment = 0.0  # placeholder until sentiment cache integration
+                    signal = self.signal_generator.generate_signal(
+                        pair, rsi_val, atr, sentiment, mode="weighted"
+                    )
+                    if signal.signal != "HOLD":
+                        logger.info(f"[SIGNAL] {pair}: {signal.signal} | conf={signal.confidence:.2f} | {signal.reason}")
+        except Exception as e:
+            logger.debug(f"RSI pipeline integration error: {e}")
+
 
         logger.info(f"[CYCLE {cycle_num}] {now.isoformat(timespec='seconds')} | "
                     f"rebalance_needed={rebalance_needed} | "
@@ -256,7 +350,23 @@ class Phase6Runner:
         if self.last_rebalance_date is not None and current_date > self.last_rebalance_date and now.time() >= target:
             return True
 
-        return False
+
+    def _evaluate_hybrid_rebalance(self) -> bool:
+        """Use HybridRebalancer to decide if rebalancing is needed."""
+        try:
+            decision: RebalanceDecision = self.hybrid_rebalancer.evaluate(
+                universe=self.FIXED_UNIVERSE,
+                previous_sentiment=None,
+                volatility=None,
+                drawdown=None,
+            )
+            if decision.should_rebalance:
+                logger.info(f"[HYBRID REBALANCE] Reason: {decision.reason}")
+                return True
+            return False
+        except Exception as e:
+            logger.warning(f"Hybrid rebalance evaluation failed: {e}")
+            return False
 
     # ------------------------------------------------------------------
     # Fresh Start
@@ -325,7 +435,7 @@ class Phase6Runner:
                         }
                         self.trade_ledger.log_trade(trade_record)
                     except Exception as e:
-                        logger.warning(f"Ledger logging failed for {pair}: {e}")
+                        logger.warning(f"Ledger logging failed for {pair}: {str(e) if not isinstance(e, dict) else e}")
                     if result.get('sl_attached'):
                         price = result.get('price')
                         oid = result.get('order_id')
@@ -344,6 +454,7 @@ class Phase6Runner:
         self.last_rebalance_date = date.today()
         self._save_state()
         logger.info("Fresh start rebalance recorded.")
+        self.portfolio.refresh()  # ensure dashboard sees new holdings
 
         # Send digest for fresh start too
         details = "Fresh start deployment completed.\nPositions initialized based on inverse volatility."
@@ -371,15 +482,24 @@ class Phase6Runner:
             
             # Use deploy_capital to handle both capital deployment rules and static allocation
             # For daily rebalance, all cash is potentially available
-            total_cash = cash + sum(current_positions.values())
+            # Normalize positions to float amounts (handle enriched dicts from get_enriched_positions)
+            norm_positions = {}
+            for k, v in current_positions.items():
+                if isinstance(v, dict):
+                    norm_positions[k] = float(v.get("amount", v.get("usd_value", 0.0)))
+                else:
+                    norm_positions[k] = float(v) if v else 0.0
+            total_cash = cash + sum(norm_positions.values())
             
-            # Apply deployment rules
+            # Apply deployment rules (pass normalized floats)
             new_allocations = deploy_capital(
-                current_allocations=current_positions,
+                current_allocations=norm_positions,
                 new_capital=0.0, # Adjusting total, not just deploying new
                 sentiment_scores=sentiment_scores,
                 source="reserve",
-                candidate_pairs=self.FIXED_UNIVERSE
+                candidate_pairs=self.FIXED_UNIVERSE,
+                rsi_values=self.rsi_values,
+                min_rsi=30.0
             )
             
             # Generate rebalance plan based on new allocations
@@ -432,29 +552,73 @@ class Phase6Runner:
         self.last_rebalance_date = date.today()
         self._save_state()
         logger.info(f"Daily rebalance completed. Executed={executed}, Skipped={len(skipped)}")
+        self.portfolio.refresh()  # ensure dashboard sees updated holdings
 
         # Telegram digest
         details = f"Rebalance completed.\nExecuted: {executed} moves\nSkipped: {len(skipped)}"
         self._send_telegram_digest("Daily Rebalance Complete", details)
 
     # ------------------------------------------------------------------
-    # Structured Logging & Alerts (Observability)
+    # Data Enrichment Helpers
     # ------------------------------------------------------------------
+    def _calculate_average_entry_prices(self) -> Dict[str, float]:
+        """Parse trades log to calculate average entry price per pair."""
+        averages = {}
+        try:
+            trades = self.trade_ledger.get_recent_trades(limit=1000)
+            totals = {} # {pair: {'qty': 0.0, 'total_cost': 0.0}}
+            for t in trades:
+                if t.get("side", "").upper() == "BUY":
+                    pair = t.get("pair")
+                    qty = float(t.get("qty", 0))
+                    price = float(t.get("entry_price", 0))
+                    if pair and qty > 0 and price > 0:
+                        if pair not in totals:
+                            totals[pair] = {'qty': 0.0, 'total_cost': 0.0}
+                        totals[pair]['qty'] += qty
+                        totals[pair]['total_cost'] += (qty * price)
+            
+            for pair, data in totals.items():
+                if data['qty'] > 0:
+                    averages[pair] = data['total_cost'] / data['qty']
+        except Exception as e:
+            self.logger.warning(f"Error calculating entry prices: {e}")
+        return averages
     def _write_dashboard_cache(self):
         """Write current live state to the dashboard cache file.
-        This is the single source of truth for the web UI.
-        Produces the rich schema defined in Handoff_Dashboard_Dataflow_Fix.md
+        Uses prices exclusively from self.price_history (runner's snapshot).
         """
         try:
+            # Ensure price history is fresh before building snapshot (DASH-006 fix)
+            self._update_price_history_and_calculate_rsi()
+
             usd = self.exchange.get_account_balance("USD")
             try:
                 usdc = self.exchange.get_account_balance("USDC")
             except Exception:
                 usdc = 0.0
 
+            # Build price snapshot for enrichment (no exchange fallback)
+            price_snapshot = {}
+            for pair in self.FIXED_UNIVERSE:
+                latest = self.price_history.get_latest_price(pair)
+                if latest is not None:
+                    price_snapshot[pair] = latest
+                else:
+                    # If still missing after update, skip pair (prevents stale fallback)
+                    logger.warning(f"[DASHBOARD] No recent price for {pair} in history; skipping")
+                    continue
+
+            # Get calculated average entry prices
+            avg_entries = self._calculate_average_entry_prices()
+
             enriched = {}
+            # Prefer cached portfolio state to avoid rate limits
             try:
-                enriched = self.exchange.get_enriched_positions()
+                # Pass snapshot to get_enriched_positions
+                enriched = self.portfolio.get_enriched_positions(force_refresh=False, price_snapshot=price_snapshot)
+                if not enriched:
+                    enriched = self.exchange.get_enriched_positions(force_refresh=False, price_snapshot=price_snapshot)
             except Exception:
                 pass
 
@@ -463,15 +627,29 @@ class Phase6Runner:
             for currency, data in enriched.items():
                 if currency in ("USD", "USDC"):
                     continue
-                value = data.get("value_usd", 0)
+                pair_name = f"{currency}-USD"
+                if isinstance(data, (int, float)):
+                    amount = float(data)
+                    price = price_snapshot.get(pair_name, 0.0)
+                    value = amount * price
+                    entry = avg_entries.get(pair_name, price)
+                else:
+                    amount = data.get("amount", 0) if isinstance(data, dict) else 0
+                    # Prefer price from snapshot, then enriched data
+                    price = price_snapshot.get(pair_name) or data.get("current_price", data.get("price", 0))
+                    value = data.get("value_usd", amount * price) if isinstance(data, dict) else amount * price
+                    entry = avg_entries.get(pair_name, data.get("entry_price", price))
+
+                pnl_pct = ((price - entry) / entry) if entry and entry > 0 else 0.0
+
                 positions.append({
-                    "pair": f"{currency}-USD",
-                    "amount": data.get("amount", 0),
-                    "current_price": data.get("current_price", data.get("price", 0)),
+                    "pair": pair_name,
+                    "amount": amount,
+                    "current_price": price,
                     "value_usd": round(value, 2),
-                    "entry_price": data.get("entry_price", data.get("price", 0)),
-                    "unrealized_pnl_pct": data.get("unrealized_pnl_pct", round(data.get("pnl", 0), 2)),
-                    "side": data.get("side", "long"),
+                    "entry_price": float(round(entry, 2)) if entry else 0.0,
+                    "unrealized_pnl_pct": round(pnl_pct, 4),
+                    "side": "long",
                 })
                 total_holdings_value += value
 
@@ -513,7 +691,7 @@ class Phase6Runner:
             with open(CACHE_PATH, "w") as f:
                 json.dump(state, f, indent=2)
 
-            self.logger.info(f"[DASHBOARD] Cache written: {len(positions)} positions, total=${total_usd:.2f}")
+            self.logger.info(f"[DASHBOARD] Cache written (using price snapshot): {len(positions)} positions, holdings=${total_holdings_value:.2f}, total=${total_usd:.2f}")
         except Exception as e:
             self.logger.warning(f"[DASHBOARD] Failed to write cache: {e}")
 

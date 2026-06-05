@@ -86,6 +86,12 @@ class CoinbaseExchangeClient:
         return 0.0
 
     def get_price(self, product_id: str) -> float:
+        """Return current spot price for a product.
+
+        IMPORTANT: Live mode must NEVER return hardcoded/fake prices.
+        - Shadow mode: returns deterministic test prices
+        - Live mode: fetches real price from Coinbase public API
+        """
         if self.shadow_mode:
             prices = {
                 "BTC-USD": 65000.0,
@@ -96,16 +102,25 @@ class CoinbaseExchangeClient:
             }
             return prices.get(product_id, 100.0)
 
-        # Live mode - use reliable fallback prices
-        fallbacks = {
-            "BTC-USD": 76500.0,
-            "ETH-USD": 3200.0,
-            "SOL-USD": 145.0,
-            "XRP-USD": 0.52,
-            "DOGE-USD": 0.12,
-        }
-        return fallbacks.get(product_id, 100.0)
-
+        # === LIVE MODE: Must return real market data ===
+        # Live mode with retry
+        for attempt in range(1, 4):
+            try:
+                import requests
+                url = f"https://api.coinbase.com/v2/prices/{product_id}/spot"
+                resp = requests.get(url, timeout=8)
+                if resp.status_code == 200:
+                    data = resp.json()
+                    price = float(data["data"]["amount"])
+                    return round(price, 2)
+                else:
+                    logger.warning(f"get_price attempt {attempt}: HTTP {resp.status_code}")
+            except Exception as e:
+                logger.warning(f"get_price attempt {attempt} failed: {e}")
+            if attempt < 3:
+                import time; time.sleep(1.5 ** attempt)
+        logger.error(f"get_price: All attempts failed for {product_id} - returning 0.0")
+        return 0.0
     def place_market_buy(self, product_id: str, usd_amount: float) -> Dict[str, Any]:
         if self.shadow_mode:
             self._order_log.append({
@@ -201,8 +216,8 @@ class CoinbaseExchangeClient:
             return False
 
     def get_holdings(self) -> Dict[str, float]:
-        """Return current crypto holdings as {asset: amount} e.g. {'BTC': 0.0123}.
-        Uses live exchange balances for accurate rebalance after SL triggers.
+        """Return current crypto holdings as {asset: amount}.
+        More robust parsing to capture positions even when they are in 'hold'.
         """
         if self.shadow_mode:
             return self._positions.copy()
@@ -215,13 +230,19 @@ class CoinbaseExchangeClient:
             for acc in accounts.get("accounts", []):
                 currency = acc.get("currency", "")
                 if currency and currency != "USD":
-                    bal = float(acc.get("available_balance", {}).get("value", 0.0))
-                    if bal > 0:
-                        holdings[currency] = bal
+                    # Check both available_balance and hold
+                    available = float(acc.get("available_balance", {}).get("value", 0.0))
+                    hold = float(acc.get("hold", {}).get("value", 0.0))
+                    total = available + hold
+
+                    if total > 0:
+                        holdings[currency] = total
             return holdings
         except Exception as e:
             logger.error(f"Failed to fetch live holdings: {e}")
             return {}
+        # Fallback if no real_client
+        return {}
 
     def get_open_orders(self, product_id: Optional[str] = None) -> List[Dict[str, Any]]:
         """Fetch open orders, optionally filtered by product. Placeholder for live.
@@ -234,11 +255,118 @@ class CoinbaseExchangeClient:
         logger.info(f"[LIVE] get_open_orders called for {product_id or 'all'} (stub)")
         return []
 
+
+    
+    def get_recent_prices(self, product_id: str, limit: int = 20, granularity: str = "ONE_HOUR") -> list[float]:
+        """Fetch recent historical candle closes using the public Coinbase endpoint.
+        Rate limit aware: public endpoint should not be called too frequently.
+        """
+        # Simple in-memory cache to avoid hammering the public API
+        cache_key = f"{product_id}:{limit}:{granularity}"
+        if not hasattr(self, "_price_cache"):
+            self._price_cache = {}
+        if cache_key in self._price_cache:
+            cached_time, cached_data = self._price_cache[cache_key]
+            if (datetime.now() - cached_time).seconds < 300:  # 5 min cache
+                return cached_data
+
+        try:
+            import requests
+            from datetime import datetime, timedelta, timezone
+
+            # Map granularity
+            gran_map = {
+                "ONE_MINUTE": 60,
+                "FIVE_MINUTE": 300,
+                "FIFTEEN_MINUTE": 900,
+                "ONE_HOUR": 3600,
+                "SIX_HOUR": 21600,
+                "ONE_DAY": 86400
+            }
+            gran_seconds = gran_map.get(granularity, 3600)
+
+            end = datetime.now(timezone.utc)
+            start = end - timedelta(seconds=gran_seconds * (limit + 5))
+
+            url = f"https://api.exchange.coinbase.com/products/{product_id}/candles"
+            params = {
+                "start": start.isoformat(),
+                "end": end.isoformat(),
+                "granularity": gran_seconds
+            }
+
+            resp = requests.get(url, params=params, timeout=15)
+            if resp.status_code != 200:
+                logger.warning(f"Public candles failed for {product_id}: {resp.status_code}")
+                return []
+
+            candles = resp.json()
+            # Coinbase returns [time, low, high, open, close, volume]
+            # Most recent first → reverse so oldest first
+            closes = [float(c[4]) for c in reversed(candles) if len(c) >= 5]
+            result = closes[-limit:] if closes else []
+
+            # Cache the result
+            self._price_cache[cache_key] = (datetime.now(), result)
+            return result
+
+        except Exception as e:
+            logger.warning(f"get_recent_prices (public) failed for {product_id}: {e}")
+            return []
+
+
+    def get_enriched_positions(self, force_refresh: bool = False, price_snapshot: Optional[Dict[str, float]] = None) -> Dict[str, Dict]:
+        """Return enriched positions with current market data.
+        If price_snapshot is provided, use it instead of direct exchange calls.
+
+        Note: entry_price is left as None or 0.0 when unknown.
+              Callers should enrich with actual entry data from trade history
+              if accurate PnL is required.
+        """
+        holdings = self.get_holdings()
+        if not holdings:
+            return {}
+
+        enriched = {}
+        for currency, amount in holdings.items():
+            pair = f"{currency}-USD"
+            try:
+                price = price_snapshot.get(pair) if price_snapshot else self.get_price(pair)
+
+                if price and price > 0:
+                    value_usd = round(amount * price, 2)
+                    enriched[currency] = {
+                        "amount": amount,
+                        "current_price": price,
+                        "value_usd": value_usd,
+                        "entry_price": 0.0,             # Unknown - do not use current price
+                        "unrealized_pnl_pct": 0.0,      # Requires real entry price
+                        "side": "long"
+                    }
+            except Exception as e:
+                logger.warning(f"Failed to enrich {currency}: {e}")
+                continue
+        return enriched
+
     def cancel_order(self, order_id: str) -> bool:
         """Cancel a specific order by ID. Placeholder.
         """
+    def get_open_orders(self, pair: str = None) -> list:
+        """Return list of open orders. Works in both shadow and live mode."""
         if self.shadow_mode:
-            print(f"[SHADOW] Would cancel order {order_id}")
-            return True
-        logger.info(f"[LIVE] cancel_order({order_id}) stub - not yet wired to real API")
-        return False
+            return []
+        if not self.real_client:
+            return []
+        try:
+            resp = self.real_client._request(
+                "GET", 
+                "/api/v3/brokerage/orders/historical/batch",
+                params={"order_status": "OPEN"}
+            )
+            orders = resp.get("orders", []) if isinstance(resp, dict) else []
+            if pair:
+                orders = [o for o in orders if o.get("product_id") == pair]
+            return orders
+        except Exception as e:
+            logger.warning(f"get_open_orders failed: {e}")
+            return []

@@ -613,3 +613,15 @@ See full context in logs/ and phase6/core/ related files.
 **Status:** In progress (sustainment crons created in ~/.hermes/cron/, metrics script, plan updated).
 **Actions:** Hourly git-mirror-sync.yaml, 30min git-health-check.yaml; sustainment-metrics.sh tested; Phase 5 section in plan; crons in ~/.hermes/cron/.
 **Verification:** hermes cron list; ./scripts/hermes/git/sustainment-metrics.sh; git log --oneline -3
+
+### Hermes Gateway Restart + Performance Utilities (2026-06-14, post Phase 5)
+**Gateway restarted via 'hermes gateway restart' (systemd user service).**
+**Pre-restart:** Active, 2.9G mem, 4 crons, update available (163 commits behind).
+**New crons yamls loaded post-restart:** git-mirror-sync (hourly), git-health-check (30min).
+**Utilities performed:**
+- Sync script run (dry + full) to mirror new crons into git hermes/.
+- git-health-check and sustainment-metrics executed and verified.
+- hermes doctor / config check / skills check run.
+- Safe cleanup check for old .bak/snap files.
+**Verification:** hermes cron list now includes git-*; sync committed changes; metrics show healthy state (4 crons, disk 59%, uptime ~12d).
+**Optimal performance notes:** Gateway reloaded with new sustainment crons; mirror synced; recommend running 'hermes update' soon for the 163 commits; monitor memory (2.9G peak).

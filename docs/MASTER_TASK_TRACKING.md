@@ -526,3 +526,14 @@ See full context in logs/ and phase6/core/ related files.
 **Next Immediate:** Run Phase 1 baseline (inventory scripts, export profiles/crons, hardware health). Create first sync script skeleton. Update VPS playbook reference. Schedule via Hermes cron where possible.
 
 **Evidence:** Plan file committed (see git log). Full details in docs/GIT_HERMES_OPERATIONALIZATION_PLAN.md. Aligns with user constraints (Kanban handoffs, MASTER primary, code isolation, real data, proactive, no mid-asks).
+
+### GIT_HERMES_OPS-002 Phase 2 started: hermes/ mirror + sync/restore scripts committed (232e83e). See hermes-state/PHASE_GOALS.md and scripts/hermes/ for details. Full ticket in plan.
+
+### GIT_HERMES_OPS-003: Phase 3 - Enhanced Git Workflows for Hermes Agents (2026-06-14)
+**Status:** In progress (workflow doc created + live agent branch/commit demo executed on feat/phase3-git-workflows-demo, commit in log).
+**Key artifact:** hermes/git-workflows/AGENT_GIT_WORKFLOWS.md with full standards for branching, commits, PRs, handoff integration.
+**Demo:** git checkout -b, add doc, commit with proper message linking MASTER.
+**Next:** Add git section to handoff template, schedule hooks, integrate with kanban-orchestrator, test gh PR flow.
+
+### GIT_HERMES_OPS-004: Phase 4 - Resilience, Monitoring & Migration (2026-06-14)
+**Status:** In progress (Phase 3 merged; playbook updated; git health script; restore drill).

@@ -117,10 +117,31 @@ When hardening Hermes on legacy hardware or building migration/resilience, treat
 - Use project-specific `.hermes/resume-packets/` (per recovery-packet skill) and git worktrees for safe experiments.
 - Integrate restore into VPS_MIGRATION_PLAYBOOK: `git clone`; `./scripts/hermes/restore-hermes.sh`.
 
-**Monitoring & Ops Integration (Phase 4):**
-- Add git health to ops-engineer and crypto-monitor: "repo dirty?", "last sync age", "unpushed Hermes changes".
-- Enhance verification loops with git status checks and restore drills.
-- Hybrid migration: keep legacy primary; mirror critical profiles/crons to cloud via git clone + Docker; legacy as hot spare.
+**Enhanced Git Workflows for Agents (Phase 3):**
+- Standardize agent-driven git: always start on feature branch `feat/<id>-<desc>` or `hermes/<profile>-<change>`.
+- Conventional commits linking MASTER ticket / Kanban card / plan (e.g. "hermes: add agent git workflows (Phase 3)").
+- Every handoff (per agent-delegation) must include "Git Commands for Apply/Verify/Rollback" section with cherry-pick, git status, isolation test commands, and MASTER update requirement.
+- Create `hermes/git-workflows/AGENT_GIT_WORKFLOWS.md` as canonical reference (branching, hooks, PR via gh or delegation to code-reviewer).
+- Add git-enhanced handoff template (HANDOFF_GIT_ENHANCED.md).
+- Pre-commit examples: run isolation tests (e.g. hermes-state/verify_baseline.py), check for handoff git sections, update MASTER.
+- Demonstrate live on branch then merge after completion (use gh issue create for tracking).
+- Integrate with codebase-inspection (pygount) + git blame for audits during agent work.
+- Use `github-code-review` patterns and gh CLI for PRs/issues where available.
+
+**Resilience, Monitoring & Migration (Phase 4):**
+- Add git health checks (e.g. scripts/hermes/git/git-health-check.sh): repo status, unpushed commits, hermes/ mirror cleanliness, last sync age from README/commit.
+- Enhance ops-engineer_state and crypto-monitor prompts/crons to include "git status in hermes/, last sync, dirty repo?".
+- Update VPS_MIGRATION_PLAYBOOK.md with dedicated "Hermes Agent + Git Resilience" section: restore steps (`./scripts/hermes/restore-hermes.sh`), hybrid legacy+cloud, daily sync cron, restore drills in /tmp, reference to hermes/git-workflows/.
+- Run restore drills (dry + real in temp HERMES_HOME) as verification; always backup live ~/.hermes first.
+- Schedule sync + health via Hermes cron or system crontab; store recovery packets in git.
+- Tag stable "Hermes + Phase 6" releases; use git pull + restore for Hermes updates on target (fast/ versioned vs full Docker for bot).
+
+**Verification loops (cross-phase):**
+- After any change: re-run `hermes cron list`, `ls hermes/git-workflows/`, `./scripts/hermes/sync-hermes-state.sh --dry`, health check, restore --dry.
+- Append real evidence (commit hashes, file lists, tool output snippets) to MASTER under the GIT_HERMES_OPS-XXX ticket.
+- Always leave the user on the canonical branch (phase-6.1) after demo branches are merged.
+
+See `references/phase-progression-and-chaining.md` for user-specific patterns on high-level "proceed to phase X" signals leading to immediate chaining through remaining work + next phase without additional prompts. This was observed and operationalized in the 2026-06-14 GIT_HERMES multi-phase execution.
 
 **Concise Phase Goals Pattern:**
 When user requests delineation of phase goals (or at plan creation), produce a compact `PHASE_GOALS.md` (or section) with one high-level goal + 3-5 bullet success criteria per phase. Keep under 1 page. See hermes-state/PHASE_GOALS.md for example from this pattern.

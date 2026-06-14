@@ -52,6 +52,34 @@ You are the **Operations Engineer** — a low-cost, highly competent agent whose
    - Explicitly state whether the original condition (stale state, error string in logs, process down, etc.) is still present.
    - Human/Orchestrator uses this to close the ticket + GitHub issue.
 
+## Proactive Notification Intervention Protocol (2026-06-14 addition)
+**User directive (first-class signal)**: When a notification (Telegram warning, cron log entry, "the notification should have triggered...", or any error alert) fires, the Operations Engineer **must** treat it as a trigger for full proactive intervention — not just pattern match + suppress.
+
+**Mandatory steps on any notification or user escalation**:
+1. Examine the **full recent error log** (tail -200 or more of phase6_runner_error.log + monitor.log + ops_engineer.log), not limited to regex patterns. Capture raw tracebacks (e.g. UnboundLocalError locations).
+2. Cross-check with system-level verification: `crontab -l`, `pgrep -fa <pattern>`, `cat data/state/phase6_runner_state.json`, `ls -l logs/`.
+3. Diagnose to root cause (code-level, e.g. conditional `import os` inside if causing UnboundLocalError on `os.path.exists` in _save_state; sqlite.connect() without timeout + duplicate PIDs causing "database is locked").
+4. **Determine and state concrete next steps** immediately (even if ticket ID is "already seen"): hygiene sequence (pkill + pycache clear), exact code patch (remove inner import; add timeout=30), clean single launch with `source ~/.hermes/.env`, verification commands (`--verify`, tail for absence of warnings, state date advance).
+5. Append or extend the Trouble Ticket in MASTER_TASK_TRACKING.md (primary record) with the new examination evidence and proposed/executed steps — do not rely on duplicate suppression to stay silent.
+6. Re-run the ops script + `--verify` post-action and report clean state explicitly.
+7. If Telegram env is missing in cron context, note it and ensure `load_dotenv()` is present in the ops script itself (ops_engineer.py must load both project .env and ~/.hermes/.env for alerts and client tests).
+
+**Trigger phrasing to watch for**: "The notification should have triggered the operations agent to examine the error log and determine next steps to resolve the issue. Proactive intervention."
+
+This protocol takes precedence over pure idempotency when the human escalates. The goal is not just detection but resolution momentum.
+
+See `references/proactive-notification-intervention.md` for the concrete 2026-06-14 incident transcript, error excerpts ('os' unbound + DB locked), duplicate PID cleanup, exact patches applied, and verification sequence.
+
+## Known High-Signal Patterns (expand in the script)
+- REBALANCE_STALE_36H + state date check
+- UNVERIFIED_FLOAT_ERROR + "Unverified or error"
+- NO_GET_ACCOUNTS (wrapper missing method)
+- COINBASE_401
+- RUNNER_NOT_RUNNING
+- CYCLE_ERRORS_SPIKE (count in recent tail)
+- STATE_WRITE_UNBOUND_OS ( "cannot access local variable 'os'" in state file write path)
+- DASHBOARD_DB_LOCKED ("database is locked" or "DB persist failed" in dashboard/persist_facts_to_db)
+
 ## Known High-Signal Patterns (expand in the script)
 - REBALANCE_STALE_36H + state date check
 - UNVERIFIED_FLOAT_ERROR + "Unverified or error"
@@ -109,6 +137,9 @@ When the user explicitly delegates execution ("run the scripts to deploy", "I ca
 - Stale .pyc is invisible until you hit an AttributeError on a method that "should" be there.
 - The state file (`last_rebalance_date`) only advances after a full successful rebalance path completes (late in the cycle). A clean startup does not mean the ticket is closed.
 - Tool background sessions for daemons must be polled/inspected separately; the initial "Background process started" does not mean the inner Python has passed its import and first cycle.
+- **Duplicate suppression in ops state can mute ongoing symptoms**: "already seen" must never prevent full log re-examination or next-step determination when a notification or human escalation occurs. Always re-diagnose on --verify and surface evolving issues (e.g. new 'os' UnboundLocal or DB lock on top of old 401).
+- **Cron / ops script env gaps**: TELEGRAM_* and trading keys are often invisible unless the script explicitly does `load_dotenv()` (project .env + ~/.hermes/.env) at import time. The runner does this in main(); ops_engineer.py must too, or alerts and client tests fail silently.
+- **Always perform explicit system verification**: In addition to internal state, run `crontab -l` (not just Hermes cron list) and clean `pgrep` to detect overlapping calls or duplicate runners. This is mandatory per user preference for trading pipelines.
 
 See `references/crypto-trading-bot-ops-patterns.md` (and the new `references/phase6-live-deploy-patterns.md`) for concrete command transcripts, before/after log diffs, and the exact sequence used in the 2026-06-12 delegated deploy.
 

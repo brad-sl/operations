@@ -1,0 +1,7 @@
+name: git-mirror-sync
+schedule: "0 * * * *"
+repeat: -1
+deliver: local
+script: /home/brad/projects/crypto-trading-bot/scripts/hermes/sync-hermes-state.sh
+workdir: /home/brad/projects/crypto-trading-bot
+description: "Phase 5 sustainment: hourly sync of Hermes state to git mirror (operations.git)"

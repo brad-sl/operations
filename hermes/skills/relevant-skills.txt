@@ -1,0 +1,5 @@
+agent-delegation
+github
+hermes-operations
+ops-engineer
+trading-bot-operations

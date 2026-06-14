@@ -1,0 +1,13 @@
+name: crypto-monitor
+profile: crypto-monitor
+schedule: "0 */6 * * *"
+prompt: |
+  Perform a full health check and maintenance pass on all crypto trading scripts and processes.
+  - Use terminal to inspect running processes (ps aux grep for trading/paper/bot/phase6 etc.)
+  - Review recent logs for ERROR/CRASH patterns in the last 6-12h
+  - Attempt safe restarts for simple dead processes (background execution where appropriate)
+  - Compile evidence on any issues found
+  - Send concise Telegram report covering: status, processes, actions taken (restarts), escalations
+  - For complex/persistent issues: escalate to primary agent (detailed evidence + Kanban task creation recommended)
+  Respect all production safety rules. Never fabricate data.
+enabled: true

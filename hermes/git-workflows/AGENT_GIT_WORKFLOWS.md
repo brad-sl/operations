@@ -79,3 +79,10 @@ See commit on branch `feat/phase3-git-workflows` for a live example of this docu
 - Agent profiles that can call `gh` directly via terminal tool.
 
 This document lives in the `hermes/` mirror so it is versioned and restorable.
+## Phase 3 Completion Note (2026-06-14)
+- Pre-commit example added in scripts/hermes/git/pre-commit-example.sh
+- Integrated with codebase-inspection (pygount) + git blame for audits.
+- Git-enhanced handoff template created.
+- Live demo: branch, 2 commits, gh issue #9, MASTER update.
+- Ready for hooks, Kanban integration, and PR flows.
+

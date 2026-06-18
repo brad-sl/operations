@@ -59,10 +59,8 @@ def is_runner_running() -> bool:
 
 def check_last_rebalance() -> bool:
     """Returns True if healthy (suppress alert).
-    Respects the actual daily_rebalance_time from config (21:00 PT per trading_config_phase6.json).
-    Only flags overdue *after* the target window + 1h grace when last_rebalance_date is stale.
-    This prevents false "over 24h/36h" alarms during the day when the evening rebalance is still pending.
-    Matches the runner's _should_rebalance logic exactly.
+    Supports daily_rebalance_times list for 2x daily (9am & 9pm).
+    Uses latest target for grace period check.
     """
     if not os.path.exists(STATE_FILE):
         return False
@@ -77,15 +75,17 @@ def check_last_rebalance() -> bool:
         now = datetime.now()
         today = now.date()
 
-        # Load real schedule (no hard-coded 09:00/10:00)
-        rebalance_time_str = "21:00"
+        # Load real schedule - support list for 2x daily
+        rebalance_times = ["09:00", "21:00"]
         try:
             with open("config/trading_config_phase6.json") as cf:
                 cfg = json.load(cf)
-            rebalance_time_str = cfg.get("scheduler", {}).get("daily_rebalance_time", "21:00")
+            rebalance_times = cfg.get("scheduler", {}).get("daily_rebalance_times", [cfg.get("scheduler", {}).get("daily_rebalance_time", "09:00")])
         except Exception:
             pass
-        target = dt_time.fromisoformat(rebalance_time_str)
+        # Use the latest time for today's window check
+        latest_time_str = sorted(rebalance_times)[-1]
+        target = dt_time.fromisoformat(latest_time_str)
         grace_delta = timedelta(hours=1)
 
         if last_date == today:
@@ -94,7 +94,7 @@ def check_last_rebalance() -> bool:
         if days <= 0:
             return True
         if days == 1:
-            # Yesterday's last; today's 21:00 window + grace not yet passed -> healthy (no false alarm)
+            # Yesterday's last; today's latest window + grace not yet passed -> healthy
             target_dt = datetime.combine(today, target) + grace_delta
             if now < target_dt:
                 return True
@@ -104,7 +104,6 @@ def check_last_rebalance() -> bool:
         return False
     except Exception:
         return False
-
 
 def main():
     print(f"[MONITOR] Phase 6 Monitoring Agent started at {datetime.now()}")
@@ -117,7 +116,15 @@ def main():
         return
 
     if not check_last_rebalance():
-        msg = "⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)"
+        rebalance_times = ["09:00", "21:00"]
+        try:
+            with open("config/trading_config_phase6.json") as cf:
+                cfg = json.load(cf)
+            rebalance_times = cfg.get("scheduler", {}).get("daily_rebalance_times", [cfg.get("scheduler", {}).get("daily_rebalance_time", "09:00")])
+        except:
+            pass
+        times_str = ", ".join(rebalance_times) + " PT"
+        msg = f"⚠️ WARNING: Rebalance window missed for configured daily time ({times_str} + 1h grace; last_rebalance stale)"
         print(msg)
         send_telegram(msg)
 

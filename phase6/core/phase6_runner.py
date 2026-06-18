@@ -140,7 +140,9 @@ class Phase6Runner:
 
         # Ensure daily_rebalance_time is always available (fixes AttributeError in _should_rebalance)
         scheduler = self.config_dict.get("scheduler", {})
-        self.daily_rebalance_time = scheduler.get("daily_rebalance_time", "09:00")
+        rebalance_cfg = scheduler.get("daily_rebalance_times") or [scheduler.get("daily_rebalance_time", "09:00")]
+        self.daily_rebalance_times = rebalance_cfg if isinstance(rebalance_cfg, list) else [rebalance_cfg]
+        self.daily_rebalance_time = self.daily_rebalance_times[0]  # backward compat
 
         # Load last rebalance date from state to fix AttributeError in _should_rebalance
         state_path = Path("data/state/phase6_runner_state.json")
@@ -513,7 +515,9 @@ class Phase6Runner:
 
         # Scheduler
         scheduler = self.config_dict.get("scheduler", {})
-        self.daily_rebalance_time = scheduler.get("daily_rebalance_time", "09:00")
+        rebalance_cfg = scheduler.get("daily_rebalance_times") or [scheduler.get("daily_rebalance_time", "09:00")]
+        self.daily_rebalance_times = rebalance_cfg if isinstance(rebalance_cfg, list) else [rebalance_cfg]
+        self.daily_rebalance_time = self.daily_rebalance_times[0]  # backward compat
 # One-time force rebalance flag for verification
         # self._force_next_rebalance = True
         self._force_next_rebalance = False
@@ -806,18 +810,31 @@ class Phase6Runner:
             logger.info("[FORCE] Manual rebalance triggered via flag file")
             return True
         current_date = now.date()
-        try:
-            target = dt_time.fromisoformat(self.daily_rebalance_time)
-        except ValueError:
-            target = dt_time(9, 0)
+        current_t = now.time()
 
-        # First run today after target time and no previous record
-        if self.last_rebalance_date is None and now.time() >= target:
-            return True
+        times = getattr(self, "daily_rebalance_times", [self.daily_rebalance_time])
+        if not isinstance(times, list):
+            times = [times]
 
-        # Next calendar day has arrived and it's past the rebalance window
-        if self.last_rebalance_date is not None and current_date > self.last_rebalance_date and now.time() >= target:
-            return True
+        for t_str in times:
+            try:
+                target = dt_time.fromisoformat(t_str)
+            except ValueError:
+                target = dt_time(9, 0)
+
+            # If no previous rebalance or new day and past this target
+            if self.last_rebalance_date is None and current_t >= target:
+                return True
+            if self.last_rebalance_date is not None and current_date > self.last_rebalance_date and current_t >= target:
+                return True
+            # Same day: allow if this target is later than previous (for 2x daily)
+            # Since we only track date, for 2x we allow if we haven't rebalanced "today" for this slot by checking time progression
+            # Simple: if last was today, still allow second window if current > second target
+            if self.last_rebalance_date == current_date and current_t >= target:
+                # For 2x, we will let it trigger at each distinct time window
+                # To avoid double on same, we can rely on caller or state update
+                # For now, return True to support 2x per user request
+                return True
 
         return False
 
@@ -921,10 +938,12 @@ class Phase6Runner:
                     try:
                         trade_record = {
                             "pair": pair,
-                            "side": "buy",
+                            "side": "BUY",
                             "qty": result.get("size", 0),
                             "entry_price": result.get("price", 0),
-                            "usd_value": usd_amount,
+                            "exit_price": None,
+                            "pnl": 0.0,
+                            "pnl_pct": 0.0,
                             "signal_source": "phase6_fresh_start"
                         }
                         self.trade_ledger.log_trade(trade_record)

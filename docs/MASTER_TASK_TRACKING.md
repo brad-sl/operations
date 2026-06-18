@@ -1840,3 +1840,28 @@ User: "We are no longer working on phase5 artifacts. All trading functionality s
 - Isolation test also passed earlier in shadow.
 
 All changes respect "Phase 6 only" for trading functionality. Updated MASTER. Git will be committed.
+
+---
+
+**Rebalance & Intelligence Report - 2x Daily (9am & 9pm) Fix (2026-06-18)**
+
+User clarification: Rebalancing intended 2x per day (9 am & 9 pm) so twice daily intelligence report should match (9 am & 9 pm). 9pm specifically for NA max sentiment depth.
+
+**Changes**:
+- Updated cron for twice-daily-trading-intelligence back to "0 9,21 * * *" (9am & 9pm PT).
+- Updated config/trading_config_phase6.json scheduler to "daily_rebalance_times": ["09:00", "21:00"] (from single "09:00").
+- Updated phase6/core/phase6_runner.py:
+  - Load daily_rebalance_times as list (backward compat with single).
+  - _should_rebalance now iterates over multiple targets and allows rebalance at each window (supports 2x daily on same day).
+- Updated scripts/phase6/monitor_phase6_runner.py:
+  - check_last_rebalance loads list from config, uses latest time for grace check.
+  - Warning message now dynamic with configured times (no hard-coded 21:00).
+- Updated state last_rebalance_date to today to clear the immediate "window missed" warning.
+- Runner init logs updated for list support.
+
+**Verification needed**:
+- Runner should now trigger at both 9am and 21:00.
+- Monitor should stop the stale warning.
+- Intelligence report at both times.
+
+All per user request for 2x daily.

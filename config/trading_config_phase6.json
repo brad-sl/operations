@@ -58,7 +58,7 @@
     "reserve_breach_action": "flag_and_adjust"
   },
   "scheduler": {
-    "daily_rebalance_time": "21:00"
+    "daily_rebalance_times": ["09:00", "21:00"]
   },
   "_live_deployment": {
     "enabled": true,

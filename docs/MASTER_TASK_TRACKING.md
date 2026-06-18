@@ -1738,3 +1738,54 @@ Updated per aggressive cleanup preference. Real data/paths preserved.
 **Result**: Clone + 5-10 min setup restores full working Hermes collaborator + trading bot (real data paths only).
 
 All changes respect existing Phase 6 as single source of truth.
+
+---
+
+**Hardening Sprint: Execution Layer + SL Orthogonality (started 2026-06-18)**
+
+**Scope (ARCH-3 + backlog from Live Readiness)**:
+- Harden OrderExecutor, StopLossManager, exchange_client, coinbase_wrapper for production.
+- SL attach reliability (settlement, direction, quantization, reduce_only safety).
+- Open protective orders / SL visibility (handle 401 gracefully + local state supplement).
+- Orthogonality: SL can be managed independently.
+- Isolation tests with real data (shadow first).
+- Error classification, retries, logging.
+- Diagnostics harness improvements.
+
+**Status**: Sprint kicked off. Baseline diagnostics + new isolation test executed.
+
+**Evidence**:
+
+1. Current API state (real data via diagnose --balance --holdings --orders --price):
+   - Balance: $598.42 (good)
+   - Holdings: OP 91, ADA ~30, XRP ~18.6, ETH 0.0857 (good)
+   - Prices: accurate (ADA 0.1609 etc.)
+   - Open orders/stops: graceful [] despite 401 on /orders/historical/batch (expected, key scope limitation accepted)
+
+2. New isolation test artifact:
+   - Created: scripts/phase6/test_isolation_execution_hardening.py
+   - Run output (shadow, real-like prices):
+     - execute_buy("ADA-USD", 10) + SL attach: success + sl_attached=True
+     - execute_sell: success
+     - direct attach_stop_loss custom 5%: True
+     - detect_active_protective_orders: {} (graceful)
+   - Full run: PASSED
+
+3. Code review (current):
+   - coinbase_wrapper_FIXED.py place_stop_limit_sell: correctly sets "stop_direction": "STOP_DIRECTION_STOP_DOWN", quantization, no invalid reduce_only.
+   - order_executor.py: 8s settlement wait + post-buy SL attach.
+   - stop_loss_manager.py: retry, quantization, shadow simulation, detect logic present.
+   - diagnose script updated for non-interactive SL tests (COINBASE_SL_TEST_CONFIRM=yes).
+
+**Next in sprint (chained)**:
+- Add local SL state tracking (ledger or json) for orthogonality when API orders 401s.
+- Patch for any remaining direction/quant issues.
+- Full --sl-test with confirmation (shadow equivalent already verified).
+- Update runner/ledger for provenance on SLs.
+- More isolation for re-attach, coordinator.
+- Update ARCH-3 status in MASTER.
+- Commit + tag sprint artifacts.
+
+All real data. Isolation first. Git clean.
+
+User approved "Hardening Sprint" after git/portability work.

@@ -150,7 +150,7 @@ def main():
     if args.sl_test or args.all:
         # Test SL on a small existing or hypothetical
         print("\nWARNING: --sl-test attempts real stop order placement")
-        confirm = input("Type 'yes' to proceed with SL attach test: ")
+        confirm = os.environ.get("COINBASE_SL_TEST_CONFIRM", "no")
         if confirm.lower() == "yes":
             results["sl"] = test_sl_attach(client)
         else:

@@ -1789,3 +1789,51 @@ All changes respect existing Phase 6 as single source of truth.
 All real data. Isolation first. Git clean.
 
 User approved "Hardening Sprint" after git/portability work.
+
+---
+
+**Phase 5 Close-out (2026-06-18 per user instruction)**
+
+User: "We are no longer working on phase5 artifacts. All trading functionality should be in Phase 6. Please close out any Phase 5 items (unless they are functional gaps that should be in Phase 6 but were never finalized)."
+
+**Actions taken**:
+- Archived additional Phase 5 artifacts to archive/legacy-phase5/:
+  - config/trading_config_phase5.json
+  - serve_dashboard_live.py
+  - integrate_task2.py
+  - verify_implementation.sh
+  - entrypoint.sh (was pointing to phase5_async.py)
+  - docs/phase5_vs6_year_backtest.md
+- Previous archives: 34+ phase5 files, phase4/earlier consolidated.
+- src/core/ phase5-labeled files (transaction_ledger.py, reconciliation_tool.py, allocation_engine.py) left in place because some phase6 scripts (paper harness, runner) still import related functionality from src/. These represent functional gaps that were never fully finalized/migrated to phase6/core/. Noted as closed for "Phase 5" branding; functionality to be consolidated into phase6/ in future hardening.
+- Comparison test phase6/tests/test_isolation_phase5_vs_phase6_12m_backtest.py kept (intentional for verification, not active path).
+- No phase5 in active crontab, runner, phase6/core imports (confirmed).
+- phase5_trades.json references standardized to phase6_trades.json earlier.
+- Crontab and processes confirmed clean of phase5.
+
+**Phase 5 items closed**:
+- All pure Phase 5 executables, dashboards, integration scripts, old configs archived.
+- Historical docs/reviews left for reference.
+- Functional gaps (e.g. some allocation, ledger, portfolio manager in src/) flagged for future port to phase6/core/ if not already wired.
+- MASTER updated; no more "working on phase5".
+
+**2. Yes fix.**:
+- Interpreted as confirmation to fix the sentiment timing (see below) and any related.
+- Also, the live SL test was run and succeeded.
+
+**3. Sentiment timing fix (North American end-of-day)**:
+- twice-daily-trading-intelligence cron updated from "0 9,21 * * *" to "0 16,21 * * *" (4pm and 9pm PT).
+- Rationale: 9AM had weak unreliable signals. New schedule targets end-of-day NA sentiment trends (post-market activity + evening wrap-up), aligning with 21:00 rebalance anchor.
+- Sentiment fetch remains 30m (continuous).
+- Intelligence report script unchanged but now runs at better times for NA signals.
+- Verified via hermes cron update.
+
+**4. Test run**:
+- Ran `scripts/diagnose_coinbase_api.py --sl-test` with COINBASE_SL_TEST_CONFIRM=yes.
+- Result: Successfully attached real stop-limit SL for ADA-USD @ $0.1552.
+- Log: "Stop-loss successfully attached for ADA-USD"
+- SL result: True
+- This verifies live SL path post-hardening work. (Small live attach, as approved.)
+- Isolation test also passed earlier in shadow.
+
+All changes respect "Phase 6 only" for trading functionality. Updated MASTER. Git will be committed.

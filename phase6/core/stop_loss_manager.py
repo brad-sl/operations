@@ -104,8 +104,18 @@ class StopLossManager:
 
         if hasattr(self.exchange, "place_limit_sell"):
             return self.exchange.place_limit_sell(pair, size, tp_price_quantized)
-        print("[TODO] place_limit_sell not yet implemented on exchange client")
-        return False
+        
+        # Fallback to direct client order placement
+        logger.info(f"Using client.place_order for TP on {pair}")
+        result = self.exchange.place_order(
+            product_id=pair,
+            side="SELL",
+            order_type="LIMIT",
+            price=str(tp_price_quantized),
+            size=str(size),
+            post_only=True
+        )
+        return bool(result)
 
     def detect_active_protective_orders(
         self, basket: Optional[List[str]] = None

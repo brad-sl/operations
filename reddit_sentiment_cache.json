@@ -1,67 +1,67 @@
 {
   "BTC-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907196Z",
+    "timestamp": "2026-06-18T19:00:04.451680Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "ETH-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907230Z",
+    "timestamp": "2026-06-18T19:00:04.451700Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "SOL-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907245Z",
+    "timestamp": "2026-06-18T19:00:04.451709Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "XRP-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907254Z",
+    "timestamp": "2026-06-18T19:00:04.451723Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "DOGE-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907262Z",
+    "timestamp": "2026-06-18T19:00:04.451732Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "ADA-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907270Z",
+    "timestamp": "2026-06-18T19:00:04.451740Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "AVAX-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907278Z",
+    "timestamp": "2026-06-18T19:00:04.451748Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "LINK-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907286Z",
+    "timestamp": "2026-06-18T19:00:04.451756Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "UNI-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907294Z",
+    "timestamp": "2026-06-18T19:00:04.451764Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "ARB-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907301Z",
+    "timestamp": "2026-06-18T19:00:04.451772Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   },
   "OP-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T16:00:04.907309Z",
+    "timestamp": "2026-06-18T19:00:04.451780Z",
     "source": "Apify Reddit Actor",
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   }

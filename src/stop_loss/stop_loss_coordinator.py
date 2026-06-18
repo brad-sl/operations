@@ -134,12 +134,21 @@ class StopLossCoordinator:
 
     def _fetch_open_stop_orders(self, pair: str) -> List[Dict[str, Any]]:
         """
-        Placeholder: In production, query exchange for open stop_loss_limit orders for pair.
+        Query exchange for open stop_loss_limit orders for pair.
         Returns list of {"id": ..., "symbol": pair, ...}
         """
-        # TODO: implement via client.get_open_orders or equivalent filtered by type
-        logger.debug(f"Fetching open stop orders for {pair} (stub)")
-        return []
+        try:
+            open_orders = self.client.get_open_orders() or []
+            # Filter specifically for stop-loss and limit-sell (TP) protective orders
+            return [
+                order for order in open_orders
+                if (order.get("product_id") == pair or order.get("pair") == pair) and
+                (bool(order.get("stop_price")) or ("stop" in str(order.get("type", "")).lower()) or
+                 ("limit" in str(order.get('type', '')).lower() and str(order.get('side', '')).upper() == 'SELL'))
+            ]
+        except Exception as e:
+            logger.error(f"Error fetching open stop orders for {pair}: {e}")
+            return []
 
     @contextmanager
     def suspend_reattach_context(self, pairs: List[str], new_positions: Dict[str, float]):

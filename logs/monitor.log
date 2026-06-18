@@ -5732,3 +5732,37 @@
 [MONITOR] Health check passed
 [MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 09:00:02.233426
 [MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 09:15:01.497233
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 09:30:02.161666
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 09:45:01.492509
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 10:00:02.127415
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 10:15:02.160091
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 10:30:02.060247
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 10:45:01.973926
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 11:00:02.685275
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 11:15:01.987901
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 11:30:02.400935
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 11:45:01.665908
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 12:00:02.300626
+⚠️ WARNING: Rebalance window missed for configured daily time (21:00 PT + 1h grace; last_rebalance stale)
+[MONITOR] Health check passed
+[MONITOR] Phase 6 Monitoring Agent started at 2026-06-18 12:15:01.990352
+[MONITOR] Health check passed

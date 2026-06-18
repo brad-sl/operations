@@ -174248,3 +174248,1053 @@ TypeError: unsupported operand type(s) for +: 'int' and 'dict'
 2026-06-18 09:02:40,691 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
 2026-06-18 09:02:41,271 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
 2026-06-18 09:02:46,280 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:03:46,284 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:03:46,284 - phase6.runner - INFO - [CYCLE 2240] 2026-06-18T09:03:46 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:03:46,934 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:03:51,944 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:03:52,545 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:03:57,555 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:04:57,560 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:04:57,560 - phase6.runner - INFO - [CYCLE 2241] 2026-06-18T09:04:57 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:04:58,194 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:05:03,201 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:05:03,784 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:05:08,794 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:06:08,799 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:06:08,799 - phase6.runner - INFO - [CYCLE 2242] 2026-06-18T09:06:08 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:06:09,642 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:06:14,649 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:06:15,216 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:06:20,225 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:07:20,230 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:07:20,230 - phase6.runner - INFO - [CYCLE 2243] 2026-06-18T09:07:20 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:07:20,812 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:07:25,821 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:07:26,733 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:07:31,742 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:08:31,746 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:08:31,746 - phase6.runner - INFO - [CYCLE 2244] 2026-06-18T09:08:31 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:08:32,342 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:08:37,353 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:08:37,922 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:08:42,931 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:09:42,935 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:09:42,936 - phase6.runner - INFO - [CYCLE 2245] 2026-06-18T09:09:42 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:09:43,577 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:09:48,585 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:09:49,207 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:09:54,215 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:10:54,220 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:10:54,220 - phase6.runner - INFO - [CYCLE 2246] 2026-06-18T09:10:54 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:10:54,813 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:10:59,820 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:11:00,408 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:11:05,418 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:12:05,423 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:12:05,423 - phase6.runner - INFO - [CYCLE 2247] 2026-06-18T09:12:05 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:12:06,090 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:12:11,098 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:12:11,686 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:12:16,696 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:13:16,700 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:13:16,700 - phase6.runner - INFO - [CYCLE 2248] 2026-06-18T09:13:16 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:13:17,398 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:13:22,407 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:13:23,016 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:13:28,025 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:14:28,028 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:14:28,028 - phase6.runner - INFO - [CYCLE 2249] 2026-06-18T09:14:28 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:14:28,697 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:14:33,706 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:14:34,274 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:14:39,282 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:15:39,285 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:15:39,285 - phase6.runner - INFO - [CYCLE 2250] 2026-06-18T09:15:39 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:15:39,904 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:15:44,916 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:15:45,816 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:15:50,825 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:16:50,830 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:16:50,830 - phase6.runner - INFO - [CYCLE 2251] 2026-06-18T09:16:50 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:16:51,634 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:16:56,642 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:16:57,262 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:17:02,272 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:18:02,278 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:18:02,279 - phase6.runner - INFO - [CYCLE 2252] 2026-06-18T09:18:02 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:18:03,260 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:18:08,271 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:18:08,998 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:18:14,008 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:19:14,013 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:19:14,013 - phase6.runner - INFO - [CYCLE 2253] 2026-06-18T09:19:14 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:19:14,627 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:19:19,635 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:19:20,221 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:19:25,230 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:20:25,233 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:20:25,233 - phase6.runner - INFO - [CYCLE 2254] 2026-06-18T09:20:25 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:20:25,871 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:20:30,878 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:20:31,522 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:20:36,534 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:21:36,537 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:21:36,538 - phase6.runner - INFO - [CYCLE 2255] 2026-06-18T09:21:36 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:21:37,244 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:21:42,254 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:21:42,942 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:21:47,954 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:22:47,959 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:22:47,960 - phase6.runner - INFO - [CYCLE 2256] 2026-06-18T09:22:47 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:22:48,556 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:22:53,566 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:22:54,121 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:22:59,130 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:23:59,134 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:23:59,134 - phase6.runner - INFO - [CYCLE 2257] 2026-06-18T09:23:59 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:23:59,775 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:24:04,783 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:24:05,669 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:24:10,676 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:25:10,681 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:25:10,681 - phase6.runner - INFO - [CYCLE 2258] 2026-06-18T09:25:10 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:25:11,300 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:25:16,313 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:25:16,933 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:25:21,941 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:26:21,945 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:26:21,946 - phase6.runner - INFO - [CYCLE 2259] 2026-06-18T09:26:21 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:26:22,577 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:26:27,584 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:26:28,171 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:26:33,181 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:27:33,186 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:27:33,186 - phase6.runner - INFO - [CYCLE 2260] 2026-06-18T09:27:33 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:27:33,991 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:27:38,998 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:27:39,594 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:27:44,602 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:28:44,606 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:28:44,606 - phase6.runner - INFO - [CYCLE 2261] 2026-06-18T09:28:44 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:28:45,180 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:28:50,188 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:28:50,763 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:28:55,774 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:29:55,778 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:29:55,778 - phase6.runner - INFO - [CYCLE 2262] 2026-06-18T09:29:55 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:29:56,376 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:30:01,385 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:30:02,092 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:30:07,108 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:31:07,117 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:31:07,117 - phase6.runner - INFO - [CYCLE 2263] 2026-06-18T09:31:07 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:31:07,755 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:31:12,765 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:31:13,410 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:31:18,418 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:32:18,422 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:32:18,423 - phase6.runner - INFO - [CYCLE 2264] 2026-06-18T09:32:18 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:32:19,063 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:32:24,074 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:32:24,687 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:32:29,697 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:33:29,702 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:33:29,702 - phase6.runner - INFO - [CYCLE 2265] 2026-06-18T09:33:29 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:33:30,363 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:33:35,373 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:33:35,964 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:33:40,206 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:34:40,210 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:34:40,211 - phase6.runner - INFO - [CYCLE 2266] 2026-06-18T09:34:40 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:34:40,900 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:34:45,908 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:34:46,583 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:34:51,590 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:35:51,593 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:35:51,594 - phase6.runner - INFO - [CYCLE 2267] 2026-06-18T09:35:51 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:35:52,340 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:35:57,352 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:35:57,941 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:36:02,949 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:37:02,952 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:37:02,953 - phase6.runner - INFO - [CYCLE 2268] 2026-06-18T09:37:02 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:37:03,648 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:37:03,651 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:37:04,350 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:37:09,361 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:38:09,365 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:38:09,365 - phase6.runner - INFO - [CYCLE 2269] 2026-06-18T09:38:09 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:38:10,171 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:38:15,177 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:38:15,884 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:38:20,893 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:39:20,896 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:39:20,896 - phase6.runner - INFO - [CYCLE 2270] 2026-06-18T09:39:20 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:39:21,674 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:39:26,683 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:39:27,280 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:39:32,288 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:40:32,291 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:40:32,291 - phase6.runner - INFO - [CYCLE 2271] 2026-06-18T09:40:32 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:40:32,905 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:40:32,906 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:40:33,587 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:40:38,595 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:41:38,599 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:41:38,600 - phase6.runner - INFO - [CYCLE 2272] 2026-06-18T09:41:38 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:41:39,274 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:41:44,281 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:41:44,848 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:41:49,857 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:42:49,860 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:42:49,860 - phase6.runner - INFO - [CYCLE 2273] 2026-06-18T09:42:49 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:42:50,517 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:42:55,524 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:42:56,130 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:43:01,137 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:44:01,140 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:44:01,140 - phase6.runner - INFO - [CYCLE 2274] 2026-06-18T09:44:01 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:44:01,733 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:44:06,742 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:44:07,377 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:44:07,378 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:45:07,384 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:45:07,384 - phase6.runner - INFO - [CYCLE 2275] 2026-06-18T09:45:07 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:45:08,077 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:45:13,084 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:45:13,666 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:45:18,675 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:46:18,678 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:46:18,678 - phase6.runner - INFO - [CYCLE 2276] 2026-06-18T09:46:18 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:46:19,291 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:46:24,300 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:46:24,932 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:46:29,939 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:47:29,944 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:47:29,944 - phase6.runner - INFO - [CYCLE 2277] 2026-06-18T09:47:29 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:47:30,568 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:47:35,577 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:47:36,120 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:47:41,128 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:48:41,132 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:48:41,132 - phase6.runner - INFO - [CYCLE 2278] 2026-06-18T09:48:41 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:48:41,945 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:48:41,947 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:48:42,542 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:48:47,551 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:49:47,556 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:49:47,557 - phase6.runner - INFO - [CYCLE 2279] 2026-06-18T09:49:47 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:49:48,138 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:49:53,147 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:49:53,749 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:49:58,760 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:50:58,764 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:50:58,765 - phase6.runner - INFO - [CYCLE 2280] 2026-06-18T09:50:58 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:50:59,451 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:51:04,460 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:51:05,051 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:51:10,058 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:52:10,063 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:52:10,063 - phase6.runner - INFO - [CYCLE 2281] 2026-06-18T09:52:10 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:52:10,675 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:52:10,676 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:52:11,305 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:52:16,313 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:53:16,317 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:53:16,317 - phase6.runner - INFO - [CYCLE 2282] 2026-06-18T09:53:16 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:53:16,919 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:53:21,932 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:53:22,526 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:53:27,532 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:54:27,537 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:54:27,537 - phase6.runner - INFO - [CYCLE 2283] 2026-06-18T09:54:27 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:54:28,159 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:54:33,168 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:54:33,992 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:54:38,999 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:55:39,004 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:55:39,004 - phase6.runner - INFO - [CYCLE 2284] 2026-06-18T09:55:39 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:55:39,931 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:55:44,940 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:55:45,574 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:55:45,574 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 09:56:45,578 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:56:45,578 - phase6.runner - INFO - [CYCLE 2285] 2026-06-18T09:56:45 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:56:46,527 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:56:51,534 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:56:52,397 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:56:57,408 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:57:57,412 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:57:57,413 - phase6.runner - INFO - [CYCLE 2286] 2026-06-18T09:57:57 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:57:58,076 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:58:03,085 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:58:03,661 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:58:08,669 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:59:08,673 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 09:59:08,674 - phase6.runner - INFO - [CYCLE 2287] 2026-06-18T09:59:08 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 09:59:09,561 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:59:14,572 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 09:59:15,136 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 09:59:20,143 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:00:20,148 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:00:20,148 - phase6.runner - INFO - [CYCLE 2288] 2026-06-18T10:00:20 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:00:20,845 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:00:20,846 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:00:21,477 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:00:26,485 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:01:26,490 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:01:26,490 - phase6.runner - INFO - [CYCLE 2289] 2026-06-18T10:01:26 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:01:27,402 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:01:32,414 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:01:33,004 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:01:38,014 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:02:38,018 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:02:38,018 - phase6.runner - INFO - [CYCLE 2290] 2026-06-18T10:02:38 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:02:38,627 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:02:43,636 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:02:44,297 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:02:49,307 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:03:49,311 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:03:49,311 - phase6.runner - INFO - [CYCLE 2291] 2026-06-18T10:03:49 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:03:50,026 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:03:50,028 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:03:50,868 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:03:55,878 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:04:55,883 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:04:55,883 - phase6.runner - INFO - [CYCLE 2292] 2026-06-18T10:04:55 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:04:56,508 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:05:01,515 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:05:02,282 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:05:07,290 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:06:07,296 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:06:07,297 - phase6.runner - INFO - [CYCLE 2293] 2026-06-18T10:06:07 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:06:08,087 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:06:13,097 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:06:13,666 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:06:18,673 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:07:18,678 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:07:18,678 - phase6.runner - INFO - [CYCLE 2294] 2026-06-18T10:07:18 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:07:19,315 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:07:24,324 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:07:24,881 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:07:24,882 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:08:24,886 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:08:24,886 - phase6.runner - INFO - [CYCLE 2295] 2026-06-18T10:08:24 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:08:25,566 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:08:30,574 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:08:31,170 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:08:36,177 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:09:36,180 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:09:36,181 - phase6.runner - INFO - [CYCLE 2296] 2026-06-18T10:09:36 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:09:37,064 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:09:42,072 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:09:42,640 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:09:47,648 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:10:47,658 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:10:47,659 - phase6.runner - INFO - [CYCLE 2297] 2026-06-18T10:10:47 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:10:48,389 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:10:53,399 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:10:54,009 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:10:59,018 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:11:59,021 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:11:59,022 - phase6.runner - INFO - [CYCLE 2298] 2026-06-18T10:11:59 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:11:59,807 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:11:59,809 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:12:00,380 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:12:05,388 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:13:05,393 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:13:05,393 - phase6.runner - INFO - [CYCLE 2299] 2026-06-18T10:13:05 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:13:06,016 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:13:11,023 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:13:11,756 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:13:16,764 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:14:16,770 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:14:16,770 - phase6.runner - INFO - [CYCLE 2300] 2026-06-18T10:14:16 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:14:17,405 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:14:22,412 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:14:23,275 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:14:28,283 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:15:28,287 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:15:28,287 - phase6.runner - INFO - [CYCLE 2301] 2026-06-18T10:15:28 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:15:28,882 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:15:28,883 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:15:29,526 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:15:34,536 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:16:34,539 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:16:34,539 - phase6.runner - INFO - [CYCLE 2302] 2026-06-18T10:16:34 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:16:35,410 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:16:40,419 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:16:41,034 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:16:46,046 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:17:46,049 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:17:46,050 - phase6.runner - INFO - [CYCLE 2303] 2026-06-18T10:17:46 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:17:46,601 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:17:51,608 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:17:52,246 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:17:57,253 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:18:57,258 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:18:57,258 - phase6.runner - INFO - [CYCLE 2304] 2026-06-18T10:18:57 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:18:57,830 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:19:02,837 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:19:03,684 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:19:03,684 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:20:03,688 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:20:03,688 - phase6.runner - INFO - [CYCLE 2305] 2026-06-18T10:20:03 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:20:04,428 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:20:09,438 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:20:10,033 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:20:15,040 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:21:15,044 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:21:15,044 - phase6.runner - INFO - [CYCLE 2306] 2026-06-18T10:21:15 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:21:15,597 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:21:20,605 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:21:21,233 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:21:26,241 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:22:26,246 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:22:26,246 - phase6.runner - INFO - [CYCLE 2307] 2026-06-18T10:22:26 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:22:26,901 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:22:31,908 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:22:32,694 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:22:37,702 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:23:37,706 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:23:37,707 - phase6.runner - INFO - [CYCLE 2308] 2026-06-18T10:23:37 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:23:38,287 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:23:43,294 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:23:43,844 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:23:48,852 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:24:48,858 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:24:48,858 - phase6.runner - INFO - [CYCLE 2309] 2026-06-18T10:24:48 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:24:49,458 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:24:49,459 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 10:24:50,051 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:24:55,060 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:25:55,063 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:25:55,063 - phase6.runner - INFO - [CYCLE 2310] 2026-06-18T10:25:55 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:25:55,605 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:26:00,613 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:26:01,151 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:26:06,163 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:27:06,173 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:27:06,173 - phase6.runner - INFO - [CYCLE 2311] 2026-06-18T10:27:06 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:27:06,945 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:27:11,958 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:27:12,517 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:27:17,524 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:28:17,529 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:28:17,529 - phase6.runner - INFO - [CYCLE 2312] 2026-06-18T10:28:17 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:28:18,338 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:28:23,346 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:28:23,974 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:28:28,985 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:29:28,989 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:29:28,989 - phase6.runner - INFO - [CYCLE 2313] 2026-06-18T10:29:28 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:29:29,594 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:29:34,602 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:29:35,278 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:29:40,290 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:30:40,297 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:30:40,297 - phase6.runner - INFO - [CYCLE 2314] 2026-06-18T10:30:40 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:30:41,376 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:30:46,387 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:30:47,025 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:30:52,035 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:31:52,038 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:31:52,038 - phase6.runner - INFO - [CYCLE 2315] 2026-06-18T10:31:52 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:31:52,877 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:31:57,885 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:31:58,497 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:32:03,504 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:33:03,509 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:33:03,509 - phase6.runner - INFO - [CYCLE 2316] 2026-06-18T10:33:03 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:33:04,178 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:33:09,189 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:33:09,755 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:33:14,764 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:34:14,769 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:34:14,769 - phase6.runner - INFO - [CYCLE 2317] 2026-06-18T10:34:14 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:34:15,429 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:34:20,436 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:34:21,023 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:34:26,035 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:35:26,039 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:35:26,039 - phase6.runner - INFO - [CYCLE 2318] 2026-06-18T10:35:26 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:35:26,662 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:35:31,670 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:35:32,266 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:35:37,277 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:36:37,284 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:36:37,284 - phase6.runner - INFO - [CYCLE 2319] 2026-06-18T10:36:37 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:36:37,962 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:36:42,972 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:36:43,583 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:36:48,592 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:37:48,597 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:37:48,597 - phase6.runner - INFO - [CYCLE 2320] 2026-06-18T10:37:48 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:37:49,200 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:37:54,209 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:37:55,062 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:38:00,069 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:39:00,074 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:39:00,074 - phase6.runner - INFO - [CYCLE 2321] 2026-06-18T10:39:00 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:39:00,948 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:39:05,958 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:39:06,685 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:39:11,700 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:40:11,703 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:40:11,703 - phase6.runner - INFO - [CYCLE 2322] 2026-06-18T10:40:11 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:40:12,355 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:40:17,362 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:40:17,981 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:40:22,989 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:41:22,992 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:41:22,993 - phase6.runner - INFO - [CYCLE 2323] 2026-06-18T10:41:22 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:41:23,848 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:41:28,856 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:41:29,446 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:41:34,456 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:42:34,460 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:42:34,460 - phase6.runner - INFO - [CYCLE 2324] 2026-06-18T10:42:34 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:42:35,100 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:42:40,108 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:42:40,935 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:42:45,943 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:43:45,951 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:43:45,951 - phase6.runner - INFO - [CYCLE 2325] 2026-06-18T10:43:45 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:43:46,669 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:43:51,679 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:43:52,258 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:43:57,266 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:44:57,270 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:44:57,270 - phase6.runner - INFO - [CYCLE 2326] 2026-06-18T10:44:57 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:44:58,182 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:45:03,191 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:45:03,828 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:45:08,837 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:46:08,841 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:46:08,841 - phase6.runner - INFO - [CYCLE 2327] 2026-06-18T10:46:08 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:46:09,452 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:46:14,461 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:46:15,095 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:46:20,105 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:47:20,109 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:47:20,110 - phase6.runner - INFO - [CYCLE 2328] 2026-06-18T10:47:20 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:47:20,869 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:47:25,878 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:47:26,520 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:47:31,531 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:48:31,535 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:48:31,535 - phase6.runner - INFO - [CYCLE 2329] 2026-06-18T10:48:31 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:48:32,149 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:48:37,160 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:48:37,733 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:48:42,742 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:49:42,745 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:49:42,745 - phase6.runner - INFO - [CYCLE 2330] 2026-06-18T10:49:42 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:49:43,581 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:49:48,589 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:49:49,161 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:49:54,170 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:50:54,175 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:50:54,175 - phase6.runner - INFO - [CYCLE 2331] 2026-06-18T10:50:54 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:50:54,810 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:50:59,818 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:51:00,396 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:51:05,407 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:52:05,411 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:52:05,411 - phase6.runner - INFO - [CYCLE 2332] 2026-06-18T10:52:05 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:52:06,213 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:52:11,221 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:52:11,859 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:52:16,867 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:53:16,871 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:53:16,871 - phase6.runner - INFO - [CYCLE 2333] 2026-06-18T10:53:16 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:53:17,578 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:53:22,586 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:53:23,134 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:53:28,141 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:54:28,145 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:54:28,145 - phase6.runner - INFO - [CYCLE 2334] 2026-06-18T10:54:28 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:54:28,770 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:54:33,781 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:54:34,363 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:54:39,371 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:55:39,376 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:55:39,376 - phase6.runner - INFO - [CYCLE 2335] 2026-06-18T10:55:39 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:55:40,243 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:55:45,252 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:55:45,895 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:55:50,902 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:56:50,907 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:56:50,908 - phase6.runner - INFO - [CYCLE 2336] 2026-06-18T10:56:50 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:56:51,547 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:56:56,557 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:56:57,110 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:57:02,119 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:58:02,124 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:58:02,124 - phase6.runner - INFO - [CYCLE 2337] 2026-06-18T10:58:02 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:58:02,722 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:58:07,731 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:58:08,280 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:58:13,288 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:59:13,292 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 10:59:13,292 - phase6.runner - INFO - [CYCLE 2338] 2026-06-18T10:59:13 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 10:59:13,890 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:59:18,898 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 10:59:19,477 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 10:59:24,488 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:00:24,494 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:00:24,494 - phase6.runner - INFO - [CYCLE 2339] 2026-06-18T11:00:24 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:00:25,172 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:00:30,181 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:00:30,826 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:00:35,836 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:01:35,841 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:01:35,841 - phase6.runner - INFO - [CYCLE 2340] 2026-06-18T11:01:35 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:01:36,453 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:01:41,462 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:01:42,084 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:01:47,092 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:02:47,096 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:02:47,096 - phase6.runner - INFO - [CYCLE 2341] 2026-06-18T11:02:47 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:02:47,902 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:02:52,912 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:02:53,465 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:02:58,475 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:03:58,478 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:03:58,478 - phase6.runner - INFO - [CYCLE 2342] 2026-06-18T11:03:58 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:03:59,156 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:04:04,165 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:04:04,796 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:04:09,805 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:05:09,809 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:05:09,809 - phase6.runner - INFO - [CYCLE 2343] 2026-06-18T11:05:09 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:05:10,407 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:05:15,422 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:05:16,059 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:05:21,076 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:06:21,081 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:06:21,081 - phase6.runner - INFO - [CYCLE 2344] 2026-06-18T11:06:21 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:06:21,679 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:06:26,688 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:06:27,277 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:06:32,285 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:07:32,313 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:07:32,313 - phase6.runner - INFO - [CYCLE 2345] 2026-06-18T11:07:32 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:07:32,972 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:07:37,982 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:07:38,525 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:07:43,534 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:08:43,541 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:08:43,541 - phase6.runner - INFO - [CYCLE 2346] 2026-06-18T11:08:43 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:08:44,421 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:08:49,429 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:08:49,984 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:08:54,996 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:09:55,000 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:09:55,000 - phase6.runner - INFO - [CYCLE 2347] 2026-06-18T11:09:54 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:09:55,633 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:10:00,645 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:10:01,312 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:10:06,319 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:11:06,323 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:11:06,323 - phase6.runner - INFO - [CYCLE 2348] 2026-06-18T11:11:06 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:11:07,258 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:11:12,274 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:11:12,912 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:11:17,920 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:12:17,925 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:12:17,925 - phase6.runner - INFO - [CYCLE 2349] 2026-06-18T11:12:17 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:12:18,568 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:12:23,576 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:12:24,179 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:12:29,188 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:13:29,192 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:13:29,192 - phase6.runner - INFO - [CYCLE 2350] 2026-06-18T11:13:29 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:13:30,017 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:13:35,024 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:13:35,597 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:13:40,609 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:14:40,613 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:14:40,613 - phase6.runner - INFO - [CYCLE 2351] 2026-06-18T11:14:40 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:14:41,237 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:14:46,245 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:14:46,808 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:14:51,816 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:15:51,819 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:15:51,819 - phase6.runner - INFO - [CYCLE 2352] 2026-06-18T11:15:51 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:15:52,438 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:15:57,448 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:15:58,030 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:16:00,262 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:17:00,268 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:17:00,268 - phase6.runner - INFO - [CYCLE 2353] 2026-06-18T11:17:00 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:17:01,000 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:17:06,009 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:17:06,918 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:17:11,931 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:18:11,934 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:18:11,935 - phase6.runner - INFO - [CYCLE 2354] 2026-06-18T11:18:11 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:18:12,617 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:18:17,628 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:18:18,217 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:18:18,219 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:19:18,224 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:19:18,224 - phase6.runner - INFO - [CYCLE 2355] 2026-06-18T11:19:18 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:19:18,847 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:19:23,855 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:19:24,479 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:19:29,492 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:20:29,495 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:20:29,495 - phase6.runner - INFO - [CYCLE 2356] 2026-06-18T11:20:29 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:20:30,089 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:20:35,096 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:20:35,694 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:20:40,705 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:21:40,708 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:21:40,709 - phase6.runner - INFO - [CYCLE 2357] 2026-06-18T11:21:40 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:21:41,366 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:21:46,376 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:21:47,185 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:21:52,193 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:22:52,197 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:22:52,197 - phase6.runner - INFO - [CYCLE 2358] 2026-06-18T11:22:52 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:22:52,767 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:22:52,768 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:22:53,332 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:22:58,342 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:23:58,345 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:23:58,345 - phase6.runner - INFO - [CYCLE 2359] 2026-06-18T11:23:58 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:23:59,189 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:24:04,198 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:24:04,767 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:24:09,776 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:25:09,779 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:25:09,780 - phase6.runner - INFO - [CYCLE 2360] 2026-06-18T11:25:09 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:25:10,385 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:25:15,393 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:25:15,974 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:25:20,982 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:26:20,985 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:26:20,986 - phase6.runner - INFO - [CYCLE 2361] 2026-06-18T11:26:20 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:26:21,570 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:26:21,571 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:26:22,129 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:26:27,138 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:27:27,141 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:27:27,142 - phase6.runner - INFO - [CYCLE 2362] 2026-06-18T11:27:27 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:27:27,772 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:27:32,780 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:27:33,566 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:27:38,574 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:28:38,578 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:28:38,578 - phase6.runner - INFO - [CYCLE 2363] 2026-06-18T11:28:38 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:28:39,176 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:28:44,184 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:28:44,759 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:28:49,765 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:29:49,769 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:29:49,769 - phase6.runner - INFO - [CYCLE 2364] 2026-06-18T11:29:49 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:29:50,420 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:29:55,429 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:29:56,220 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:29:56,221 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:30:56,224 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:30:56,224 - phase6.runner - INFO - [CYCLE 2365] 2026-06-18T11:30:56 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:30:56,892 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:31:01,899 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:31:02,728 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:31:07,735 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:32:07,740 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:32:07,740 - phase6.runner - INFO - [CYCLE 2366] 2026-06-18T11:32:07 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:32:08,314 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:32:13,325 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:32:13,910 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:32:18,918 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:33:18,923 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:33:18,923 - phase6.runner - INFO - [CYCLE 2367] 2026-06-18T11:33:18 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:33:19,520 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:33:24,527 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:33:25,136 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:33:30,148 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:34:30,152 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:34:30,152 - phase6.runner - INFO - [CYCLE 2368] 2026-06-18T11:34:30 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:34:31,246 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:34:31,247 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:34:31,854 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:34:36,862 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:35:36,865 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:35:36,865 - phase6.runner - INFO - [CYCLE 2369] 2026-06-18T11:35:36 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:35:37,483 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:35:42,491 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:35:43,078 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:35:48,087 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:36:48,091 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:36:48,092 - phase6.runner - INFO - [CYCLE 2370] 2026-06-18T11:36:48 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:36:48,706 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:36:53,717 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:36:54,268 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:36:59,276 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:37:59,280 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:37:59,280 - phase6.runner - INFO - [CYCLE 2371] 2026-06-18T11:37:59 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:37:59,860 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:37:59,861 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:38:00,423 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:38:05,432 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:39:05,437 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:39:05,437 - phase6.runner - INFO - [CYCLE 2372] 2026-06-18T11:39:05 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:39:06,088 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:39:11,095 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:39:11,695 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:39:16,703 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:40:16,706 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:40:16,707 - phase6.runner - INFO - [CYCLE 2373] 2026-06-18T11:40:16 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:40:17,335 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:40:22,343 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:40:22,930 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:40:27,938 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:41:27,942 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:41:27,942 - phase6.runner - INFO - [CYCLE 2374] 2026-06-18T11:41:27 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:41:28,529 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:41:33,536 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:41:34,204 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:41:34,205 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:42:34,209 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:42:34,209 - phase6.runner - INFO - [CYCLE 2375] 2026-06-18T11:42:34 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:42:34,828 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:42:39,836 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:42:40,429 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:42:45,437 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:43:45,441 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:43:45,441 - phase6.runner - INFO - [CYCLE 2376] 2026-06-18T11:43:45 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:43:46,072 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:43:51,083 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:43:51,804 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:43:56,811 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:44:56,816 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:44:56,816 - phase6.runner - INFO - [CYCLE 2377] 2026-06-18T11:44:56 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:44:57,611 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:45:02,620 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:45:03,311 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:45:08,319 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:46:08,324 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:46:08,324 - phase6.runner - INFO - [CYCLE 2378] 2026-06-18T11:46:08 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:46:08,934 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:46:08,935 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:46:09,539 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:46:14,547 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:47:14,551 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:47:14,552 - phase6.runner - INFO - [CYCLE 2379] 2026-06-18T11:47:14 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:47:15,234 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:47:20,241 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:47:20,820 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:47:25,827 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:48:25,831 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:48:25,832 - phase6.runner - INFO - [CYCLE 2380] 2026-06-18T11:48:25 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:48:26,482 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:48:31,490 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:48:32,112 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:48:37,122 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:49:37,131 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:49:37,132 - phase6.runner - INFO - [CYCLE 2381] 2026-06-18T11:49:37 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:49:37,802 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:49:37,803 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:49:38,401 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:49:43,409 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:50:43,413 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:50:43,413 - phase6.runner - INFO - [CYCLE 2382] 2026-06-18T11:50:43 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:50:44,027 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:50:49,035 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:50:49,700 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:50:54,707 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:51:54,712 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:51:54,712 - phase6.runner - INFO - [CYCLE 2383] 2026-06-18T11:51:54 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:51:55,340 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:52:00,347 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:52:01,126 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:52:06,137 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:53:06,146 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:53:06,146 - phase6.runner - INFO - [CYCLE 2384] 2026-06-18T11:53:06 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:53:06,952 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:53:11,962 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:53:12,541 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:53:12,542 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): '>' not supported between instances of 'dict' and 'int'
+2026-06-18 11:54:12,546 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:54:12,546 - phase6.runner - INFO - [CYCLE 2385] 2026-06-18T11:54:12 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:54:13,163 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:54:18,170 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:54:18,720 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:54:23,729 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:55:23,733 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:55:23,733 - phase6.runner - INFO - [CYCLE 2386] 2026-06-18T11:55:23 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:55:24,586 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:55:29,593 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:55:30,373 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:55:35,382 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:56:35,386 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:56:35,386 - phase6.runner - INFO - [CYCLE 2387] 2026-06-18T11:56:35 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:56:36,007 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:56:41,018 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:56:41,609 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:56:46,617 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:57:46,620 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:57:46,620 - phase6.runner - INFO - [CYCLE 2388] 2026-06-18T11:57:46 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:57:47,175 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:57:52,184 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:57:52,796 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:57:57,805 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:58:57,810 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 11:58:57,810 - phase6.runner - INFO - [CYCLE 2389] 2026-06-18T11:58:57 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 11:58:58,411 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:59:03,419 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 11:59:04,005 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 11:59:09,018 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:00:09,021 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:00:09,021 - phase6.runner - INFO - [CYCLE 2390] 2026-06-18T12:00:09 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:00:09,647 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:00:14,656 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:00:15,231 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:00:20,241 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:01:20,245 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:01:20,245 - phase6.runner - INFO - [CYCLE 2391] 2026-06-18T12:01:20 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:01:20,837 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:01:25,845 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:01:26,703 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:01:31,713 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:02:31,716 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:02:31,716 - phase6.runner - INFO - [CYCLE 2392] 2026-06-18T12:02:31 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:02:32,332 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:02:37,343 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:02:37,947 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:02:42,955 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:03:42,960 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:03:42,960 - phase6.runner - INFO - [CYCLE 2393] 2026-06-18T12:03:42 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:03:43,634 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:03:48,642 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:03:49,281 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:03:54,291 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:04:54,295 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:04:54,295 - phase6.runner - INFO - [CYCLE 2394] 2026-06-18T12:04:54 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:04:54,950 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:04:59,958 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:05:00,916 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:05:05,927 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:06:05,933 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:06:05,934 - phase6.runner - INFO - [CYCLE 2395] 2026-06-18T12:06:05 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:06:07,060 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:06:12,075 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:06:12,755 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:06:17,764 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:07:17,769 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:07:17,769 - phase6.runner - INFO - [CYCLE 2396] 2026-06-18T12:07:17 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:07:18,658 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:07:23,667 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:07:24,237 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:07:29,247 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:08:29,251 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:08:29,251 - phase6.runner - INFO - [CYCLE 2397] 2026-06-18T12:08:29 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:08:29,847 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:08:34,855 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:08:35,422 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:08:40,436 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:09:40,440 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:09:40,440 - phase6.runner - INFO - [CYCLE 2398] 2026-06-18T12:09:40 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:09:41,055 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:09:46,066 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:09:46,961 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:09:51,972 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:10:51,976 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:10:51,976 - phase6.runner - INFO - [CYCLE 2399] 2026-06-18T12:10:51 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:10:52,582 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:10:57,590 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:10:58,136 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:11:03,144 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:12:03,148 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:12:03,148 - phase6.runner - INFO - [CYCLE 2400] 2026-06-18T12:12:03 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:12:03,831 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:12:08,840 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:12:09,459 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:12:14,469 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:13:14,474 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:13:14,474 - phase6.runner - INFO - [CYCLE 2401] 2026-06-18T12:13:14 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:13:15,051 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:13:20,059 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:13:20,673 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:13:25,683 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:14:25,687 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:14:25,687 - phase6.runner - INFO - [CYCLE 2402] 2026-06-18T12:14:25 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:14:26,322 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:14:31,332 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:14:31,917 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:14:36,927 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:15:36,934 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:15:36,934 - phase6.runner - INFO - [CYCLE 2403] 2026-06-18T12:15:36 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:15:37,666 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:15:42,675 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:15:43,254 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:15:48,262 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:16:48,296 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:16:48,296 - phase6.runner - INFO - [CYCLE 2404] 2026-06-18T12:16:48 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:16:49,179 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:16:54,190 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:16:54,940 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:16:59,948 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:17:59,953 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:17:59,953 - phase6.runner - INFO - [CYCLE 2405] 2026-06-18T12:17:59 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:18:00,588 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:18:05,597 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:18:06,323 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:18:11,339 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:19:11,344 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:19:11,344 - phase6.runner - INFO - [CYCLE 2406] 2026-06-18T12:19:11 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:19:12,011 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:19:17,021 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:19:17,640 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:19:22,651 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:20:22,655 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:20:22,655 - phase6.runner - INFO - [CYCLE 2407] 2026-06-18T12:20:22 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:20:23,276 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:20:28,285 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:20:28,851 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:20:33,860 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:21:33,867 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:21:33,868 - phase6.runner - INFO - [CYCLE 2408] 2026-06-18T12:21:33 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:21:34,518 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:21:39,527 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:21:40,096 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:21:45,104 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:22:45,109 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:22:45,109 - phase6.runner - INFO - [CYCLE 2409] 2026-06-18T12:22:45 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:22:45,708 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:22:50,717 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:22:51,452 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:22:56,465 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:23:56,470 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:23:56,470 - phase6.runner - INFO - [CYCLE 2410] 2026-06-18T12:23:56 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:23:57,434 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:24:02,444 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:24:03,121 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:24:08,131 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:25:08,172 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:25:08,172 - phase6.runner - INFO - [CYCLE 2411] 2026-06-18T12:25:08 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:25:08,895 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:25:13,904 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:25:14,528 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:25:19,536 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:26:19,540 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:26:19,540 - phase6.runner - INFO - [CYCLE 2412] 2026-06-18T12:26:19 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:26:20,150 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:26:25,159 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:26:25,736 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:26:30,745 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:27:30,749 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:27:30,750 - phase6.runner - INFO - [CYCLE 2413] 2026-06-18T12:27:30 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:27:31,724 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:27:36,734 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:27:37,838 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:27:42,854 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:28:42,859 - phase6.core.sentiment_scorer - INFO - Sentiment loaded for dynamic basket (11 pairs). X primary; Reddit only on real results.
+2026-06-18 12:28:42,859 - phase6.runner - INFO - [CYCLE 2414] 2026-06-18T12:28:42 | rebalance_needed=False | last_rebalance=2026-06-17
+2026-06-18 12:28:43,494 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:28:48,503 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked
+2026-06-18 12:28:49,289 - phase6.runner - INFO - [DASHBOARD] Cache written (using price snapshot): 4 positions, holdings=$191.03, total=$789.45
+2026-06-18 12:28:54,298 - phase6.runner - WARNING - [DASHBOARD] DB persist failed (non-fatal): database is locked

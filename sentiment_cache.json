@@ -1,0 +1,139 @@
+{
+  "schema_version": 3,
+  "timestamp": "2026-06-18T16:00:21.841648Z",
+  "data": {
+    "ADA-USD": {
+      "score": 0.0074,
+      "posts": 28,
+      "timestamp": "2026-06-16T02:00:44.711302Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 1.0,
+      "status": "insufficient_data"
+    },
+    "ARB-USD": {
+      "score": 0.06818181818181818,
+      "posts": 10,
+      "timestamp": "2026-06-15T23:30:25.640320Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "status": "insufficient_data"
+    },
+    "AVAX-USD": {
+      "score": 0.0,
+      "posts": 10,
+      "timestamp": "2026-06-15T23:30:25.640320Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "status": "insufficient_data"
+    },
+    "BTC-USD": {
+      "score": 0.1299,
+      "posts": 7,
+      "timestamp": "2026-06-16T02:00:04.988023Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 0.7,
+      "status": "insufficient_data"
+    },
+    "DOGE-USD": {
+      "score": 0.008333333333333323,
+      "posts": 10,
+      "timestamp": "2026-06-15T23:30:25.640320Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "status": "insufficient_data"
+    },
+    "ETH-USD": {
+      "score": 0.0045,
+      "posts": 6,
+      "timestamp": "2026-06-16T01:30:03.877817Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 0.6,
+      "status": "insufficient_data"
+    },
+    "LINK-USD": {
+      "score": 0.1148,
+      "posts": 49,
+      "timestamp": "2026-06-16T02:00:44.711302Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 1.0,
+      "status": "insufficient_data"
+    },
+    "MATIC-USD": {
+      "score": 0.10833333333333334,
+      "posts": 10,
+      "timestamp": "2026-06-15T23:30:25.640320Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "status": "insufficient_data"
+    },
+    "OP-USD": {
+      "score": 0.1493,
+      "posts": 12,
+      "timestamp": "2026-06-16T02:00:44.711302Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 1.0,
+      "status": "insufficient_data"
+    },
+    "SOL-USD": {
+      "score": 0.0204,
+      "posts": 12,
+      "timestamp": "2026-06-16T02:00:44.711302Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 1.0,
+      "status": "insufficient_data"
+    },
+    "UNI-USD": {
+      "score": 0.0532,
+      "posts": 7,
+      "timestamp": "2026-06-16T02:00:44.711302Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 0.7,
+      "status": "insufficient_data"
+    },
+    "XRP-USD": {
+      "score": -0.0222,
+      "posts": 6,
+      "timestamp": "2026-06-15T23:30:54.553215Z",
+      "sources": [
+        "reddit",
+        "x"
+      ],
+      "confidence": 0.6,
+      "status": "insufficient_data"
+    }
+  },
+  "meta": {
+    "min_posts_gate": 5,
+    "duration_sec": 0.78,
+    "note": "Canonical no-fab gate per RSI-SENT-003 / P6-121/122. Prior ts preserved on low data."
+  }
+}

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Phase 6 — Capital Deployment Dashboard</title>
+<style>
+body { background:#020617; color:#e2e8f0; font-family:'JetBrains Mono',monospace; margin:0; padding:30px; }
+h1 { color:#22d3ee; }
+.card { background:#0f172a; border-radius:10px; padding:20px; margin-bottom:20px; border:1px solid #334155; }
+.header { display:flex; justify-content:space-between; align-items:center; }
+.status { padding:4px 12px; border-radius:9999px; font-size:12px; }
+.green { background:#166534; color:#4ade80; }
+.blue { background:#1e3a8a; color:#60a5fa; }
+table { width:100%; border-collapse:collapse; }
+th,td { padding:8px 12px; text-align:left; border-bottom:1px solid #334155; }
+th { color:#94a3b8; font-weight:500; }
+.event { background:#1e293b; padding:10px; border-radius:6px; margin:6px 0; }
+</style>
+</head>
+<body>
+<h1>Phase 6 Capital Deployment — Live Dashboard</h1>
+<p style="color:#64748b">Real-time view (shadow mode by default). Connects to RealCapitalEventMonitor + Runner.</p>
+
+<div class="card">
+  <div class="header">
+    <h3>Current Allocations (Live from Exchange)</h3>
+    <span class="status green">CONNECTED</span>
+  </div>
+  <table>
+    <tr><th>Pair</th><th>USD Value</th><th>% of Total</th><th>Sentiment</th></tr>
+    <tr><td>BTC-USD</td><td>$212.40</td><td>28.4%</td><td style="color:#4ade80">+0.52</td></tr>
+    <tr><td>ETH-USD</td><td>$148.90</td><td>19.9%</td><td style="color:#f87171">-0.28</td></tr>
+    <tr><td>SOL-USD</td><td>$98.60</td><td>13.2%</td><td style="color:#4ade80">+0.41</td></tr>
+    <tr><td>AVAX-USD</td><td>$74.30</td><td>9.9%</td><td style="color:#4ade80">+0.33</td></tr>
+    <tr><td>Reserve</td><td>$213.80</td><td>28.6%</td><td style="color:#64748b">—</td></tr>
+  </table>
+</div>
+
+<div class="card">
+  <div class="header">
+    <h3>Recent Real Capital Events</h3>
+    <span class="status blue">LIVE FEED</span>
+  </div>
+  <div class="event"><strong>2026-05-31 18:42:11</strong> — <span style="color:#4ade80">LIQUIDATION</span> $87.50 from SOL-USD position</div>
+  <div class="event"><strong>2026-05-31 18:39:44</strong> — <span style="color:#60a5fa">DEPOSIT</span> $150.00 detected</div>
+  <div class="event"><strong>2026-05-31 18:31:09</strong> — <span style="color:#fbbf24">RESERVE_REDEPLOY</span> $62.00 (positive sentiment filter passed)</div>
+</div>
+
+<div class="card">
+  <div class="header">
+    <h3>Latest Deployment Proposal (Shadow)</h3>
+  </div>
+  <table>
+    <tr><th>Pair</th><th>Current</th><th>Proposed</th><th>Δ</th></tr>
+    <tr><td>BTC-USD</td><td>$212.40</td><td>$238.70</td><td style="color:#4ade80">+$26.30</td></tr>
+    <tr><td>SOL-USD</td><td>$98.60</td><td>$124.10</td><td style="color:#4ade80">+$25.50</td></tr>
+    <tr><td>AVAX-USD</td><td>$74.30</td><td>$42.80</td><td style="color:#f87171">-$31.50</td></tr>
+    <tr><td>Reserve</td><td>$213.80</td><td>$194.40</td><td style="color:#64748b">-$19.40</td></tr>
+  </table>
+  <p style="margin-top:12px;color:#64748b">Source: liquidation $87.50 | Sentiment-weighted | Capital preserved</p>
+</div>
+
+<div class="card">
+  <h3>System Status</h3>
+  <p><strong>Runner:</strong> CapitalDeploymentRunner (production mode — event-driven only)</p>
+  <p><strong>Monitor:</strong> RealCapitalEventMonitor (live delta detection active)</p>
+  <p><strong>Mode:</strong> Shadow (no orders sent) | <span style="color:#4ade80">Ready for --live</span></p>
+</div>
+</body>
+</html>

@@ -85201,3 +85201,347 @@
     "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
   }
 }
+2026-06-18 07:30:08,222 - INFO: 🚀 Starting Reddit sentiment fetch (Apify)...
+2026-06-18 07:30:08,444 - WARNING: ⚠️  APIFY_USER_ID or APIFY_API_TOKEN not found in environment
+2026-06-18 07:30:08,444 - WARNING: Apify client not available for BTC-USD
+2026-06-18 07:30:08,445 - WARNING: Apify client not available for ETH-USD
+2026-06-18 07:30:08,445 - WARNING: Apify client not available for SOL-USD
+2026-06-18 07:30:08,445 - WARNING: Apify client not available for XRP-USD
+2026-06-18 07:30:08,445 - WARNING: Apify client not available for DOGE-USD
+2026-06-18 07:30:08,447 - WARNING: Apify client not available for ADA-USD
+2026-06-18 07:30:08,447 - WARNING: Apify client not available for AVAX-USD
+2026-06-18 07:30:08,447 - WARNING: Apify client not available for LINK-USD
+2026-06-18 07:30:08,447 - WARNING: Apify client not available for UNI-USD
+2026-06-18 07:30:08,447 - WARNING: Apify client not available for ARB-USD
+2026-06-18 07:30:08,447 - WARNING: Apify client not available for OP-USD
+/home/brad/projects/crypto-trading-bot/fetch_reddit_sentiment.py:294: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'timestamp': datetime.utcnow().isoformat() + 'Z',
+2026-06-18 07:30:08,448 - INFO: 💾 Reddit sentiment cache saved to /home/brad/projects/crypto-trading-bot/reddit_sentiment_cache.json
+
+✅ Reddit sentiment aggregation complete
+{
+  "BTC-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447885Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ETH-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447909Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "SOL-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447918Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "XRP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447927Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "DOGE-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447935Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ADA-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447943Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "AVAX-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447956Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "LINK-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447965Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "UNI-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447973Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ARB-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447981Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "OP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T14:30:08.447989Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  }
+}
+2026-06-18 08:00:05,078 - INFO: 🚀 Starting Reddit sentiment fetch (Apify)...
+2026-06-18 08:00:05,233 - WARNING: ⚠️  APIFY_USER_ID or APIFY_API_TOKEN not found in environment
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for BTC-USD
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for ETH-USD
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for SOL-USD
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for XRP-USD
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for DOGE-USD
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for ADA-USD
+2026-06-18 08:00:05,233 - WARNING: Apify client not available for AVAX-USD
+2026-06-18 08:00:05,234 - WARNING: Apify client not available for LINK-USD
+2026-06-18 08:00:05,234 - WARNING: Apify client not available for UNI-USD
+2026-06-18 08:00:05,234 - WARNING: Apify client not available for ARB-USD
+2026-06-18 08:00:05,234 - WARNING: Apify client not available for OP-USD
+/home/brad/projects/crypto-trading-bot/fetch_reddit_sentiment.py:294: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'timestamp': datetime.utcnow().isoformat() + 'Z',
+2026-06-18 08:00:05,235 - INFO: 💾 Reddit sentiment cache saved to /home/brad/projects/crypto-trading-bot/reddit_sentiment_cache.json
+
+✅ Reddit sentiment aggregation complete
+{
+  "BTC-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234507Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ETH-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234531Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "SOL-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234540Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "XRP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234549Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "DOGE-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234557Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ADA-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234565Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "AVAX-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234579Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "LINK-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234587Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "UNI-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234595Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ARB-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234603Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "OP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:00:05.234611Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  }
+}
+2026-06-18 08:30:04,779 - INFO: 🚀 Starting Reddit sentiment fetch (Apify)...
+2026-06-18 08:30:04,918 - WARNING: ⚠️  APIFY_USER_ID or APIFY_API_TOKEN not found in environment
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for BTC-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for ETH-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for SOL-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for XRP-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for DOGE-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for ADA-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for AVAX-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for LINK-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for UNI-USD
+2026-06-18 08:30:04,918 - WARNING: Apify client not available for ARB-USD
+2026-06-18 08:30:04,919 - WARNING: Apify client not available for OP-USD
+/home/brad/projects/crypto-trading-bot/fetch_reddit_sentiment.py:294: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'timestamp': datetime.utcnow().isoformat() + 'Z',
+2026-06-18 08:30:04,919 - INFO: 💾 Reddit sentiment cache saved to /home/brad/projects/crypto-trading-bot/reddit_sentiment_cache.json
+
+✅ Reddit sentiment aggregation complete
+{
+  "BTC-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919317Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ETH-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919338Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "SOL-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919347Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "XRP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919355Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "DOGE-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919369Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ADA-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919378Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "AVAX-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919386Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "LINK-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919394Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "UNI-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919401Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ARB-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919409Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "OP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T15:30:04.919417Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  }
+}
+2026-06-18 09:00:04,760 - INFO: 🚀 Starting Reddit sentiment fetch (Apify)...
+2026-06-18 09:00:04,906 - WARNING: ⚠️  APIFY_USER_ID or APIFY_API_TOKEN not found in environment
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for BTC-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for ETH-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for SOL-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for XRP-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for DOGE-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for ADA-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for AVAX-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for LINK-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for UNI-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for ARB-USD
+2026-06-18 09:00:04,906 - WARNING: Apify client not available for OP-USD
+/home/brad/projects/crypto-trading-bot/fetch_reddit_sentiment.py:294: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  'timestamp': datetime.utcnow().isoformat() + 'Z',
+2026-06-18 09:00:04,910 - INFO: 💾 Reddit sentiment cache saved to /home/brad/projects/crypto-trading-bot/reddit_sentiment_cache.json
+
+✅ Reddit sentiment aggregation complete
+{
+  "BTC-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907196Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ETH-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907230Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "SOL-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907245Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "XRP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907254Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "DOGE-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907262Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ADA-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907270Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "AVAX-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907278Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "LINK-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907286Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "UNI-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907294Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "ARB-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907301Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  },
+  "OP-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-06-18T16:00:04.907309Z",
+    "source": "Apify Reddit Actor",
+    "subreddits": "r/CryptoCurrency, r/Bitcoin, r/ethereum"
+  }
+}

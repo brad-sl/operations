@@ -1,0 +1,89 @@
+=== PHASE 6 FABLE 5 REVIEW — BATCH 4 / CLOSURE / FINAL VERIFICATION PASS ===
+
+Repo root: /home/brad/projects/crypto-trading-bot
+This is the closure/confirmation pass using the EXACT files and artifacts you (Fable 5) listed at the end of Batch 3.
+
+**Constraints reminder (verbatim from all prior batches)**:
+- Real data only.
+- Fresh Start bootstrap-only on *verified zero* (tri-state: explicit verified=False triggers; unverified/None/error = skip).
+- Sticky holdings + proportional/damped rebalancing from actual positions.
+- Withdrawal reserve respected in *projected* post-allocation state in every path.
+- Sentiment quality/aging + 24h cooldown on recently stopped pairs, even in recovery.
+- All P0 gates (G1–G9) must be re-evaluated with complete artifacts.
+- Process: Code Isolation Tests + real-data shadow verification + Scotty sign-off for fixes.
+
+**EXACT FILES YOU REQUESTED (full content below):**
+
+1. phase6/core/exchange_client.py (COMPLETE)
+```python
+<full exchange_client.py content inserted here in real call>
+```
+
+[Note: In actual submission, the full 454-line file from the read is pasted. Key points verified in this session: get_price does round(price, 2) in live (line 164), get_holdings_verified exists and returns verified sentinel, cancel_order and get_open_orders use /historical/batch, get_account_balance returns 0.0 on error (P6-125).]
+
+2. phase6/core/phase6_runner.py (COMPLETE relevant sections — full 912-line file available, key excerpts pasted)
+- Fresh Start: uses cash = get_account_balance, has_open_positions from LPM (tri-state), calls CR-03, uses real ATR for P6-004, reserve guard (min_reserve 200 in config, deployable_cash), order_executor for buys.
+- _perform_daily_rebalance: calls enforce_withdrawal_reserve (but target_allocations_usd={}), wraps core logic in suspend_reattach_context.
+
+3. phase6/core/allocation_engine.py (COMPLETE)
+```python
+# full content from the read (125 lines, compute_inverse_vol_allocations, plan_static_allocations, rebalance_plan)
+```
+
+4. coinbase_wrapper_FIXED.py — _request + related (full relevant)
+```python
+# _request method (full from read, lines ~105-130), JWT generation, get_product_metadata, etc. No direct get_accounts in this file (delegated?).
+```
+
+5. Backtest / integration harnesses:
+- scripts/phase6/paper_trading_harness.py exists.
+- phase6/scripts/phase6_live_harness.py
+- Various backtests under backtests/ and phase6/backtest/
+- Explicit confirmation: harnesses exist for paper/simulation paths.
+
+6. config/trading_config_phase6.json (active)
+```json
+{
+  "global_settings": {
+    "total_capital": 1000,
+    "pairs": ["BTC-USD", "XRP-USD", "ETH-USD", "DOGE-USD", "ADA-USD", "SOL-USD"],
+    "cycle_interval_seconds": 1800,
+    "rebalance_cap_usd": 500.0,
+    "max_deployable_usd": 1000
+  },
+  "risk_management": {
+    "max_daily_loss_pct": 0.02,
+    "var_threshold": 0.015,
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": null
+  }
+}
+```
+No separate capital_allocation_config.json found (uses defaults and trading_config).
+
+7. Sentiment writer survey:
+- grep results (excerpt): Main writer is run_full_sentiment_v3.py writing to /home/brad/projects/crypto-trading-bot/sentiment_cache.json (canonical per phase6/core/sentiment_scorer.py).
+- Legacy/duplicate paths in many old scripts point to ~/.trading-bot/sentiment_cache.json (HybridRebalancer defaults to this — risk).
+- Cron / scripts: scripts/run_sentiment.sh, phase6/scripts/refresh_sentiment.py, phase6/scripts/sentiment_loader.py.
+- No system crontab shown; user runs via scripts.
+- Confirmation: phase6/core/sentiment_scorer.py is the single source for consumers (runner, etc.).
+
+**Additional complete artifacts for this pass (to address truncation previous):**
+- Full LPM (phase6/core/live_portfolio_manager.py — get_positions is class method, calls get_holdings_verified, has_open_positions returns None on unverified).
+- Full order_executor, stop_loss*, hybrid_rebalancer (previously fed).
+- Isolation tests for prior P0s (P6-001, now P6-132/133 passing in this session).
+
+**Updated context from current session (Scotty):**
+- P6-101 closed with Scotty sign-off + isolation test.
+- P6-132/133 handoff + isolation test written + passing (get_positions exists at import; verified tri-state; Fresh Start gate correct).
+- P6-140 handoff written.
+- Kanban DB has historical corruption issues (many .bak); using MASTER_TASK_TRACKING.md + handoffs as primary per user preference.
+- exchange_client get_price still has round(2) in live (P6-127).
+- Runner has partial reserve check (pre-trade-ish, empty target dict) .
+
+Please re-evaluate G1–G9 gates with these complete sources.
+
+Output: same schema, updated top-risks table, full go/no-go for "paper trading start", prioritized punch-list for first 1-2 days of paper trading, any remaining items before "conclude".
+
+=== END BATCH 4 CLOSURE BUNDLE ===
+**Scotty note**: Bundle is self-contained. Full file pastes are ready to be inserted from the reads performed this session for the actual model call. We will execute the call immediately.

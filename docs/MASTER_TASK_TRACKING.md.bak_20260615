@@ -1,0 +1,161 @@
+# MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
+
+**Single canonical durable record** (per user preference).  
+Hermes Kanban has been unreliable in the past — this file + dated handoffs in `handoffs/` are the source of truth.  
+All delegated work, status, completion evidence, and cross-references live here or point here.
+
+**Update rules**:
+- After any significant progress, isolation test run, or handoff: append a dated entry with evidence (test output, file paths, metrics).
+- Use Phase N + Task ID (e.g. ARCH-01).
+- Success criteria must be concrete and verifiable (isolation test passes with real data, capital utilization metric improves, etc.).
+- No fake/placeholder data ever in trading paths.
+- Prefer code isolation testing (standalone wrappers) as standard verification before marking complete.
+- When "go ahead and tackle" or "proceed to phase X" is given, agent owns full chain: creation → execution → isolation/E2E tests → artifact → MASTER update → next without mid-stream permission asks.
+
+**Last updated**: 2026-06-15 (initial seed for architecture cleanup initiative)  
+**Current primary focus**: Fix divergence (runner vs rebalancer vs signals vs scanner) + get reliable multi-pair entry points so capital is deployed and rebalancing has positions to work with.
+
+---
+
+## Initiative: ARCH — Clean Isolated Components Architecture (2026-06-15)
+
+**Problem statement** (user + code evidence):  
+Divergence between systems means inconsistent trade decisions. Signals and opportunity scanner compute evaluations but produce no entries (only logs). All trades are rebalance-gated (time + hybrid trigger). After 2+ weeks, few/no entries across pairs → idle capital, no daily fluctuation capture, rebalancing ineffective. Monolithic runner + duplicated logic (sentiment loading, allocation paths in fresh start vs daily, hybrid plan stub unused) makes optimization nearly impossible.
+
+**Goal**: Isolate evaluation, allocation/decision, execution (+ SL), and rebalancing (as strategy) into small, callable, testable components with clear contracts. Thin orchestrator invokes them. Evaluation always feeds real decisions. Rebalancing becomes one strategy, not a parallel system.
+
+**Reference design**: `docs/phase6/ARCHITECTURE_ISOLATED_COMPONENTS.md` (written 2026-06-15).
+
+**Principles for this initiative**:
+- Code isolation testing first (standalone test scripts that exercise exact logic with real caches/data and assert outputs).
+- Real data only (canonical sentiment_scorer, rsi_cache, verified holdings, trade ledger).
+- Dynamic basket from config.
+- Measurable: proposal acceptance rate, capital utilization %, entry frequency, signal quality correlation to P&L.
+- Preserve working pieces (deploy_capital gates, inverse-vol+sentiment, CR-03 SL coordination, 21:00 rebalance anchor, withdrawal reserve).
+- Single MASTER list + tight handoffs for delegation.
+
+### Phase ARCH-0: Baseline Audit + Isolation Tests (Current Behavior)
+**Status**: Not started  
+**Owner**: TBD (or self if proceeding)  
+**Success criteria**:
+- Standalone isolation wrappers exist and run:
+  - `test_isolation_current_signals.py`: Confirms SignalGenerator runs but produces no trades/plans (only logs).
+  - `test_isolation_current_rebalance_path.py`: Exercises full daily rebalance (with real holdings/cash snapshot or paper data) and shows exact plan output + capital deployed.
+  - `test_isolation_hybrid_trigger.py`: Shows hybrid_rebalancer decisions vs runner time-based.
+  - `test_isolation_opportunity_scanner.py`: Shows proposals generated but not consumed.
+- Report (or section in MASTER) with quantitative evidence: e.g. "last 14 days: 0 signal-driven entries, X rebalance cycles, average deployed per cycle $Y, current open pairs Z, idle capital %".
+- All tests use real persisted data (no fabrication). Pass with known-good snapshots.
+- Divergence points documented with line numbers + call graphs.
+- No changes to production code in this phase.
+
+**Verification**: Run the wrappers via terminal; paste output + git diff of new test files into update here.  
+**Handoff doc template**: `handoffs/phase6/Handoff_ARCH-0_Baseline_Isolation.md` (create when handing off).
+
+**Notes / evidence so far** (2026-06-15):
+- Confirmed in `phase6/core/phase6_runner.py`: signals generated in `_run_cycle` (lines ~720-728) only logged if != HOLD. All actual plans from `_perform_daily_rebalance` → `deploy_capital` (phase6/scripts) → `rebalance_plan`.
+- Hybrid only for trigger (`_evaluate_hybrid_rebalance`).
+- Fresh start has separate weight calc.
+- Opportunity scanner separate (proposals to jsonl, isolation already partially exists in phase6/core/test_isolation_opportunity_scanner.py).
+- Config daily_rebalance_time: "21:00", rebalance_cap_usd: 500, min_reserve: 200.
+
+### Phase ARCH-1: Extract & Unify Evaluation Layer
+**Status**: Not started  
+**Dependencies**: ARCH-0 complete + baseline tests passing.  
+**Success criteria**:
+- Evaluation produces consistent `Proposal` dataclass (or simple dict contract) from SignalGenerator + OpportunityScanner + any other scorers.
+- New (or refactored) `phase6/core/evaluation.py` or facade with `evaluate_universe(basket, data_snapshot) -> list[Proposal]`.
+- Both existing modules refactored to feed the same output shape; scanner logic no longer "shadow only" by default (proposals are first-class).
+- Isolation test: `test_isolation_evaluation.py` that loads real caches, runs evaluate, asserts non-empty proposals for at least some pairs under current market conditions, with reasons.
+- Runner temporarily updated to call the new evaluation (still can shadow-execute for safety).
+- All consumers (runner, future allocator, reports) go through the facade. Dupe scoring removed.
+- Evidence: test output showing real proposals with scores/reasons from real sentiment/RSI data.
+
+**Key artifacts**:
+- Proposal contract defined.
+- Updated opportunity_scanner and signal_generator (or wrappers).
+- Isolation test + runner integration (minimal).
+
+**Handoff ready when**: Tests pass, design contract reviewed.
+
+### Phase ARCH-2: Unify Allocator / Decision Layer (The Core Trading Logic)
+**Status**: Not started  
+**Dependencies**: ARCH-1 (proposals available).  
+**Success criteria**:
+- Single entrypoint (e.g. `allocator.compute_plan(...)` or evolved `deploy_capital` as the heart) that accepts current_positions, list[Proposal], available_capital, config/risk params, mode (or strategy).
+- Rebalancing logic moved here as one strategy/mode (uses inverse vol + sentiment tilt + deploy_capital gates + rebalance_plan deltas).
+- Hybrid trigger logic extracted/adapted as one possible "should_rebalance" input or strategy selector.
+- Fresh start logic unified (no more separate weight calc).
+- Allocator always returns a `TradePlan` (list of moves with reasons) + diagnostics. Can return empty.
+- Isolation test `test_isolation_allocator.py`: Feed real proposals + snapshot holdings/cash → assert correct plan (sizes respect caps, gates applied, reasons include signal provenance).
+- "Signal-driven" paths now produce real (or shadow) plans that allocator can consume.
+- Evidence that idle capital would be deployable on high-score proposals.
+- No duplication of sentiment loading (everything via sentiment_scorer).
+
+**Key artifacts**:
+- Refactored/central `allocation_engine.py` or new `decision_allocator.py`.
+- Updated `deploy_capital.py` as core strategy.
+- Tests proving before/after equivalence on rebalance cases + new signal cases.
+
+**Handoff ready when**: Allocator produces plans from both rebalance triggers *and* live proposals.
+
+### Phase ARCH-3: Execution Layer Hardening + SL Orthogonality
+**Status**: Not started  
+**Dependencies**: ARCH-2.  
+**Success criteria**:
+- Execution takes a `TradePlan` and handles safety (reserve check, cooldown filter, SL suspend via coordinator, actual order placement via order_executor).
+- StopLossCoordinator remains the wrapper for any trade window (CR-03 patterns preserved/enhanced).
+- Isolation test: `test_isolation_execution_plan.py` (or use existing paper harness) that feeds a plan and verifies orders (or shadow logs) + SL re-attach.
+- Ledger entries include provenance (which proposal/strategy triggered the move).
+- Thin wrapper so allocator output can be executed or dry-run uniformly.
+
+### Phase ARCH-4: Thin Orchestrator + Full Wiring + Measurement
+**Status**: Not started  
+**Dependencies**: ARCH-0 through 3.  
+**Success criteria**:
+- Runner (or new `orchestrator.py`) reduced to cycle coordination: refresh data → evaluate() → allocate() → if plan: execute(wrapped in SL context) → persist.
+- Signals/opportunities now drive entries (subject to risk gates); rebalancing still runs on schedule for drift + as a strategy.
+- Daily 21:00 anchor + hybrid trigger preserved as ways to invoke allocator in rebalance mode.
+- Added observability: per-cycle metrics logged (proposals generated, plans non-empty, capital deployed this cycle, current utilization, active pairs).
+- Isolation + paper E2E: Full cycle test that starts with empty or small basket, generates proposals from real data, allocator produces plan, execution "happens" (paper or shadow), capital moves.
+- Old duplicate paths (scripts/ copies of runner/allocation, unused hybrid plan gen) deprecated/removed after verification.
+- Evidence: 7-day paper run or backtest showing entries on signals + rebalances, reduced idle time, consistent decisions.
+
+**Handoff ready when**: Runner is thin, full path from evaluation to trade is exercised in isolation + paper, metrics visible.
+
+### Phase ARCH-5: Optimization, Backtesting, and Cleanup
+**Status**: Not started  
+**Dependencies**: ARCH-4.  
+**Success criteria**:
+- Backtest harness can replay real proposal streams through the new allocator and compare strategies (pure rebalance vs signal-tilt + rebalance).
+- A/B framework or config flags for evaluation modes / allocator strategies.
+- Capital utilization target met (e.g. >70% deployed on average when opportunities exist, per risk rules).
+- All reviews/Fable findings related to divergence closed.
+- Scattered handoffs and old docs updated to point to new architecture.
+- Final isolation test suite covers the full stack with real data snapshots.
+
+---
+
+## Other Active / Backlog Items (Condensed)
+(Expand or move here from handoffs/ as they are promoted to this master list. Prioritize ARCH until entries flowing reliably.)
+
+- Sentiment pipeline reliability & canonical cache (ongoing, multiple handoffs).
+- RSI 15m decoupled pipeline + dashboard.
+- Withdrawal reserve + deploy caps hardening (P6-145 etc. from Fable reviews).
+- Stop-loss coordinator durability + re-attach testing.
+- Paper trading harness + isolation for new components.
+- Live readiness gates (from IDEALOOP / Fable reviews).
+- Dynamic basket + per-trader cache sharing.
+
+**Cross-reference**: See `handoffs/DELEGATION_QUEUE.md`, `handoffs/phase6/`, `reviews/Phase6_Fable5_Code_Review_Package/`, `docs/PHASE6_CURRENT_STATUS.md`, `hermes-state/PHASE_GOALS.md` for details. New work should consolidate here.
+
+---
+
+## How to Use This File Going Forward
+- When starting a sub-task: Add a row or subsection with ID, success criteria, verification method (explicitly "run isolation wrapper X and paste output").
+- On completion: Date-stamp, link evidence (test file + output, PR or commit if any, before/after metrics), update status.
+- For delegation: Create a tight handoff doc in `handoffs/phase6/` that references the ARCH-N task here, then update this with the handoff link + status.
+- After "proceed", the agent will chain phases, run isolation tests, update this file, and only surface when a phase completes or a blocker requires decision.
+
+**Current ask / decision point**: Review the ARCHITECTURE_ISOLATED_COMPONENTS.md. Confirm direction or request changes. Then "proceed to ARCH-0" (or specific phase) to start the baseline isolation tests + first MASTER updates with real evidence.
+
+This file will be the durable single source. Let's make the decision logic consistent, measurable, and actually deploy capital on opportunities.

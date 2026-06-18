@@ -1,0 +1,18 @@
+=== Phase 6 Paper Trading Harness Run (Fable 5 non-critical closure + clean-up) ===
+Date: 2026-06-10
+Harness: scripts/phase6/paper_trading_harness.py (augmented with reserve telemetry every tick, G2 simulated failure injection on tick 2, canonical v3 sentiment aging, rebalance_plan calls, robust allocation import)
+Config updates: withdrawal_reserve {min_reserve_usd: 200.0, max_deployable_usd: 800.0} + risk_management deploy/min keys
+Mode: dry-run, 8 ticks @ 2s interval (real sentiment load, PaperTrader execution)
+
+Key telemetry observed (excerpts):
+- Every tick: >>> HARNESS TELEMETRY: reserve_min=$200.00 cash=... total=... deployable_after_reserve=...
+- Tick 2: >>> [SIMULATED FAILURE] inject holdings error (Fresh Start guard test) ... Harness continued after simulated error (tri-state must not flip to Fresh Start)
+- Sentiment aging, weights, small rebalance plans all executed without crash.
+- 8 ticks completed, errors captured only the injected one as designed.
+- No phantom Fresh Start, reserve projected enforcement logged, G4 visible.
+
+Artifact summary: PASS with expected injected error. Full pipeline exercised post non-critical fixes. No new criticals surfaced in short run.
+
+Next: Can extend to 48+ ticks with real cache updates or add more forced failures/cooldown scenarios.
+
+Scotty sign-off (2026-06-10): All addressed non-criticals (P6-141 cache NameError, P6-142 rebalance key shapes, P6-148/P6-143/145 G4 reserve config + projection, runner hardening, harness robustness + logs) verified. Isolation tests for 142/148 pass. Paper run clean aside from intentional sim error. Kanban restarted + last batch of high cards recreated. MASTER/handoffs reflect progress. Transition complete for paper observation phase.

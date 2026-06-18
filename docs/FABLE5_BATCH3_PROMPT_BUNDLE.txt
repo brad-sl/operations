@@ -1,0 +1,37 @@
+=== PHASE 6 FABLE 5 REVIEW — BATCH 3 (FINAL CRITICAL FILES FOR LIVE SAFETY) ===
+
+Repo root: /home/brad/projects/crypto-trading-bot
+All previous constraints apply exactly (real data only; Fresh Start = bootstrap-only on *verified* zero never on transient errors or empty-from-error; sticky holdings + proportional adjustment; withdrawal reserves respected; sentiment quality/aging/24h cooldown on stopped pairs; Code Isolation Testing + Scotty sign-off before any promotion).
+
+**Exact files requested at end of Batch 2:**
+1. phase6/core/live_portfolio_manager.py (full)
+2. phase6/core/exchange_client.py (full — post P6-001 fixes)
+3. phase6/core/rebalancing/hybrid_rebalancer.py (full)
+4. phase6/core/order_executor.py (full) + phase6/core/stop_loss_manager.py (full) + phase6/core/stop_loss_coordinator.py (full)
+5. src/capital_allocation/withdrawal_reserve.py (full) + phase6/scripts/deploy_capital.py (full)
+6. Remainder of phase6/core/phase6_runner.py (Fresh Start logic, _handle_fresh_start, _perform_daily_rebalance, get_holdings call sites, reserve deployment)
+7. trading_config_phase6.json (actual config in use)
+8. phase6/core/sentiment_scorer.py (full) + any remaining legacy sentiment writing scripts (run_full_sentiment_v3.py already fed in Batch 2; confirm no other active writers)
+9. phase6/core/trade_ledger.py (full) + any backtest harness / integration tests that exercise the above live paths
+
+**Additional context from prior batches (top open risks to close):**
+- P6-115/116: Wrapper price/size quantization (high risk for DOGE/XRP stops)
+- P6-117/118: Order reconciliation (get_orders endpoint, cancel, fills, schemas)
+- P6-121/122: Sentiment writer fabrication + schema mismatch
+- P6-101/125: Holdings/balance verified sentinel (P6-101 now has Scotty sign-off + isolation test; close P6-125 gap in balance live-init)
+- P6-114: Durable suspended stops + rollback (depends on 117/118)
+- P6-108/109: Sticky rebalance, in-memory last_rebalance_time, allocation bounds feasible check
+- Reserve end-to-end (visible in planning, deploy_capital, runner)
+
+**Top requested review focus (beyond previous schema):**
+- Confirm the verified sentinel contract is uniformly applied (holdings + balance + positions + reconcile) and that Fresh Start only fires on explicit verified-zero.
+- Confirm CR-03 suspend/reattach uses real order shapes, can actually cancel/list, and rollback is atomic/durable.
+- Reserve respected in every allocation/rebalance/deploy path (no silent bypass).
+- Sentiment ingestion is real + fresh-gated (no more fabrication of neutral with fresh stamp).
+- Order execution returns real success/fill data (no fabricated success=True for sells or always-PENDING).
+- Allocation inverse-vol bounds feasible for the 5-pair universe; rebalance plans respect reserves and sticky holdings.
+- Ledger + backtest harness actually exercise the corrected paths with real data shapes.
+
+**Output requirements**: Same exact schema as prior batches. Updated consolidated top-risks table across all batches. Updated go/no-go live-safety gate table. Explicit request for any remaining files (or " ready to conclude").
+
+=== END BATCH 3 BUNDLE ===

@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "last_updated": "2026-06-16T21:15:00Z",
+  "method": "Generated via scripts/optimize_sentiment_keywords.py (trading_relevance scoring with base + crypto slang lexicon) + cumulative manual review of samples across multiple runs. Prioritizes organic token price/action discussion over company news or listing hype spam.",
+  "notes": "X (primary) prefers clean or $ticker for trading signals. Reddit uses lists (first is primary). 'ripple' consistently underperforms for XRP token trading talk vs 'XRP'. BTC benefits from both 'BTC' and 'bitcoin'. Re-run optimizer on new pairs or monthly.",
+  "pairs": {
+    "BTC-USD": {
+      "x": "BTC",
+      "reddit": ["BTC", "bitcoin"],
+      "notes": "Both terms used by traders; 'bitcoin' often surfaces more conviction/whale discussion in tests."
+    },
+    "ETH-USD": {
+      "x": "ETH",
+      "reddit": ["ETH", "ethereum"],
+      "notes": "Ticker primary; name as secondary."
+    },
+    "SOL-USD": {
+      "x": "SOL",
+      "reddit": ["SOL", "solana"],
+      "notes": "$SOL performed strongly in some optimizer runs for trading hype signals."
+    },
+    "XRP-USD": {
+      "x": "XRP",
+      "reddit": ["XRP", "xrp"],
+      "notes": "Strong cumulative evidence: 'XRP' / '$XRP' produces better trading-relevant token signals than 'ripple' (which pulls more company/news). Do not use 'ripple' as primary."
+    },
+    "DOGE-USD": {
+      "x": "DOGE",
+      "reddit": ["DOGE", "dogecoin"],
+      "notes": "Ticker primary."
+    },
+    "ADA-USD": {
+      "x": "ADA",
+      "reddit": ["ADA", "cardano"],
+      "notes": "Ticker primary."
+    },
+    "AVAX-USD": {
+      "x": "AVAX",
+      "reddit": ["AVAX", "avalanche"],
+      "notes": "Ticker primary."
+    },
+    "LINK-USD": {
+      "x": "LINK",
+      "reddit": ["LINK", "chainlink"],
+      "notes": "Ticker primary."
+    },
+    "UNI-USD": {
+      "x": "UNI",
+      "reddit": ["UNI", "uniswap"],
+      "notes": "Ticker primary."
+    },
+    "ARB-USD": {
+      "x": "ARB",
+      "reddit": ["ARB", "arbitrum"],
+      "notes": "Ticker preferred for low-volume pairs in relevance tests."
+    },
+    "OP-USD": {
+      "x": "OP",
+      "reddit": ["OP", "optimism"],
+      "notes": "Ticker primary."
+    }
+  },
+  "defaults": {
+    "x_fallback": "ticker_upper",
+    "reddit_fallback": ["ticker_lower"]
+  }
+}

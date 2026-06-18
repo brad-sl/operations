@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phase 6 Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        .section-card { transition: all 0.2s ease; }
+        .metric-value { font-variant-numeric: tabular-nums; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-200">
+    <div class="max-w-7xl mx-auto p-8">
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-semibold tracking-tight">Phase 6 Dashboard</h1>
+                <div class="flex items-center gap-3 mt-1">
+                    <span id="mode-badge" class="px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5">
+                        <i class="fa-solid fa-circle text-[8px]"></i> <span id="mode-text">PAPER</span>
+                    </span>
+                    <span class="text-slate-500 text-sm">Last updated: <span id="last-updated">--</span></span>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="text-xs text-slate-400">Total Portfolio Value</div>
+                <div id="total-balance" class="text-4xl font-semibold tabular-nums">$0.00</div>
+                <div id="balance-source" class="text-xs text-slate-500"></div>
+            </div>
+        </div>
+
+        <!-- KPI Row -->
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
+                <div class="text-slate-400 text-sm">Today</div>
+                <div id="pnl-today" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
+                <div class="text-slate-400 text-sm">24 Hours</div>
+                <div id="pnl-24h" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
+                <div class="text-slate-400 text-sm">7 Days</div>
+                <div id="pnl-7d" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
+                <div class="text-slate-400 text-sm">30 Days</div>
+                <div id="pnl-30d" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
+                <div class="text-slate-400 text-sm">Win Ratio</div>
+                <div id="win-ratio" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- Active Positions -->
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-semibold flex items-center gap-2"><i class="fa-solid fa-wallet"></i> Active Positions</h2>
+                    <span id="position-count" class="text-xs px-3 py-1 bg-slate-800 rounded-2xl">0 pairs</span>
+                </div>
+                <div id="positions-table" class="overflow-auto min-h-[120px]"></div>
+            </div>
+
+            <!-- Activity Indicators -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> Activity Indicators</h2>
+                <div id="activity-indicators" class="space-y-4 text-sm"></div>
+            </div>
+            
+            <!-- Sentiment -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-globe"></i> Sentiment</h2>
+                <div id="sentiment-grid" class="grid grid-cols-2 gap-3 text-sm"></div>
+            </div>
+
+            <!-- Recent Rebalances -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-sync"></i> Recent Rebalances</h2>
+                <div id="rebalances-list" class="space-y-3 text-sm min-h-[80px]"></div>
+            </div>
+
+            <!-- Recent Trades -->
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-exchange-alt"></i> Recent Trades</h2>
+                <div id="trades-list" class="space-y-3 text-sm min-h-[80px]"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchData(endpoint) {
+            try {
+                const res = await fetch(endpoint);
+                if (!res.ok) throw new Error('Network error');
+                return await res.json();
+            } catch (e) {
+                console.error('Fetch error for ' + endpoint, e);
+                return null;
+            }
+        }
+
+        async function updateDashboard() {
+            const posData = await fetchData('/api/positions');
+            const perfData = await fetchData('/api/performance');
+            const tradesData = await fetchData('/api/trades');
+            const sentimentData = await fetchData('/api/sentiment');
+
+            // Header/Balance
+            // Total Portfolio Value - prefer balances API for accuracy
+            const balData = await fetchData('/api/balances');
+            const totalEl = document.getElementById('total-balance');
+            const sourceEl = document.getElementById('balance-source');
+            
+            let total = 0;
+            if (balData && balData.total_usd !== undefined) {
+                total = balData.total_usd;
+                if (sourceEl) sourceEl.textContent = balData.source || 'Live (cached)';
+            } else if (posData && posData.total_usd !== undefined) {
+                total = posData.total_usd;
+            }
+            
+            if (totalEl) {
+                const tsEl = document.getElementById('last-updated');
+                if (tsEl) tsEl.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                totalEl.textContent = '$' + parseFloat(total).toLocaleString(undefined, {minimumFractionDigits: 2});
+            }
+            
+            // Separate cash from trading positions
+            let tradingPositions = positions.filter(p => !["USD", "USDC"].includes(p.pair));
+            let cashPositions = positions.filter(p => ["USD", "USDC"].includes(p.pair));
+
+            if (countEl) countEl.textContent = `${tradingPositions.length} pairs`;
+
+            if (!tradingPositions.length && !cashPositions.length) {
+                container.innerHTML = `<div class="text-slate-500 text-sm py-4">No active positions or cash</div>`;
+            } else {
+                let html = `<table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-slate-800">
+                    <th class="text-left py-2 font-normal">Asset</th>
+                    <th class="text-right py-2 font-normal">Side</th>
+                    <th class="text-right py-2 font-normal">Size</th>
+                    <th class="text-right py-2 font-normal">Value</th>
+                    <th class="text-right py-2 font-normal">PnL</th></tr></thead><tbody>`;
+
+                // Cash rows first
+                cashPositions.forEach(pos => {
+                    html += `<tr class="border-b border-slate-800 last:border-0 bg-slate-900/40">
+                        <td class="py-2.5 font-medium text-amber-300">${pos.pair}</td>
+                        <td class="py-2.5 text-right tabular-nums text-amber-400">Cash</td>
+                        <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(2)}</td>
+                        <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
+                        <td class="py-2.5 text-right tabular-nums text-slate-500">—</td>
+                    </tr>`;
+                });
+
+                // Trading positions
+                tradingPositions.forEach(pos => {
+                    const pnlVal = parseFloat(pos.unrealized_pnl_pct || 0);
+                    const sideLabel = pos.side === 'Cash' ? 'Cash' : (pos.side === 'BUY' || pos.side === 'long' || !pos.side ? 'Long' : 'Short');
+                    html += `<tr class="border-b border-slate-800 last:border-0">
+                        <td class="py-2.5 font-medium">${pos.pair || 'N/A'}</td>
+                        <td class="py-2.5 text-right tabular-nums ${sideLabel === 'Long' ? 'text-emerald-400' : 'text-red-400'}">${sideLabel}</td>
+                        <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(4)}</td>
+                        <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
+                        <td class="py-2.5 text-right tabular-nums ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}">${(pnlVal * 100).toFixed(2)}%</td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>`;
+                container.innerHTML = html;
+            }
+
+            // PnL
+            if (perfData) {
+                if (document.getElementById('win-ratio')) document.getElementById('win-ratio').textContent = ((perfData.win_ratio || 0) * 100).toFixed(0) + '%';
+                if (document.getElementById('pnl-today')) document.getElementById('pnl-today').textContent = (perfData.today || 0).toFixed(2) + '%';
+                if (document.getElementById('pnl-24h')) document.getElementById('pnl-24h').textContent = (perfData.h24 || 0).toFixed(2) + '%';
+                if (document.getElementById('pnl-7d')) document.getElementById('pnl-7d').textContent = (perfData.d7 || 0).toFixed(2) + '%';
+                if (document.getElementById('pnl-30d')) document.getElementById('pnl-30d').textContent = (perfData.d30 || 0).toFixed(2) + '%';
+            }
+
+            // Activity Indicators
+            const actContainer = document.getElementById('activity-indicators');
+            const bought = posData?.bought_indicators || [];
+            if (actContainer) {
+                actContainer.innerHTML = bought.length ? bought.map(p => `<span class="inline-block mr-1 px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-300 text-xs">${p}</span>`).join('') : '<div class="text-slate-500">No activity</div>';
+            }
+
+            // Sentiment
+            const sentContainer = document.getElementById('sentiment-grid');
+            if (sentContainer && sentimentData && sentimentData.status === 'ok') {
+                const pairs = Object.keys(sentimentData.data);
+                sentContainer.innerHTML = pairs.map(p => {
+                    const val = sentimentData.data[p].sentiment;
+                    let label = 'Neutral';
+                    let color = 'text-slate-400';
+                    if (val > 0.1) { label = 'Bullish'; color = 'text-emerald-400'; }
+                    else if (val < -0.1) { label = 'Bearish'; color = 'text-red-400'; }
+                    return `
+                    <div class="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded-lg text-xs">
+                        <span>${p}</span>
+                        <span class="${color}">${label}</span>
+                    </div>`;
+                }).join('');
+            } else if (sentContainer) {
+                sentContainer.innerHTML = '<div class="text-slate-500 text-sm">No sentiment data available</div>';
+            }
+
+            // Trades
+            const tradesContainer = document.getElementById('trades-list');
+            if (tradesContainer && tradesData) {
+                tradesContainer.innerHTML = (tradesData.trades || []).slice(0, 5).map(t => `
+                    <div class="flex justify-between items-center text-xs bg-slate-800/30 p-2 rounded">
+                        <span>${t.pair}</span>
+                        <span class="${t.side === 'BUY' ? 'text-emerald-400' : 'text-red-400'}">${t.side}</span>
+                    </div>
+                `).join('');
+            }
+            
+            document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+        }
+        // Initial load - force live data fetch
+        async function initDashboard() {
+            try {
+                const balancesRes = await fetch('/api/balances');
+                const balances = await balancesRes.json();
+                
+                // Update mode badge
+                const modeText = document.getElementById('mode-text');
+                const modeBadge = document.getElementById('mode-badge');
+                if (balances.mode === 'live') {
+                    modeText.textContent = 'LIVE';
+                    modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-red-900 text-red-400 font-medium flex items-center gap-1.5';
+                } else {
+                    modeText.textContent = 'PAPER';
+                    modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5';
+                }
+                
+                // Update total balance
+                const totalEl = document.getElementById('total-balance');
+                if (totalEl && balances.total_usd !== undefined) {
+                    totalEl.textContent = '$' + balances.total_usd.toFixed(2);
+                }
+                
+                // Update source
+                const sourceEl = document.getElementById('balance-source');
+                if (sourceEl) sourceEl.textContent = balances.source || '';
+                
+                document.getElementById('last-updated').textContent = new Date().toLocaleTimeString();
+            } catch (e) {
+                console.error('Init failed', e);
+            }
+            
+            // Then start the regular polling
+            setInterval(updateDashboard, 5000);
+            updateDashboard();
+        }
+        
+        initDashboard();
+    </script>
+</body>
+</html>

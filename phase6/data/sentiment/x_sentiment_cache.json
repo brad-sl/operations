@@ -1,74 +1,74 @@
 {
   "BTC-USD": {
-    "sentiment": 0.0182,
-    "timestamp": "2026-06-18T14:00:03.738291",
+    "sentiment": 0.293,
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 26,
+    "confidence": 1.0
+  },
+  "ETH-USD": {
+    "sentiment": 0.0104,
+    "timestamp": "2026-06-18T16:00:03.653887",
     "post_count": 19,
     "confidence": 0.76
   },
-  "ETH-USD": {
-    "sentiment": 0.0021,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 10,
-    "confidence": 0.4
-  },
   "SOL-USD": {
-    "sentiment": 0.2871,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 62,
+    "sentiment": 0.2976,
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 60,
     "confidence": 1.0
   },
   "XRP-USD": {
-    "sentiment": 0.0093,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 8,
-    "confidence": 0.32
+    "sentiment": 0.1425,
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 5,
+    "confidence": 0.2
   },
   "DOGE-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 0,
-    "confidence": 0.0
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 3,
+    "confidence": 0.15
   },
   "ADA-USD": {
     "sentiment": 1.0,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 51,
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 39,
     "confidence": 1.0
   },
   "AVAX-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T14:00:03.738291",
+    "timestamp": "2026-06-18T16:00:03.653887",
     "post_count": 0,
     "confidence": 0.0
   },
   "LINK-USD": {
-    "sentiment": 0.5223,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 44,
+    "sentiment": 0.5414,
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 54,
     "confidence": 1.0
   },
   "UNI-USD": {
     "sentiment": 1.0,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 6,
-    "confidence": 0.24
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 3,
+    "confidence": 0.15
   },
   "ARB-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 1,
-    "confidence": 0.05
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 0,
+    "confidence": 0.0
   },
   "OP-USD": {
-    "sentiment": 0.4365,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 97,
+    "sentiment": 0.4661,
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 99,
     "confidence": 1.0
   },
   "MATIC-USD": {
     "sentiment": 0.0,
-    "timestamp": "2026-06-18T14:00:03.738291",
-    "post_count": 3,
-    "confidence": 0.15
+    "timestamp": "2026-06-18T16:00:03.653887",
+    "post_count": 1,
+    "confidence": 0.05
   }
 }

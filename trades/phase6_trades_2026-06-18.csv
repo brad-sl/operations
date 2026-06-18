@@ -1,0 +1,2 @@
+timestamp,pair,side,qty,entry_price,exit_price,pnl,pnl_pct,signal_source
+2026-06-18T12:58:55.735280,TEST-USD,BUY,0.0,0.0,0.0,0,0,smoke_test

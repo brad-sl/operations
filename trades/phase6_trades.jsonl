@@ -1,0 +1,13 @@
+{"pair": "BTC-USD", "side": "buy", "qty": 0.00223738, "entry_price": 65000.0, "usd_value": 145.43, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:22:25.024792"}
+{"pair": "ETH-USD", "side": "buy", "qty": 0.045, "entry_price": 3200.0, "usd_value": 144.0, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:22:25.025421"}
+{"pair": "SOL-USD", "side": "buy", "qty": 1.02262069, "entry_price": 145.0, "usd_value": 148.28, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:22:25.025848"}
+{"pair": "XRP-USD", "side": "buy", "qty": 268.69230769, "entry_price": 0.52, "usd_value": 139.72, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:22:25.026303"}
+{"pair": "DOGE-USD", "side": "buy", "qty": 1188.08333333, "entry_price": 0.12, "usd_value": 142.57, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:22:25.026834"}
+{"pair": "BTC-USD", "side": "buy", "qty": 0.00223738, "entry_price": 65000.0, "usd_value": 145.43, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:23:28.420004"}
+{"pair": "ETH-USD", "side": "buy", "qty": 0.045, "entry_price": 3200.0, "usd_value": 144.0, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:23:28.420515"}
+{"pair": "SOL-USD", "side": "buy", "qty": 1.02262069, "entry_price": 145.0, "usd_value": 148.28, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:23:28.420959"}
+{"pair": "XRP-USD", "side": "buy", "qty": 268.69230769, "entry_price": 0.52, "usd_value": 139.72, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:23:28.421446"}
+{"pair": "DOGE-USD", "side": "buy", "qty": 1188.08333333, "entry_price": 0.12, "usd_value": 142.57, "signal_source": "phase6_fresh_start", "timestamp": "2026-06-06T21:23:28.421889"}
+{"pair": "TEST-USD", "side": "BUY", "qty": 0.0, "entry_price": 0.0, "exit_price": 0.0, "pnl": 0, "pnl_pct": 0, "signal_source": "smoke_test", "timestamp": "2026-06-18T05:59:48.521554"}
+{"pair": "TEST-USD", "side": "BUY", "qty": 0.0, "entry_price": 0.0, "exit_price": 0.0, "pnl": 0, "pnl_pct": 0, "signal_source": "smoke_test", "timestamp": "2026-06-18T05:59:53.801276"}
+{"pair": "TEST-USD", "side": "BUY", "qty": 0.0, "entry_price": 0.0, "exit_price": 0.0, "pnl": 0, "pnl_pct": 0, "signal_source": "smoke_test", "timestamp": "2026-06-18T12:58:55.735280"}

@@ -1,0 +1,1 @@
+{"event_type": "header", "description": "Trade Activity Log - Phase 6", "format": "JSON Lines", "fields": ["timestamp", "event_type", "pair", "side", "qty", "price", "usd_value", "pnl", "source"], "updated": "2026-06-02"}

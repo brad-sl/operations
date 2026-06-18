@@ -1,0 +1,35 @@
+diff --git a/phase5_multi_pair.py b/phase5_multi_pair.py
+index c9a3b2d..f4e7a1b 100644
+--- a/phase5_multi_pair.py
++++ b/phase5_multi_pair.py
+@@ -610,6 +610,32 @@ class Phase5Harness:
+         except Exception as e:
+             self.logger.error(f"❌ Rebalancing error: {e}", exc_info=True)
+ 
++    def _apply_sentiment_adjustment(self):
++        """Apply sentiment-weighted adjustment to current allocations.
++        Kept as a separate method for easy maintenance and testing.
++        """
++        try:
++            from scripts.sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
++
++            current_sentiment = load_sentiment_scores(universe=self.pairs)
++            self.logger.info(f"Sentiment scores: {current_sentiment}")
++
++            adjusted = get_sentiment_adjusted_weights(
++                base_weights=self.allocations,
++                sentiment_scores=current_sentiment,
++                sentiment_weight=0.20
++            )
++
++            self.logger.info(f"Applying sentiment adjustment (20% weight)...")
++            self.logger.info(f"Allocations AFTER sentiment: {adjusted}")
++
++            self.allocations = adjusted
++
++        except Exception as sent_err:
++            self.logger.warning(f"Sentiment adjustment skipped: {sent_err}")
++
+     def run(self, total_cycles=None):
+         """Main trading bot execution loop"""
+         if total_cycles is None:

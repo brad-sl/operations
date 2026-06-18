@@ -1,0 +1,40 @@
+=== PHASE 6 FABLE 5 REVIEW — BATCH 2 (Cross-cutting for P0/P1 blast radius from Batch 1) ===
+
+Repo root: /home/brad/projects/crypto-trading-bot
+Constraints reminder (real data only, Fresh Start = bootstrap-only on VERIFIED zero holdings never on API errors, sticky holdings + proportional rebalancing, ~$250 withdrawal reserve always respected, Code Isolation Testing + durable tracking).
+
+This batch supplies the exact files requested at end of Batch 1 to close P6-101, P6-105, P6-106, P6-108, P6-109 etc.
+
+=== FILE: phase6/core/phase6_runner.py (focus: Fresh Start gate + get_holdings usage + _handle_fresh_start + _run_cycle) ===
+[Full file already known from prior context; key sections for P6-101:
+- lines ~265-271: has_positions = self.portfolio.has_open_positions(); if None: error + skip; elif not : _handle_fresh_start
+- _handle_fresh_start (around line 434+): uses cash, reserve logic (deployable_cash), real ATR now per previous fixes.
+- _perform_daily_rebalance and callers of exchange.get_holdings / get_enriched_positions.
+Provide full context around Fresh Start detection and any place that treats empty dict or 0 balance as "safe to fresh-start or rebalance away"].
+
+=== FILE: coinbase_wrapper_FIXED.py (full) ===
+### Relevant for P6-105 / P6-113 order schema (how raw responses are parsed for order_type, stop_price, success_response structure, batch cancel, get_open_orders/historical).
+
+=== FILE: phase6/core/allocation_engine.py (full, plus notes on any consumers of RegimeDetector / correlation actions) ===
+[Lightweight helpers; note if used by hybrid_rebalancer or runner. Consumers in phase6/core/rebalancing/hybrid_rebalancer.py and phase6/core/risk/* if they feed into allocation.]
+
+=== FILE: run_full_sentiment_v3.py (full) + current sentiment_cache.json structure sample (if present) ===
+Canonical writer. Schema for timestamps, scores, quality. Important for P6-108 freshness/staleness checks in hybrid rebalancer _load_sentiment.
+
+=== Durable state notes (last_rebalance_time, suspended-order snapshots, etc.) ===
+HybridRebalancer stores last_rebalance_time in memory only (self.last_rebalance_time). No durable file shown yet. StopLossCoordinator has self._suspended_orders (in-mem). Check for any .json or ledger files used for rebalance timestamps or CR-03 snapshots in the runner or coordinator.
+
+=== Additional context from Batch 1 risks ===
+Re-state top P0/P1 that need closing:
+- P6-101: holdings errors → verified sentinel (use the Fresh Start code here to confirm blast radius)
+- P6-105/113: Coinbase order schema reality (raw dicts from wrapper vs what manager/coordinator expect)
+- P6-108/109: baseline fabrication + sticky rebalance (use allocation + sentiment writer)
+- P6-114: suspended order snapshot durability needed for rollback
+
+After this batch give:
+1. Updated top risks across Batch 0+1+2.
+2. Detailed findings for any new issues or refinements to prior P6-1xx using the strict ID/Title/Category/Priority/Severity/Evidence/Impact/Recommended Fix/Effort/Dependencies/Backlog format.
+3. Specific “ready to close” or “still blocked by X” assessment for P6-101,102,103,105,107,108,109,114.
+4. Explicit “Please provide Batch 3 (the remaining tiers: sentiment tier, backtest, config/docs) or the specific additional files you still need.”
+
+End with the full immediate P0/P1 go/no-go summary table updated for everything seen.

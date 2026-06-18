@@ -1,0 +1,13 @@
+diff --git a/phase5_multi_pair.py b/phase5_multi_pair.py
+index 8e4f2c1..c9a3b2d 100644
+--- a/phase5_multi_pair.py
++++ b/phase5_multi_pair.py
+@@ -598,6 +598,8 @@ class Phase5Harness:
+                 self.logger.info(f"Allocations AFTER:  {self.allocations}")
+                 self.logger.info(f"Reserve: ${reserve_before:.2f} → ${self.reserve:.2f}")
+ 
++                self._apply_sentiment_adjustment()  # NEW: sentiment-weighted redeployment
++
+             else:
+                 self.logger.info(f"✅ Correlation healthy ({avg_correlation:.3f}). No rebalancing needed.")
+ 

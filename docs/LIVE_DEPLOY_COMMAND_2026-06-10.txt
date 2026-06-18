@@ -1,0 +1,36 @@
+Exact command to run Phase 6 in LIVE mode for the scheduled 9 AM rebalance (and daily thereafter).
+
+Location: project root (/home/brad/projects/crypto-trading-bot)
+
+REQUIREMENTS BEFORE RUNNING:
+- Real Coinbase Advanced Trade API keys in the environment (COINBASE_API_KEY / private key, or whatever your CoinbaseWrapper / exchange_client expects).
+- The OPENROUTER key (for any external signals if still used).
+- Recommend first test with --mode shadow even with keys present, then switch to live with the confirm flag.
+- You must pass BOTH --mode live AND --confirm-live (this is a hard safety gate in the parser; no bypass).
+
+COMMAND (copy/paste):
+cd /home/brad/projects/crypto-trading-bot && \
+python3 phase6/core/phase6_runner.py \
+  --config config/trading_config_phase6.json \
+  --mode live \
+  --confirm-live
+
+Or as a single line for cron / scheduler:
+cd /home/brad/projects/crypto-trading-bot && source ~/.hermes/.env 2>/dev/null || true; python3 phase6/core/phase6_runner.py --config config/trading_config_phase6.json --mode live --confirm-live
+
+Notes:
+- The runner will log heavily, send Telegram digests on actions, and use the exact config (withdrawal_reserve min/max, rebalance_cap, etc.).
+- All fixes from Fable 5 batches + Live Readiness (P6-127/155/157/CR-03/G4 etc.) are live in this build.
+- Tomorrow’s run will be the first real-capital exposure after the final 100-tick paper validation.
+
+Monitor:
+- Telegram
+- `logs/` or terminal output
+- data/state/phase6_live_state.json and paper_summary equivalents if any
+- trade ledger
+
+If anything looks off, flip back to shadow immediately or kill the process.
+
+Scotty pre-push sign-off 2026-06-10: paper 100-tick + all CITs + Live Readiness Checklist green. You have the keys + responsibility for the actual live trigger.
+
+Good luck — this is the moment after a lot of disciplined gate work.

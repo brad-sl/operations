@@ -1,0 +1,35 @@
+{
+  "sentiment": {
+    "BTC-USD": {
+      "sentiment_score": 0.1,
+      "source": "merged",
+      "post_count": 47
+    },
+    "ETH-USD": {
+      "sentiment_score": 0.05,
+      "source": "merged",
+      "post_count": 13
+    },
+    "SOL-USD": {
+      "sentiment_score": 0.2,
+      "source": "merged",
+      "post_count": 37
+    },
+    "XRP-USD": {
+      "sentiment_score": -0.1,
+      "source": "merged",
+      "post_count": 7
+    },
+    "DOGE-USD": {
+      "sentiment_score": 0.0,
+      "source": "merged",
+      "post_count": 6
+    },
+    "ADA-USD": {
+      "sentiment_score": 0.2085,
+      "source": "x",
+      "post_count": 1
+    }
+  },
+  "last_updated": "2026-06-05T19:49:55.854944+00:00"
+}

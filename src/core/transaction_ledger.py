@@ -20,7 +20,7 @@ class TransactionLedger:
     def __init__(self, ledger_path: str = None):
         if ledger_path is None:
             script_dir = os.path.dirname(os.path.abspath(__file__))
-            ledger_path = os.path.join(script_dir, 'state', 'phase5_trades.json')
+            ledger_path = os.path.join(script_dir, 'state', 'phase6_trades.json')  # standardized from legacy phase5 name
         
         self.ledger_path = ledger_path
         self.logger = logging.getLogger(__name__)

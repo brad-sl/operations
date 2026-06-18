@@ -162,7 +162,12 @@ def calculate_sentiment(posts: List[Dict]) -> float:
 def main():
     """Fetch X sentiment for configured pairs and cache with timestamp."""
     # TODO: Load pairs from Phase 6 config (for now use sensible default set)
-    pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD"]
+    # Dynamic from trader basket config (full opportunity pool)
+    try:
+        cfg = json.load(open("../../../config/trading_config_phase6.json"))
+        pairs = cfg.get("phase_6_specific", {}).get("opportunity_pool") or cfg.get("global_settings", {}).get("pairs", ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD"])
+    except:
+        pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD", "MATIC-USD"]
 
     keywords_dict = {pair: pair.split('-')[0] for pair in pairs}
 

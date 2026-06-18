@@ -1,5 +1,5 @@
 #!/bin/bash
-# Hourly sentiment cache refresh for Phase 5 (X API v2 all pairs)
-cd /home/brad/.openclaw/workspace/operations/crypto-bot
-source venv/bin/activate
-python3 fetch_x_sentiment.py >> logs/sentiment_fetch.log 2>&1
+# 30min sentiment cron wrapper (no-agent)
+export OPENBLAS_CORETYPE=GENERIC
+cd "$(dirname "$0")"
+python3 run_sentiment_system.py

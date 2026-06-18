@@ -1,16 +1,8 @@
-"""
-Stop Loss Manager for Phase 6
-
-Handles stop-loss (and take-profit) placement at the Coinbase level using native orders.
-This is mandatory before going live.
-"""
-
-import time
 import logging
 from typing import Optional, Any, List, Dict
+import time
 
 logger = logging.getLogger(__name__)
-
 
 class StopLossManager:
     """
@@ -34,12 +26,37 @@ class StopLossManager:
         Returns True on successful placement (or shadow success).
         """
         pct = sl_pct if sl_pct is not None else self.default_sl_pct
-        stop_price = round(entry_price * (1 - pct), 2)
-        limit_price = round(stop_price * 0.995, 2)
+        
+        # Quantize stop and limit prices
+        meta = self.exchange.get_product_metadata(pair)
+        # Use full precision API prices for SL/TP attachment
+        stop_price = entry_price * (1 - pct)
+        limit_price = stop_price * 0.995
+        
+        # Quantize prices ensuring sub-dollar precision compliance
+        stop_price_str = self.exchange._quantize_price(stop_price, meta.get("price_increment", "0.00000001"))
+        stop_price = float(stop_price_str)
+        limit_price_str = self.exchange._quantize_price(limit_price, meta.get("price_increment", "0.00000001"))
+        limit_price = float(limit_price_str)
+        
+        # Ensure prices are valid
+        if stop_price >= entry_price:
+            logger.warning(f"Stop price {stop_price} >= entry {entry_price}, adjusting...")
+            price_inc = float(meta.get("price_increment", "0.0001"))
+            stop_price = entry_price - price_inc
+            stop_price_str = self.exchange._quantize_price(stop_price, meta.get("price_increment", "0.00000001"))
+            stop_price = float(stop_price_str)
+            limit_price = stop_price - price_inc
+            limit_price_str = self.exchange._quantize_price(limit_price, meta.get("price_increment", "0.00000001"))
+            limit_price = float(limit_price_str)
+        
+        # Quantize size
+        size_str = self.exchange._quantize_size(size, meta["base_increment"])
+        size = float(size_str)
 
         if self.shadow_mode:
             print(f"[SHADOW] Would attach native SL for {pair}")
-            print(f"         Entry: ${entry_price:.2f} | Stop: ${stop_price:.2f} | Limit: ${limit_price:.2f} | SL%: {pct*100:.1f}% | size: {size}")
+            print(f"         Entry: ${entry_price:.2f} | Stop: ${stop_price:.4f} | Limit: ${limit_price:.4f} | SL%: {pct*100:.1f}% | size: {size}")
             return True
 
         # Live mode with retry
@@ -73,16 +90,20 @@ class StopLossManager:
         Attach a native take-profit limit sell order.
         """
         pct = tp_pct if tp_pct is not None else self.default_tp_pct
-        tp_price = round(entry_price * (1 + pct), 2)
+        tp_price = entry_price * (1 + pct)
 
         if self.shadow_mode:
             print(f"[SHADOW] Would attach native TP for {pair}")
-            print(f"         Entry: ${entry_price:.2f} | TP: ${tp_price:.2f} | TP%: {pct*100:.1f}% | size: {size}")
+            print(f"         Entry: ${entry_price} | TP: ${tp_price} | TP%: {pct*100:.1f}% | size: {size}")
             return True
 
-        # Use a simple limit sell for TP
+        # Use a simple limit sell for TP (quantize price)
+        meta = self.exchange.get_product_metadata(pair)
+        tp_price_str = self.exchange._quantize_price(tp_price, meta["price_increment"])
+        tp_price_quantized = float(tp_price_str)
+
         if hasattr(self.exchange, "place_limit_sell"):
-            return self.exchange.place_limit_sell(pair, size, tp_price)
+            return self.exchange.place_limit_sell(pair, size, tp_price_quantized)
         print("[TODO] place_limit_sell not yet implemented on exchange client")
         return False
 
@@ -190,14 +211,6 @@ class StopLossManager:
         """
         CR-03.5: Verification method confirming end-to-end
         suspend → rebalance → re-attach sequence.
-
-        - Detects any orphaned protective orders on zero-balance pairs
-        - Reports active protective orders post-rebalance vs holdings
-        - Includes suspended order ID audit trail in report
-        - Structured logging of verification outcome with order details
-
-        Returns: report dict with 'success', 'orphaned_stops', 'active_protective_after',
-                 'suspended_tracked', 'details'
         """
         report: Dict[str, Any] = {
             "success": False,

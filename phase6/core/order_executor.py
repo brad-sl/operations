@@ -1,22 +1,6 @@
 #!/usr/bin/env python3
 """
 Phase 6 OrderExecutor - Robust Order Execution Wrapper
-
-Reconciles Phase 5 execution patterns with Phase 6 architecture.
-Provides retry logic, client_order_id generation, structured results,
-and StopLossManager integration after successful buys.
-
-Usage:
-    from .order_executor import OrderExecutor
-
-    executor = OrderExecutor(
-        exchange=exchange_client,
-        stop_loss_manager=sl_manager,
-        mode=mode,
-        logger=logger
-    )
-
-    result = executor.execute_buy("BTC-USD", 100.0)
 """
 
 import logging
@@ -27,16 +11,7 @@ from typing import Any, Dict, List, Optional
 
 
 class OrderExecutor:
-    """
-    Robust order executor for Phase 6.
-
-    Features:
-    - Exponential backoff retry (3 attempts)
-    - Automatic client_order_id generation
-    - Structured result dictionaries
-    - StopLossManager integration on successful buys
-    - Shadow/live mode awareness via exchange client
-    """
+    """Robust order executor for Phase 6."""
 
     def __init__(
         self,
@@ -47,17 +22,6 @@ class OrderExecutor:
         max_retries: int = 3,
         base_delay: float = 1.0,
     ):
-        """
-        Initialize OrderExecutor.
-
-        Args:
-            exchange: CoinbaseExchangeClient instance
-            stop_loss_manager: StopLossManager instance
-            mode: "shadow" or "live"
-            logger: Optional logger (defaults to phase6.executor)
-            max_retries: Maximum retry attempts (default 3)
-            base_delay: Base delay in seconds for exponential backoff
-        """
         self.exchange = exchange
         self.stop_loss_manager = stop_loss_manager
         self.mode = mode.lower().strip()
@@ -66,217 +30,90 @@ class OrderExecutor:
         self.max_retries = max_retries
         self.base_delay = base_delay
 
-        self.logger.info(
-            f"OrderExecutor initialized | mode={self.mode} | "
-            f"max_retries={max_retries} | base_delay={base_delay}s"
-        )
-
     def _generate_client_order_id(self, prefix: str = "phase6") -> str:
-        """Generate a unique client_order_id for traceability."""
         return f"{prefix}-{secrets.token_hex(16)}"
 
-    def _classify_error(self, error: Exception) -> str:
-        """Classify error for logging and potential future circuit breaking."""
-        err_str = str(error).lower()
-        if "rate" in err_str or "429" in err_str:
-            return "rate_limit"
-        if "timeout" in err_str:
-            return "timeout"
-        if "insufficient" in err_str or "balance" in err_str:
-            return "insufficient_funds"
-        if "invalid" in err_str or "bad request" in err_str:
-            return "invalid_request"
-        return "unknown"
-
     def _retry_with_backoff(self, func, *args, **kwargs) -> Dict[str, Any]:
-        """
-        Execute function with exponential backoff retry.
-
-        Returns structured result dict.
-        """
         last_error = None
         for attempt in range(1, self.max_retries + 1):
             try:
-                result = func(*args, **kwargs)
-                if attempt > 1:
-                    self.logger.info(f"Retry succeeded on attempt {attempt}")
-                return result
+                return func(*args, **kwargs)
             except Exception as e:
                 last_error = e
-                error_type = self._classify_error(e)
-                delay = self.base_delay * (2 ** (attempt - 1))
-
-                self.logger.warning(
-                    f"Attempt {attempt}/{self.max_retries} failed "
-                    f"({error_type}): {e}. Retrying in {delay:.1f}s..."
-                )
-
-                if attempt < self.max_retries:
-                    time.sleep(delay)
-                else:
-                    self.logger.error(
-                        f"All {self.max_retries} attempts failed. "
-                        f"Last error: {e}"
-                    )
-
-        # All retries exhausted
-        return {
-            "success": False,
-            "order_id": None,
-            "client_order_id": None,
-            "error": str(last_error),
-            "error_type": self._classify_error(last_error) if last_error else "unknown",
-            "attempts": self.max_retries,
-        }
+                time.sleep(self.base_delay * (2 ** (attempt - 1)))
+        return {"success": False, "error": str(last_error)}
 
     def execute_buy(self, pair: str, usd_amount: float) -> Dict[str, Any]:
-        """
-        Execute a market buy with retry logic and SL attachment.
-
-        Returns structured result:
-        {
-            "success": bool,
-            "order_id": str or None,
-            "client_order_id": str or None,
-            "price": float or None,
-            "size": float or None,
-            "sl_attached": bool,
-            "error": str or None,
-            "timestamp": str
-        }
-        """
-        client_order_id = self._generate_client_order_id()
-        timestamp = datetime.utcnow().isoformat()
-
-        self.logger.info(
-            f"[BUY] {pair} ${usd_amount:.2f} | client_order_id={client_order_id}"
-        )
-
         if self.shadow_mode:
-            self.logger.info(f"[SHADOW] Simulating BUY ${usd_amount:.2f} {pair}")
-            price = self.exchange.get_price(pair)
-            size = usd_amount / price if price > 0 else 0.0
-
-            # Simulate SL attachment
-            sl_attached = self.stop_loss_manager.attach_stop_loss(pair, price, size)
-
+            # Simulate fill using current price so SL attachment can be exercised in shadow
+            entry_price = getattr(self.exchange, 'get_price', lambda p: 0.0)(pair) or 0.0
+            size = usd_amount / entry_price if entry_price > 0 else 0.0
+            sl_result = False
+            if self.stop_loss_manager:
+                sl_result = self.stop_loss_manager.attach_stop_loss(pair, entry_price, size)
             return {
                 "success": True,
-                "order_id": f"shadow-{client_order_id}",
-                "client_order_id": client_order_id,
-                "price": price,
-                "size": round(size, 8),
-                "sl_attached": sl_attached,
-                "error": None,
-                "timestamp": timestamp,
+                "order_id": "shadow_buy",
+                "entry_price": round(entry_price, 4),
+                "size": round(size, 6),
+                "sl_attached": sl_result
             }
 
-        # Live path with retry
         def _do_buy():
             return self.exchange.place_market_buy(pair, usd_amount)
 
-        raw_result = self._retry_with_backoff(_do_buy)
+        result = self._retry_with_backoff(_do_buy)
 
-        if not raw_result.get("success", False):
-            return {
-                "success": False,
-                "order_id": None,
-                "client_order_id": client_order_id,
-                "price": None,
-                "size": None,
-                "sl_attached": False,
-                "error": raw_result.get("error", "Buy failed after retries"),
-                "timestamp": timestamp,
-            }
+        if result.get("success"):
+            # Post-fill: approximate entry with current price (production should query fill details)
+            entry_price = getattr(self.exchange, 'get_price', lambda p: 0.0)(pair) or (usd_amount / 1.0)
+            size = usd_amount / entry_price if entry_price > 0 else 0.0
 
-        # Success path - fetch price and attach SL
-        try:
-            price = self.exchange.get_price(pair)
-            size = usd_amount / price if price > 0 else 0.0
+            sl_result = False
+            if self.stop_loss_manager:
+                # Live needs a short settlement window before the asset is available for stop sell order
+                if getattr(self, "mode", None) == "live":
+                    import time
+                    self.logger.info("[SL] Waiting 8s for buy settlement before attaching stop...")
+                    time.sleep(8)
+                sl_result = self.stop_loss_manager.attach_stop_loss(pair, entry_price, size)
+                self.logger.info(f"[SL] Post-buy attach attempt for {pair}: entry=${entry_price:.4f} size={size:.6f} result={sl_result}")
+            result["entry_price"] = round(entry_price, 4)
+            result["size"] = round(size, 6)
+            result["sl_attached"] = sl_result
+        else:
+            result["sl_attached"] = False
 
-            sl_attached = self.stop_loss_manager.attach_stop_loss(pair, price, size)
-
-            order_id = raw_result.get("order_id") or raw_result.get("id")
-
-            if sl_attached:
-                self.logger.info(
-                    f"[SUCCESS] {pair}: bought ${usd_amount:.2f} @ ${price:.2f} | "
-                    f"SL attached | order_id={order_id}"
-                )
-            else:
-                self.logger.warning(
-                    f"[PARTIAL] {pair}: bought ${usd_amount:.2f} @ ${price:.2f} | "
-                    f"SL attachment FAILED"
-                )
-
-            return {
-                "success": True,
-                "order_id": order_id,
-                "client_order_id": client_order_id,
-                "price": price,
-                "size": round(size, 8),
-                "sl_attached": sl_attached,
-                "error": None,
-                "timestamp": timestamp,
-            }
-
-        except Exception as e:
-            self.logger.exception(f"Post-buy processing error for {pair}: {e}")
-            return {
-                "success": True,  # Buy succeeded even if post-processing failed
-                "order_id": raw_result.get("order_id"),
-                "client_order_id": client_order_id,
-                "price": None,
-                "size": None,
-                "sl_attached": False,
-                "error": f"Post-buy error: {str(e)}",
-                "timestamp": timestamp,
-            }
+        return result
 
     def execute_sell(self, pair: str, size: float) -> Dict[str, Any]:
-        """
-        Execute a market sell (stub for Phase 6 - to be fully implemented later).
-        """
-        self.logger.info(f"[SELL] {pair} size={size} (stub implementation)")
-        return {
-            "success": True,
-            "order_id": f"sell-stub-{secrets.token_hex(8)}",
-            "client_order_id": self._generate_client_order_id("sell"),
-            "price": None,
-            "size": size,
-            "error": None,
-            "timestamp": datetime.utcnow().isoformat(),
-            "note": "SELL execution is stubbed in current Phase 6 scope",
-        }
+        """Execute a market sell."""
+        if self.mode == "live":
+            result = self.exchange.place_market_sell(pair, size)
+            if not result.get("success", False):
+                return {"success": False, "error": result.get("error", "Failed")}
+            return {"success": True, "order_id": result.get("order_id") or result.get("id")}
+        
+        # Shadow mode
+        return {"success": True, "order_id": f"shadow_sell-{secrets.token_hex(4)}"}
 
     def execute_rebalance_plan(self, plan: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Execute a full rebalance plan (list of moves).
-
-        Each move should contain: pair, action (BUY/SELL), usd_amount
-        Returns list of structured results.
+        Execute a full rebalance plan.
+        Processes SELL moves first, and aborts if a SELL fails in live mode.
         """
         results = []
-        for move in plan:
+        sorted_plan = sorted(plan, key=lambda x: x.get("action", "") != "SELL")
+
+        for move in sorted_plan:
             pair = move.get("pair")
             action = move.get("action", "").upper()
             usd_amount = float(move.get("usd_amount", 0))
 
-            if not pair or usd_amount < 20:
-                results.append(
-                    {
-                        "success": False,
-                        "pair": pair,
-                        "action": action,
-                        "error": "below minimum or invalid",
-                    }
-                )
-                continue
-
             if action == "BUY":
                 result = self.execute_buy(pair, usd_amount)
+                # Note: execute_buy now handles SL attachment internally (including shadow simulation)
             elif action == "SELL":
-                # Size approximation for sell stub
                 result = self.execute_sell(pair, usd_amount)
             else:
                 result = {"success": False, "error": f"unknown action: {action}"}
@@ -284,10 +121,10 @@ class OrderExecutor:
             result["pair"] = pair
             result["action"] = action
             results.append(result)
+            
+            # Atomic enforcement: abort plan if SELL failed in live mode
+            if self.mode == "live" and action == "SELL" and not result.get("success"):
+                self.logger.error(f"[ATOMIC] SELL failed ({pair}). Aborting full plan execution.")
+                break
 
         return results
-
-
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    print("✅ OrderExecutor module loaded successfully")

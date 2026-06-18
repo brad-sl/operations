@@ -85,9 +85,10 @@ def rebalance_plan(current_allocs: Dict[str, float], target_allocs_pct: Dict[str
     # Compute deltas
     deltas = {}
     for coin in coins:
-        cur = current_allocs.get(coin, 0.0)
+        cur_val = current_allocs.get(coin, 0.0)
+        cur = cur_val.get("usd_value", cur_val) if isinstance(cur_val, dict) else cur_val
         tgt = target_allocs_usd.get(coin, 0.0)
-        deltas[coin] = tgt - cur
+        deltas[coin] = tgt - float(cur)
     # Sort by magnitude of delta
     moves = []
     for coin, diff in deltas.items():

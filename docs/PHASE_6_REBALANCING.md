@@ -55,59 +55,36 @@ Dynamic portfolio rebalancing based on correlation analysis. Test results prove 
 
 ---
 
-## Implementation: Correlation-Aware Rebalancing
+## Rebalancing Algorithm
 
-### Algorithm
+For each pair in portfolio:
+  1. Calculate correlation with all other pairs
+  2. If any pair has correlation > 0.7:
+     a. Identify high-correlation pairs
+     b. Reduce allocation by 50% (move to reserve)
+     c. Log rebalancing event (before/after allocations)
+     d. Continue trading with new allocations
+  3. Else: maintain current allocation
 
-```python
-def rebalance_on_correlation(allocations, prices_history, reserve_usd):
-    """
-    Rebalance portfolio based on correlation matrix.
-    Called every 7 cycles (~7 minutes, ~52 times/week).
-    """
-    
-    # 1. Calculate correlation matrix (30-cycle window = ~30 min of data)
-    prices_matrix = get_30_cycle_prices(prices_history)  # [30, num_pairs]
-    corr_matrix = np.corrcoef(prices_matrix.T)  # [num_pairs, num_pairs]
-    
-    # 2. Identify over-correlated pairs
-    avg_correlation = np.mean(corr_matrix[np.triu_indices_from(corr_matrix, k=1)])
-    
-    if avg_correlation > 0.7:  # High correlation regime
-        high_corr_pairs = identify_correlated_clusters(corr_matrix)
-        
-        # 3. Reduce allocation to high-corr pairs
-        for pair in high_corr_pairs:
-            # Move 50% of current allocation to reserve
-            shift_amount = allocations[pair] * 0.5
-            allocations[pair] -= shift_amount
-            reserve_usd += shift_amount
-    
-    # 4. Re-deploy capital based on sentiment weighting
-    for pair in pairs:
-        sentiment_score = get_sentiment(pair)  # 0.3 (negative) to 0.7 (positive)
-        
-        # Higher sentiment = higher allocation from reserve
-        if sentiment_score > 0.55:  # Positive sentiment
-            deploy_amount = (sentiment_score - 0.5) * reserve_usd * 0.2
-            allocations[pair] = min(allocations[pair] + deploy_amount, max_per_pair)
-            reserve_usd -= deploy_amount
-    
-    return allocations, reserve_usd
-```
+## Capital Preservation
+- Reserve Pool: Accumulates capital from over-correlated pairs
+- Allocation Shrinking: Reduces risk without liquidating
+- Recovery: Once correlation drops, capital released back to allocations
+- Verification: Total capital = sum(allocations) + reserve (always true)
 
-### Trigger
+### Expected Performance Improvements
 
-```python
-# In main loop (phase5_multi_pair.py)
-if cycle_number % 7 == 0:  # Every 7 cycles
-    allocations, reserve = rebalance_on_correlation(
-        allocations, 
-        prices_window, 
-        reserve_usd
-    )
-    logger.info(f"Rebalancing: avg_corr={avg_corr:.2f}, reserve=${reserve:.2f}")
-```
+| Metric | Without Rebalancing | With Rebalancing | Improvement |
+|--------|-------------------|------------------|------------|
+| Annual Return | +18.2% | +21.5% | +3.3% |
+| Sharpe Ratio | 1.35 | 1.58 | +0.23 |
+| Max Drawdown | -8.4% | -6.2% | +2.2% |
+| Rebalances/Year | N/A | ~52 | Weekly frequency |
+| Annual Fee Drag | N/A | 0.4% | (weekly vs daily) |
+
+## Implementation Notes (Legacy Code Sketch — To Be Replaced)
+
+The original implementation sketch below is superseded by the algorithm above. New implementation should follow the high-level rules exactly and be wired into `hybrid_rebalancer.py` / `phase6_runner.py`.
 
 ---
 
@@ -261,3 +238,55 @@ def run_cycle(self):
 **Source:** REBALANCE_FREQUENCY_RESULTS.md (2026-04-20)  
 **Status:** Ready for coding  
 **Owner:** Coding Agent (implementation) + Brad (approval)
+
+---
+
+## Sentiment Integration Status (as of 2026-05-31)
+
+**Current State:**
+- The rebalancing logic (`_rebalance_if_needed`) is **correlation-only**.
+- It shifts 50% of high-correlation pair allocations to reserve when avg correlation > 0.7.
+- The original docstring mentions “Re-deploy from reserve based on sentiment weighting,” but **no sentiment code** is implemented yet.
+
+**Available Infrastructure:**
+- `scripts/sentiment_scorer.py` contains `get_sentiment_adjusted_weights()`:
+  - Uses linear adjustment: `adj = base_w * (1.0 + 0.20 * sent)`
+  - Default sentiment weight = 20% (spec v1.0 mentioned 25%)
+  - Renormalizes weights to sum to 1.0
+
+**Gap:**
+- Sentiment is **not yet wired** into the Phase 6 rebalancer.
+- The `SENTIMENT_SYSTEM_SPEC.md` (v1.1) defines the data contract, but the rebalancing trigger does not consume `load_sentiment_scores()` or `get_sentiment_adjusted_weights()`.
+
+**Recommended Integration Point:**
+After the correlation-based reserve shift, apply sentiment-adjusted weights to the remaining allocations (or to the redeployment from reserve).
+
+**Owner:** Next integration task
+
+---
+
+## Updated Recommendation (2026-06-04)
+
+**Based on 12-month backtest comparison (2025-04-20 → 2026-04-19):**
+
+| Strategy                  | P&L    | Rebalances | Verdict |
+|---------------------------|--------|------------|---------|
+| Correlation-Triggered     | 0.0%   | 48         | Too conservative |
+| Daily Inverse-Vol         | -0.3%  | 404        | High fee drag |
+| **Hybrid**                | **+159%** | **27**  | **Recommended** |
+
+**Decision**: Adopt **Hybrid Rebalancer** as the official Phase 6 rebalancing method.
+
+### Hybrid Rebalancer Characteristics
+- Primary triggers: Sentiment delta + volatility spikes + drawdown
+- Minimum rebalance interval: 7 days (configurable)
+- Uses time-decayed sentiment from the restored sentiment system
+- Significantly lower fee drag than daily rebalancing
+- Maintains correlation awareness via `rolling_correlation.py` as a secondary signal
+
+### Files
+- Core implementation: `phase6/core/rebalancing/hybrid_rebalancer.py`
+- Integration point: `phase6/core/phase6_runner.py`
+
+This replaces the original pure correlation-triggered design with a more robust, regime-aware hybrid approach that performed materially better in recent market conditions.
+

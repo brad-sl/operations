@@ -10,7 +10,7 @@ import logging
 import time
 import json
 import requests
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 from dotenv import load_dotenv
 
 try:
@@ -128,6 +128,87 @@ class CoinbaseAdvancedClient:
         except Exception as e:
             self.logger.error(f"Order failed for {product_id}: {e}")
             return OrderResponse(success=False, error=str(e))
+
+    def place_stop_limit_sell(self, product_id: str, qty: float, stop_price: float, limit_price: float):
+        """
+        Places a stop-limit sell order via SDK.
+        """
+        import uuid
+        client_order_id = str(uuid.uuid4())
+        try:
+            # stop_limit_order_gtc_sell
+            order = self.client.stop_limit_order_gtc_sell(
+                client_order_id=client_order_id,
+                product_id=product_id,
+                base_size=str(qty),
+                stop_price=str(stop_price),
+                limit_price=str(limit_price)
+            )
+            self.logger.info(f"✅ SL Order placed: {product_id} qty={qty}, stop={stop_price}, limit={limit_price}, id={getattr(order, 'order_id', str(order))}")
+            return True
+        except Exception as e:
+            self.logger.error(f"SL Order failed for {product_id}: {e}")
+            return False
+
+    def cancel_order(self, order_id: str):
+        """Cancels a single order."""
+        try:
+            self.client.cancel_orders(order_ids=[order_id])
+            return True
+        except Exception as e:
+            self.logger.error(f"Cancel order failed: {order_id}, {e}")
+            return False
+
+    def get_product_metadata(self, product_id: str):
+        """Returns mock metadata for testing; normally fetches from API."""
+        return {"price_increment": "0.0001", "base_increment": "0.00000001"}
+
+    def _quantize_price(self, price: float, increment: str) -> str:
+        from decimal import Decimal, ROUND_DOWN
+        inc = Decimal(increment)
+        return str((Decimal(str(price)) // inc) * inc)
+
+    def _quantize_size(self, size: float, increment: str) -> str:
+        from decimal import Decimal, ROUND_DOWN
+        inc = Decimal(increment)
+        return str((Decimal(str(size)) // inc) * inc)
+
+    def get_accounts(self) -> Dict[str, Any]:
+        """Fetch all accounts from Coinbase using SDK. Returns shape expected by LivePortfolioManager."""
+        from typing import Any
+        try:
+            response = self.client.get_accounts()
+            accounts_list = []
+            if hasattr(response, 'accounts') and response.accounts:
+                for acc in response.accounts:
+                    # Normalize SDK Account object to dict
+                    currency = getattr(acc, 'currency', None)
+                    avail = getattr(acc, 'available_balance', None)
+                    if avail is not None:
+                        if hasattr(avail, 'value'):
+                            avail_dict = {'value': str(getattr(avail, 'value', '0'))}
+                        else:
+                            avail_dict = {'value': str(avail.get('value', '0')) if isinstance(avail, dict) else '0'}
+                    else:
+                        avail_dict = {'value': '0'}
+                    balance_val = getattr(acc, 'balance', None)
+                    if balance_val is None:
+                        balance_val = avail_dict.get('value', '0')
+                    accounts_list.append({
+                        'currency': currency,
+                        'available_balance': avail_dict,
+                        'balance': str(balance_val) if balance_val else '0',
+                        'asset': currency,  # alias
+                    })
+            self.logger.info(f"✅ get_accounts: fetched {len(accounts_list)} accounts")
+            return {'accounts': accounts_list}
+        except Exception as e:
+            self.logger.error(f"get_accounts failed: {e}")
+            return {'accounts': []}
+
+    def get_account_balances(self) -> Dict[str, Any]:
+        """Alias / alternative name expected by some managers. Same shape as get_accounts."""
+        return self.get_accounts()
 
 def main():
     """Quick test"""

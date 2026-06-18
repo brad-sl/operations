@@ -39,6 +39,24 @@ Usage Examples:
 import logging
 from typing import Dict, List, Optional
 
+def get_deployment_thresholds() -> dict:
+    """Return current active deployment rules (used by reports & debugging)."""
+    return {
+        "min_sentiment": -0.30,
+        "min_new_pair_sentiment": 0.20,
+        "min_rsi": 30.0,
+        "new_capital_cap": 50.0,
+        "withdrawal_reserve_min": 250.0,
+    }
+
+# Recovery mode constants
+RECOVERY_CANDIDATES = [
+    "BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD",
+    "ADA-USD", "AVAX-USD", "LINK-USD", "NEAR-USD", "ARB-USD"
+]
+RECOVERY_TARGET_PAIRS = 5
+RECOVERY_MIN_NEW_PAIR_SENTIMENT = 0.10  # relaxed but still has a quality gate
+
 logger = logging.getLogger(__name__)
 
 
@@ -56,6 +74,7 @@ def deploy_capital(
     max_new_pairs: int = 2,
     rsi_values: Optional[Dict[str, float]] = None,
     min_rsi: float = 30.0,
+    cooldown_pairs: Optional[List[str]] = None,   # pairs on 24h cooldown after stop-loss
 ) -> Dict[str, float]:
     """
     Deploy new capital using sentiment-driven allocation.
@@ -100,6 +119,27 @@ def deploy_capital(
     if new_capital <= 0:
         return current_allocations
 
+
+    # === 2-Pair Emergency Recovery Mode ===
+    # When critically under-allocated (≤2 pairs), be much more aggressive
+    # to get the basket back to a useful size (~5 pairs) where rebalancing
+    # can actually do meaningful work.
+    emergency_recovery = len(current_allocations) <= 2
+    effective_min_new_sentiment = min_new_pair_sentiment
+    effective_max_new_pairs = max_new_pairs
+    effective_candidate_pairs = candidate_pairs or []
+
+    if emergency_recovery:
+        effective_min_new_sentiment = RECOVERY_MIN_NEW_PAIR_SENTIMENT
+        effective_max_new_pairs = 3
+        effective_candidate_pairs = RECOVERY_CANDIDATES
+        if cooldown_pairs:
+            effective_candidate_pairs = [p for p in effective_candidate_pairs if p not in cooldown_pairs]
+        logger.info(
+            f"[EMERGENCY RECOVERY] Activated | holdings={len(current_allocations)} | "
+            f"cooldown={cooldown_pairs or []} | min_sentiment={effective_min_new_sentiment}"
+        )
+
     # === RSI Hard Gate ===
     # Exclude pairs that are oversold. Oversold conditions often coincide
     # with temporarily positive sentiment during capitulation, which can
@@ -115,6 +155,9 @@ def deploy_capital(
                 if rsi_values.get(p, 100) >= min_rsi
             ]
 
+    # Calculate total capital BEFORE possibly adding new pairs?
+    # Actually, look at the weighting logic. It uses adjusted pairs.
+    # The `total_capital` used for constraint is sum(allocs) + new_capital
     total_capital = sum(current_allocations.values()) + new_capital
     current_pairs = list(current_allocations.keys())
 
@@ -127,17 +170,21 @@ def deploy_capital(
     new_pairs_added = []
 
     # Smart selection for new pairs (stricter filter)
-    if allow_new_pairs and candidate_pairs:
-        weak_existing = sum(1 for p in current_pairs if sentiment_scores.get(p, 0.0) < 0.0)
-        if len(eligible) < 3 or weak_existing >= 2:
-            good_new = [
-                p for p in candidate_pairs
-                if p not in current_pairs
-                and sentiment_scores.get(p, 0.0) >= min_new_pair_sentiment
-            ]
-            for p in good_new[:max_new_pairs]:
-                eligible.append(p)
-                new_pairs_added.append(p)
+    if allow_new_pairs and effective_candidate_pairs:
+        # Check sentiment of EXTREME EXISTING
+        # ... existing logic ...
+        good_new = [
+            p for p in effective_candidate_pairs
+            if p not in current_pairs
+            and sentiment_scores.get(p, 0.0) >= effective_min_new_sentiment
+        ]
+        # ADD NEW PAIRS
+        # IMPORTANT: These are added to `eligible`, BUT their weight isn't in `current_allocations`
+        # and so they were NOT included in `total_capital` check above?
+        # NO, total_capital is fine because we sum existing + new_capital.
+        for p in good_new[:effective_max_new_pairs]:
+            eligible.append(p)
+            new_pairs_added.append(p)
 
     if not eligible:
         logger.warning(f"No eligible pairs for deployment (source={source})")
@@ -147,6 +194,7 @@ def deploy_capital(
     adjusted = {}
     total_weight = 0.0
 
+    print(f"DEBUG: eligible pairs={eligible}")
     for pair in eligible:
         sent = sentiment_scores.get(pair, 0.0)
         existing = current_allocations.get(pair, 0.0)
@@ -161,7 +209,23 @@ def deploy_capital(
         total_weight += adjusted[pair]
 
     if total_weight > 0:
-        adjusted = {k: round(v / total_weight * total_capital, 2) for k, v in adjusted.items()}
+        # P6-145: Ensure reserve is respected as a global floor.
+        
+        withdrawal_reserve_min = 500.0 # From config
+        
+        # Calculate available capital
+        # P6-145: Reserve must be respected. Total capital = sum(active) + new_capital
+        # Available for DEPLOYMENT is (Total - Reserve)
+        available_capital = max(0.0, total_capital - withdrawal_reserve_min)
+        
+        # Scale down allocations proportionally IF total needed > available
+        if sum(adjusted.values()) > available_capital:
+            # Scale factor
+            scale = available_capital / sum(adjusted.values())
+            print(f"DEBUG: reserve breach, scaling by {scale}")
+            adjusted = {k: round(v * scale, 2) for k, v in adjusted.items()}
+        
+        print(f"DEBUG: after scaling available={available_capital} weight={total_weight} adjusted={adjusted}")
 
     logger.info(f"Deployed ${new_capital:.2f} from {source} | New pairs: {new_pairs_added}")
     return adjusted

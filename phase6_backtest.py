@@ -24,6 +24,8 @@ import os
 sys.path.append(str(Path(__file__).parent))
 
 from phase6.core.sentiment_scorer import load_sentiment_scores
+from phase6.core.allocation_engine import compute_inverse_vol_allocations, rebalance_plan
+from phase6.core.sentiment_scorer import get_sentiment_adjusted_weights
 
 PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD"]
 

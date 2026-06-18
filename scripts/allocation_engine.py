@@ -85,9 +85,13 @@ def rebalance_plan(current_allocs: Dict[str, float], target_allocs_pct: Dict[str
     # Compute deltas
     deltas = {}
     for coin in coins:
-        cur = current_allocs.get(coin, 0.0)
+        cur_val = current_allocs.get(coin, 0.0)
+        if isinstance(cur_val, dict):
+            cur = cur_val.get("value_usd") or cur_val.get("usd_value") or 0.0
+        else:
+            cur = cur_val
         tgt = target_allocs_usd.get(coin, 0.0)
-        deltas[coin] = tgt - cur
+        deltas[coin] = tgt - float(cur)
     # Sort by magnitude of delta
     moves = []
     for coin, diff in deltas.items():
@@ -111,6 +115,10 @@ def rebalance_plan(current_allocs: Dict[str, float], target_allocs_pct: Dict[str
             plan.append({"from_coin": coin, "to_coin": 'USD', "amount_usd": min(-diff, total_capital * 0.25)})
         else:
             plan.append({"from_coin": 'USD', "to_coin": coin, "amount_usd": min(diff, total_capital * 0.25)})
+
+    # G4 funding constraint improvement: if caller wants to limit total buys to a deployable post-reserve amount
+    # (we support post-facto capping here for now; real runner should pass tighter targets)
+    # This makes the plan respect the caller having already decided the max new capital to deploy this cycle.
     return plan
 
 # Simple convenience for quick testing in interactive sessions

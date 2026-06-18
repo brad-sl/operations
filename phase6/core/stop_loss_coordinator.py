@@ -27,15 +27,36 @@ class StopLossCoordinator:
         self._reattach_positions: Dict[str, float] = {}
 
     def suspend_protective_orders(self, pairs: List[str]) -> Dict[str, Any]:
-        """Suspend (cancel) all active SL (and TP) orders for the given pairs."""
-        active_orders = self.sl_manager.detect_active_protective_orders(basket=pairs)
-        suspended = self.sl_manager.suspend_active_protective_orders(active_orders)
-        
-        # Track for context manager
-        self._suspended_orders = {pair: list(filter(lambda o: o['id'] in suspended.get(pair, []), orders))
-                                  for pair, orders in active_orders.items()}
-        
-        return {"canceled_ids": suspended}
+        """Suspend (cancel) all active SL orders for the given pairs.
+        Improved: better filtering for stop orders, uses get_open_stop_orders if available,
+        detailed logging, and safe handling of different Coinbase response shapes.
+        """
+        canceled = []
+        for pair in pairs:
+            try:
+                # Prefer dedicated stop fetch if present on client
+                if hasattr(self.client, "get_open_stop_orders"):
+                    orders = self.client.get_open_stop_orders(pair) or []
+                else:
+                    orders = self.client.get_open_orders(pair) or []
+                
+                for order in orders:
+                    order_type = str(order.get("order_type", "")).lower()
+                    has_stop = bool(order.get("stop_price")) or "stop" in order_type
+                    oc = order.get("order_configuration", {}) or {}
+                    has_stop_config = any(k in oc for k in ("stop_limit", "stop_market", "stop"))
+                    
+                    if has_stop or has_stop_config:
+                        oid = order.get("order_id") or order.get("id") or order.get("client_order_id")
+                        if oid:
+                            success = self.client.cancel_order(oid)
+                            canceled.append(oid)
+                            logger.info(f"[SL] Cancelled stop order {oid} for {pair} (success={success})")
+            except Exception as e:
+                logger.warning(f"suspend error for {pair}: {e}")
+
+        self._suspended_orders = {p: [] for p in pairs}
+        return {"canceled_ids": canceled, "count": len(canceled)}
 
     def reattach_protective_orders(self, positions: Dict[str, Any]) -> Dict[str, Any]:
         """

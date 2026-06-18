@@ -312,3 +312,44 @@ Restored RSI as the **primary signal driver** per the original Phase 6.01 archit
 
 **Commit**: `f08c6d3` — "feat: Integrate PriceHistoryManager + RSI calculation into Phase6Runner"
 
+
+
+## 9. Smoke Test & SL Verification Integration (Added 2026-06-17)
+
+**Smoke test script**: `scripts/run_shadow_rebalance_cycle.py`
+
+### Standard Deployment Procedure Update
+Before every major deployment (paper, sandbox, staging, production ramp):
+1. Run `python scripts/run_shadow_rebalance_cycle.py`
+2. Verify:
+   - suspend_reattach_context is entered ([CR-03] logs)
+   - SL attachment is exercised for any buys (post-fix in order_executor)
+   - Allocator produces a sensible plan using current RSI + Sentiment
+   - No crashes in coordinator or executor
+3. Review output for:
+   - Which pairs are sold/bought
+   - Re-attach confirmations
+   - Any warnings from stop price adjustments
+
+### Full End-to-End Smoke (Optional but Recommended for Live)
+User-approved: Place a **small live test trade** ($10-25) on a low-conviction pair (e.g. current weakest), 
+validate:
+- Order fills
+- SL attaches automatically (check logs + Coinbase UI)
+- Position appears in state
+- Then liquidate the test position (via runner or manual)
+- Confirm SL was suspended/reattached cleanly during liquidation
+
+Command for full smoke (when ready):
+  python scripts/run_shadow_rebalance_cycle.py --live-smoke --amount 15
+
+This test is now **mandatory gate** before any capital-increasing deployment.
+
+### Files Updated
+- phase6/core/order_executor.py (SL attach after buy)
+- phase6/core/exchange_client.py (improved get_open_orders + new get_open_stop_orders)
+- phase6/core/stop_loss_coordinator.py (better stop filtering)
+- scripts/run_shadow_rebalance_cycle.py (the smoke runner)
+- This doc
+
+**Last verified**: 2026-06-17 via shadow run (see logs in this execution).

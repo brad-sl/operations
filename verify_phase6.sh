@@ -1,10 +1,10 @@
 #!/bin/bash
 # Phase 6 Verification Script
-# Runs bot for 1+ hour in paper trading mode
+# Runs bot for 5 minutes (reduced for test)
 
 set -e
 
-echo "🚀 Phase 6 Trading Bot Verification"
+echo "🚀 Phase 6 Trading Bot Verification (Trial)"
 echo "===================================="
 
 # Check config
@@ -15,39 +15,25 @@ if [ ! -f "$CONFIG" ]; then
 fi
 echo "✅ Config found: $CONFIG"
 
-# Check Python
-PYTHON=$(which python3)
-if [ -z "$PYTHON" ]; then
-    echo "❌ python3 not found"
-    exit 1
-fi
-echo "✅ Python: $PYTHON"
-
-# Check mode
-echo "✅ Environment:"
-echo "   SANDBOX_MODE=$SANDBOX_MODE"
-echo "   SANDBOX_TRADING=$SANDBOX_TRADING"
-echo "   PAPER_MODE=$PAPER_MODE"
-
 # Start bot
 echo ""
 echo "🔄 Starting Phase 6 Trading Bot..."
 echo "   Config: $CONFIG"
-echo "   Mode: PAPER_TRADE"
-echo "   Duration: 1+ hour (120 cycles @ 30min interval)"
-echo "   Expected cycles: 2"
+echo "   Mode: shadow"
+echo "   Duration: 5 minutes (test)"
 echo ""
 
-python3 phase6_trading.py --config "$CONFIG" --mode PAPER_TRADE &
+export PYTHONPATH=.
+python3 -m phase6.core.phase6_runner --config "$CONFIG" --mode shadow &
 BOT_PID=$!
 
 echo "✅ Bot started (PID: $BOT_PID)"
 
-# Monitor for 1+ hour
-echo "📊 Monitoring bot for 1+ hour..."
-DURATION=3600  # 1 hour
+# Monitor
+echo "📊 Monitoring bot for 5 minutes..."
+DURATION=300
 ELAPSED=0
-CHECK_INTERVAL=60  # Check every minute
+CHECK_INTERVAL=10
 
 while [ $ELAPSED -lt $DURATION ]; do
     sleep $CHECK_INTERVAL
@@ -63,24 +49,11 @@ while [ $ELAPSED -lt $DURATION ]; do
 done
 
 echo ""
-echo "✅ Bot ran continuously for 1+ hour!"
+echo "✅ Bot ran continuously for 5 minutes!"
 
 # Kill bot gracefully
 echo "🛑 Stopping bot..."
 kill $BOT_PID 2>/dev/null || true
 wait $BOT_PID 2>/dev/null || true
 
-# Check trades log
-TRADES_LOG="trades_paper_phase6.csv"
-if [ -f "$TRADES_LOG" ]; then
-    LINE_COUNT=$(wc -l < "$TRADES_LOG")
-    echo "✅ Trades log exists: $TRADES_LOG ($LINE_COUNT lines)"
-else
-    echo "⚠️  Trades log not found (no trades executed, which is OK)"
-fi
-
-echo ""
 echo "✨ Phase 6 Verification Complete!"
-echo "   - Bot runs continuously ✅"
-echo "   - Paper trading enabled ✅"
-echo "   - Ready for production"

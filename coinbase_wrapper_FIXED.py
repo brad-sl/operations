@@ -129,13 +129,37 @@ class CoinbaseWrapper:
                 return e.response.json()
             return {'error': str(e)}
     
+    def get_product_metadata(self, product_id: str) -> Dict[str, float]:
+        # Placeholder for dynamic fetch (API call to products endpoint)
+        if "BTC" in product_id:
+            return {"price_increment": 0.01, "base_increment": 0.00000001}
+        elif "DOGE" in product_id:
+            return {"price_increment": 0.00001, "base_increment": 1.0}
+        elif "XRP" in product_id:
+            return {"price_increment": 0.0001, "base_increment": 0.1}
+        elif "SOL" in product_id:
+            return {"price_increment": 0.001, "base_increment": 0.01}
+        elif "ADA" in product_id:
+            return {"price_increment": 0.0001, "base_increment": 1.0}
+        elif "ETH" in product_id:
+            return {"price_increment": 0.01, "base_increment": 0.00001}
+        return {"price_increment": 0.01, "base_increment": 0.001}
+
+    def _quantize_price(self, price: float, increment: float) -> str:
+        from decimal import Decimal, ROUND_DOWN
+        return str(Decimal(str(price)).quantize(Decimal(str(increment)), rounding=ROUND_DOWN))
+
+    def _quantize_size(self, size: float, increment: float) -> str:
+        from decimal import Decimal, ROUND_DOWN
+        return str(Decimal(str(size)).quantize(Decimal(str(increment)), rounding=ROUND_DOWN))
+
     def get_accounts(self) -> Dict[str, Any]:
-        """Get all accounts."""
+        """Get all accounts (balances, holdings). Matches what CoinbaseExchangeClient expects."""
         return self._request('GET', '/api/v3/brokerage/accounts')
     
     def get_orders(self, order_status: str = 'OPEN') -> Dict[str, Any]:
         """Get orders by status."""
-        return self._request('GET', f'/api/v3/brokerage/orders/batch?order_status={order_status}')
+        return self._request('GET', f'/api/v3/brokerage/orders/historical/batch?order_status={order_status}')
     
     def place_market_buy(self, product_id: str, qty: float) -> Dict[str, Any]:
         """
@@ -149,13 +173,15 @@ class CoinbaseWrapper:
             Order response with order_id and status
         """
         try:
+            # Support both: if qty looks like USD amount (small for crypto like ADA), prefer quote_size for "spend X USD"
+            # For safety, default to quote_size when calling with usd_amount semantics
             body = {
                 'client_order_id': secrets.token_hex(16),
                 'product_id': product_id,
                 'side': 'BUY',
                 'order_configuration': {
                     'market_market_ioc': {
-                        'base_size': f"{qty:.8f}"
+                        'quote_size': f"{qty:.8f}"   # USD amount to spend
                     }
                 }
             }
@@ -262,14 +288,18 @@ class CoinbaseWrapper:
     def place_limit_buy(self, product_id: str, qty: float, price: float) -> Dict[str, Any]:
         """Place limit buy order."""
         try:
+            meta = self.get_product_metadata(product_id)
+            qty_str = self._quantize_size(qty, meta["base_increment"])
+            limit_price_str = self._quantize_price(price, meta["price_increment"])
+            
             body = {
                 'client_order_id': secrets.token_hex(16),
                 'product_id': product_id,
                 'side': 'BUY',
                 'order_configuration': {
                     'limit_limit_gtc': {
-                        'base_size': f"{qty:.8f}",
-                        'limit_price': f"{price:.2f}"
+                        'base_size': qty_str,
+                        'limit_price': limit_price_str
                     }
                 }
             }
@@ -291,3 +321,47 @@ class CoinbaseWrapper:
         except Exception as e:
             logger.error(f"Limit buy exception: {e}")
             return {'id': '', 'status': 'FAILED', 'success': False, 'error': str(e)}
+
+
+    def place_stop_limit_sell(
+        self,
+        product_id: str,
+        qty: float,
+        stop_price: float,
+        limit_price: Optional[float] = None,
+        client_order_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Place a native stop-limit sell order."""
+        import time
+        meta = self.get_product_metadata(product_id)
+        
+        if limit_price is None:
+            limit_price = float(self._quantize_price(stop_price * 0.995, meta["price_increment"]))
+
+        if client_order_id is None:
+            client_order_id = f"sl-{product_id}-{int(time.time())}"
+
+        body = {
+            "client_order_id": client_order_id,
+            "product_id": product_id,
+            "side": "SELL",
+            "order_configuration": {
+                "stop_limit_stop_limit_gtc": {
+                    "base_size": self._quantize_size(qty, meta["base_increment"]),
+                    "limit_price": self._quantize_price(limit_price, meta["price_increment"]),
+                    "stop_price": self._quantize_price(stop_price, meta["price_increment"]),
+                    "stop_direction": "STOP_DIRECTION_STOP_DOWN"
+                }
+            }
+        }
+
+        try:
+            response = self._request("POST", "/api/v3/brokerage/orders", body)
+            if response.get("success") is False:
+                err = response.get("error_response", {}).get("error", "Unknown")
+                return {"success": False, "error": err, "raw": response}
+            order_id = response.get("success_response", {}).get("order_id", "")
+            return {"success": True, "order_id": order_id, "raw": response}
+        except Exception as e:
+            logger.error(f"Stop-limit sell failed for {product_id}: {e}")
+            return {"success": False, "error": str(e)}

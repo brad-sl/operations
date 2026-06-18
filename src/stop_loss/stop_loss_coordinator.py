@@ -159,22 +159,22 @@ class StopLossCoordinator:
 
         try:
             yield suspend_summary  # allow caller to perform trades inside the window
-            # Success path
-            reattach_summary = self.reattach_protective_orders(new_positions)
+            # Success path: restore protective orders with new positions
+            self.reattach_protective_orders(new_positions)
             logger.info("[CR-03] Atomic suspend→rebalance→reattach cycle completed successfully")
         except Exception as exc:
             logger.error(f"[CR-03] Exception during protected window: {exc}", exc_info=True)
-            if self.require_atomic and original_suspended:
-                logger.warning("[CR-03] Attempting atomic rollback re-attach of original stops")
+            if self.require_atomic:
+                logger.warning("[CR-03] Attempting restoration re-attach on failure path to prevent orphaned orders")
                 try:
-                    # Best-effort restore using previously known entry prices if available
-                    # In practice caller should pass original positions; here we fallback
-                    self.reattach_protective_orders(self._reattach_positions or {})
+                    # Explicit restoration guarantee on failure path
+                    fallback = self._reattach_positions or new_positions or {}
+                    self.reattach_protective_orders(fallback)
                 except Exception as rollback_err:
-                    logger.critical(f"[CR-03] Rollback failed: {rollback_err}")
+                    logger.critical(f"[CR-03] Restoration on failure failed: {rollback_err}")
             raise
         finally:
-            # Clear transient state
+            # Always clear transient state; restoration already ensured on both success and exception paths
             self._suspended_orders.clear()
 
 

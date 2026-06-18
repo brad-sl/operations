@@ -14,6 +14,7 @@ Location: phase6/core/rebalancing/hybrid_rebalancer.py
 
 import json
 import logging
+from ..sentiment_scorer import load_sentiment_scores
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -21,7 +22,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CACHE_PATH = os.path.expanduser("~/.trading-bot/sentiment_cache.json")
+DEFAULT_CACHE_PATH = "/home/brad/projects/crypto-trading-bot/sentiment_cache.json"
 DEFAULT_CONFIG = {
     "sentiment_delta_threshold": 0.15,  # absolute change to trigger consideration
     "volatility_spike_threshold": 0.25,  # e.g. 25% vol increase
@@ -63,29 +64,14 @@ class HybridRebalancer:
         logger.info("HybridRebalancer initialized with thresholds: %s", self.config)
 
     def _load_sentiment(self, universe: List[str]) -> Dict[str, float]:
-        """Load latest sentiment scores (time-decayed already baked into cache)."""
-        scores = {}
+        """Canonical delegation for consistency with runner/scorer.
+        Uses load_sentiment_scores (full dynamic basket, X primary + real Reddit).
+        """
         try:
-            if not os.path.exists(self.cache_path):
-                logger.warning("Sentiment cache missing, neutral scores")
-                return {sym: 0.0 for sym in universe}
-
-            with open(self.cache_path, "r") as f:
-                data = json.load(f)
-
-            sentiment_data = data.get("sentiment", {})
-            for sym in universe:
-                entry = sentiment_data.get(sym, {})
-                # Support both flat score and nested structure from sentiment modules
-                if isinstance(entry, dict):
-                    score = entry.get("sentiment_score", entry.get("score", 0.0))
-                else:
-                    score = float(entry) if entry else 0.0
-                scores[sym] = float(score)
+            return load_sentiment_scores(universe=universe)
         except Exception as e:
-            logger.warning("Failed loading sentiment cache: %s", e)
-            scores = {sym: 0.0 for sym in universe}
-        return scores
+            logger.warning("Canonical load failed, neutral: %s", e)
+            return {sym: 0.0 for sym in universe}
 
     def _compute_sentiment_deltas(
         self, current_sentiment: Dict[str, float], previous_sentiment: Dict[str, float]
@@ -248,7 +234,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     rebal = HybridRebalancer()
     decision = rebal.evaluate(
-        universe=["BTC-USD", "ETH-USD", "XRP-USD"],
+        universe=["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD"],  # full basket for consistency
         previous_sentiment={"BTC-USD": 0.1, "ETH-USD": -0.05, "XRP-USD": 0.2},
         volatility={"BTC-USD": 0.3},
         drawdown=0.05,

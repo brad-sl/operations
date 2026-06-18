@@ -1,17 +1,17 @@
 [Unit]
-Description=Crypto Trading Bot Dashboard
+Description=Phase 6 Crypto Dashboard (DB-first, SQL views)
 After=network.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
 User=brad
-WorkingDirectory=/home/brad/.openclaw/workspace/operations/crypto-bot
-ExecStart=/usr/bin/python3 serve_dashboard_phase4d.py
+WorkingDirectory=/home/brad/projects/crypto-trading-bot
+ExecStart=/usr/bin/python3 serve_dashboard.py --mode live --port 8502
 Restart=always
 RestartSec=5
-StandardOutput=append:/home/brad/.openclaw/workspace/operations/crypto-bot/logs/dashboard.log
-StandardError=append:/home/brad/.openclaw/workspace/operations/crypto-bot/logs/dashboard.log
+StandardOutput=append:/home/brad/projects/crypto-trading-bot/logs/phase6_dashboard.log
+StandardError=append:/home/brad/projects/crypto-trading-bot/logs/phase6_dashboard.log
 
 [Install]
 WantedBy=default.target

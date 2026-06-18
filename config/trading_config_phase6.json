@@ -1,20 +1,70 @@
 {
-    "global_settings": {
-        "total_capital": 1000,
-        "pairs": ["BTC-USD", "XRP-USD", "ETH-USD", "DOGE-USD", "ADA-USD", "SOL-USD"],
-        "cycle_interval_seconds": 1800
+  "global_settings": {
+    "total_capital": 1000,
+    "pairs": [
+      "BTC-USD",
+      "ETH-USD",
+      "SOL-USD",
+      "XRP-USD",
+      "DOGE-USD",
+      "ADA-USD",
+      "AVAX-USD",
+      "LINK-USD",
+      "UNI-USD",
+      "ARB-USD",
+      "OP-USD"
+    ],
+    "cycle_interval_seconds": 1800,
+    "rebalance_cap_usd": 150.0,
+    "max_deployable_usd": 1000,
+    "use_new_allocator": false,
+    "rebalance_style": "permissive_deploy",
+    "trade_buffer_hours": 24,
+    "signal_freshness_enforced": true
+  },
+  "risk_management": {
+    "max_daily_loss_pct": 0.02,
+    "var_threshold": 0.015,
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": null,
+    "min_reserve_usd": 200.0,
+    "deploy_pct": 0.72
+  },
+  "phase_6_specific": {
+    "expansion_rules": {
+      "max_pairs": 12,
+      "correlation_threshold": 0.3,
+      "reserve_min_pct": 0.2
     },
-    "risk_management": {
-        "max_daily_loss_pct": 0.02,
-        "var_threshold": 0.015,
-        "stop_loss_pct": 0.03,
-        "take_profit_pct": null
-    },
-    "phase_6_specific": {
-        "expansion_rules": {
-            "max_pairs": 12,
-            "correlation_threshold": 0.3,
-            "reserve_min_pct": 0.2
-        }
-    }
+    "opportunity_pool": [
+      "BTC-USD",
+      "ETH-USD",
+      "SOL-USD",
+      "XRP-USD",
+      "DOGE-USD",
+      "ADA-USD",
+      "AVAX-USD",
+      "LINK-USD",
+      "UNI-USD",
+      "ARB-USD",
+      "OP-USD",
+      "MATIC-USD"
+    ]
+  },
+  "withdrawal_reserve": {
+    "min_reserve_usd": 200.0,
+    "max_deployable_usd": 800.0,
+    "alert_pct": 1.1,
+    "reserve_breach_action": "flag_and_adjust"
+  },
+  "scheduler": {
+    "daily_rebalance_time": "21:00"
+  },
+  "_live_deployment": {
+    "enabled": true,
+    "paper_test_passed": "2026-06-15",
+    "strategy": "permissive_deploy (old-style deploy_capital, tuned rebalance_cap_usd=150, rebalance_style=permissive_deploy)",
+    "mode_default": "live requires --confirm-live",
+    "dashboard_feed": "full chain: signals + deploy_capital (old-style) -> plan/execution -> _write_dashboard_cache fed by newly deployed old-style code in production"
+  }
 }

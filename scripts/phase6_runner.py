@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
 """
 Phase 6 Production Runner (Updated)
 
@@ -10,6 +14,7 @@ Key design decisions:
 - CLI defaults to "shadow" for safety
 - Config file can contain "mode" or "shadow_mode.default"
 - Future deployment scripts can set the mode based on PHASE6_ENV (dev/test/prod)
+- Sentiment comes exclusively from the canonical single-source scorer.
 """
 
 import argparse
@@ -23,7 +28,12 @@ from typing import Dict, List, Optional, Any
 
 from config_loader import ConfigLoader
 from allocation_engine import compute_inverse_vol_allocations, rebalance_plan
-from sentiment_scorer import load_sentiment_scores, get_sentiment_adjusted_weights
+from phase6.core.sentiment_scorer import (
+    load_sentiment_scores,
+    get_aged_sentiment_scores,
+    get_sentiment_adjusted_weights,
+    get_sentiment_freshness_minutes,
+)
 from stop_loss_manager import StopLossManager
 from exchange_client import CoinbaseExchangeClient
 from live_portfolio_manager import LivePortfolioManager
@@ -207,12 +217,15 @@ class Phase6Runner:
             logger.warning(f"Insufficient cash for Fresh Start: ${cash:.2f}")
             return
 
-        # Load sentiment and compute base inverse-vol weights, then adjust
+        # Load sentiment from the SINGLE canonical source and adjust weights
+        # PRODUCTION DEPLOY: Use aged scores with 60min exponential decay for conservative decisions
         dummy_vols = {p: 0.65 for p in self.FIXED_UNIVERSE}
         base_weights = compute_inverse_vol_allocations(dummy_vols)
-        sentiment_scores = load_sentiment_scores(universe=self.FIXED_UNIVERSE)
+        sentiment_scores = get_aged_sentiment_scores(universe=self.FIXED_UNIVERSE, half_life_minutes=60.0)
+        freshness_min = get_sentiment_freshness_minutes() or 0
         weights = get_sentiment_adjusted_weights(base_weights, sentiment_scores)
 
+        logger.info(f"Fresh Start using canonical aged sentiment (age={freshness_min}min, half_life=60min)")
         deploy_pct = self.config_dict.get("risk_management", {}).get("deploy_pct", 0.72)
 
         for pair, weight in weights.items():
@@ -233,7 +246,7 @@ class Phase6Runner:
         logger.info("Fresh start rebalance recorded.")
 
         # Send digest for fresh start too
-        details = "Fresh start deployment completed.\nPositions initialized based on inverse volatility."
+        details = "Fresh start deployment completed.\nPositions initialized based on inverse volatility + canonical sentiment."
         self._send_telegram_digest("Phase 6 Fresh Start", details)
 
     # ------------------------------------------------------------------

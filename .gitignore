@@ -22,8 +22,6 @@ data/state/*.json
 # Backups & Archives
 *.bak
 *.backup
-archive/
-archived/
 backups/
 
 # Config & Sensitive

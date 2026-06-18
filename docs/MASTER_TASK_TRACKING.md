@@ -1821,12 +1821,15 @@ User: "We are no longer working on phase5 artifacts. All trading functionality s
 - Interpreted as confirmation to fix the sentiment timing (see below) and any related.
 - Also, the live SL test was run and succeeded.
 
-**3. Sentiment timing fix (North American end-of-day)**:
-- twice-daily-trading-intelligence cron updated from "0 9,21 * * *" to "0 16,21 * * *" (4pm and 9pm PT).
-- Rationale: 9AM had weak unreliable signals. New schedule targets end-of-day NA sentiment trends (post-market activity + evening wrap-up), aligning with 21:00 rebalance anchor.
-- Sentiment fetch remains 30m (continuous).
-- Intelligence report script unchanged but now runs at better times for NA signals.
-- Verified via hermes cron update.
+**3. Sentiment timing clarification and fix (North American max sentiment depth at 9:00 pm)**:
+- Per user clarification on item 3: The intent was to keep it 9:00 pm (21:00 PT) to correspond with North America max Sentiment depth.
+- 9 AM execution time had weak/unreliable trading signals (as noted).
+- Updated twice-daily-trading-intelligence cron from "0 9,21 * * *" to "0 21 * * *" (only the 9pm PT slot).
+- This aligns with the 21:00 PT rebalance anchor for evening volume and NA max sentiment depth at end of day.
+- Sentiment fetch remains */30 * * * * (continuous).
+- Intelligence report script (phase6/scripts/generate_trading_intelligence_report.py) unchanged.
+- Verified: cron schedule now 0 21 * * *, next run at 21:00.
+- (Previous mistaken 16,21 update corrected.)
 
 **4. Test run**:
 - Ran `scripts/diagnose_coinbase_api.py --sl-test` with COINBASE_SL_TEST_CONFIRM=yes.

@@ -1707,3 +1707,34 @@ User request: "If there are still legacy phase 4 or earlier artifacts that can b
 - Archive/legacy-phase4-and-earlier/ now consolidates pre-Phase 6 artifacts (alongside prior Phase 5 archive).
 
 Updated per aggressive cleanup preference. Real data/paths preserved.
+
+---
+
+**Git Regimen + Full Portability (Hermes + Active Code) — 2026-06-18**
+
+**Goal**: Solid git hygiene so the entire Hermes agent environment + Phase 6 trading bot code can be moved to another machine with minimal effort.
+
+**Completed**:
+- Enhanced `.gitignore` (secrets, .env, *.pem, venv, __pycache__, logs, data/, backups, node_modules, etc.). Archive/ left trackable for reference.
+- Added `.gitattributes` for consistent LF normalization across machines.
+- Created `requirements.txt` (aiohttp, dotenv, pandas, etc. for Phase 6 runtime).
+- Refreshed `README.md`:
+  - Accurate Phase 6-only structure.
+  - Explicit "Moving to a New Machine" section.
+  - Hermes profile export/import instructions (`hermes profile export/import`).
+  - Git practices, secrets handling, clone + venv + config steps.
+- Cleaned git index: removed massive tracked `.venv/` pollution and `.env`.
+- Committed as: "chore: solid git regimen + portability for Hermes + Phase 6 code"
+- Legacy Phase 4/5 archives already in place from prior step.
+
+**How to move now (summary)**:
+1. `git clone <repo>`
+2. `python -m venv .venv && pip install -r requirements.txt`
+3. On old machine: `hermes profile export <crypto-profile> ...`
+4. Transfer tar.gz + keys securely.
+5. On new: `hermes profile import ... ; hermes auth ...`
+6. Edit `config/trading_config_phase6.json` + restore Coinbase key.
+
+**Result**: Clone + 5-10 min setup restores full working Hermes collaborator + trading bot (real data paths only).
+
+All changes respect existing Phase 6 as single source of truth.

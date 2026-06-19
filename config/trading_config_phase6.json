@@ -17,7 +17,7 @@
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 150.0,
     "max_deployable_usd": 1000,
-    "use_new_allocator": false,
+    "use_new_allocator": true,
     "rebalance_style": "permissive_deploy",
     "trade_buffer_hours": 24,
     "signal_freshness_enforced": true
@@ -58,13 +58,16 @@
     "reserve_breach_action": "flag_and_adjust"
   },
   "scheduler": {
-    "daily_rebalance_times": ["09:00", "21:00"]
+    "daily_rebalance_times": [
+      "09:00",
+      "21:00"
+    ]
   },
   "_live_deployment": {
     "enabled": true,
     "paper_test_passed": "2026-06-15",
-    "strategy": "permissive_deploy (old-style deploy_capital, tuned rebalance_cap_usd=150, rebalance_style=permissive_deploy)",
+    "strategy": "ARCH-4 new stack: evaluate_universe -> RotationStrategy allocator -> TradePlan -> _execute_trade_plan -> OrderExecutor (Coinbase place_market_buy/sell in live)",
     "mode_default": "live requires --confirm-live",
-    "dashboard_feed": "full chain: signals + deploy_capital (old-style) -> plan/execution -> _write_dashboard_cache fed by newly deployed old-style code in production"
+    "dashboard_feed": "full new chain: proposals + allocator decisions drive real orders when --mode=live"
   }
 }

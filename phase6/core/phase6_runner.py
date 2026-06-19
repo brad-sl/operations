@@ -204,316 +204,35 @@ class Phase6Runner:
         # New: Structured event logger
         self.db_path = "/home/brad/projects/crypto-trading-bot/data/phase6.db"
 
-    def persist_facts_to_db(self, facts: Dict[str, List[Dict[str, Any]]]):
-        """Persist raw facts to SQLite DB."""
+    def persist_facts_to_db(self, usd_balance: float, usdc_balance: float, holdings: dict, price_snapshot: dict):
+        """Persist raw facts to phase6.db for SQL VIEW consumption. Dual-write with JSON.
+        Called from _write_dashboard_cache. Real data only.
+        """
         import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance["ts"], balance["currency"], balance["balance"]))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding["ts"], holding["currency"], holding["amount"]))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price["ts"], price["pair"], price["price"]))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi["ts"], rsi["pair"], rsi["value"]))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent["ts"], sent["pair"], sent["score"]))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
+        from datetime import datetime
+        db_path = Path("data/phase6.db")
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+        conn = sqlite3.connect(str(db_path))
+        ts = datetime.utcnow().isoformat() + "Z"
 
-        self.event_log_path = Path("logs/phase6/events.jsonl")
-        self.db_path = "/home/brad/projects/crypto-trading-bot/data/phase6.db"
+        # Balances
+        conn.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance, available, hold, source) VALUES (?, 'USD', ?, ?, 0, 'live')", (ts, usd_balance, usd_balance))
+        if usdc_balance and usdc_balance > 0:
+            conn.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance, available, hold, source) VALUES (?, 'USDC', ?, ?, 0, 'live')", (ts, usdc_balance, usdc_balance))
 
-    def persist_facts_to_db(self, facts: Dict[str, List[Dict[str, Any]]]):
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
+        # Holdings (from LPM, which has verified totals)
+        for currency, amount in (holdings or {}).items():
+            if str(currency).upper() not in ("USD", "USDC") and amount > 0:
+                conn.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount, available, hold, source) VALUES (?, ?, ?, 0, ?, 'live')", (ts, str(currency).upper(), amount, amount))
 
-        # Scheduler
+        # Prices from snapshot
+        for pair, price in (price_snapshot or {}).items():
+            if isinstance(price, (int, float)) and str(pair).endswith("-USD"):
+                conn.execute("INSERT OR REPLACE INTO prices (ts, pair, price, source) VALUES (?, ?, ?, 'price_snapshot')", (ts, pair, price))
 
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
-
-        """Persist raw facts to SQLite DB."""
-        import sqlite3
-        conn = sqlite3.connect(self.db_path)
-        cursor = conn.cursor()
-        try:
-            for balance in facts.get("balances", []):
-                cursor.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance) VALUES (?, ?, ?)", 
-                               (balance['ts'], balance['currency'], balance['balance']))
-            for holding in facts.get("holdings", []):
-                cursor.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount) VALUES (?, ?, ?)", 
-                               (holding['ts'], holding['currency'], holding['amount']))
-            for price in facts.get("prices", []):
-                cursor.execute("INSERT OR REPLACE INTO prices (ts, pair, price) VALUES (?, ?, ?)", 
-                               (price['ts'], price['pair'], price['price']))
-            for rsi in facts.get("rsi", []):
-                cursor.execute("INSERT OR REPLACE INTO rsi_values (ts, pair, value) VALUES (?, ?, ?)", 
-                               (rsi['ts'], rsi['pair'], rsi['value']))
-            for sent in facts.get("sentiment", []):
-                cursor.execute("INSERT OR REPLACE INTO sentiment_scores (ts, pair, score) VALUES (?, ?, ?)", 
-                               (sent['ts'], sent['pair'], sent['score']))
-            conn.commit()
-        except Exception as e:
-            logger.error(f"DB persistence failed: {e}")
-        finally:
-            conn.close()
-
-        # Scheduler
+        conn.commit()
+        conn.close()
+        self.logger.info(f"[DB] Facts persisted to {db_path} at {ts}")
         scheduler = self.config_dict.get("scheduler", {})
         rebalance_cfg = scheduler.get("daily_rebalance_times") or [scheduler.get("daily_rebalance_time", "09:00")]
         self.daily_rebalance_times = rebalance_cfg if isinstance(rebalance_cfg, list) else [rebalance_cfg]

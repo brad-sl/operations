@@ -85,6 +85,7 @@ class RotationStrategy:
                 scores[p.pair] = p.score
         return scores
 
+
     def decide(
         self,
         proposals: List[Proposal],
@@ -98,6 +99,13 @@ class RotationStrategy:
         Returns TradePlan with actions.
         """
         plan = TradePlan(strategy_used="rotation_catch_wave")
+        # Aggressive Recovery Logic (ARCH-2)
+        emergency_recovery = len(current_allocs) <= 2
+        active_pair_count = sum(1 for v in current_allocs.values() if v > self.config.min_move_usd)
+        if active_pair_count <= 2:
+            emergency_recovery = True
+            logger.info("[ARCH-2] Emergency Recovery Mode Active (Low Basket)")
+
         scores = self._proposals_to_scores(proposals)
 
         # Current weights from allocs
@@ -108,15 +116,23 @@ class RotationStrategy:
         weak_pairs = []
         strong_pairs = []
         for p in proposals:
+            # Aggressive RECOVERY: relax SELL/ROTATE_OUT gates
             if p.side in ("ROTATE_OUT", "SELL") or (p.side == "HOLD" and p.score < 0.4):
                 if current_allocs.get(p.pair, 0) > 0:
-                    weak_pairs.append(p.pair)
-            elif p.side in ("ROTATE_IN", "BUY") and p.score > 0.55:
+                    if not emergency_recovery or p.score < 0.2: # Only sell if very weak in recovery
+                        weak_pairs.append(p.pair)
+            
+            # Aggressive RECOVERY: relax BUY gates
+            min_buy_score = 0.3 if emergency_recovery else 0.55
+            if p.side in ("ROTATE_IN", "BUY") and p.score > min_buy_score:
                 strong_pairs.append((p.pair, p.score))
 
         # Sort strong by score
         strong_pairs.sort(key=lambda x: x[1], reverse=True)
-        top_strong = [p for p, _ in strong_pairs[:2]]  # limit to 1-2 for lower churn
+        # Limit aggressive expansion
+        max_strong = 3 if emergency_recovery else 2
+        top_strong = [p for p, _ in strong_pairs[:max_strong]]
+
 
         # Hard stops (simplified: if we had recent prices we could check drawdown; here use proposal metadata if present)
         for pair in list(current_allocs.keys()):

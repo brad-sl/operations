@@ -32,3 +32,13 @@ cb_key.pem
 .hermes-state/
 .devvit/
 .nodehost/
+
+# Additional secret hardening (P0)
+# All keys, tokens, PEMs must stay out of repo
+*.key
+*.pem
+!**/*cert*.pem
+!**/*cacert*.pem
+secrets/
+*.p12
+*.pfx

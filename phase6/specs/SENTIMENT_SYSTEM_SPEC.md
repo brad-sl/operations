@@ -1,220 +1,158 @@
-# Sentiment System Specification
+# Sentiment System Specification (Current Implementation)
 
-**Version:** 1.1  
-**Status:** Draft  
-**Date:** 2026-05-31  
-**Owner:** Crypto Trading Bot Team
+**Version:** 2.0 (Current Production)  
+**Status:** Implemented and Active  
+**Date:** 2026-07-01 (Updated from v1.1 2026-05-31)  
+**Owner:** Crypto Trading Bot Team  
+**Canonical Module:** `phase6/core/sentiment_scorer.py`
 
-## Changelog (v1.1)
-- Reddit now prefers **native Apify sentiment fields** (`sentiment_score_normalized`, `sentiment_label`, `sentiment_confidence`) when available.
-- Standardized production parameters: `maxPosts: 30`, `scrapeComments: false`.
-- VADER remains the fallback engine for `DirectRedditFetcher` only.
-- Updated recommended Reddit actor parameters.
+## Changelog (v2.0)
+- **Major evolution from v1.1**:
+  - X is now the **primary** source with rich metadata (post_count, confidence, buzz_factor) and statistical significance damping.
+  - Reddit is **conditional** (loaded from shared DB `sentiment_scores` table only when real posts > 0; empty Apify results treated as "no signal", not neutral 0.0).
+  - Added **Polymarket regime bias** as a global/strategic layer (volume-weighted, polarity-adjusted from crypto/macro markets).
+  - Unified aging/decay, combined RSI+Sentiment loaders, and influence stack logging.
+  - Data primarily in `data/phase6.db` (Reddit/RSI) + `data/state/x_sentiment_cache.json` + `sentiment_cache.json`.
+  - Strict path management via `phase6/core/paths.py` and `docs/DATA_FLOW_AND_LOCATIONS.md`.
+  - Dynamic universe support (12+ pairs).
+  - Integrated into intelligence reports, allocator, influence stack, and evaluation.
+- Deprecated/updated: Separate `phase6/core/sentiment/fetch_*` assumptions; VADER fallback de-emphasized; unified scorer is canonical.
+- Polymarket added as third major signal (regime tilt, not per-pair).
 
 ## 1. Purpose
+The Sentiment System provides normalized, aged, multi-source sentiment scores for trading decisions. It combines:
+- **X (Twitter)**: Primary, high-frequency tactical signals with volume/buzz metadata.
+- **Reddit (Apify)**: Conditional confirmatory signals (only when real data returned).
+- **Polymarket**: Strategic global regime bias (risk-on / risk-off tilt).
 
-This document defines the **Sentiment System** as a standalone, reusable feature. It provides normalized sentiment scores for multiple cryptocurrency pairs by combining signals from X (Twitter) and Reddit.
+All consumers (runner, allocator, reports, backtests, dashboards) **must** go through the canonical scorer to avoid duplication and ensure data hygiene.
 
-The system is designed to be called by multiple downstream consumers (backtesting, paper trading, live trading, monitoring, and dashboards) without duplication of logic.
-
-## 2. Architecture Overview
+## 2. Current Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Sentiment System                          │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐     ┌──────────────────────────────┐  │
-│  │ X Sentiment      │     │ Reddit Sentiment             │  │
-│  │ fetch_x_         │     │ fetch_reddit_                │  │
-│  │ sentiment.py     │     │ sentiment.py                 │  │
-│  └────────┬─────────┘     └──────────────┬───────────────┘  │
-│           │                              │                   │
-│           └──────────────┬───────────────┘                   │
-│                          ▼                                   │
-│                 ┌──────────────────────┐                     │
-│                 │   Sentiment Scorer   │                     │
-│                 │ sentiment_scorer.py  │                     │
-│                 └──────────┬───────────┘                     │
-│                            │                                 │
-│                 ┌──────────▼──────────┐                      │
-│                 │   Sentiment Cache   │                      │
-│                 │  + Decay / Staleness│                      │
-│                 └─────────────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Sentiment + Regime System                      │
+├─────────────────────────────────────────────────────────────────────┤
+│  X Sentiment (primary)         Reddit (conditional)     Polymarket   │
+│  fetch_x + run_full_sentiment  Apify → DB               regime bias  │
+│  x_sentiment_cache.json        sentiment_scores table   (overlay)    │
+│         │                              │                     │        │
+│         └──────────────────────┬───────┴─────────────────────┘        │
+│                                ▼                                      │
+│                    phase6/core/sentiment_scorer.py                    │
+│  - load_sentiment_scores()     (X + conditional Reddit + fallback)   │
+│  - get_aged_sentiment_scores() (60min HL exponential decay)          │
+│  - load_latest_sentiment_for_basket() ( + RSI from DB)               │
+│  - get_sentiment_adjusted_weights()                                  │
+│  - Rich X details + damping                                          │
+│                                │                                      │
+│         ┌──────────────────────┴──────────────────────┐              │
+│         ▼                                             ▼              │
+│  Intelligence Reports / Influence Stack     Allocator / Evaluation    │
+│  (X + Reddit + Polymarket logged)           (weights, proposals)      │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
-## 3. Core Components
+Key files (per `phase6/core/paths.py` + DATA_FLOW):
+- Scorer: `phase6/core/sentiment_scorer.py`
+- Paths: `phase6/core/paths.py` (SENTIMENT_CACHE, X_SENTIMENT_CACHE, PHASE6_DB)
+- Fetch/Collector: `run_full_sentiment_v3.py` (canonical writer)
+- Reddit fetch: `fetch_reddit_sentiment.py` (Apify)
+- X fetch: `fetch_x_sentiment.py` / integrated in v3 runner
+- Polymarket: `hermes/skills/crypto_analyst/polymarket_overlay.py` (loaded dynamically)
+- Reports: `phase6/scripts/generate_trading_intelligence_report.py`
+- Allocator: `phase6/core/allocator.py`
 
-| Component                    | File                                      | Responsibility |
-|-----------------------------|-------------------------------------------|----------------|
-| X Sentiment Fetcher         | `phase6/core/sentiment/fetch_x_sentiment.py` | Fetch and score X/Twitter signals |
-| Reddit Sentiment Fetcher    | `phase6/core/sentiment/fetch_reddit_sentiment.py` | **Primary: Native Apify fields** (preferred) |
-| Direct Reddit Fetcher       | `phase6/core/sentiment/direct_reddit_fetcher.py` | VADER fallback when native fields missing |
-| Sentiment Scorer            | `phase6/core/sentiment/sentiment_scorer.py` | Combine, normalize, apply decay |
-| Cache / Aggregator          | `phase6/core/sentiment/sentiment_cache.py` (future) | Unified storage & staleness |
-| Entry Point / CLI           | `phase6/scripts/fetch_sentiment.py` (future) | Unified CLI for all consumers |
+## 3. Core Components (Implemented)
 
-## 4. Public Interface
+| Component                  | Location                                      | Responsibility |
+|----------------------------|-----------------------------------------------|----------------|
+| Canonical Scorer           | `phase6/core/sentiment_scorer.py`            | Single source of truth for scores |
+| X Loader + Details         | `load_x_sentiment_scores()`, `load_x_sentiment_details()` | Rich metadata + low-signal damping |
+| Reddit Loader (conditional)| `_load_reddit_from_db()`                     | DB query; only real (posts > 0) results |
+| Aging / Decay              | `get_aged_sentiment_scores()`                | Exponential decay (default 60min HL) |
+| Combined Basket Loader     | `load_latest_sentiment_for_basket()`         | Sentiment + RSI from shared DB |
+| Weight Adjustment          | `get_sentiment_adjusted_weights()`           | 20% default influence |
+| Polymarket Regime          | `polymarket_overlay.get_polymarket_regime_bias()` | Volume-weighted, polarity-adjusted global bias |
+| Influence Stack            | Reports + TradeLedger                        | Logs X + Reddit + Polymarket per cycle |
+| Freshness / Timestamp      | `get_sentiment_freshness_minutes()`          | Staleness detection |
 
-All downstream systems should interact with the sentiment system through a single, stable interface.
+## 4. Data Model & Output
 
-### Recommended Calling Pattern (Future)
-
-```python
-from phase6.core.sentiment import get_sentiment_scores
-
-scores = get_sentiment_scores(
-    pairs=["BTC-USD", "ETH-USD", "SOL-USD"],
-    max_age_minutes=60
-)
+**Per-pair sentiment** (from `load_sentiment_scores`):
+```json
+{
+  "BTC-USD": 0.42,   // normalized -1.0 to +1.0 (can be aged)
+  ...
+}
 ```
 
-### Current Interim Interface
-
-Until the unified entry point is built, consumers may import directly from:
-
-- `sentiment_scorer.load_sentiment_scores()`
-- `RedditSentimentFetcher().fetch_pair_sentiment()`
-- `XSentimentFetcher().fetch_pair_sentiment()`
-
-## 5. Data Model
-
-### Sentiment Score Output
-
+**Rich X details**:
 ```json
 {
   "BTC-USD": {
-    "score": 0.42,
-    "confidence": 0.75,
-    "source_breakdown": {
-      "x": 0.55,
-      "reddit": 0.28
-    },
-    "timestamp": "2026-05-29T18:00:00Z",
-    "age_minutes": 12
+    "sentiment": 0.42,
+    "post_count": 47,
+    "buzz_factor": 1.23,
+    "confidence": 0.78
   }
 }
 ```
 
-### Rules
-- `score`: Normalized value between `-1.0` and `1.0`
-- `confidence`: 0.0 – 1.0 (based on volume + signal strength)
-- All timestamps must be in UTC (ISO 8601)
+**Polymarket regime** (global):
+```json
+{
+  "risk_on_bias": 0.5,
+  "num_markets": 33,
+  "total_vol": 35642986,
+  "confidence": 1.0,
+  "events": [...],
+  "note": "..."
+}
+```
 
-## 6. Naming & Consistency Rules
+**Aged scores** apply `decay = 2 ** (-age_minutes / half_life)`.
 
-- All files related to sentiment live under `phase6/core/sentiment/`
-- Fetchers are named `fetch_<platform>_sentiment.py`
-- Public functions use `get_` or `load_` prefixes
-- Cache files use the pattern `<platform>_sentiment_cache.json`
-- Never duplicate sentiment logic across files
+## 5. Key Rules & Behavior (Current)
 
-## 7. Multi-Pair Efficiency Requirements
+- **X primary**: Always attempted first.
+- **Reddit conditional**: Only used if real data returned from Apify/DB. Empty results → leave as 0.0 (no false neutral).
+- **Statistical damping** on weak X signals (low post_count or confidence).
+- **Aging default**: 60-minute half-life (conservative for trading).
+- **Dynamic universe**: 12-pair basket (config-driven).
+- **Shared state**: DB for cross-trader Reddit/RSI; state/ JSON for X.
+- **0.0 contract**: Means "no usable signal" or neutral after damping. Consumers should apply freshness gates.
+- **Polymarket**: Strategic (slow, global) vs per-pair tactical. Currently often lands neutral when crowd expectations balanced.
 
-- The system must support fetching sentiment for 5–20 pairs in a single call efficiently.
-- Rate limiting and request batching must be respected (especially for Reddit).
-- Parallel fetching is allowed but must include proper backoff.
+## 6. Caching, Staleness & Observability
 
-## 8. Fallback & Error Handling
+- Max recommended age: 60 minutes (matches decay).
+- Freshness helpers exposed for loops/reports.
+- Logging in scorer: basket size, aging applied, source notes.
+- Influence snapshots logged per intelligence cycle.
 
-1. **Reddit**:
-   - **Primary**: Apify actor with native sentiment fields (`sentiment_analysis: true`)
-   - **Fallback**: `DirectRedditFetcher` using VADER on raw text
-   - Final fallback: Return `0.0` with low confidence
+## 7. Integration Points (Current)
 
-2. **X/Twitter**:
-   - Primary path only (no fallback defined yet)
+- **Intelligence Reports**: Full X + Reddit + Polymarket + aged scores + influence.
+- **Allocator / RotationStrategy**: Sentiment in proposals/evaluation; regime_mult from Polymarket.
+- **Runner & Rebalance**: `load_latest_sentiment_for_basket()`.
+- **Tests**: Heavy isolation tests using real caches.
+- **Dashboards / Briefs**: Formatted labels.
 
-3. **General**:
-   - Never raise unhandled exceptions to callers
-   - Always return a valid score object (even if neutral)
+## 8. Advantages of Current Implementation vs Original Spec
 
-## 9. Caching & Staleness
+- Richer X metadata + damping prevents noise.
+- Conditional Reddit avoids polluting with empty results.
+- Polymarket adds macro regime context.
+- DB + strict paths improve sharing and drift resistance.
+- Aging + combined RSI/sentiment loaders are production-ready.
+- Influence stack enables attribution analysis.
 
-- Default maximum age: **60 minutes**
-- Scores older than the threshold should trigger a refresh
-- Cache must support per-pair staleness
-
-## 10. Logging & Observability
-
-- All fetchers must log at minimum:
-  - Start of fetch
-  - Number of posts/signals retrieved
-  - Final score per pair
-  - Which source was used (Native Apify vs VADER Direct)
-- Use structured logging where possible
-
-## 11. Integration Points
-
-This system is intended to be consumed by:
-
-- Phase 6 Backtester (`phase6_backtest.py`)
-- Phase 6 Runner (`phase6_runner.py`)
-- Capital allocation engine
-- Monitoring / alerting systems
-- Future dashboard
+**Next Steps / Gaps to Address**:
+- Full unified `get_sentiment_scores(pairs, max_age_minutes)` facade.
+- More aggressive use of Polymarket specific probabilities (not just bias).
+- Historical momentum from Polymarket price history.
+- Continuous monitoring of signal quality (post count trends, Reddit hit rate).
 
 ---
-
-**Next Steps After Spec Approval**
-
-1. Clean up `fetch_reddit_sentiment.py` to prefer native Apify fields
-2. Improve `DirectRedditFetcher` reliability (VADER fallback)
-3. Build unified entry point (`get_sentiment_scores`)
-4. Wire sentiment into the Phase 6 rebalancing logic
-
-## 5.1 Sentiment Scoring Methodology (Reference Implementation)
-
-The system uses the scoring logic defined in `phase6/core/sentiment/sentiment_scorer.py`.
-
-### Core Rules
-
-1. **Time Decay**
-   - X (Twitter) signals use a **15-minute half-life**
-   - Reddit signals use a **60-minute half-life**
-   - Exponential decay is applied so older signals lose influence
-
-2. **Signal Combination**
-   - Raw sentiment values are loaded from the respective caches
-   - Scores are combined with appropriate weighting
-   - The final `combined` score is stored in the returned object
-
-3. **Allocation Adjustment**
-   - The function `get_sentiment_adjusted_weights()` applies sentiment to base portfolio weights
-   - Current implementation uses **20% sentiment influence** (code default):
-     ```python
-     adj = base_w * (1.0 + 0.20 * sent)
-     ```
-
-4. **Fallback Behavior**
-   - If no recent data exists for a pair, the score defaults to `0.0`
-   - Stale data beyond configured thresholds is treated as neutral
-
-### Scoring Responsibility
-
-- **Fetchers** are responsible for:
-  - Querying the source (X or Reddit)
-  - Producing a **raw sentiment value** per pair (native Apify or VADER)
-  - Writing the result to the respective cache file
-
-- **Sentiment Scorer** (`sentiment_scorer.py`) is the **single component** responsible for:
-  - Loading raw values from both caches
-  - Applying time decay
-  - Combining X and Reddit signals into a final score
-  - Exposing `load_sentiment_scores()` and `get_sentiment_adjusted_weights()`
-
-No other component should perform scoring logic.
-
-### Text Analysis Engine
-
-**Primary**: Native Apify sentiment fields (when `sentiment_analysis: true`)
-
-**Fallback**: VADER (Valence Aware Dictionary and sEntiment Reasoner) in `DirectRedditFetcher`
-
-**Rationale**
-- Native Apify fields are now reliable and higher quality for short social text.
-- VADER remains available as a robust fallback for direct scraping.
-
-**Requirements**
-- Reddit fetcher must first check for native `sentiment_score_normalized`.
-- Only fall back to VADER when native fields are missing or low confidence.
+*This document now reflects the live system as of July 2026. The v1.1 draft is preserved in .bak.*

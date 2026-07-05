@@ -8,7 +8,7 @@
 - **Divergent decision logic**: 
   - `phase6/core/phase6_runner.py` computes signals every cycle via `SignalGenerator` but **only logs them** (never turns BUY/SELL into trades).
   - All live capital deployment and trades flow exclusively through rebalance paths: `_perform_daily_rebalance()` + `deploy_capital()` (scripts/) + `rebalance_plan()` (allocation_engine).
-  - `HybridRebalancer` (rebalancing/hybrid_rebalancer.py) is a narrow *trigger* (sentiment deltas + thresholds + rule-based AI filter). Its `generate_rebalance_plan` is a simple stub that is **never used** by the runner. Runner always bypasses it for real allocation.
+  - `HybridRebalancer` (rebalancing/hybrid_rebalancer.py) is a narrow *trigger* (sentiment deltas + thresholds + rule-based AI filter). Its `generate_rebalance_plan` was retired in P4-03 (thin compat shim only). Runner/ARCH-4 uses Allocator + RebalanceStrategy exclusively for plans. HybridRebalancer remains narrow *trigger* only.
   - Fresh Start has its own (slightly different) inverse-vol + sentiment weight calc.
   - `opportunity_scanner.py` produces ranked proposals (shadow-only, to jsonl) with its own scoring (RSI + sentiment velocity + momentum/vol + diversification). Not wired to anything that trades.
 - **Monolithic runner**: 1300+ lines handling scheduling, data refresh, SL coordination (CR-03), execution, dashboard, state, *and* the only active trade logic. Hard to test, optimize, or A/B.

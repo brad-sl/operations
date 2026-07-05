@@ -24,8 +24,9 @@ from phase6.core.sentiment_scorer import load_sentiment_scores
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
-FIXED_UNIVERSE = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
+from phase6.core.paths import load_trading_basket
+FIXED_UNIVERSE = load_trading_basket()  # central 11-pair (TESTS-01)
 
 def test_hybrid_trigger_vs_time():
     print("=== ARCH-0: Hybrid Trigger Isolation Test ===")
@@ -69,7 +70,7 @@ def test_hybrid_trigger_vs_time():
         },
         "real_sentiment": {p: round(s,4) for p,s in real_sentiment.items()},
         "time_based_likely": time_based,
-        "note": "In runner: rebalance_needed = self._should_rebalance(now) or self._evaluate_hybrid_rebalance(). Hybrid is secondary. generate_rebalance_plan in hybrid is a thin stub (not the primary plan producer)."
+        "note": "In runner: rebalance_needed = self._should_rebalance(now) or self._evaluate_hybrid_rebalance(). Hybrid is secondary trigger only (P4-03). generate_rebalance_plan retired; plans via Allocator + RebalanceStrategy (ARCH-4 canonical)."
     }
     out_path = PROJECT_ROOT / "data/state/arch0_isolation_hybrid_trigger_evidence.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -78,7 +79,7 @@ def test_hybrid_trigger_vs_time():
     print(f"\nEvidence written to {out_path}")
 
     print("\nConclusion: Hybrid trigger is a secondary 'or' condition. Primary driver remains calendar time + the deploy_capital path.")
-    print("Hybrid can produce RebalanceDecision, but its generate_rebalance_plan is minimal and often bypassed.")
+    print("Hybrid can produce RebalanceDecision (trigger only). generate_rebalance_plan retired per P4-03; no longer used or primary. Plans via Allocator/RebalanceStrategy.")
 
     return evidence
 

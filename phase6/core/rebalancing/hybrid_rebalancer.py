@@ -12,6 +12,9 @@ reliable across regimes.
 Location: phase6/core/rebalancing/hybrid_rebalancer.py
 """
 
+from ..paths import PROJECT_ROOT  # per DATA_FLOW_AND_LOCATIONS.md
+
+
 import json
 import logging
 from ..sentiment_scorer import load_sentiment_scores
@@ -22,7 +25,7 @@ from typing import Dict, List, Optional, Any, Tuple
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_CACHE_PATH = "/home/brad/projects/crypto-trading-bot/sentiment_cache.json"
+DEFAULT_CACHE_PATH = str(PROJECT_ROOT / "data/state/sentiment_cache.json")  # per DATA_FLOW
 DEFAULT_CONFIG = {
     "sentiment_delta_threshold": 0.15,  # absolute change to trigger consideration
     "volatility_spike_threshold": 0.25,  # e.g. 25% vol increase
@@ -50,11 +53,15 @@ class HybridRebalancer:
     """
     Hybrid scheduler: hard thresholds first, then AI (rule-based) filter.
 
-    Usage:
-        rebalancer = HybridRebalancer(config)
-        decision = rebalancer.evaluate(current_portfolio, market_data)
-        if decision.should_rebalance:
-            plan = rebalancer.generate_plan(...)
+    NARROW ROLE (post P4-03): This is ONLY the hybrid *trigger* for rebalance decisions
+    (via .evaluate() returning RebalanceDecision). It is secondary to calendar _should_rebalance
+    in the runner.
+
+    Plan generation is retired here. Canonical plans flow exclusively through
+    Allocator + RebalanceStrategy (or RotationStrategy) -> TradePlan in ARCH-4,
+    which uses allocation_engine.rebalance_plan under the hood.
+
+    No generate_rebalance_plan; callers must use the unified allocator path.
     """
 
     def __init__(self, config: Optional[Dict] = None, cache_path: str = DEFAULT_CACHE_PATH):
@@ -212,22 +219,29 @@ class HybridRebalancer:
         target_weights: Dict[str, float],
         total_capital: float,
         min_move_usd: float = 25.0,
+        proposals: Optional[List[Any]] = None,
+        trade_plan: Optional[Any] = None,
     ) -> List[Dict[str, Any]]:
         """
-        Thin wrapper around allocation_engine style planning.
-        Can be enhanced with sentiment-adjusted targets later.
+        THIN DELEGATE (P4-03 retired stub).
+        Rebalance plans flow through Allocator + RebalanceStrategy.
+        Hybrid only for .evaluate() trigger.
+        This is compat shim only; no dummy vol logic.
         """
-        # For now, simple delta-based plan (import from allocation_engine in real use)
-        plan = []
-        target_usd = {k: v * total_capital for k, v in target_weights.items()}
-        for coin, tgt in target_usd.items():
-            cur = current_allocs.get(coin, 0.0)
-            diff = tgt - cur
-            if abs(diff) >= min_move_usd:
-                action = "BUY" if diff > 0 else "SELL"
-                plan.append({"pair": coin, "action": action, "usd_amount": round(abs(diff), 2)})
-        return plan
-
+        logger.warning("[P4-03] generate_rebalance_plan on HybridRebalancer retired. Use Allocator/RebalanceStrategy for plans.")
+        try:
+            from ..allocation_engine import rebalance_plan as engine_rebalance_plan
+            if trade_plan is not None:
+                if hasattr(trade_plan, "actions"):
+                    acts = getattr(trade_plan, "actions", []) or []
+                    return list(acts)
+                if isinstance(trade_plan, (list, tuple)):
+                    return list(trade_plan)
+            target_pct = {k: float(v) * 100 for k, v in (target_weights or {}).items()}
+            return engine_rebalance_plan(current_allocs or {}, target_pct, total_capital, min_move_usd)
+        except Exception as e:
+            logger.warning("shim failed: %s", e)
+            return []
 
 # Convenience for quick testing
 if __name__ == "__main__":

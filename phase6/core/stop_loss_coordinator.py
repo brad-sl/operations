@@ -14,7 +14,12 @@ import logging
 from contextlib import contextmanager
 from typing import Dict, Any, List, Optional
 
-from phase6.core.sl_preflight import sanitize_reattach_order_id
+from phase6.core.sl_preflight import (
+    sanitize_reattach_order_id,
+    order_configuration_is_stop,
+    cancel_open_stops_for_pair,
+    poll_available_after_cancel,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -84,12 +89,10 @@ class StopLossCoordinator:
                     orders = self.client.get_open_orders(pair) or []
                 
                 for order in orders:
-                    order_type = str(order.get("order_type", "")).lower()
-                    has_stop = bool(order.get("stop_price")) or "stop" in order_type
                     oc = order.get("order_configuration", {}) or {}
-                    has_stop_config = any(k in oc for k in ("stop_limit", "stop_market", "stop"))
+                    has_stop = order_configuration_is_stop(oc) or bool(order.get("stop_price")) or "stop" in str(order.get("order_type", "")).lower()
                     
-                    if has_stop or has_stop_config:
+                    if has_stop:
                         oid = order.get("order_id") or order.get("id") or order.get("client_order_id")
                         if oid:
                             success = self.client.cancel_order(oid)
@@ -135,6 +138,7 @@ class StopLossCoordinator:
                 amount = float(value) if value else 0
                 entry_for_calc = 0
                 intended_entry = 0
+                current_p = 0.0
 
             # P0-02.9: ensure size passed for SL attachment is explicitly quantized
             # using canonical quantizer + real metadata (re-attach / coordinator paths)
@@ -147,6 +151,11 @@ class StopLossCoordinator:
             if amount <= 0 or entry_for_calc <= 0:
                 results[pair] = {"status": "skipped", "reason": "missing amount or price"}
                 continue
+
+            # Release holds from existing stops before re-attach (root cause of PREVIEW_INSUFFICIENT_FUND).
+            released = cancel_open_stops_for_pair(self.client, pair)
+            if released:
+                poll_available_after_cancel(self.client, pair, timeout=4.0)
 
             if intended_entry > 0 and current_p > 0 and abs(intended_entry - current_p) / max(current_p, 1e-9) > 0.005:
                 logger.info(f"[SL-ANCHOR #1] {pair}: using original entry ${intended_entry:.4f} for SL (current ${current_p:.4f})")

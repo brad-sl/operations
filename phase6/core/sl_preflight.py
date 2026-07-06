@@ -154,3 +154,139 @@ def quantize_stop_bundle(
         limit_str = exchange.quantize_price(pair, limit_f)
 
     return stop_f, limit_f, stop_str, limit_str
+
+
+def order_configuration_is_stop(oc: Optional[Dict[str, Any]]) -> bool:
+    """Coinbase Advanced Trade uses keys like stop_limit_stop_limit_gtc (not bare stop_limit)."""
+    if not oc:
+        return False
+    for key in oc.keys():
+        kl = str(key).lower()
+        if kl.startswith("stop_limit") or kl.startswith("stop_market") or kl.startswith("trigger_bracket"):
+            return True
+        if "stop" in kl and "bracket" not in kl:
+            return True
+    return False
+
+
+def extract_stop_price_from_order(order: Dict[str, Any]) -> Optional[float]:
+    oc = order.get("order_configuration") or {}
+    for key, cfg in oc.items():
+        if not isinstance(cfg, dict):
+            continue
+        if "stop" in str(key).lower():
+            sp = cfg.get("stop_price") or cfg.get("stop_trigger_price")
+            if sp is not None:
+                try:
+                    return float(sp)
+                except (TypeError, ValueError):
+                    pass
+    if order.get("stop_price") is not None:
+        try:
+            return float(order["stop_price"])
+        except (TypeError, ValueError):
+            pass
+    return None
+
+
+def cancel_open_stops_for_pair(exchange: Any, pair: str) -> int:
+    """Cancel open protective stops so base balance is released for re-attach."""
+    canceled = 0
+    if not hasattr(exchange, "get_open_stop_orders"):
+        orders = exchange.get_open_orders(pair) or []
+        orders = [o for o in orders if order_configuration_is_stop(o.get("order_configuration"))]
+    else:
+        orders = exchange.get_open_stop_orders(pair) or []
+    for order in orders:
+        oid = order.get("order_id") or order.get("id")
+        if not oid:
+            continue
+        try:
+            if exchange.cancel_order(oid):
+                canceled += 1
+                logger.info("[SL-RELEASE] Canceled stop %s for %s", oid, pair)
+        except Exception as exc:
+            logger.warning("[SL-RELEASE] Cancel failed %s %s: %s", pair, oid, exc)
+    return canceled
+
+
+def poll_available_after_cancel(exchange: Any, pair: str, timeout: float = 4.0) -> float:
+    """Wait for tradable balance after stop cancel (hold release lag)."""
+    import time
+
+    asset = pair.split("-")[0] if "-" in pair else pair
+    if not hasattr(exchange, "get_crypto_available"):
+        return 0.0
+    deadline = time.time() + timeout
+    last = 0.0
+    while time.time() < deadline:
+        try:
+            last = float(exchange.get_crypto_available(asset) or 0.0)
+            if last > 0:
+                return last
+        except Exception:
+            pass
+        time.sleep(0.35)
+    return last
+
+
+def resolve_sl_attach_size(
+    exchange: Any,
+    pair: str,
+    requested_size: float,
+    *,
+    safety_ratio: float = 0.98,
+) -> Tuple[float, Dict[str, Any]]:
+    """
+    Size stop attachment to tradable (available) balance, not ledger/holdings total.
+    Returns (effective_size, meta). effective_size 0 => caller should skip or release holds first.
+    """
+    meta: Dict[str, Any] = {"requested": requested_size, "pair": pair}
+    asset = pair.split("-")[0] if "-" in pair else pair
+    avail = 0.0
+    total = 0.0
+    try:
+        if hasattr(exchange, "get_crypto_available"):
+            avail = float(exchange.get_crypto_available(asset) or 0.0)
+        if hasattr(exchange, "get_holdings_verified"):
+            hv = exchange.get_holdings_verified() or {}
+            total = float((hv.get("positions") or {}).get(asset, 0.0) or 0.0)
+    except Exception as exc:
+        meta["balance_error"] = str(exc)
+
+    meta["available"] = avail
+    meta["total"] = total
+
+    effective = float(requested_size or 0.0)
+    if effective <= 0 and total > 0:
+        effective = total
+
+    if avail <= 0 and total > 0:
+        meta["holds_entire_balance"] = True
+        meta["hint"] = "cancel_existing_stops_before_attach"
+        return 0.0, meta
+
+    cap = max(0.0, avail * safety_ratio)
+    if effective > cap:
+        logger.warning(
+            "[SL-SIZE] %s: capping attach size %.8f -> %.8f (avail=%.8f)",
+            pair,
+            effective,
+            cap,
+            avail,
+        )
+        effective = cap
+        meta["capped"] = True
+
+    if hasattr(exchange, "quantize_size"):
+        q = float(exchange.quantize_size(pair, effective))
+        meta["quantized"] = q
+        effective = q
+
+    if effective <= 0:
+        meta["skip_reason"] = "dust_or_zero_after_quantize"
+        return 0.0, meta
+
+    return effective, meta
+
+    return stop_f, limit_f, stop_str, limit_str

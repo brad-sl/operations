@@ -7210,3 +7210,12 @@ Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 002; superseded
 
 **Git hygiene:** `data/state/*.json` and `logs/` already in `.gitignore`; code/docs committed on `phase-6.1` (this batch).
 
+### 2026-07-06 (evening) — SL-INSUFFICIENT-FUND-02
+
+**SL-INSUFFICIENT-FUND-02** — **Done**
+- **Issue:** Re-attach failed UNI/LINK/OP/ADA with `PREVIEW_INSUFFICIENT_FUND` despite positions; `available=0` because existing `stop_limit_stop_limit_gtc` orders held full balance; suspend/CR-03 never canceled them (wrong OC key detection).
+- **Fix:** `order_configuration_is_stop` + release/poll + `resolve_sl_attach_size` (cap to tradable balance); coordinator cancel-before-attach; exchange_client stop normalization.
+- **Tests:** `phase6/tests/test_isolation_sl_insufficient_fund.py`
+- **Live verify:** `reattach_sl_once.py` — all 6 pairs attached.
+- **Handoff:** `handoffs/phase6/Handoff_SL_INSUFFICIENT_FUND_02.md`
+

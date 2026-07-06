@@ -146,9 +146,19 @@ class StopLossManager:
             limit_price_str = self.exchange.quantize_price(pair, limit_price)
             limit_price = float(limit_price_str)
         
-        # Quantize size
-        size_str = self.exchange.quantize_size(pair, size)
-        size = float(size_str)
+        # Quantize size to tradable balance (PREVIEW_INSUFFICIENT_FUND mitigation)
+        from phase6.core.sl_preflight import resolve_sl_attach_size, cancel_open_stops_for_pair, poll_available_after_cancel
+
+        requested_size = float(size)
+        size, size_meta = resolve_sl_attach_size(self.exchange, pair, requested_size)
+        if size <= 0 and size_meta.get("holds_entire_balance"):
+            cancel_open_stops_for_pair(self.exchange, pair)
+            poll_available_after_cancel(self.exchange, pair, timeout=4.0)
+            size, size_meta = resolve_sl_attach_size(self.exchange, pair, requested_size)
+        if size <= 0:
+            reason = size_meta.get("skip_reason") or size_meta.get("hint") or "zero_size"
+            logger.warning("[SL-SIZE] Skipping %s attach: %s (meta=%s)", pair, reason, size_meta)
+            return False
 
         if self.shadow_mode:
             print(f"[SHADOW] Would attach native SL for {pair}")
@@ -171,7 +181,13 @@ class StopLossManager:
                 else:
                     logger.warning(f"SL attempt {attempt}/{max_retries} failed for {pair}")
             except Exception as e:
+                err = str(e)
                 logger.error(f"SL attempt {attempt}/{max_retries} exception for {pair}: {e}")
+                if "INSUFFICIENT_FUND" in err.upper() and attempt < max_retries:
+                    from phase6.core.sl_preflight import cancel_open_stops_for_pair, poll_available_after_cancel
+                    cancel_open_stops_for_pair(self.exchange, pair)
+                    poll_available_after_cancel(self.exchange, pair, timeout=4.0)
+                    size, _ = resolve_sl_attach_size(self.exchange, pair, requested_size)
 
             if attempt < max_retries:
                 sleep_time = 2 ** attempt
@@ -228,13 +244,15 @@ class StopLossManager:
         active: Dict[str, List[Dict[str, Any]]] = {}
         try:
             open_orders = self.exchange.get_open_orders() or []
+            from phase6.core.sl_preflight import order_configuration_is_stop
             for order in open_orders:
                 product_id = order.get("product_id") or order.get("pair")
                 if basket and product_id not in basket:
                     continue
-                order_type = str(order.get("type", "")).lower()
+                order_type = str(order.get("type", order.get("order_type", ""))).lower()
                 side = str(order.get("side", "")).upper()
-                has_stop = bool(order.get("stop_price")) or "stop" in order_type
+                oc = order.get("order_configuration") or {}
+                has_stop = order_configuration_is_stop(oc) or bool(order.get("stop_price")) or "stop" in order_type
 
                 protective_type = None
                 if has_stop:

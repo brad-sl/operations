@@ -61,6 +61,14 @@ def assess_basket_coverage(basket: List[str], project_root: Path) -> Dict[str, A
     now = time.time()
     rsi_map = _load_rsi_map(project_root)
     sent_map = _load_sentiment_map(project_root)
+    if not sent_map:
+        try:
+            from phase6.core.sentiment_scorer import load_sentiment_scores
+
+            loaded = load_sentiment_scores(basket) or {}
+            sent_map = {k: float(v) for k, v in loaded.items() if v is not None}
+        except Exception:
+            pass
     rsi_m = _mtime(project_root / "data/state/rsi_cache.json")
     sent_m = _mtime(project_root / "data/state/sentiment_cache.json")
 

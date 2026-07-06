@@ -45,7 +45,12 @@ This repo follows these practices for portability and cleanliness:
 - Only active Phase 6 code + essential support (coinbase wrappers that are current, configs) are tracked.
 - Legacy code is in `archive/`.
 - `docs/MASTER_TASK_TRACKING.md` is the durable task record.
+- **`docs/GIT_REPO_DAILY_MANAGEMENT.md`** — daily Hermes cron, mirror sync, agent git rules.
+- **`hermes/git-workflows/AGENT_GIT_WORKFLOWS.md`** — branch/commit/handoff standard.
+- Hermes skill **`git-repo-management`** — load for any git sync or tracking work.
 - Never commit `.env`, `*.pem`, auth files, or live state.
+
+**Daily automation:** Hermes job `daily-git-hermes-management` at `30 4 * * *` runs `scripts/hermes/git-daily-management.sh` (health + `hermes/` mirror). Verify with `hermes cron list`.
 
 ### Typical Workflow
 ```bash

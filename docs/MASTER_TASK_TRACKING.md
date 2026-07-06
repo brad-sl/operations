@@ -7088,6 +7088,30 @@ P4-02 complete via kanban:
 - Shadow only per spec; no live execution path enabled
 Next: P4-05 (deferred) per table.
 
+### 2026-07-06 — GIT_HERMES_OPS: Daily git management + documentation — COMPLETE
+
+**Status**: Done
+
+**Finding (audit):** `~/.hermes/cron/git-mirror-sync.yaml` and `git-health-check.yaml` existed but were **never registered** in `hermes cron list` (only 3 trading/kanban jobs active). Hourly/30m git jobs were redundant vs user expectation of **daily** management.
+
+**Actions**:
+- Added `scripts/hermes/git-daily-management.sh` (health + `sync-hermes-state.sh` + baseline verifier tail)
+- Fixed `scripts/hermes/git/git-health-check.sh` project root (`../../..`)
+- Canonical doc: `docs/GIT_REPO_DAILY_MANAGEMENT.md`
+- Skill: `git-repo-management` (`~/.hermes/skills/software-development/git-repo-management/`)
+- Registered Hermes cron **`daily-git-hermes-management`** — job_id `92d0bbe12216`, schedule `30 4 * * *`, `no_agent`, workdir project root
+- Deprecated stale YAML templates (marked `enabled: false` + comment)
+- README + `hermes-operations` skill cross-links
+
+**Verify**:
+```bash
+hermes cron list | grep -A6 daily-git
+./scripts/hermes/git-daily-management.sh --health-only
+crontab -l | grep -i git || echo "no system git crontab (expected)"
+```
+
+**Open item:** `git remote` still unset locally — add `origin` → `https://github.com/brad-sl/operations.git` then `git push -u origin phase-6.1` for offsite backup (health check exits ATTENTION until then).
+
 ### 2026-07-06 — P4-04: Platform executor default (ARCH-4) — COMPLETE (Kanban t_975d32ca)
 
 **Git**: `900b06b` on branch `feat/p4-04-platform-executor-default` (`feat(phase6): P4-04 platform TradeExecutor default`)

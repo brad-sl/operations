@@ -175,6 +175,7 @@ class Phase6Runner:
         # Load last rebalance date from state to fix AttributeError in _should_rebalance
         state_path = Path("data/state/phase6_runner_state.json")
         self.last_rebalance_date = None
+        self._rebalance_slots_completed: set = set()
         self.state_file = str(state_path)  # ensure attr always present for _save_state / _load_state (prevents AttributeError on unconditional saves)
         if state_path.exists():
             try:
@@ -337,6 +338,8 @@ class Phase6Runner:
                 if last_str:
                     self.last_rebalance_date = datetime.strptime(last_str, "%Y-%m-%d").date()
                     logger.info(f"State loaded: last_rebalance_date={self.last_rebalance_date}")
+                completed = state.get("rebalance_slots_completed") or []
+                self._rebalance_slots_completed = set(completed) if isinstance(completed, list) else set()
         except Exception as e:
             logger.warning(f"Could not load state file {self.state_file}: {e}")
 
@@ -382,6 +385,8 @@ class Phase6Runner:
                     state = json.load(f)
             if self.last_rebalance_date:
                 state["last_rebalance_date"] = self.last_rebalance_date.isoformat()
+            if getattr(self, "_rebalance_slots_completed", None):
+                state["rebalance_slots_completed"] = sorted(self._rebalance_slots_completed)
             state["last_updated"] = datetime.now().isoformat()
             with open(self.state_file, "w") as f:
                 json.dump(state, f, indent=2)
@@ -528,6 +533,31 @@ class Phase6Runner:
         """P4-05: delegate per-cycle orchestration to CycleCoordinator."""
         self._cycle_coordinator.run_cycle(self, cycle_num)
 
+    def _due_rebalance_slot_id(self, now: Optional[datetime] = None) -> Optional[str]:
+        """Latest configured daily slot whose local time has passed (for 1x or 2x daily)."""
+        now = now or datetime.now()
+        current_date = now.date()
+        current_t = now.time()
+        times = getattr(self, "daily_rebalance_times", [self.daily_rebalance_time])
+        if not isinstance(times, list):
+            times = [times]
+        parsed: List[tuple[str, dt_time]] = []
+        for t_str in times:
+            try:
+                parsed.append((t_str, dt_time.fromisoformat(t_str)))
+            except ValueError:
+                parsed.append((t_str, dt_time(9, 0)))
+        parsed.sort(key=lambda x: x[1])
+        due: Optional[tuple[str, dt_time]] = None
+        for t_str, target in parsed:
+            if current_t >= target:
+                due = (t_str, target)
+            else:
+                break
+        if due is None:
+            return None
+        return f"{current_date.isoformat()}|{due[0]}"
+
     def _should_rebalance(self, now: datetime) -> bool:
         if getattr(self, "_force_next_rebalance", False):
             self._force_next_rebalance = False
@@ -539,32 +569,23 @@ class Phase6Runner:
             force_flag.unlink()
             logger.info("[FORCE] Manual rebalance triggered via flag file")
             return True
+
+        slot_id = self._due_rebalance_slot_id(now)
+        if not slot_id:
+            return False
+
+        completed = getattr(self, "_rebalance_slots_completed", set()) or set()
+        if slot_id in completed:
+            return False
+
         current_date = now.date()
-        current_t = now.time()
-
-        times = getattr(self, "daily_rebalance_times", [self.daily_rebalance_time])
-        if not isinstance(times, list):
-            times = [times]
-
-        for t_str in times:
-            try:
-                target = dt_time.fromisoformat(t_str)
-            except ValueError:
-                target = dt_time(9, 0)
-
-            # If no previous rebalance or new day and past this target
-            if self.last_rebalance_date is None and current_t >= target:
-                return True
-            if self.last_rebalance_date is not None and current_date > self.last_rebalance_date and current_t >= target:
-                return True
-            # Same day: allow if this target is later than previous (for 2x daily)
-            # Since we only track date, for 2x we allow if we haven't rebalanced "today" for this slot by checking time progression
-            # Simple: if last was today, still allow second window if current > second target
-            if self.last_rebalance_date == current_date and current_t >= target:
-                # For 2x, we will let it trigger at each distinct time window
-                # To avoid double on same, we can rely on caller or state update
-                # For now, return True to support 2x per user request
-                return True
+        if self.last_rebalance_date is None:
+            return True
+        if current_date > self.last_rebalance_date:
+            return True
+        # Same calendar day: only the not-yet-completed slot (e.g. 21:00 after 09:00)
+        if self.last_rebalance_date == current_date:
+            return True
 
         return False
 
@@ -729,6 +750,11 @@ class Phase6Runner:
         except Exception:
             pass
         self.last_rebalance_date = date.today()
+        slot_id = self._due_rebalance_slot_id()
+        if slot_id:
+            if not hasattr(self, "_rebalance_slots_completed"):
+                self._rebalance_slots_completed = set()
+            self._rebalance_slots_completed.add(slot_id)
         self._save_state()
         logger.info(f"Daily rebalance completed. Executed={executed}, Skipped={len(skipped)}")
         try:
@@ -746,7 +772,10 @@ class Phase6Runner:
         except Exception:
             pass
         details = f"Rebalance completed.\nExecuted: {executed} moves\nSkipped: {len(skipped)}"
-        self._send_telegram_digest("Daily Rebalance Complete", details)
+        if executed > 0 or len(skipped) > 0:
+            self._send_telegram_digest("Daily Rebalance Complete", details)
+        else:
+            logger.info("[TELEGRAM] Skipping digest for no-op rebalance (0 executed, 0 skipped)")
 
     def _perform_daily_rebalance(self):
         """P4-05b: delegate daily rebalance body to RebalanceCoordinator."""

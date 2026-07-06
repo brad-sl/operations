@@ -259,6 +259,7 @@ class Phase6Runner:
         self.state_file = "data/state/phase6_runner_state.json"
         os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
         self._load_state()
+        self._sync_hybrid_rebalance_cooldown()
 
         from phase6.core.cycle_coordinator import CycleCoordinator
 
@@ -342,6 +343,17 @@ class Phase6Runner:
                 self._rebalance_slots_completed = set(completed) if isinstance(completed, list) else set()
         except Exception as e:
             logger.warning(f"Could not load state file {self.state_file}: {e}")
+
+    def _sync_hybrid_rebalance_cooldown(self) -> None:
+        """Prevent hybrid trigger from firing every 60s cycle after a calendar rebalance."""
+        hr = getattr(self, "hybrid_rebalancer", None)
+        if not hr or not self.last_rebalance_date:
+            return
+        hr.last_rebalance_time = datetime.combine(self.last_rebalance_date, dt_time(12, 0))
+        logger.debug(
+            "Hybrid rebalance cooldown seeded from last_rebalance_date=%s",
+            self.last_rebalance_date,
+        )
 
 
 
@@ -755,6 +767,8 @@ class Phase6Runner:
             if not hasattr(self, "_rebalance_slots_completed"):
                 self._rebalance_slots_completed = set()
             self._rebalance_slots_completed.add(slot_id)
+        if getattr(self, "hybrid_rebalancer", None):
+            self.hybrid_rebalancer.last_rebalance_time = datetime.now()
         self._save_state()
         logger.info(f"Daily rebalance completed. Executed={executed}, Skipped={len(skipped)}")
         try:

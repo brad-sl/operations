@@ -23,7 +23,11 @@ class CycleCoordinator:
 
     def run_cycle(self, runner: Phase6Runner, cycle_num: int) -> None:
         now = datetime.now()
-        rebalance_needed = runner._should_rebalance(now) or runner._evaluate_hybrid_rebalance()
+        time_due = runner._should_rebalance(now)
+        hybrid_due = False
+        if not time_due:
+            hybrid_due = runner._evaluate_hybrid_rebalance()
+        rebalance_needed = time_due or hybrid_due
         runner._update_price_history_and_calculate_rsi()
 
         self._run_unified_evaluation(runner)

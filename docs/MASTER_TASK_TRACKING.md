@@ -7219,3 +7219,28 @@ Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 002; superseded
 - **Live verify:** `reattach_sl_once.py` — all 6 pairs attached.
 - **Handoff:** `handoffs/phase6/Handoff_SL_INSUFFICIENT_FUND_02.md`
 
+---
+
+## Epic: SCALING-1000 (Planned 2026-07-06)
+
+**Goal:** 1,000 traders; **GoHighLevel** = onboarding, subscriptions, comms, CRM; **Coinbase OAuth** = per-trader exchange auth; Phase 6 engine = backend workers.
+
+**Canonical plan:** `docs/epics/SCALING-1000_EPIC.md`  
+**Kickoff handoff:** `handoffs/scaling/Handoff_SCALING-1000_EPIC_Kickoff.md`
+
+### Child workstreams (not started)
+
+| ID | Phase | Summary |
+|----|-------|---------|
+| SCALING-1000-T0-01 | T0 | Postgres trader registry + migrations |
+| SCALING-1000-T0-02 | T0 | `AccountContext` injection (feature-flagged) |
+| SCALING-1000-T0-03 | T0 | OAuth `TradingClient` adapter + `portfolio_uuid` |
+| SCALING-1000-T0-04 | T0 | Job queue `run_cycle(account_id)` |
+| SCALING-1000-T0-05 | T0 | Two-account isolation tests |
+| SCALING-1000-GHL-T0 | T0 | GHL `TradingAccount` custom object (manual pilot) |
+| SCALING-1000-GHL-01..06 | T1–T3 | Private integration, workflows W1–W7, SaaS webhooks, sync worker |
+| SCALING-1000-T1-01..04 | T1 | Staggered scheduler, shared intel, SL remediation, status API |
+| SCALING-1000-T2-* / T3-* | T2–T3 | Fleet scale, reconciliation, load/chaos |
+
+**Next action:** `SCALING-1000-T0-01` (schema ERD — no production runner changes).
+

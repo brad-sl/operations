@@ -7121,7 +7121,7 @@ Next: P4 wave complete; optional ANALYST-005/006 hardening on SL/data refresh.
 - **Tests:** `test_isolation_sl_preflight.py`, `test_isolation_pre_rebalance_refresh.py`, cycle coordinator PASSED
 - **Runner restart:** executed post-merge (see ops log)
 
-### 2026-07-06 (evening) — ANALYST-006 duplicates + OP settlement telemetry
+### 2026-07-06 (evening) — ANALYST-20260706 duplicates + OP settlement telemetry
 
 - **ANALYST-20260706-001–004** closed as duplicates of 005–008 (briefing reruns).
 - **Live telemetry (OP-USD):** re-attach used stale BUY `order_id` `4d0bc7f7-e652-4a44-bcc8-5288a13d0a9b` → 20s fill poll `filled=0`, `status=None`; SL still attached via balance-stable fallback. **Fix:** per-cycle order_id reset + `sanitize_reattach_order_id` (`9102eaf7` / `6413b4e4`). Handoff note: `Handoff_ANALYST-005-007_SL_Preflight.md`.

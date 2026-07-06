@@ -32,11 +32,14 @@ if [ -f "$PIDFILE" ]; then
     fi
 fi
 
-# Also block if any live via pgrep (catches other start methods)
-if pgrep -f "phase6.core.phase6_runner" > /dev/null 2>&1; then
-  existing_pids=$(pgrep -f "phase6.core.phase6_runner" | tr '\n' ' ')
+# Also block if any live runner (strict: real python -m launch only; not shell wrappers)
+runner_pids() {
+  ps -eo pid=,args= 2>/dev/null | grep -E '[p]ython(3)?.* -m phase6\.core\.phase6_runner' | awk '{print $1}'
+}
+existing_pids=$(runner_pids | tr '\n' ' ')
+if [ -n "$existing_pids" ]; then
   echo "ERROR: Phase 6 Runner already running (PIDs: $existing_pids). Aborting to prevent duplicates."
-  echo "Use pkill -f phase6.core.phase6_runner (then re-run) or check pid files."
+  echo "Use: runner_pids | xargs kill; rm -f $PIDFILE phase6_live.pid"
   exit 1
 fi
 

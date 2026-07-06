@@ -7090,6 +7090,8 @@ Next: P4-05 (deferred) per table.
 
 ### 2026-07-06 — P4-04: Platform executor default (ARCH-4) — COMPLETE (Kanban t_975d32ca)
 
+**Git**: `900b06b` on branch `feat/p4-04-platform-executor-default` (`feat(phase6): P4-04 platform TradeExecutor default`)
+
 **Status**: Done
 
 **Actions**:

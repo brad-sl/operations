@@ -65,7 +65,8 @@ Allocator / Decision Layer (the "trading logic" single source)
 └── Unified allocator( current_positions, proposals, available_capital, risk_params, mode="daily_rebalance" ) -> TradePlan
 
 Execution Layer (thin, safe)
-├── OrderExecutor (execute_buy/sell, execute_plan)
+├── TradeExecutor (`trading/executor.py` + `trading.factory`) — **default ARCH-4 boundary when `use_platform_executor` (P4-04)**
+├── OrderExecutor (legacy fallback when `use_platform_executor: false`)
 ├── StopLossCoordinator (wraps windows: suspend → trade → reattach)
 ├── ReserveEnforcer (pre/post checks)
 └── TradeLedger + error handling

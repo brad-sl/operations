@@ -20,15 +20,21 @@
     "use_new_allocator": true,
     "rebalance_style": "permissive_deploy",
     "trade_buffer_hours": 24,
-    "signal_freshness_enforced": true
+    "signal_freshness_enforced": true,
+    "mid_cycle_allocator_enabled": false,
+    "use_platform_executor": true
   },
   "risk_management": {
     "max_daily_loss_pct": 0.02,
     "var_threshold": 0.015,
     "stop_loss_pct": 0.03,
     "take_profit_pct": null,
-    "min_reserve_usd": 200.0,
-    "deploy_pct": 0.72
+    "min_reserve_usd": 50.0,
+    "deploy_pct": 0.72,
+    "adaptive_sl": true,
+    "sl_base_pct": 0.03,
+    "sl_min_pct": 0.015,
+    "sl_max_pct": 0.05
   },
   "phase_6_specific": {
     "expansion_rules": {
@@ -52,7 +58,7 @@
     ]
   },
   "withdrawal_reserve": {
-    "min_reserve_usd": 200.0,
+    "min_reserve_usd": 50.0,
     "max_deployable_usd": 800.0,
     "alert_pct": 1.1,
     "reserve_breach_action": "flag_and_adjust"

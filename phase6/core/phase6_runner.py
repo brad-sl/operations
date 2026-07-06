@@ -82,6 +82,15 @@ try:
 except ImportError:
     NEW_ALLOCATOR_AVAILABLE = False
 
+
+# P4-04: Platform executor (trading.factory + TradeExecutor) default for ARCH-4
+try:
+    from trading.factory import create_trading_client
+    from trading.executor import TradeExecutor
+    PLATFORM_EXECUTOR_AVAILABLE = True
+except ImportError as e:
+    PLATFORM_EXECUTOR_AVAILABLE = False
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
@@ -138,6 +147,17 @@ class Phase6Runner:
             logger.warning("use_new_allocator requested but ARCH-4 modules not importable — falling back to legacy")
             self.use_new_allocator = False
 
+        # P4-04: Platform executor default when ARCH-4 active (use_new_allocator); legacy OrderExecutor only on explicit fallback
+        # use_platform_executor: true makes trading.factory + TradeExecutor the execution boundary for rebalance plans
+        self.use_platform_executor = bool(
+            self.config_dict.get("global_settings", {}).get(
+                "use_platform_executor", self.use_new_allocator
+            )
+        )
+        if self.use_platform_executor and not PLATFORM_EXECUTOR_AVAILABLE:
+            logger.warning("use_platform_executor requested but platform modules not importable — falling back to legacy OrderExecutor")
+            self.use_platform_executor = False
+
         # Ensure daily_rebalance_time is always available (fixes AttributeError in _should_rebalance)
         scheduler = self.config_dict.get("scheduler", {})
         rebalance_cfg = scheduler.get("daily_rebalance_times") or [scheduler.get("daily_rebalance_time", "09:00")]
@@ -193,6 +213,7 @@ class Phase6Runner:
         self.trade_ledger = TradeLedger()
         self.price_history = PriceHistoryManager(max_history=100, persist_path="data/state/price_history.json")
         self.rsi_values = {}
+
         self.order_executor = OrderExecutor(
             exchange=self.exchange,
             stop_loss_manager=self.stop_loss_manager,
@@ -200,7 +221,28 @@ class Phase6Runner:
             logger=logger,
         )
         self.logger = logger
-        
+
+        # P4-04: initialize platform TradeExecutor (default boundary for ARCH-4 rebalance)
+        self.trade_executor = None
+        if getattr(self, "use_platform_executor", False):
+            try:
+                trading_client = create_trading_client(
+                    mode=self.mode,
+                    exchange="coinbase",
+                    config=self.config_dict,
+                    initial_capital=effective_capital,
+                )
+                self.trade_executor = TradeExecutor(
+                    client=trading_client,
+                    stop_loss_coordinator=getattr(self, "stop_loss_coordinator", None),
+                    logger=logger,
+                )
+                self.logger.info("[P4-04] Platform TradeExecutor initialized as default execution boundary")
+            except Exception as e:
+                self.logger.warning(f"[P4-04] Failed to init TradeExecutor (falling back to OrderExecutor): {e}")
+                self.use_platform_executor = False
+                self.trade_executor = None
+
         # New: Structured event logger
         self.db_path = "/home/brad/projects/crypto-trading-bot/data/phase6.db"
 
@@ -1173,7 +1215,7 @@ class Phase6Runner:
 
 
     def _execute_trade_plan(self, trade_plan):
-        """ARCH-4: Execute TradePlan using existing OrderExecutor (supports shadow/paper)."""
+        """ARCH-4: Execute TradePlan. Prefer platform TradeExecutor when use_platform_executor (P4-04 default for ARCH-4); legacy OrderExecutor only on fallback."""
         if not trade_plan or not getattr(trade_plan, "actions", None):
             self.logger.info("[ARCH-4] No actions in TradePlan")
             return 0, []
@@ -1188,9 +1230,19 @@ class Phase6Runner:
             self.logger.info(f"[ARCH-4 SHADOW EXEC] Plan: {exec_plan}")
             return len(exec_plan), []
         try:
-            results = self.order_executor.execute_rebalance_plan(exec_plan)
+            if getattr(self, "use_platform_executor", False) and getattr(self, "trade_executor", None):
+                results = self.trade_executor.execute_rebalance_plan(exec_plan)
+                self.logger.info("[P4-04] Executed via platform TradeExecutor")
+            else:
+                results = self.order_executor.execute_rebalance_plan(exec_plan)
+                self.logger.info("[P4-04] Executed via legacy OrderExecutor (fallback)")
             executed = sum(1 for r in results if r.get("success"))
             skipped = [r for r in results if not r.get("success")]
+            # Persist raw rebalance fact (DASH-VIEWS-01) - ensure for both paths
+            try:
+                self.persist_rebalance_to_db({"actions": exec_plan, "results": [r.get("pair") for r in results if r.get("success")]}, executed)
+            except Exception:
+                pass
             return executed, skipped
         except Exception as e:
             self.logger.exception(f"[ARCH-4] Execution error: {e}")

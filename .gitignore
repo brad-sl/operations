@@ -18,6 +18,14 @@ logs/
 *.db-shm
 *.db-wal
 data/state/*.json
+data/state/*.pid
+*.pid
+
+# Local Hermes planning scratch (not durable ops state)
+.hermes/
+
+# Ephemeral test output at repo root
+/P0-*.json
 
 # Backups & Archives
 *.bak
@@ -26,6 +34,7 @@ backups/
 
 # Config & Sensitive
 .env
+.env.bak*
 cb_key.pem
 .streamlit/
 .pytest_cache/

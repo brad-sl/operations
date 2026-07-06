@@ -29,7 +29,7 @@ from phase6.core.phase6_runner import Phase6Runner, NEW_ALLOCATOR_AVAILABLE
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 
 def create_minimal_test_config(use_new: bool = True) -> str:
     """Create a temp config with the ARCH-4 flag."""
@@ -97,6 +97,14 @@ def test_runner_arch4_wiring():
 
         assert len(runner._last_proposals) > 0
         assert plan.expected_exposure > 0.5
+
+        # P4-01: assert _last_proposals / path uses no legacy_rebalance_plan source when flag true
+        for p in (runner._last_proposals or []):
+            src = getattr(p, "source", None)
+            if src is None and isinstance(p, dict):
+                src = p.get("source")
+            assert src != "legacy_rebalance_plan", f"Primary (use_new=True) must not use legacy_rebalance_plan source (got {src})"
+        print("[P4-01] No legacy_rebalance_plan in primary path proposals — PASS")
 
         print("\n[ARCH-4 Wiring] PASSED — Runner flag + new stack integration verified in simulation.")
 

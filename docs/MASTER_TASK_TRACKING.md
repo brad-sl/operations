@@ -6992,8 +6992,8 @@ Source: Daily Intelligence Briefing 2026-07-05 16:00 UTC
 | P4-06 | MASTER + docs hygiene + Kanban queue | 0 | None | **Done** | `t_95f584c9` | this section |
 | P4-01 | Single decision path (`use_new_allocator`) | 1 | Low | **Done** | `t_9e7a5028` | `handoffs/phase6/Handoff_P4-01_Single_Decision_Path.md` |
 | P4-03 | Retire hybrid `generate_rebalance_plan` stub | 1 | Low | **Done** | `t_1f7a514f` | `handoffs/phase6/Handoff_P4-03_Hybrid_Stub_Retire.md` |
-| P4-02 | Unified evaluation + mid-cycle shadow flag | 2 | Medium | **Todo** (blocked on P4-01+03) | `t_964830f6` | `handoffs/phase6/Handoff_P4-02_Mid_Cycle_Shadow.md` |
-| P4-04 | Platform executor default (ARCH-4) | 3 | Medium | **Todo** (blocked on P4-02) | `t_975d32ca` | `handoffs/phase6/Handoff_P4-04_Platform_Executor_Default.md` |
+| P4-02 | Unified evaluation + mid-cycle shadow flag | 2 | Medium | **Done** (P4-02 complete) | `t_964830f6` (unified eval + shadow mid-cycle) | `handoffs/phase6/Handoff_P4-02_Mid_Cycle_Shadow.md` |
+| P4-04 | Platform executor default (ARCH-4) | 3 | Medium | **Done** | `t_975d32ca` | `handoffs/phase6/Handoff_P4-04_Platform_Executor_Default.md` |
 | P4-05 | Thin orchestrator (`CycleCoordinator`) | 4 | Higher | **Not scheduled** | — | deferred (user requested detail only) |
 
 **Dependency order**: P4-06 → (P4-01 ∥ P4-03) → P4-02 → P4-04 → P4-05 (later).
@@ -7035,6 +7035,7 @@ Proposals populated via new path: 11
 
 **Handoff reference**: handoffs/phase6/Handoff_P4-01_Single_Decision_Path.md
 ### 2026-07-05 — P4-03: Retire hybrid `generate_rebalance_plan` stub — COMPLETE (Kanban t_1f7a514f)
+2026-07-05 — P4-02: Unified evaluation + mid-cycle shadow (t_964830f6) — COMPLETE. Always-on evaluate_universe snapshot per cycle (replaced parallel logs). mid_cycle_allocator_enabled flag (default false). Shadow-only allocator on non-rebalance cycles in shadow mode. Isolation test + evidence produced. Config updated. Logs acceptance/util metrics. MASTER updated.
 
 **Status**: Done
 
@@ -7074,4 +7075,117 @@ Test PASSED (ran without crash)
 **Handoff reference**: handoffs/phase6/Handoff_P4-03_Hybrid_Stub_Retire.md
 **Parallel wave 1** with P4-01.
 
+
+
+### 2026-07-05 P4-02 Completion (t_964830f6)
+P4-02 complete via kanban: 
+- Added mid_cycle_allocator_enabled (default false) to global_settings in trading_config_phase6.json
+- Unified per-cycle evaluate_universe snapshot in phase6_runner._run_cycle (always on primary path; removed conditional skip + parallel legacy signal logs for single path)
+- mid-cycle shadow logic: when flag+shadow+!rebalance_needed, compute allocator plan from _last_proposals, log acceptance/utilization metrics, shadow _execute logs only (no trades)
+- Isolation test: phase6/tests/test_isolation_mid_cycle_shadow.py (real data -> proposals(11) -> plan, evidence in p4_02_*.json, asserts full basket coverage)
+- Evidence produced with real sentiment/scanner/allocator output (non-hold proposals, rotation plan actions possible)
+- MASTER table + notes updated
+- Shadow only per spec; no live execution path enabled
+Next: P4-05 (deferred) per table.
+
+### 2026-07-06 — P4-04: Platform executor default (ARCH-4) — COMPLETE (Kanban t_975d32ca)
+
+**Status**: Done
+
+**Actions**:
+- Confirmed runner wiring: `use_platform_executor` defaults `True` when `use_new_allocator` is active (`phase6/core/phase6_runner.py`).
+- `trading.factory.create_trading_client` + `trading.executor.TradeExecutor` initialized as default execution boundary; legacy `OrderExecutor` only when `use_platform_executor: false`.
+- Prod config: `config/trading_config_phase6.json` → `"use_platform_executor": true`.
+- Added isolation test `phase6/tests/test_isolation_allocator_platform_executor.py`.
+
+**Test evidence** (PYTHONPATH=., real shadow client + dynamic product metadata):
+```
+Runner: use_new_allocator=True, use_platform_executor=True, trade_executor=TradeExecutor
+[P4-04] Primary path routed to platform TradeExecutor — PASS
+[P4-04] Explicit fallback uses legacy OrderExecutor — PASS
+[P4-04 ISOLATION] PASSED
+Evidence: data/state/p4_04_platform_executor_evidence.json
+```
+
+**Shadow rebalance boundary** (`config/trading_config_phase6.json`, mode=shadow, single BUY leg):
+```
+[P4-04] Platform TradeExecutor initialized as default execution boundary
+[P4-04] Executed via platform TradeExecutor
+shadow_rebalance_exec: executed= 1 skipped= 0
+```
+
+**Success criteria met**: Platform executor default on ARCH-4 flags; fallback explicit; isolation + shadow exercise pass.
+
+**Handoff reference**: handoffs/phase6/Handoff_P4-04_Platform_Executor_Default.md
+
+**ANALYST-20260705-005** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-05 23:02 UTC
+
+
+**ANALYST-20260705-006** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-05 23:02 UTC
+
+
+**ANALYST-20260705-007** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-06 04:00 UTC
+
+
+**ANALYST-20260705-008** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-06 04:00 UTC
+
+
+**ANALYST-20260706-001** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-06 16:00 UTC
+
+
+**ANALYST-20260706-002** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-06 16:00 UTC
+
+
+**ANALYST-20260706-003** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-06 16:01 UTC
+
+
+**ANALYST-20260706-004** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-06 16:01 UTC
 

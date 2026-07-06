@@ -3,8 +3,13 @@ CR-03: Atomic Stop-Loss / Take-Profit Suspend/Reattach Coordinator
 
 Provides atomic suspend/reattach semantics for protective orders (SL/TP)
 during rebalancing, Fresh Start, or position adjustments.
+
+See docs/DATA_FLOW_AND_LOCATIONS.md (and phase6/core/paths.py) for paths.
 """
 
+from .paths import PHASE6_LIVE_STATE  # per DATA_FLOW_AND_LOCATIONS.md
+import os
+import json
 import logging
 from contextlib import contextmanager
 from typing import Dict, Any, List, Optional
@@ -25,6 +30,42 @@ class StopLossCoordinator:
 
         self._suspended_orders: Dict[str, List[Dict[str, Any]]] = {}
         self._reattach_positions: Dict[str, float] = {}
+        self._buy_order_ids: Dict[str, str] = {}
+
+    def set_buy_order_ids(self, mapping: Optional[Dict[str, str]]) -> None:
+        """Pairs -> recent BUY order_id for settlement poll on re-attach (ANALYST-005)."""
+        self._buy_order_ids = dict(mapping or {})
+
+
+    def _get_original_entry(self, pair: str, value: Any) -> float:
+        """Robust lookup for ORIGINAL entry price (highest immediate risk fix).
+        Prefers enriched position data. Caller should ensure enriched positions
+        from get_enriched_positions() or ledger are passed.
+        Falls back to phase6_live_state.json (which carries ledger-derived entries)
+        for re-attach anchoring verification (SL-01).
+        """
+        if isinstance(value, dict):
+            for k in ("entry_price", "original_entry", "buy_fill_price", "entry"):
+                v = value.get(k)
+                if v and float(v) > 0:
+                    return float(v)
+        # Fallback to live_state (populated with entry_price from ledger/avg in dashboard)
+        try:
+            live_state_path = str(PHASE6_LIVE_STATE)  # from .paths per DATA_FLOW
+            if os.path.exists(live_state_path):
+                import json
+                with open(live_state_path) as f:
+                    ls = json.load(f)
+                for p in ls.get("positions", []):
+                    p_pair = p.get("pair")
+                    if p_pair == pair or (p_pair and p_pair.replace("-USD", "") == pair.replace("-USD", "")):
+                        ep = p.get("entry_price", 0)
+                        if ep and float(ep) > 0:
+                            logger.info(f"[SL-ANCHOR fallback#live_state] {pair}: using ${float(ep):.4f}")
+                            return float(ep)
+        except Exception as e:
+            logger.debug(f"[SL-ANCHOR] live_state fallback skipped for {pair}: {e}")
+        return 0.0
 
     def suspend_protective_orders(self, pairs: List[str]) -> Dict[str, Any]:
         """Suspend (cancel) all active SL orders for the given pairs.
@@ -84,28 +125,53 @@ class StopLossCoordinator:
             # Extract data from enriched dict or simple value
             if isinstance(value, dict):
                 amount = value.get("amount", value.get("qty", 0))
-                # Prefer explicit entry_price, fall back to current_price
-                entry_price = value.get("entry_price") or value.get("current_price") or value.get("price", 0)
+                # #1 HARDEN: Use robust original entry lookup (targeted anchoring fix)
+                intended_entry = self._get_original_entry(pair, value)
+                current_p = value.get("current_price") or value.get("price", 0)
+                entry_for_calc = intended_entry if intended_entry > 0 else current_p
             else:
                 amount = float(value) if value else 0
-                entry_price = 0
+                entry_for_calc = 0
+                intended_entry = 0
 
-            if amount <= 0 or entry_price <= 0:
+            # P0-02.9: ensure size passed for SL attachment is explicitly quantized
+            # using canonical quantizer + real metadata (re-attach / coordinator paths)
+            if amount > 0 and hasattr(self.client, "quantize_size"):
+                try:
+                    amount = float(self.client.quantize_size(pair, float(amount)))
+                except Exception:
+                    pass
+
+            if amount <= 0 or entry_for_calc <= 0:
                 results[pair] = {"status": "skipped", "reason": "missing amount or price"}
                 continue
 
+            if intended_entry > 0 and current_p > 0 and abs(intended_entry - current_p) / max(current_p, 1e-9) > 0.005:
+                logger.info(f"[SL-ANCHOR #1] {pair}: using original entry ${intended_entry:.4f} for SL (current ${current_p:.4f})")
+
             try:
+                oid = self._buy_order_ids.get(pair) or self._buy_order_ids.get(pair.replace("-USD", ""))
                 success = self.sl_manager.attach_stop_loss(
                     pair=pair,
-                    entry_price=float(entry_price),
+                    entry_price=float(entry_for_calc),
                     size=float(amount),
-                    sl_pct=None  # use default from config
+                    sl_pct=None,
+                    anchor_entry=float(intended_entry) if intended_entry > 0 else None,
+                    order_id=oid,
                 )
                 results[pair] = {
                     "status": "attached" if success else "failed",
-                    "entry_price": entry_price,
+                    "entry_price": entry_for_calc,
+                    "intended_entry": intended_entry,
                     "size": amount
                 }
+                # #1 verify after attach
+                if success and intended_entry > 0:
+                    try:
+                        v = self.sl_manager.verify_protective_stop(pair, intended_entry)
+                        results[pair]["verify"] = {"verified": v.get("verified"), "status": v.get("status")}
+                    except Exception:
+                        pass
             except Exception as e:
                 logger.error(f"Failed to re-attach SL for {pair}: {e}")
                 results[pair] = {"status": "error", "error": str(e)}

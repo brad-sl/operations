@@ -37,6 +37,9 @@ class CycleCoordinator:
         )
 
         if rebalance_needed:
+            from phase6.core.pre_rebalance_data_refresh import ensure_basket_signals_ready
+
+            ensure_basket_signals_ready(runner, cap_sec=15.0, force_refresh=True)
             runner._perform_daily_rebalance()
 
         runner._save_state()

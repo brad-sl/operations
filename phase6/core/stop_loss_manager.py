@@ -1,3 +1,6 @@
+# See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths, state, config hygiene and drift prevention.
+# All code must derive PROJECT_ROOT via paths.py and avoid absolute hardcodes.
+
 import logging
 from typing import Optional, Any, List, Dict
 import time
@@ -19,39 +22,111 @@ class StopLossManager:
         self.default_sl_pct = config.get("risk_management", {}).get("stop_loss_pct", 0.03)
         self.default_tp_pct = config.get("risk_management", {}).get("take_profit_pct", 0.06)
 
-    def attach_stop_loss(self, pair: str, entry_price: float, size: float, sl_pct: float = None) -> bool:
+        # Adaptive SL support (#3 risk-aware sizing)
+        self.adaptive_sl_enabled = config.get("risk_management", {}).get("adaptive_sl", True)
+    def get_sl_pct(
+        self,
+        pair: str,
+        regime_bias: float = 0.5,
+        risk_data: Optional[Dict[str, Any]] = None,
+    ) -> float:
+        """Return effective SL % for pair (#3). Uses adaptive via sl_risk_scorer + regime if enabled."""
+        if not getattr(self, "adaptive_sl_enabled", True):
+            return self.default_sl_pct
+        try:
+            from phase6.core.sl_risk_scorer import get_adaptive_sl_pct
+            return get_adaptive_sl_pct(
+                pair=pair,
+                base_pct=self.default_sl_pct,
+                regime_bias=regime_bias,
+                risk_data=risk_data,
+            )
+        except Exception as e:
+            logger.debug(f"Adaptive SL fallback for {pair}: {e}")
+            return self.default_sl_pct
+
+
+    def attach_stop_loss(self, pair: str, entry_price: float, size: float, sl_pct: float = None, anchor_entry: float = None, order_id: Optional[str] = None) -> bool:
         """
         Attach a native stop-loss order with retry logic.
+        ANALYST-20260703-051: Pre-flight settlement poll using order fill if order_id provided (tied to recent buy), else balance.
+        Uses get_order_fill_details via poll_for_settlement for actual fill wait before SL attach.
 
-        Returns True on successful placement (or shadow success).
+        - Polls for settlement before placing to reduce PREVIEW_INSUFFICIENT_FUND.
+        - Uses precise per-product tick (price_increment/base_increment) to avoid PREVIEW_INVALID_STOP_PRICE_PRECISION.
+        - Risk-aware: uses sl_risk_scorer + adaptive for poll aggressiveness.
         """
-        pct = sl_pct if sl_pct is not None else self.default_sl_pct
-        
-        # Quantize stop and limit prices
+        if sl_pct is not None:
+            pct = sl_pct
+        else:
+            # #3 adaptive
+            pct = self.get_sl_pct(pair) if hasattr(self, "get_sl_pct") else self.default_sl_pct
+
+        # Pre-flight settlement poll (ANALYST-20260705-005 / 007)
+        try:
+            from phase6.core.sl_preflight import settlement_poll_params
+            from phase6.core.sl_risk_scorer import get_sl_risk
+
+            risk = get_sl_risk(pair)
+            risk_level = risk.get("level", "LOW")
+            params = settlement_poll_params(pair, order_id=order_id, risk_level=risk_level)
+            if not self.shadow_mode:
+                settled = self.exchange.poll_for_settlement(
+                    pair,
+                    timeout=params["timeout"],
+                    order_id=params.get("order_id"),
+                )
+                if not settled:
+                    logger.warning(
+                        f"[PRE-FLIGHT] Settlement poll failed/timeout for {pair} "
+                        f"(risk={risk_level}, mode={params['mode']}, order_id={order_id}); proceeding cautiously"
+                    )
+                else:
+                    logger.info(
+                        f"[PRE-FLIGHT] Settlement confirmed for {pair} before SL "
+                        f"(mode={params['mode']}, order_id={order_id or 'N/A'})"
+                    )
+        except Exception as e:
+            logger.debug(f"[PRE-FLIGHT] poll skipped or failed: {e}")
+
         meta = self.exchange.get_product_metadata(pair)
-        # Use full precision API prices for SL/TP attachment
-        stop_price = entry_price * (1 - pct)
+        price_inc = float(meta.get("price_increment", 0.0001))
+
+        calc_base = anchor_entry if (anchor_entry and anchor_entry > 0) else entry_price
+
+        if (not calc_base or calc_base <= 0) and not self.shadow_mode:
+            try:
+                current_px = self.exchange.get_price(pair) or 0.0
+                if current_px > 0:
+                    logger.warning(
+                        f"[SL FALLBACK] entry/anchor was 0 for {pair}; using current market ${current_px:.2f} for SL anchor"
+                    )
+                    calc_base = current_px
+            except Exception:
+                pass
+
+        stop_price = calc_base * (1 - pct)
         limit_price = stop_price * 0.995
-        
-        # Quantize prices ensuring sub-dollar precision compliance
-        stop_price_str = self.exchange._quantize_price(stop_price, meta.get("price_increment", "0.00000001"))
-        stop_price = float(stop_price_str)
-        limit_price_str = self.exchange._quantize_price(limit_price, meta.get("price_increment", "0.00000001"))
-        limit_price = float(limit_price_str)
-        
-        # Ensure prices are valid
+
+        from phase6.core.sl_preflight import quantize_stop_bundle
+
+        stop_price, limit_price, stop_price_str, limit_price_str = quantize_stop_bundle(
+            self.exchange, pair, calc_base, stop_price, limit_price
+        )
+
+        # Ensure prices are valid vs entry
         if stop_price >= entry_price:
             logger.warning(f"Stop price {stop_price} >= entry {entry_price}, adjusting...")
             price_inc = float(meta.get("price_increment", "0.0001"))
             stop_price = entry_price - price_inc
-            stop_price_str = self.exchange._quantize_price(stop_price, meta.get("price_increment", "0.00000001"))
+            stop_price_str = self.exchange.quantize_price(pair, stop_price)
             stop_price = float(stop_price_str)
             limit_price = stop_price - price_inc
-            limit_price_str = self.exchange._quantize_price(limit_price, meta.get("price_increment", "0.00000001"))
+            limit_price_str = self.exchange.quantize_price(pair, limit_price)
             limit_price = float(limit_price_str)
         
         # Quantize size
-        size_str = self.exchange._quantize_size(size, meta["base_increment"])
+        size_str = self.exchange.quantize_size(pair, size)
         size = float(size_str)
 
         if self.shadow_mode:
@@ -99,7 +174,7 @@ class StopLossManager:
 
         # Use a simple limit sell for TP (quantize price)
         meta = self.exchange.get_product_metadata(pair)
-        tp_price_str = self.exchange._quantize_price(tp_price, meta["price_increment"])
+        tp_price_str = self.exchange.quantize_price(pair, tp_price)
         tp_price_quantized = float(tp_price_str)
 
         if hasattr(self.exchange, "place_limit_sell"):
@@ -290,3 +365,46 @@ class StopLossManager:
             report["details"] = f"ERROR: {str(e)}"
 
         return report
+
+
+    def verify_protective_stop(self, pair: str, intended_entry: float, expected_pct: float = None) -> dict:
+        """
+        #1: Hardened verification that SL is attached and anchored to the *original* entry.
+        Returns dict with verified flag, actual stops, status.
+        Call after attach/reattach.
+        """
+        if expected_pct is None:
+            expected_pct = self.get_sl_pct(pair) if hasattr(self, "get_sl_pct") else self.default_sl_pct
+        expected_stop = intended_entry * (1 - expected_pct)
+        res = {
+            "pair": pair,
+            "intended_entry": round(intended_entry, 4),
+            "expected_pct": round(expected_pct*100, 2),
+            "expected_stop": round(expected_stop, 4),
+            "verified": False,
+            "actual": [],
+            "status": "no_check"
+        }
+        if self.shadow_mode:
+            res["status"] = "shadow_ok"
+            res["verified"] = True
+            return res
+        try:
+            stops = []
+            if hasattr(self.exchange, "get_open_stop_orders"):
+                stops = self.exchange.get_open_stop_orders(pair) or []
+            for o in stops:
+                sp = float(o.get("stop_price") or 0)
+                if sp:
+                    res["actual"].append(round(sp, 4))
+                    if abs(sp - expected_stop) / expected_stop < 0.005:
+                        res["verified"] = True
+                        res["status"] = "anchored_ok"
+                        break
+            if not res["actual"]:
+                res["status"] = "no_stop"
+        except Exception as e:
+            res["status"] = "error"
+            res["error"] = str(e)
+        logger.info(f"[SL VERIFY #1] {pair} anchored to entry ${intended_entry:.4f} -> {res['status']}")
+        return res

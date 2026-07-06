@@ -294,10 +294,26 @@ class Phase6Runner:
         if usdc_balance and usdc_balance > 0:
             conn.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance, available, hold, source) VALUES (?, 'USDC', ?, ?, 0, 'live')", (ts, usdc_balance, usdc_balance))
 
-        # Holdings (from LPM, which has verified totals)
+        # Holdings (flat currency->qty or pair->enriched dict from dashboard)
         for currency, amount in (holdings or {}).items():
-            if str(currency).upper() not in ("USD", "USDC") and amount > 0:
-                conn.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount, available, hold, source) VALUES (?, ?, ?, 0, ?, 'live')", (ts, str(currency).upper(), amount, amount))
+            if str(currency).upper() in ("USD", "USDC", "POSITIONS", "VERIFIED", "ERROR", "VALUE_USD"):
+                continue
+            if isinstance(amount, dict):
+                cur = str(amount.get("pair") or currency).replace("-USD", "").upper()
+                if not cur or cur in ("USD", "USDC"):
+                    cur = str(currency).replace("-USD", "").upper()
+                amt = float(amount.get("amount", 0) or 0)
+            else:
+                cur = str(currency).replace("-USD", "").upper()
+                try:
+                    amt = float(amount or 0)
+                except (TypeError, ValueError):
+                    continue
+            if amt > 0:
+                conn.execute(
+                    "INSERT OR REPLACE INTO holdings (ts, currency, amount, available, hold, source) VALUES (?, ?, ?, 0, ?, 'live')",
+                    (ts, cur, amt, amt),
+                )
 
         # Prices from snapshot
         for pair, price in (price_snapshot or {}).items():

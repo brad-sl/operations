@@ -8,3 +8,5 @@
 - `Phase6Runner._execute_trade_plan` records BUY `order_id` → coordinator
 
 **Test:** `phase6/tests/test_isolation_sl_preflight.py`
+
+**Live telemetry (2026-07-06 PDT):** OP-USD CR-03 re-attach hit stale BUY `order_id` `4d0bc7f7-…` (20s poll: `filled=0`, `status=None`); mitigated in `9102eaf7` — cycle-scoped IDs + `sanitize_reattach_order_id` on re-attach.

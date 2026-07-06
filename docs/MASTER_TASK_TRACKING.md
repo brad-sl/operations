@@ -7121,6 +7121,11 @@ Next: P4 wave complete; optional ANALYST-005/006 hardening on SL/data refresh.
 - **Tests:** `test_isolation_sl_preflight.py`, `test_isolation_pre_rebalance_refresh.py`, cycle coordinator PASSED
 - **Runner restart:** executed post-merge (see ops log)
 
+### 2026-07-06 (evening) — ANALYST-006 duplicates + OP settlement telemetry
+
+- **ANALYST-20260706-001–004** closed as duplicates of 005–008 (briefing reruns).
+- **Live telemetry (OP-USD):** re-attach used stale BUY `order_id` `4d0bc7f7-e652-4a44-bcc8-5288a13d0a9b` → 20s fill poll `filled=0`, `status=None`; SL still attached via balance-stable fallback. **Fix:** per-cycle order_id reset + `sanitize_reattach_order_id` (`9102eaf7` / `6413b4e4`). Handoff note: `Handoff_ANALYST-005-007_SL_Preflight.md`.
+
 ### 2026-07-06 — GIT_HERMES_OPS: Daily git management + documentation — COMPLETE
 
 **Status**: Done
@@ -7194,37 +7199,17 @@ Status: **Done** (2026-07-06) — merged with 006 implementation (same handoff).
 
 
 **ANALYST-20260706-001** — Add pre-flight settlement poll + product-specific tick handling to SL layer
-Status: Proposed — Awaiting Review/Acceptance
-Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
-Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
-Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
-Priority: High | Effort: Medium | Category: SL / Platform
-Source: Daily Intelligence Briefing 2026-07-06 16:00 UTC
+Status: **Closed — duplicate** (2026-07-06). Same scope as **ANALYST-20260705-005/007** (Done). Handoff: `handoffs/phase6/Handoff_ANALYST-005-007_SL_Preflight.md`. Follow-on: stale re-attach `order_id` fix `9102eaf7`.
 
 
 **ANALYST-20260706-002** — Strengthen pre-rebalance data refresh + fallback for partial coverage
-Status: Proposed — Awaiting Review/Acceptance
-Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
-Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
-Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
-Priority: Medium | Effort: Low-Medium | Category: Data / Runner
-Source: Daily Intelligence Briefing 2026-07-06 16:00 UTC
+Status: **Closed — duplicate** (2026-07-06). Same scope as **ANALYST-20260705-006/008** (Done). Handoff: `handoffs/phase6/Handoff_ANALYST-006-008_PreRebalance_Refresh.md`.
 
 
 **ANALYST-20260706-003** — Add pre-flight settlement poll + product-specific tick handling to SL layer
-Status: Proposed — Awaiting Review/Acceptance
-Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
-Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
-Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
-Priority: High | Effort: Medium | Category: SL / Platform
-Source: Daily Intelligence Briefing 2026-07-06 16:01 UTC
+Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 001; superseded by **ANALYST-20260705-005/007** (Done).
 
 
 **ANALYST-20260706-004** — Strengthen pre-rebalance data refresh + fallback for partial coverage
-Status: Proposed — Awaiting Review/Acceptance
-Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
-Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
-Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
-Priority: Medium | Effort: Low-Medium | Category: Data / Runner
-Source: Daily Intelligence Briefing 2026-07-06 16:01 UTC
+Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 002; superseded by **ANALYST-20260705-006/008** (Done).
 

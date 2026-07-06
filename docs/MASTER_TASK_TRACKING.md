@@ -6994,7 +6994,7 @@ Source: Daily Intelligence Briefing 2026-07-05 16:00 UTC
 | P4-03 | Retire hybrid `generate_rebalance_plan` stub | 1 | Low | **Done** | `t_1f7a514f` | `handoffs/phase6/Handoff_P4-03_Hybrid_Stub_Retire.md` |
 | P4-02 | Unified evaluation + mid-cycle shadow flag | 2 | Medium | **Done** (P4-02 complete) | `t_964830f6` (unified eval + shadow mid-cycle) | `handoffs/phase6/Handoff_P4-02_Mid_Cycle_Shadow.md` |
 | P4-04 | Platform executor default (ARCH-4) | 3 | Medium | **Done** | `t_975d32ca` | `handoffs/phase6/Handoff_P4-04_Platform_Executor_Default.md` |
-| P4-05 | Thin orchestrator (`CycleCoordinator`) | 4 | Higher | **Not scheduled** | — | deferred (user requested detail only) |
+| P4-05 | Thin orchestrator (`CycleCoordinator`) | 4 | Higher | **Done** | — | `handoffs/phase6/Handoff_P4-05_CycleCoordinator.md` |
 
 **Dependency order**: P4-06 → (P4-01 ∥ P4-03) → P4-02 → P4-04 → P4-05 (later).
 
@@ -7086,7 +7086,32 @@ P4-02 complete via kanban:
 - Evidence produced with real sentiment/scanner/allocator output (non-hold proposals, rotation plan actions possible)
 - MASTER table + notes updated
 - Shadow only per spec; no live execution path enabled
-Next: P4-05 (deferred) per table.
+Next: P4 wave complete; optional ANALYST-005/006 hardening on SL/data refresh.
+
+### 2026-07-06 — P4-05: CycleCoordinator + legacy gap fixes — COMPLETE
+
+**Status**: Done
+
+**Legacy gaps closed**:
+- P4-02 mid-cycle shadow wired in `CycleCoordinator` (`mid_cycle_allocator_enabled`, shadow-only)
+- ARCH-4 rebalance early-return skipped `last_rebalance_date` / digest — fixed via `_finalize_daily_rebalance`
+- `persist_facts_to_db` contained `__init__` tail that **reset** `last_rebalance_date` on every dashboard DB write — removed
+- Duplicate `persist_facts_to_db` method removed
+- Dashboard cache JSON (`performance_metrics` / `arch4`) nesting fixed
+- `use_new_allocator` default **True** when omitted (P4-01 primary path)
+
+**Architecture**:
+- `phase6/core/cycle_coordinator.py` owns per-cycle: RSI refresh → unified eval → optional P4-02 shadow plan → rebalance trigger
+- `Phase6Runner._run_cycle` delegates; rebalance body + CR-03 remain on runner (incremental slimming)
+
+**Tests** (project `.venv`, real sentiment caches):
+```bash
+.venv/bin/python phase6/tests/test_isolation_cycle_coordinator.py   # PASSED
+.venv/bin/python phase6/tests/test_isolation_mid_cycle_shadow.py    # PASSED
+.venv/bin/python phase6/tests/test_isolation_runner_wiring_arch4.py # PASSED
+```
+
+**Handoff**: `handoffs/phase6/Handoff_P4-05_CycleCoordinator.md`
 
 ### 2026-07-06 — GIT_HERMES_OPS: Daily git management + documentation — COMPLETE
 

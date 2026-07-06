@@ -141,11 +141,19 @@ class Phase6Runner:
         # Set dynamic full universe from config (replaces previous class-level 6-pair hardcoded FIXED_UNIVERSE)
         self.FIXED_UNIVERSE = self._load_full_universe(config_path)
 
-        # ARCH-4: New Allocator stack flag (safe default off until validated in shadow)
-        self.use_new_allocator = bool(self.config_dict.get("global_settings", {}).get("use_new_allocator", False))
+        # ARCH-4: primary allocator path (P4-01) — default on when config omits flag
+        gs_flags = self.config_dict.get("global_settings", {})
+        self.use_new_allocator = bool(gs_flags.get("use_new_allocator", True))
         if self.use_new_allocator and not NEW_ALLOCATOR_AVAILABLE:
             logger.warning("use_new_allocator requested but ARCH-4 modules not importable — falling back to legacy")
             self.use_new_allocator = False
+
+        # P4-02: mid-cycle shadow allocator (default off for live safety)
+        self.mid_cycle_allocator_enabled = bool(gs_flags.get("mid_cycle_allocator_enabled", False))
+        self._last_proposals = []
+        self._last_plan = None
+        self._last_mid_cycle_plan = None
+        self._last_signal_mtime = 0.0
 
         # P4-04: Platform executor default when ARCH-4 active (use_new_allocator); legacy OrderExecutor only on explicit fallback
         # use_platform_executor: true makes trading.factory + TradeExecutor the execution boundary for rebalance plans
@@ -246,6 +254,25 @@ class Phase6Runner:
         # New: Structured event logger
         self.db_path = "/home/brad/projects/crypto-trading-bot/data/phase6.db"
 
+        self._force_next_rebalance = False
+        self.state_file = "data/state/phase6_runner_state.json"
+        os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
+        self._load_state()
+
+        from phase6.core.cycle_coordinator import CycleCoordinator
+
+        self._cycle_coordinator = CycleCoordinator()
+
+        logger.info(
+            f"Phase6Runner initialized | mode={self.mode} | shadow={self.shadow_mode} | "
+            f"rebalance_time={self.daily_rebalance_time} | use_new_allocator={self.use_new_allocator} | "
+            f"mid_cycle_shadow={self.mid_cycle_allocator_enabled}"
+        )
+
+    def _use_primary_allocator_path(self) -> bool:
+        """P4-01 single decision path when flag true and modules available."""
+        return bool(getattr(self, "use_new_allocator", True) and NEW_ALLOCATOR_AVAILABLE)
+
     def persist_facts_to_db(self, usd_balance: float, usdc_balance: float, holdings: dict, price_snapshot: dict):
         """Persist raw facts to phase6.db for SQL VIEW consumption. Dual-write with JSON.
         Called from _write_dashboard_cache. Real data only.
@@ -275,21 +302,6 @@ class Phase6Runner:
         conn.commit()
         conn.close()
         self.logger.info(f"[DB] Facts persisted to {db_path} at {ts}")
-        scheduler = self.config_dict.get("scheduler", {})
-        rebalance_cfg = scheduler.get("daily_rebalance_times") or [scheduler.get("daily_rebalance_time", "09:00")]
-        self.daily_rebalance_times = rebalance_cfg if isinstance(rebalance_cfg, list) else [rebalance_cfg]
-        self.daily_rebalance_time = self.daily_rebalance_times[0]  # backward compat
-# One-time force rebalance flag for verification
-        # self._force_next_rebalance = True
-        self._force_next_rebalance = False
-        self.last_rebalance_date = None
-
-        # Persistence file for rebalance date (survives restarts)
-        self.state_file = "data/state/phase6_runner_state.json"
-        os.makedirs(os.path.dirname(self.state_file), exist_ok=True)
-        self._load_state()
-
-        logger.info(f"Phase6Runner initialized | mode={self.mode} | shadow={self.shadow_mode} | rebalance_time={self.daily_rebalance_time}")
 
     # ------------------------------------------------------------------
     # Persistence helpers (restart-safe scheduler)
@@ -492,72 +504,8 @@ class Phase6Runner:
             self.price_history.flush()
 
     def _run_cycle(self, cycle_num: int):
-        now = datetime.now()
-        rebalance_needed = self._should_rebalance(now) or self._evaluate_hybrid_rebalance()
-        self._update_price_history_and_calculate_rsi()
-
-        # === New RSI Pipeline Integration (GAP-001/002/003) ===
-        try:
-            # Calculate ATR on recent prices
-            recent_prices = []
-            for pair in self.FIXED_UNIVERSE:
-                prices = self.price_history.get_prices(pair, n=20)
-                if prices:
-                    recent_prices.append(prices[-1])
-
-            if len(recent_prices) >= 14:
-                # Simple ATR approximation using close prices
-                atr = self.atr_calculator.calculate_atr(
-                    recent_prices, recent_prices, recent_prices, period=14
-                )
-                regime = self.regime_detector.detect(recent_prices, atr)
-
-            # ARCH-4: Prefer unified evaluation + allocator when enabled
-            # Freshness guard (#1): Only run full proposal generation when primary signals (sentiment/RSI) have updated.
-            # This prevents wasteful repeated work on stale data (runner loop is 60s, signals are 15m/30m).
-            if getattr(self, "use_new_allocator", False) and NEW_ALLOCATOR_AVAILABLE:
-                if self._should_run_full_evaluation():
-                    sentiment_scores = load_sentiment_scores(universe=self.FIXED_UNIVERSE)
-                    self._last_proposals = evaluate_universe(
-                        basket=self.FIXED_UNIVERSE,
-                        sentiment=sentiment_scores,
-                        rsi_values=self.rsi_values,
-                        mode="weighted",
-                        include_scanner=True
-                    )
-                    # Log non-HOLD for visibility (but real decisions come from Allocator)
-                    for p in self._last_proposals:
-                        if p.side not in ("HOLD", "hold"):
-                            logger.info(f"[ARCH-4 PROPOSAL] {p.pair}: {p.side} score={p.score:.2f} src={p.source}")
-                    logger.debug("[FRESHNESS] Full evaluation run due to new signal data")
-                else:
-                    logger.debug("[FRESHNESS] Skipping full evaluation - signals not updated since last pass")
-            else:
-                # Legacy signal logging
-                for pair in self.FIXED_UNIVERSE:
-                    rsi_val = self.rsi_values.get(pair, 50.0)
-                    sentiment_scores = load_sentiment_scores(universe=self.FIXED_UNIVERSE)
-                    sentiment = sentiment_scores.get(pair, 0.0) if isinstance(sentiment_scores, dict) else 0.0
-                    signal = self.signal_generator.generate_signal(
-                        pair, rsi_val, atr, sentiment, mode="weighted"
-                    )
-                    if signal.signal != "HOLD":
-                        logger.info(f"[SIGNAL] {pair}: {signal.signal} | conf={signal.confidence:.2f} | {signal.reason}")
-        except Exception as e:
-            logger.debug(f"RSI pipeline integration error: {e}")
-
-
-        logger.info(f"[CYCLE {cycle_num}] {now.isoformat(timespec='seconds')} | "
-                    f"rebalance_needed={rebalance_needed} | "
-                    f"last_rebalance={self.last_rebalance_date or 'never'}")
-
-        if rebalance_needed:
-            self._perform_daily_rebalance()
-
-        self._save_state()  # ensure disk state (last_rebalance_date + last_updated) always matches in-memory after every cycle (prevents monitor desync on partial rebalance failures)
-
-        # Always write dashboard cache at end of cycle (even if no rebalance)
-        self._write_dashboard_cache()
+        """P4-05: delegate per-cycle orchestration to CycleCoordinator."""
+        self._cycle_coordinator.run_cycle(self, cycle_num)
 
     def _should_rebalance(self, now: datetime) -> bool:
         if getattr(self, "_force_next_rebalance", False):
@@ -751,6 +699,34 @@ class Phase6Runner:
     # ------------------------------------------------------------------
     # Daily Rebalancing
     # ------------------------------------------------------------------
+    def _finalize_daily_rebalance(self, executed: int, skipped: list, **kwargs):
+        """Shared post-rebalance bookkeeping (ARCH-4 + legacy)."""
+        from datetime import date
+
+        try:
+            self.portfolio.refresh()
+        except Exception:
+            pass
+        self.last_rebalance_date = date.today()
+        self._save_state()
+        logger.info(f"Daily rebalance completed. Executed={executed}, Skipped={len(skipped)}")
+        try:
+            log_rebalance_event(
+                {
+                    "pairs_before": kwargs.get("pairs_before", 0),
+                    "pairs_after": kwargs.get("pairs_after", 0),
+                    "capital_deployed_usd": float(kwargs.get("capital_deployed_usd", 0.0)),
+                    "executed": executed,
+                    "skipped": len(skipped),
+                    "reason": "daily_rebalance",
+                    "mode": getattr(self, "mode", "live"),
+                }
+            )
+        except Exception:
+            pass
+        details = f"Rebalance completed.\nExecuted: {executed} moves\nSkipped: {len(skipped)}"
+        self._send_telegram_digest("Daily Rebalance Complete", details)
+
     def _perform_daily_rebalance(self):
         logger.info("=== Daily Rebalance ===")
 
@@ -808,7 +784,7 @@ class Phase6Runner:
             cash = self.exchange.get_account_balance("USD")
 
             # ARCH-4: Use new unified Allocator when flag is set (paper trade / new production path)
-            if getattr(self, "use_new_allocator", False) and NEW_ALLOCATOR_AVAILABLE:
+            if self._use_primary_allocator_path():
                 logger.info("[ARCH-4] Using new Allocator + RotationStrategy path (replacing direct deploy_capital)")
 
                 # Force fresh evaluation for daily rebalance (the key decision point), regardless of cycle freshness guard.
@@ -859,11 +835,22 @@ class Phase6Runner:
 
                 self._last_plan = plan  # for dashboard and logs
                 executed, skipped = self._execute_trade_plan(plan)
-                logger.info(f"[ARCH-4] Rebalance complete via new stack. Strategy={plan.strategy_used}, actions={len(plan.actions)}, exposure={plan.expected_exposure:.1%}")
-                # Early return: legacy deploy_capital path skipped for ARCH-4
+                logger.info(
+                    f"[ARCH-4] Rebalance complete via new stack. Strategy={plan.strategy_used}, "
+                    f"actions={len(plan.actions)}, exposure={plan.expected_exposure:.1%}"
+                )
+                pairs_before = len(norm_allocs)
+                self._finalize_daily_rebalance(
+                    executed,
+                    skipped,
+                    pairs_before=pairs_before,
+                    pairs_after=pairs_before,
+                    capital_deployed_usd=float(sum(a.get("usd", a.get("usd_amount", 0)) for a in plan.actions)),
+                )
                 return
 
-            # Legacy path (when flag off) - WIRED AS PRIMARY: old-style permissive_deploy using deploy_capital
+            if not self.use_new_allocator:
+                logger.warning("[LEGACY FALLBACK] use_new_allocator=False — deploy_capital path")
             # This is the logic that demonstrated +6-24pp edge vs hold in full 365d diagnostics (tuned smaller cap, permissive min_sent -0.30)
             logger.info("[OLD-STYLE WIRED] Using permissive_deploy via deploy_capital (rebalance_style=permissive_deploy from config, rebalance_cap_usd tuned to 150). Dashboard will be fed by this path.")
             # Compute target weights using inverse volatility + sentiment
@@ -971,28 +958,17 @@ class Phase6Runner:
             self.portfolio.refresh()
             new_positions = self.portfolio.get_enriched_positions() or {}
 
-        # Post-context: state update and digest (context already handled re-attach)
-        self.last_rebalance_date = date.today()
-        self._save_state()
-        logger.info(f"Daily rebalance completed. Executed={executed}, Skipped={len(skipped)}")
-        # Log rebalance event for dashboard/history
-        try:
-            log_rebalance_event({
-                "pairs_before": len(norm_positions) if "norm_positions" in locals() else 0,
-                "pairs_after": len(new_positions) if "new_positions" in locals() else len(norm_positions) if "norm_positions" in locals() else 0,
-                "capital_deployed_usd": float(min(rebalance_cap, cash)) if "rebalance_cap" in locals() and "cash" in locals() else 0.0,
-                "executed": executed,
-                "skipped": len(skipped),
-                "reason": "daily_rebalance",
-                "mode": getattr(self, "mode", "live")
-            })
-        except Exception:
-            pass  # non-critical
-        self.portfolio.refresh()  # ensure dashboard sees updated holdings
-
-        # Telegram digest
-        details = f"Rebalance completed.\nExecuted: {executed} moves\nSkipped: {len(skipped)}"
-        self._send_telegram_digest("Daily Rebalance Complete", details)
+        # Post-context: state update (legacy path)
+        new_positions = self.portfolio.get_enriched_positions() or {}
+        self._finalize_daily_rebalance(
+            executed,
+            skipped,
+            pairs_before=len(norm_positions) if "norm_positions" in locals() else 0,
+            pairs_after=len(new_positions) if new_positions else 0,
+            capital_deployed_usd=float(min(rebalance_cap, cash))
+            if "rebalance_cap" in locals() and "cash" in locals()
+            else 0.0,
+        )
 
     # ------------------------------------------------------------------
     # Data Enrichment Helpers
@@ -1162,10 +1138,11 @@ class Phase6Runner:
                 "performance_metrics": {
                     "daily_pnl_est": daily_pnl_est,
                     "win_rate": win_rate,
-
-                # ARCH-4 / new production code data (fed to dashboard)
+                    "total_trades": len(recent_trades),
+                },
                 "arch4": {
                     "use_new_allocator": getattr(self, "use_new_allocator", False),
+                    "mid_cycle_shadow": getattr(self, "mid_cycle_allocator_enabled", False),
                     "last_strategy": getattr(getattr(self, "_last_plan", None), "strategy_used", None),
                     "last_exposure": getattr(getattr(self, "_last_plan", None), "expected_exposure", None),
                     "last_rotations": getattr(getattr(self, "_last_plan", None), "rotations", 0),
@@ -1173,10 +1150,10 @@ class Phase6Runner:
                     "proposals_summary": [
                         {"pair": p.pair, "side": p.side, "score": round(p.score, 3), "source": p.source}
                         for p in getattr(self, "_last_proposals", [])[:5]
-                    ] if hasattr(self, "_last_proposals") else []
+                    ]
+                    if getattr(self, "_last_proposals", None)
+                    else [],
                 },
-                    "total_trades": len(recent_trades)
-                }
             }
 
 
@@ -1279,36 +1256,6 @@ class Phase6Runner:
             self._last_signal_mtime = latest
             return True
         return False
-
-    def persist_facts_to_db(self, usd_balance: float, usdc_balance: float, holdings: dict, price_snapshot: dict):
-        """Persist raw facts to phase6.db for SQL VIEW consumption. Dual-write with JSON.
-        Called from _write_dashboard_cache. Real data only.
-        """
-        import sqlite3
-        from datetime import datetime
-        db_path = Path("data/phase6.db")
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-        conn = sqlite3.connect(str(db_path))
-        ts = datetime.utcnow().isoformat() + "Z"
-
-        # Balances
-        conn.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance, available, hold, source) VALUES (?, 'USD', ?, ?, 0, 'live')", (ts, usd_balance, usd_balance))
-        if usdc_balance and usdc_balance > 0:
-            conn.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance, available, hold, source) VALUES (?, 'USDC', ?, ?, 0, 'live')", (ts, usdc_balance, usdc_balance))
-
-        # Holdings (from LPM, which has verified totals)
-        for currency, amount in (holdings or {}).items():
-            if str(currency).upper() not in ("USD", "USDC") and amount > 0:
-                conn.execute("INSERT OR REPLACE INTO holdings (ts, currency, amount, available, hold, source) VALUES (?, ?, ?, 0, ?, 'live')", (ts, str(currency).upper(), amount, amount))
-
-        # Prices from snapshot
-        for pair, price in (price_snapshot or {}).items():
-            if isinstance(price, (int, float)) and str(pair).endswith("-USD"):
-                conn.execute("INSERT OR REPLACE INTO prices (ts, pair, price, source) VALUES (?, ?, ?, 'price_snapshot')", (ts, pair, price))
-
-        conn.commit()
-        conn.close()
-        self.logger.info(f"[DB] Facts persisted to {db_path} at {ts}")
 
     def log_critical(self, error_type: str, message: str, context: Optional[Dict[str, Any]] = None):
         """Wrapper for critical notifications."""

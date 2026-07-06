@@ -7110,7 +7110,7 @@ hermes cron list | grep -A6 daily-git
 crontab -l | grep -i git || echo "no system git crontab (expected)"
 ```
 
-**Open item:** `git remote` still unset locally — add `origin` → `https://github.com/brad-sl/operations.git` then `git push -u origin phase-6.1` for offsite backup (health check exits ATTENTION until then).
+**Open item:** ~~`git remote` still unset locally~~ **Resolved 2026-07-06:** `origin` = `https://github.com/brad-sl/operations.git`. Auth: **GitHub CLI** (`gh auth git-credential`, account `brad-sl`, HTTPS). Push: `phase-6.1` → `edefe7d` (force-with-lease after unrelated-history divergence; safety branch `phase-6.1-local-sync-20260706` on remote).
 
 ### 2026-07-06 — P4-04: Platform executor default (ARCH-4) — COMPLETE (Kanban t_975d32ca)
 

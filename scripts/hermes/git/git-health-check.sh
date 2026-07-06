@@ -22,9 +22,12 @@ if [[ -z "$REMOTE_URL" ]]; then
 else
   echo "Remote: $REMOTE_URL"
   git fetch origin --dry-run 2>&1 | head -3 || echo "NOTE: fetch dry-run failed (auth/network OK to ignore in health)"
-  UNPUSHED=$(git log --oneline @{u}.. 2>/dev/null | wc -l | tr -d ' ' || echo 0)
-  echo "Unpushed commits vs upstream: ${UNPUSHED:-0}"
-  if [[ "${UNPUSHED:-0}" -gt 0 ]]; then
+  UNPUSHED=0
+  if git rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+    UNPUSHED=$(git rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)
+  fi
+  echo "Unpushed commits vs upstream: ${UNPUSHED}"
+  if [[ "${UNPUSHED}" -gt 0 ]]; then
     echo "WARN: unpushed commits exist"
     ISSUES=$((ISSUES + 1))
   fi

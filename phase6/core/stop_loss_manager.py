@@ -92,27 +92,48 @@ class StopLossManager:
         meta = self.exchange.get_product_metadata(pair)
         price_inc = float(meta.get("price_increment", 0.0001))
 
-        calc_base = anchor_entry if (anchor_entry and anchor_entry > 0) else entry_price
+        market_px = 0.0
+        if not self.shadow_mode:
+            try:
+                market_px = float(self.exchange.get_price(pair) or 0.0)
+            except Exception:
+                pass
+
+        from phase6.core.sl_preflight import (
+            quantize_stop_bundle,
+            resolve_stop_calc_base,
+            ensure_stop_below_market,
+        )
+
+        calc_base, anchor_reason = resolve_stop_calc_base(
+            pair, entry_price, anchor_entry, market_px or None
+        )
 
         if (not calc_base or calc_base <= 0) and not self.shadow_mode:
             try:
-                current_px = self.exchange.get_price(pair) or 0.0
+                current_px = market_px or float(self.exchange.get_price(pair) or 0.0)
                 if current_px > 0:
                     logger.warning(
                         f"[SL FALLBACK] entry/anchor was 0 for {pair}; using current market ${current_px:.2f} for SL anchor"
                     )
                     calc_base = current_px
+                    anchor_reason = "market_fallback"
             except Exception:
                 pass
 
         stop_price = calc_base * (1 - pct)
         limit_price = stop_price * 0.995
 
-        from phase6.core.sl_preflight import quantize_stop_bundle
-
         stop_price, limit_price, stop_price_str, limit_price_str = quantize_stop_bundle(
             self.exchange, pair, calc_base, stop_price, limit_price
         )
+
+        if market_px > 0:
+            stop_price, limit_price = ensure_stop_below_market(
+                self.exchange, pair, stop_price, limit_price, market_px, pct
+            )
+            stop_price_str = self.exchange.quantize_price(pair, stop_price)
+            limit_price_str = self.exchange.quantize_price(pair, limit_price)
 
         # Ensure prices are valid vs entry
         if stop_price >= entry_price:

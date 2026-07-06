@@ -6947,39 +6947,19 @@ Source: Daily Intelligence Briefing 2026-07-05 04:00 UTC
 
 
 **ANALYST-20260705-001** — Add pre-flight settlement poll + product-specific tick handling to SL layer
-Status: Proposed — Awaiting Review/Acceptance
-Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
-Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
-Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
-Priority: High | Effort: Medium | Category: SL / Platform
-Source: Daily Intelligence Briefing 2026-07-05 16:00 UTC
+Status: **Closed — duplicate** (2026-07-06). Implemented as **ANALYST-20260705-005/007** (Done). Handoff: `handoffs/phase6/Handoff_ANALYST-005-007_SL_Preflight.md`.
 
 
 **ANALYST-20260705-002** — Add lightweight 'strategic brief' artifact before each scheduled rebalance
-Status: Proposed — Awaiting Review/Acceptance
-Description: Have the intelligence report produce a short JSON 'brief' (regime bias, high-SL-risk pairs, top proposals) that the runner can optionally load as context or constraints.
-Benefits: Pre-rebalance strategic context without heavy coupling. Makes daily briefings directly actionable for the allocator.
-Risks + Mitigations: Another artifact to maintain (mitigation: keep it tiny and optional).
-Priority: Medium | Effort: Low | Category: Runner / Analyst
-Source: Daily Intelligence Briefing 2026-07-05 16:00 UTC
+Status: **Done** (2026-07-06). Generator writes `data/state/intel_strategic_brief.json`; runner loads via `strategic_brief_loader.log_brief_for_rebalance()` at daily rebalance start (`rebalance_coordinator.py`). Tests: `test_isolation_strategic_brief.py`.
 
 
 **ANALYST-20260705-003** — Add pre-flight settlement poll + product-specific tick handling to SL layer
-Status: Proposed — Awaiting Review/Acceptance
-Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
-Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
-Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
-Priority: High | Effort: Medium | Category: SL / Platform
-Source: Daily Intelligence Briefing 2026-07-05 16:00 UTC
+Status: **Closed — duplicate** (2026-07-06). Same as **001** / **005/007** (Done).
 
 
 **ANALYST-20260705-004** — Add lightweight 'strategic brief' artifact before each scheduled rebalance
-Status: Proposed — Awaiting Review/Acceptance
-Description: Have the intelligence report produce a short JSON 'brief' (regime bias, high-SL-risk pairs, top proposals) that the runner can optionally load as context or constraints.
-Benefits: Pre-rebalance strategic context without heavy coupling. Makes daily briefings directly actionable for the allocator.
-Risks + Mitigations: Another artifact to maintain (mitigation: keep it tiny and optional).
-Priority: Medium | Effort: Low | Category: Runner / Analyst
-Source: Daily Intelligence Briefing 2026-07-05 16:00 UTC
+Status: **Closed — duplicate** (2026-07-06). Same as **002** (Done).
 
 ---
 
@@ -7212,4 +7192,21 @@ Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 001; superseded
 
 **ANALYST-20260706-004** — Strengthen pre-rebalance data refresh + fallback for partial coverage
 Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 002; superseded by **ANALYST-20260705-006/008** (Done).
+
+### 2026-07-06 (late) — SL-ENTRY-ANCHOR-01 + ops wrap-up batch
+
+**SL-ENTRY-ANCHOR-01** — **Done**
+- **Issue:** SOL re-attach used ledger anchor ~$141 vs market ~$82 → `PREVIEW_STOP_PRICE_ABOVE_LAST_TRADE_PRICE`.
+- **Fix:** `resolve_stop_calc_base` + `ensure_stop_below_market` in `sl_preflight.py`; wired in `stop_loss_manager.py`.
+- **Tests:** `test_isolation_sl_preflight.py` (anchor rebase case).
+- **Ops:** `scripts/phase6/reattach_sl_once.py` for one-off live re-attach after deploy.
+- **Handoff:** `handoffs/phase6/Handoff_SL_ENTRY_ANCHOR_01.md`
+
+**Ops fixes logged (2026-07-06):**
+- Rebalance Telegram spam: once-per-slot `rebalance_slots_completed` + no-op digest skip (`879df0fa`, `85bdaed5`).
+- Duplicate runners: systemd `phase6-runner.service` disabled by user; monitor auto-kill (`71f68e8a`).
+
+**ANALYST-002/004 strategic brief:** runner hook complete (see 002 Done above).
+
+**Git hygiene:** `data/state/*.json` and `logs/` already in `.gitignore`; code/docs committed on `phase-6.1` (this batch).
 

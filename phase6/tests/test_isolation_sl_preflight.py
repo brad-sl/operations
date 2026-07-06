@@ -6,7 +6,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from phase6.core.sl_preflight import settlement_poll_params, quantize_stop_bundle, sanitize_reattach_order_id
+from phase6.core.sl_preflight import (
+    settlement_poll_params,
+    quantize_stop_bundle,
+    sanitize_reattach_order_id,
+    resolve_stop_calc_base,
+    ensure_stop_below_market,
+)
 
 
 class _Ex:
@@ -50,8 +56,18 @@ def test_sanitize_stale_reattach_order_id():
     print("[SL-REATTACH] sanitize_reattach_order_id OK")
 
 
+def test_anchor_rebase_stale_entry():
+    base, reason = resolve_stop_calc_base("SOL-USD", 82.0, 141.0, 82.5)
+    assert reason == "market_rebase" and abs(base - 82.5) < 0.01
+    ex = _Ex()
+    stop, limit = ensure_stop_below_market(ex, "SOL-USD", 136.0, 135.0, 82.5, 0.03)
+    assert stop < 82.5 and limit < stop
+    print("[SL-ANCHOR-REBASE] stale entry OK")
+
+
 if __name__ == "__main__":
     test_settlement_params()
     test_quantize_stop_bundle()
     test_sanitize_stale_reattach_order_id()
+    test_anchor_rebase_stale_entry()
     print("[SL PREFLIGHT ISOLATION] PASSED")

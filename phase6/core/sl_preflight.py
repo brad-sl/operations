@@ -15,6 +15,62 @@ MEDIUM_RISK_TIMEOUT = 3.5
 HIGH_RISK_TIMEOUT = 5.0
 ORDER_FILL_TIMEOUT = 20.0
 
+# Coinbase stop-down preview: stop must be below last trade (~market). Stale ledger entries
+# above market trigger PREVIEW_STOP_PRICE_ABOVE_LAST_TRADE_PRICE.
+ANCHOR_MAX_ABOVE_MARKET = 1.05
+
+
+def resolve_stop_calc_base(
+    pair: str,
+    entry_price: float,
+    anchor_entry: Optional[float],
+    market_px: Optional[float],
+) -> Tuple[float, str]:
+    """Pick SL % base; rebase to market when anchor is stale vs last trade."""
+    calc_base = float(anchor_entry) if anchor_entry and anchor_entry > 0 else float(entry_price or 0)
+    reason = "anchor" if anchor_entry and anchor_entry > 0 else "entry"
+    if market_px and market_px > 0 and calc_base > market_px * ANCHOR_MAX_ABOVE_MARKET:
+        logger.warning(
+            "[SL-ANCHOR-REBASE] %s: calc_base $%.4f >> market $%.4f; rebasing to market for stop-down preview",
+            pair,
+            calc_base,
+            market_px,
+        )
+        calc_base = float(market_px)
+        reason = "market_rebase"
+    return calc_base, reason
+
+
+def ensure_stop_below_market(
+    exchange: Any,
+    pair: str,
+    stop_price: float,
+    limit_price: float,
+    market_px: float,
+    pct: float,
+) -> Tuple[float, float]:
+    """If stop is still at/above market, recompute from market * (1 - pct)."""
+    if not market_px or market_px <= 0:
+        return stop_price, limit_price
+    if stop_price < market_px * 0.999:
+        return stop_price, limit_price
+    meta = exchange.get_product_metadata(pair)
+    price_inc = float(meta.get("price_increment", 0.0001))
+    calc_base = market_px
+    stop_price = calc_base * (1 - pct)
+    limit_price = stop_price * 0.995
+    stop_price, limit_price, _, _ = quantize_stop_bundle(
+        exchange, pair, calc_base, stop_price, limit_price
+    )
+    logger.warning(
+        "[SL-ANCHOR-REBASE] %s: stop was >= market $%.4f; recomputed stop $%.4f limit $%.4f",
+        pair,
+        market_px,
+        stop_price,
+        limit_price,
+    )
+    return stop_price, limit_price
+
 
 def settlement_poll_params(
     pair: str,

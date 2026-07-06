@@ -25,6 +25,10 @@ class RebalanceCoordinator:
     def perform_daily(self, runner: "Phase6Runner") -> None:
                 logger.info("=== Daily Rebalance ===")
 
+                from phase6.core.strategic_brief_loader import log_brief_for_rebalance
+
+                runner._last_strategic_brief = log_brief_for_rebalance()
+
                 # Fresh cycle: do not carry BUY order_ids from prior runs into CR-03 re-attach
                 runner._recent_buy_order_ids = {}
                 if getattr(runner, "stop_loss_coordinator", None):

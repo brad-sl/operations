@@ -999,14 +999,16 @@ class Phase6Runner:
             skipped = [r for r in results if not r.get("success")]
             if not hasattr(self, "_recent_buy_order_ids"):
                 self._recent_buy_order_ids = {}
+            cycle_ids: Dict[str, str] = {}
             for r in results:
                 if r.get("success") and str(r.get("side", r.get("action", ""))).upper() == "BUY":
                     pair = r.get("pair")
                     oid = r.get("order_id") or r.get("id")
                     if pair and oid:
-                        self._recent_buy_order_ids[pair] = str(oid)
+                        cycle_ids[pair] = str(oid)
+            self._recent_buy_order_ids = cycle_ids
             if getattr(self, "stop_loss_coordinator", None):
-                self.stop_loss_coordinator.set_buy_order_ids(self._recent_buy_order_ids)
+                self.stop_loss_coordinator.set_buy_order_ids(cycle_ids)
             # Persist raw rebalance fact (DASH-VIEWS-01) - ensure for both paths
             try:
                 self.persist_rebalance_to_db({"actions": exec_plan, "results": [r.get("pair") for r in results if r.get("success")]}, executed)

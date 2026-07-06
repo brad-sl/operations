@@ -14,6 +14,8 @@ import logging
 from contextlib import contextmanager
 from typing import Dict, Any, List, Optional
 
+from phase6.core.sl_preflight import sanitize_reattach_order_id
+
 logger = logging.getLogger(__name__)
 
 class StopLossCoordinator:
@@ -150,7 +152,8 @@ class StopLossCoordinator:
                 logger.info(f"[SL-ANCHOR #1] {pair}: using original entry ${intended_entry:.4f} for SL (current ${current_p:.4f})")
 
             try:
-                oid = self._buy_order_ids.get(pair) or self._buy_order_ids.get(pair.replace("-USD", ""))
+                oid_raw = self._buy_order_ids.get(pair) or self._buy_order_ids.get(pair.replace("-USD", ""))
+                oid = sanitize_reattach_order_id(self.client, pair, oid_raw)
                 success = self.sl_manager.attach_stop_loss(
                     pair=pair,
                     entry_price=float(entry_for_calc),

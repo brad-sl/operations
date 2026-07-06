@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from phase6.core.sl_preflight import settlement_poll_params, quantize_stop_bundle
+from phase6.core.sl_preflight import settlement_poll_params, quantize_stop_bundle, sanitize_reattach_order_id
 
 
 class _Ex:
@@ -34,7 +34,24 @@ def test_quantize_stop_bundle():
     print("[ANALYST-007] quantize_stop_bundle OK")
 
 
+def test_sanitize_stale_reattach_order_id():
+    class _Client:
+        def get_order_fill_details(self, order_id):
+            return {"filled_size": 0, "status": None}
+
+    assert sanitize_reattach_order_id(_Client(), "OP-USD", "4d0bc7f7-stale") is None
+    assert sanitize_reattach_order_id(_Client(), "OP-USD", None) is None
+
+    class _Filled:
+        def get_order_fill_details(self, order_id):
+            return {"filled_size": 1.0, "status": "FILLED"}
+
+    assert sanitize_reattach_order_id(_Filled(), "OP-USD", "ord") is None
+    print("[SL-REATTACH] sanitize_reattach_order_id OK")
+
+
 if __name__ == "__main__":
     test_settlement_params()
     test_quantize_stop_bundle()
+    test_sanitize_stale_reattach_order_id()
     print("[SL PREFLIGHT ISOLATION] PASSED")

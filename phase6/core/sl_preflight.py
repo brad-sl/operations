@@ -33,6 +33,40 @@ def settlement_poll_params(
     return {"timeout": LOW_RISK_TIMEOUT, "order_id": None, "mode": "balance_stable"}
 
 
+def sanitize_reattach_order_id(
+    exchange: Any,
+    pair: str,
+    order_id: Optional[str],
+) -> Optional[str]:
+    """
+    Re-attach must not reuse stale BUY order_ids from prior cycles.
+    Only return order_id when the exchange still reports an open/pending buy worth polling.
+    """
+    if not order_id:
+        return None
+    if not exchange or not hasattr(exchange, "get_order_fill_details"):
+        return None
+    try:
+        fill = exchange.get_order_fill_details(order_id) or {}
+        status = str(fill.get("status") or fill.get("order_status") or "").upper()
+        filled = float(fill.get("filled_size", fill.get("filled", 0)) or 0)
+        if filled > 0 or status in ("FILLED", "DONE", "COMPLETED"):
+            return None
+        if status in ("CANCELLED", "CANCELED", "EXPIRED", "FAILED", "REJECTED"):
+            return None
+        if filled <= 0 and not status:
+            logger.info(
+                "[SL-PREFLIGHT] Dropping stale/unverifiable order_id %s for %s re-attach; using balance_stable poll",
+                order_id,
+                pair,
+            )
+            return None
+        return str(order_id)
+    except Exception as exc:
+        logger.debug("[SL-PREFLIGHT] order_id sanitize failed for %s: %s", pair, exc)
+        return None
+
+
 def quantize_stop_bundle(
     exchange: Any,
     pair: str,

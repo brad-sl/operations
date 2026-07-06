@@ -25,6 +25,11 @@ class RebalanceCoordinator:
     def perform_daily(self, runner: "Phase6Runner") -> None:
                 logger.info("=== Daily Rebalance ===")
 
+                # Fresh cycle: do not carry BUY order_ids from prior runs into CR-03 re-attach
+                runner._recent_buy_order_ids = {}
+                if getattr(runner, "stop_loss_coordinator", None):
+                    runner.stop_loss_coordinator.set_buy_order_ids({})
+
                 # Production hardening: enforce withdrawal reserve before any allocation
                 try:
                     # Fable-5 / P6-143/145 G4: use config-driven reserve + pass projected targets
@@ -70,7 +75,6 @@ class RebalanceCoordinator:
                 pre_positions = current_positions
 
                 # Wrap core rebalance logic (order changes) inside suspend_reattach_context
-                runner.stop_loss_coordinator.set_buy_order_ids(getattr(runner, "_recent_buy_order_ids", {}))
                 with runner.stop_loss_coordinator.suspend_reattach_context(basket, pre_positions):
                     logger.info("[CR-03] Entered suspend_reattach_context - performing rebalance body")
 

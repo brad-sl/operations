@@ -1,7 +1,9 @@
 name: git-health-check
+# DEPRECATED 2026-07-06: folded into daily-git-hermes-management
+enabled: false
 schedule: "*/30 * * * *"
 repeat: -1
 deliver: local
 script: /home/brad/projects/crypto-trading-bot/scripts/hermes/git/git-health-check.sh
 workdir: /home/brad/projects/crypto-trading-bot
-description: "Phase 5 sustainment: every 30min git health for hermes mirror + ops monitoring"
+description: "DEPRECATED — use daily-git-hermes-management cron"

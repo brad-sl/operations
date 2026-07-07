@@ -79,14 +79,8 @@ See `references/proactive-notification-intervention.md` for the concrete 2026-06
 - CYCLE_ERRORS_SPIKE (count in recent tail)
 - STATE_WRITE_UNBOUND_OS ( "cannot access local variable 'os'" in state file write path)
 - DASHBOARD_DB_LOCKED ("database is locked" or "DB persist failed" in dashboard/persist_facts_to_db)
-
-## Known High-Signal Patterns (expand in the script)
-- REBALANCE_STALE_36H + state date check
-- UNVERIFIED_FLOAT_ERROR + "Unverified or error"
-- NO_GET_ACCOUNTS (wrapper missing method)
-- COINBASE_401
-- RUNNER_NOT_RUNNING
-- CYCLE_ERRORS_SPIKE (count in recent tail)
+- REBALANCE_TELEGRAM_SPAM — `trading-bot-operations` → `references/rebalance-scheduler-telegram-spam-2026-07-06.md` + `references/phase6-runner-singleton-sl-reattach.md`
+- MULTIPLE_PHASE6_RUNNERS — `.venv` + `/usr/bin/python3`; `scripts/phase6/disable_systemd_runner.sh`; monitor keeps `.venv`
 
 Add new patterns only after root-causing a real incident and confirming the regex is stable.
 

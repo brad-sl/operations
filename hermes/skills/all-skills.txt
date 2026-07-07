@@ -1,9 +1,12 @@
 agent-behavior
 agent-delegation
+agentic-architecture
 apify-reddit-sentiment
 apple
 autonomous-ai-agents
+computer-use
 creative
+crypto_analyst
 crypto-data-acquisition
 data-science
 devops
@@ -32,6 +35,5 @@ research
 smart-home
 social-media
 software-development
-spec-driven-feature-development
 trading-bot-operations
 yuanbao

@@ -3,45 +3,45 @@
 │                         Scheduled Jobs                                  │
 └─────────────────────────────────────────────────────────────────────────┘
 
-  4dcba7aa8f06 [active]
-    Name:      twice-daily-trading-intelligence
-    Schedule:  0 9,21 * * *
-    Repeat:    ∞
-    Next run:  2026-06-14T21:00:00-07:00
-    Deliver:   telegram:1617763347
-    Script:    phase6/scripts/generate_trading_intelligence_report.py
-    Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-06-14T09:00:56.184624-07:00  ok
-
   a93067255b66 [active]
     Name:      Daily Kanban Backup
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-06-15T03:00:00-07:00
+    Next run:  2026-07-08T03:00:00-07:00
     Deliver:   local
     Script:    backup-kanban.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-06-14T03:00:47.677628-07:00  ok
+    Last run:  2026-07-07T03:00:39.066599-07:00  ok
 
   5c1207235cf6 [active]
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-06-14T11:30:00-07:00
+    Next run:  2026-07-07T04:45:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-06-14T11:16:00.193560-07:00  ok
+    Last run:  2026-07-07T04:30:48.937380-07:00  ok
 
   8612a817fe55 [active]
     Name:      sentiment-30min-refresh
     Schedule:  */30 * * * *
     Repeat:    ∞
-    Next run:  2026-06-14T11:30:00-07:00
+    Next run:  2026-07-07T05:00:00-07:00
     Deliver:   local
     Script:    run_sentiment_cron.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-06-14T11:01:02.333898-07:00  ok
+    Last run:  2026-07-07T04:30:50.730233-07:00  ok
+
+  92d0bbe12216 [active]
+    Name:      daily-git-hermes-management
+    Schedule:  30 4 * * *
+    Repeat:    ∞
+    Next run:  2026-07-08T04:30:00-07:00
+    Deliver:   local
+    Script:    git-daily-management.sh
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   /home/brad/projects/crypto-trading-bot
 

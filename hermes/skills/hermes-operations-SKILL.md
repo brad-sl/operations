@@ -28,11 +28,159 @@ When using the agent's `cronjob` tool (distinct from raw `hermes cron` CLI):
 - After create, always verify with `hermes cron list` (via terminal tool) — the list is the source of truth.
 - Long-running external calls (Apify Reddit/X sentiment) can timeout in interactive verification; the cron itself will execute the script in its own context.
 
+## Stale no_agent Script Copies + Project Package Import Side Effects
+For `no_agent: true` cron jobs that reference a `script:` (e.g. report generators, refreshers) and import project modules:
+
+**Core rule**: The file at `~/.hermes/scripts/<...>` is what actually executes. It is a copy that can (and will) become stale after project changes.
+
+**Common trigger pattern** (observed 2026-06-23):
+- Script does `sys.path.insert(...) ; from phase6.core.xxx import ...`
+- This executes `phase6/core/__init__.py` (which does unconditional imports of runner etc.).
+- A downstream module has runtime-evaluated type annotation using a name only available under `TYPE_CHECKING` (e.g. `plan: TradePlan` in order_executor).
+- Result: NameError on cron run even if the script "looks fine".
+
+**Debugging sequence (mandatory)**:
+1. `cronjob list` → note exact `script:` path and job_id.
+2. `cat ~/.hermes/scripts/<exact path>` (compare timestamp/size to project source).
+3. `python3 ~/.hermes/scripts/<exact path> 2>&1 | cat` (full traceback; user notifications truncate).
+4. Trace the import (here: sentiment_scorer → core/__init__.py → phase6_runner → order_executor).
+5. Fix source (add `from __future__ import annotations` at top of affected file; make annotations stringified if needed).
+6. Sync: `cp <project script> ~/.hermes/scripts/<target dir>/`
+7. In the hermes copy, prefer absolute project root for sys.path (relative `Path(__file__).parent...` often resolves to ~/.hermes/... instead of project).
+8. Re-run direct python + confirm cron next execution or manual trigger.
+9. Cross-check `crontab -l` + hermes list.
+
+**Pitfalls**:
+- Assuming the project `phase6/scripts/xxx.py` is what the cron runs.
+- Evolving a report/analyzer script (adding SL risk, Polymarket, strategic proposals with IDs, decision approval section) without syncing the hermes copy → silent feature loss.
+- Package `__init__.py` eager imports turn "type only" dependencies into runtime requirements.
+- Relative paths in scripts copied to hermes locations.
+- Stale copies lose all recent analyst/strategic output.
+
+See `references/cron-no-agent-script-desync-and-project-imports-2026-06-23.md` for the exact traceback, commands used, and the 2026-06-23 fix (future annotations + copy + absolute path).
+
+**Standing practice**: After any change to a `no_agent` script or anything it imports (especially under phase6.core), immediately sync the hermes copy and run it directly from the hermes path as verification. Combine with code-isolation-testing for the report logic itself.
+
+Update this section whenever a new desync or import-side-effect incident occurs. Prefer `workdir` on the cron job + direct project script where possible for future jobs to reduce copy surface.
+
 ## Common Pitfalls
 - Using `--prompt` or `--schedule` flags with `hermes cron create` often fails due to CLI parsing.
 - Dropping YAML files in `~/.hermes/cron/` does not always auto-register the job.
 - The gateway must be running for any cron work to fire.
 - **cronjob tool loop trap**: calling create without `schedule` 50+ times in a row (identical args) triggers the exact tool-loop warning seen in max-iteration sessions. Always include the parameter on the first attempt.
+
+## Cron Hygiene & Redundancy Avoidance
+**Strong user preference (reinforced in multiple sessions):** Explicitly verify system-level crontab in addition to Hermes cron list / cronjob tool. Run `crontab -l` (and `crontab -l | grep ...` for specific jobs) alongside any Hermes cron inspection. This catches raw system entries that may overlap or be legacy.
+
+Before adding or retaining diagnostic / smoke / access-check crons:
+- Audit whether the primary runner, refresher jobs (RSI 15m, sentiment 30m), monitors, or main loops already exercise the same code paths (e.g. `_ensure_live_client()`, `get_holdings_verified()`, live client init).
+- In trading bot contexts, the runner + signal refreshers usually provide frequent enough coverage of access, connectivity, and basic state. Dedicated hourly diagnostics are frequently overkill/redundant.
+
+When the user indicates a scheduled job is "overkill", "redundant", or "I don’t really care":
+- Treat as a first-class signal to immediately remove the cron entry.
+- Update any documentation, comments, or SKILL references that describe the schedule.
+- Proactively decommission rather than leave "just in case".
+
+Example (from session): Hourly RobustSmokeTest.py (system crontab `0 * * * *`) for access/SL logic was removed after user noted the runner already exercises the paths frequently enough. The file was retained as manual-only with updated header.
+
+**Verification pattern after any cron change:**
+1. `crontab -l`
+2. Hermes cron list (via tool or terminal)
+3. `ps aux | grep -E 'phase|runner|smoke'` (or equivalent)
+4. Confirm no unintended overlap with trading paths.
+
+See `references/cron-hygiene-redundancy-avoidance.md` for the full session transcript (smoke test removal), removal commands, example of updated script docstring, and the standing checklist.
+
+Add a "Cron Hygiene" review to any long-lived trading bot cron setup or monitor profile. Prefer fewer, higher-signal scheduled jobs. Runner activity is the default coverage for access checks.
+
+## External API Cost Control for Sentiment & Polling Jobs
+**Trigger**: User reports high bills on "X Developer" (or similar platform API) while running Hermes + trading bot. Distinguish from xAI/SuperGrok (Grok chats, reports, agents) — they are separate billings.
+
+**Diagnosis pattern (run via terminal)**:
+- `crontab -l | grep -E 'fetch|sentiment|run_sentiment'`
+- Read the fetch scripts (fetch_x_sentiment.py uses direct `https://api.twitter.com/2/tweets/search/recent`; Reddit often Apify).
+- Count: 12-pair basket + batch_size=5 → ~3 calls/run at max_results=100. 48×/day × resources returned (posts + metrics + expansions) = high daily cost.
+- Check `.env` keys (X_API_BEARER vs APIFY_*).
+- Cross-check Hermes cron list + actual script copies in `~/.hermes/scripts/`.
+
+**Control primitives** (apply in order):
+1. **Frequency**: 30m → 2h or 4h+ (`0 */2 * * *` or sparser). Macro/rotation sentiment does not need sub-hourly.
+2. **Per-call volume**: `max_results=100` → 30-50.
+3. **Incremental**: Add `since_id` (from previous response meta) + state file (e.g. `x_last_tweet_id.txt`). Only pay for new posts.
+4. **Provider**: Switch direct X/Twitter search to Apify actor (see `apify` + `apify-reddit-sentiment` skills). Much cheaper for volume.
+5. **Verification**: Re-run `crontab -l`, test script with proper wrapper (OPENBLAS if needed), check X dashboard resource usage, watch log growth. Update MASTER with before/after + expected savings.
+6. Audit for duplicate sentiment crons (fetch_x + run_sentiment.sh + legacy).
+
+**Hermes-specific notes**:
+- Scripts that run under Hermes (no_agent or cron) often execute from `~/.hermes/scripts/` (or phase6 copy). Sync after edits; use candidate paths for skill modules (e.g. polymarket_overlay.py) or explicit copies to `~/.hermes/skills/crypto_analyst/` and project-relative fallbacks.
+- Wrap env-sensitive calls (sentiment + TextBlob/NumPy) in `.sh` with `OPENBLAS_CORETYPE=GENERIC`.
+- Always pair system `crontab -l` with Hermes inspection.
+
+See `references/x-api-cost-control-sentiment-throttling.md` for the 2026-06-24 diagnosis transcript, volume math, exact changes applied (throttle + params + skeleton incremental), and billing separation evidence.
+
+**Pitfall**: Treating "X bills" as agent cost. Or leaving aggressive polling because "sentiment is important" without measuring actual call volume.
+
+**Broader LLM / Agent Token Cost Control (Grok/xAI side, separate from data APIs)**
+X Developer (Twitter API) billing is completely independent of SuperGrok / xAI / Grok Build. High X bills do **not** go away by subscribing to SuperGrok.
+
+**Full repeatable audit + reduction playbook** (used successfully to target ~$10/day total):
+1. List all crons: `crontab -l` + `hermes cron list` + check `~/.hermes/cron/jobs.json`. Identify LLM-heavy ones (ops_engineer every 10m, intelligence reports 2×/day, sentiment system, monitors).
+2. Distinguish billings explicitly in diagnosis: X Developer (bearer, search/recent, resources per post) vs. xAI/Grok (chat, reports, agents via api.x.ai or OpenRouter).
+3. Throttle frequency aggressively for non-real-time signals (sentiment, ops diagnostics).
+4. Switch expensive direct data sources to Apify (see above + apify-reddit-sentiment).
+5. For Grok/agent tokens: 
+   - Install xAI CLI safely: `curl -fsSL https://x.ai/cli/install.sh -o /tmp/xai_install.sh && bash /tmp/xai_install.sh` (avoids shell injection flags).
+   - Create/update `~/.grok/config.toml` with cost controls:
+     ```toml
+     [models]
+     default = "grok-build"
+
+     [model.grok-build]
+     model = "grok-build"
+     max_completion_tokens = 4096
+     temperature = 0.3
+     context_window = 128000
+     ```
+   - Re-point heavy profiles in `~/.hermes/profiles/<name>/config.yaml` (crypto-analyst, crypto-engineer, crypto-orchestrator, code-reviewer, creative-director etc.) to:
+     `default: grok-build-0.1`
+     `provider: xai-oauth`
+     `base_url: https://api.x.ai/v1`
+   - Global default already favors grok-build-0.1 where possible. Verify with `grok models` (shows grok-build as default after login).
+6. Add lightweight usage logging (model, prompt_len, response_len as token proxy, source, "via Apify") in report generators, fetchers, and ops paths.
+7. Verify: run scripts manually with timeout/tee, watch logs, check dashboards, update MASTER + before/after.
+
+**Standing rules**:
+- Always run `crontab -l` (system) in addition to Hermes tools.
+- Prefer `grok-build-0.1` + xai-oauth for cost-sensitive recurring analyst / ops work.
+- Apify for social sentiment (X or Reddit) when volume would otherwise trigger pay-per-resource billing.
+- Document changes with exact commands, before/after, and impact in MASTER_TASK_TRACKING.md.
+- Combine with isolation tests / live verification for any modified fetch/report logic.
+
+See `references/hermes-grok-build-cost-playbook.md` (or the throttling reference) for concrete commands, profile diffs, cron before/after, and logging examples from 2026-06-24 audit.
+
+**Analyst Report Output Caching & Live Verification Patterns (2026-06-24 extension)**
+The Phase 6 `generate_trading_intelligence_report.py` (and Hermes copies) is now largely deterministic Python (rule-based assessment, evolution notes, and strategic proposals from learnings + heuristics + live data). The ANALYST_PERSONA is flavor only; no direct LLM calls inside the script. Real cost is in the Hermes crypto-analyst gateway context + repeated manual re-runs.
+
+**Patterns**:
+- **Live verification test**: `timeout 180 python3 phase6/scripts/generate_trading_intelligence_report.py 2>&1 | tee /tmp/intel_report_live_test.log | head -N`. Inspect for real data (Polymarket bias, coverage stats, signals, SL risks), new ANALYST- IDs, persistence to backlog/MASTER, and "Report complete".
+- **Dual caching layer** (to trim fat on repeated invocations):
+  - Full report cache: `data/state/intel_report_cache.json` keyed on date + basket + rounded poly bias + high-risk count + coverage (12h TTL). Stores generated text + meta.
+  - Compact strategic brief: `data/state/intel_strategic_brief.json` (regime bias, coverage, high-SL-risk pairs, top 3 proposals, last rebalance). Runner/allocator can consume without full text. Directly realizes one of the proposals generated in the same cycle.
+- Compute key with stable fingerprint (avoid date-only to catch regime shifts).
+- On cache hit: short-circuit with note or serve cached text/brief.
+- Always save both at end of generation (even on full run).
+- Tie to proposals: the brief artifact was proposed as ANALYST-20260624-006 in the live run that created the cache.
+
+**Live run example outcomes** (for pattern reference):
+- Polymarket: bias 0.4, 4 markets.
+- Coverage 10/11 FULL.
+- New proposals: 005 (SL pre-flight + ticks), 006 (strategic brief).
+- High SL risk on many low-priced names due to preview failures.
+- 48h observation follow-ups printed for prior items.
+
+**Standing practice**: After any report/script change or cost model switch, run the live test + confirm real data (not mocks) + cache files updated. Update MASTER with key stats. See `references/report-caching-and-live-verification-2026-06-24.md`.
+
+Add cache helpers to the report script (or a shared util) and sync Hermes copies. Combine with code-isolation-testing for the generator logic.
 
 ## Monitoring Setup
 When setting up persistent monitors (e.g. `crypto-monitor`), always:
@@ -61,6 +209,41 @@ This pattern prevents repeated "connection refused" issues across reboots and di
 
 ## Telegram Integration
 Always store bot token and chat ID in the project's `.env` file. Use `load_dotenv()` with explicit path when running from outside the project directory.
+
+## Telegram single-owner conflicts (Hermes multi-profile + OpenClaw)
+**Class pattern**: More than one process long-polls the same Telegram bot token (`getUpdates`). Telegram allows **one** consumer per token.
+
+### Symptom families (do not confuse)
+| What you see | Likely cause |
+|--------------|--------------|
+| Startup errors: token already in use (PID …), gateway restart loop | Multiple Hermes `gateway run` / `hermes-gateway-*.service` on same token |
+| **Outbound works** (`hermes send`, bot messages arrive) **but user replies do nothing** | Second poller still active (often **OpenClaw** `channels.telegram.enabled` + Hermes both polling) |
+| `Connected to Telegram (polling mode)` then **hours of zero inbound log lines** | Split-brain polling: Hermes thinks connected while another client steals updates |
+| `urllib`/API **HTTP 409 Conflict** on `getUpdates` | Definitive dual-poller signal |
+
+**Diagnosis** (run via terminal; probe script: `scripts/tg-bot-diag.py`):
+```bash
+ps aux | grep -E 'hermes.*gateway run|openclaw.*gateway' | grep -v grep
+ls ~/.config/systemd/user/hermes-gateway*.service
+systemctl --user list-units 'hermes-gateway*' --plain --no-legend
+tail -100 ~/.hermes/logs/gateway.log | grep -iE 'telegram|conflict|enqueue|Sending response'
+python3 ~/.hermes/skills/hermes-operations/scripts/tg-bot-diag.py
+```
+
+**Hermes multi-profile fix (permanent)** — `hermes update` restarts all active `hermes-gateway*` units; stopping without **uninstall** lets conflicts return:
+```bash
+for p in code-reviewer crypto-analyst crypto-engineer crypto-orchestrator; do
+  hermes --profile "$p" gateway uninstall
+done
+systemctl --user daemon-reload && systemctl --user restart hermes-gateway
+hermes gateway list
+```
+
+**OpenClaw same-token fix** when Hermes owns the home bot: set `plugins.entries.telegram.enabled` and `channels.telegram.enabled` to `false` in `~/.openclaw/openclaw.json`, then `openclaw gateway restart`, wait ~25s, `systemctl --user restart hermes-gateway`, re-run `tg-bot-diag.py`, then send + **user reply** test (not send-only).
+
+**Pitfalls**: `hermes send` success does not prove inbound; do not `gateway install` on profiles sharing `TELEGRAM_BOT_TOKEN`; OpenClaw may run for other work with Telegram disabled.
+
+See `references/telegram-gateway-multi-profile-conflicts.md` (2026-06-19 + 2026-07-04). Optional user note: `~/.hermes/TELEGRAM_GATEWAY_SINGLETON.md`.
 
 ## Dedicated Monitoring Agent Profiles (crypto-monitor pattern)
 For long-running trading infrastructure, create isolated profiles (e.g. `crypto-monitor`) rather than overloading the default agent:
@@ -152,6 +335,43 @@ When user requests delineation of phase goals (or at plan creation), produce a c
 - Append "VERIFIED" notes to MASTER.
 
 See `references/git-operationalization-patterns.md` for condensed session transcripts, example artifacts layout, and full phase goals.
+
+**Daily repo automation (2026-07-06):** Load skill **`git-repo-management`** and `docs/GIT_REPO_DAILY_MANAGEMENT.md`. Hermes job `daily-git-hermes-management` (`92d0bbe12216`, `30 4 * * *`) must appear in `hermes cron list` — YAML files under `~/.hermes/cron/` alone are insufficient.
+
+## OpenClaw Maintenance (absorbed from openclaw-maintenance)
+
+Handle OpenClaw version drift, duplicate plugins, gateway blocks, and multi-install conflicts:
+
+### Common Symptoms
+- "Config was last written by a newer OpenClaw"
+- Gateway restart refused due to version mismatch
+- Duplicate plugin warnings for `openclaw-adspirer`
+
+### Diagnostics
+```bash
+which -a openclaw
+ls -l ~/.npm-global/bin/openclaw ~/.nvm/versions/node/*/bin/openclaw 2>/dev/null
+openclaw doctor --fix
+```
+
+### Version Conflict Resolution
+```bash
+OPENCLAW_ALLOW_OLDER_BINARY_DESTRUCTIVE_ACTIONS=1 openclaw update --yes --tag latest
+openclaw gateway restart --force
+```
+
+### Duplicate Plugin Cleanup
+```bash
+rm -rf ~/.openclaw/npm/node_modules/openclaw-adspirer \
+       ~/.openclaw/npm/package.json \
+       ~/.openclaw/npm/package-lock.json
+```
+
+After fixes: `openclaw adspirer status && openclaw gateway status`
+
+If Hermes is the primary Telegram bot, disable OpenClaw Telegram polling (`channels.telegram.enabled` and `plugins.entries.telegram.enabled` in `~/.openclaw/openclaw.json`) — same `botToken` as Hermes causes HTTP 409 and inbound silence while outbound send still works.
+
+---
 
 ## Loaded Skills Context
 This skill should be consulted whenever heavy Hermes CLI interaction or persistent agent setup is required. Consult it for any git-backed resilience, state versioning, or operational baseline work on Hermes.

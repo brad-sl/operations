@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "regime_quad_template",
+  "description": "Template: run each regime window separately; aggregate in scorecard (see REGIME_SCENARIO_PROCEDURE.md)",
+  "default_engine": "arch4",
+  "primary_metric": "max_drawdown_pct",
+  "baseline_scenario_id": "baseline_7d",
+  "regime_windows": [
+    {
+      "regime": "bull",
+      "label": "Bull (example)",
+      "date_range": { "start": "2025-10-01", "end": "2025-12-31" }
+    },
+    {
+      "regime": "bear",
+      "label": "Bear stress (SL)",
+      "date_range": { "start": "2025-08-01", "end": "2025-09-30" }
+    },
+    {
+      "regime": "flat",
+      "label": "Flat / chop",
+      "date_range": { "start": "2026-01-01", "end": "2026-03-31" }
+    },
+    {
+      "regime": "recent",
+      "label": "Recent OHLCV tail",
+      "date_range": { "start": "2026-02-01", "end": "2026-04-19" }
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "baseline_7d",
+      "label": "Rotation weekly",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "rebalance_7d",
+      "label": "Rebalance weekly",
+      "arch4": { "strategy": "rebalance" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    }
+  ]
+}

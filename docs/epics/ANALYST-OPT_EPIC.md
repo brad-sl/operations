@@ -70,14 +70,15 @@ EXECUTION (Phase 6): deterministic runner; shadow first; real data only
 - `run_analyst_opt_weekly.py` — weekly pack + learnings dedup
 - Intelligence report prints **Optimization results (scenario vs production)**
 
-### R3 — Proposal linkage (queued)
-- Auto-ingest winning proposals to MASTER backlog only if `gate` rules pass  
-- Deduplicate stale learnings (fix duplicate 2026-07-04 entries)
+### R3 — Proposal linkage ✅ (2026-07-07)
 
-### R3 — Shadow promotion pipeline
+- `promotion_gates.py` — Path B, beat baseline, max DD slack, positive Sharpe, production overlap, regime scorecard
+- `proposal_from_leaderboard.py` → `analyst_proposed_backlog.json` + MASTER (dedupe by `source_run_id`)
+- Weekly job calls ingest after leaderboard
+- `run_regime_scorecard.py` + `REGIME_SCENARIO_PROCEDURE.md` (bull/bear/flat/recent)
+- `regime_quad_template.json`
 
-- Git-versioned config overlay + automatic rollback on monitor breach  
-- Compare shadow PnL vs backtest prediction; feed drift into learnings
+### R4 — Shadow promotion pipeline (queued)
 
 ---
 

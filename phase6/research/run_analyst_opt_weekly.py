@@ -33,6 +33,14 @@ def main() -> int:
     if rc != 0:
         return rc
 
+    from phase6.research.proposal_from_leaderboard import ingest_from_latest_leaderboard
+
+    proposal, gates = ingest_from_latest_leaderboard()
+    if proposal:
+        print(f"R3 proposal ingested: {proposal['id']}")
+    else:
+        print(f"R3 proposal skipped gates passed={gates.passed} failures={gates.failures}")
+
     from phase6.research.learnings_dedup import dedup_learnings_file
 
     removed = dedup_learnings_file(ROOT / "data/state/analyst_learnings.json")

@@ -1,5 +1,8 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-07** — **ANALYST-OPT R3** gated proposals + regime procedure (`REGIME_SCENARIO_PROCEDURE.md`, `run_regime_scorecard.py`).
+- Ingest only when gates pass (current winner blocked: negative Sharpe)
+
 **2026-07-07** — **ANALYST-OPT R2** production compare + brief + weekly cron (`e039d96c4732`).
 - `--compare-production`, since-go-live return in brief; dedup learnings
 - Verified prod since go-live ~-28% vs scenario winner on OHLCV window (calendars differ until OHLCV extended)

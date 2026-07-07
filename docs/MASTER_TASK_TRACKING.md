@@ -1,5 +1,9 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-07** — **ANALYST-OPT R2** production compare + brief + weekly cron (`e039d96c4732`).
+- `--compare-production`, since-go-live return in brief; dedup learnings
+- Verified prod since go-live ~-28% vs scenario winner on OHLCV window (calendars differ until OHLCV extended)
+
 **2026-07-07** — **ANALYST-OPT R1b** Path B leaderboard (`engine: arch4`).
 - `arch4_scenario_runner.py`, pack `r1_arch4_smoke_three.json`
 - Verified full pack: winner `rebalance_7d` sharpe=-2.12 (rotation baselines worse on period); `engine_mode=arch4`
@@ -7314,4 +7318,22 @@ Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI
 Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
 Priority: Medium | Effort: Low-Medium | Category: Data / Runner
 Source: Daily Intelligence Briefing 2026-07-07 16:00 UTC
+
+
+**ANALYST-20260707-003** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-07 20:08 UTC
+
+
+**ANALYST-20260707-004** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-07 20:08 UTC
 

@@ -1,0 +1,40 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "r2_production_overlap",
+  "description": "ARCH-4 scenarios on window overlapping live production (since 2026-06-06)",
+  "default_engine": "arch4",
+  "primary_metric": "total_return_pct",
+  "baseline_scenario_id": "baseline_7d",
+  "date_range": {
+    "start": "2026-06-06",
+    "end": "2026-07-07"
+  },
+  "scenarios": [
+    {
+      "id": "baseline_7d",
+      "label": "ARCH-4 rotation weekly",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "rebalance_7d",
+      "label": "ARCH-4 rebalance weekly",
+      "engine": "arch4",
+      "arch4": { "strategy": "rebalance" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    }
+  ]
+}

@@ -1,0 +1,47 @@
+#!/usr/bin/env python3
+"""
+ANALYST-OPT weekly job: scenario leaderboard (Path B) + production comparison + learnings dedup.
+
+Writes data/state/analyst_scenario_leaderboard_latest.json for the daily intelligence brief.
+
+Usage:
+  python3 phase6/research/run_analyst_opt_weekly.py
+"""
+from __future__ import annotations
+
+import subprocess
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
+
+DEFAULT_PACK = ROOT / "phase6/research/scenarios/r1_arch4_smoke_three.json"
+
+
+def main() -> int:
+    cmd = [
+        sys.executable,
+        str(ROOT / "phase6/research/run_scenario_leaderboard.py"),
+        "--pack",
+        str(DEFAULT_PACK),
+        "--compare-production",
+        "--record-learning",
+    ]
+    print(" ".join(cmd))
+    rc = subprocess.call(cmd, cwd=str(ROOT))
+    if rc != 0:
+        return rc
+
+    from phase6.research.learnings_dedup import dedup_learnings_file
+
+    removed = dedup_learnings_file(ROOT / "data/state/analyst_learnings.json")
+    if removed:
+        print(f"deduped analyst_learnings.json removed={removed} duplicate entries")
+
+    print("ANALYST-OPT weekly OK")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

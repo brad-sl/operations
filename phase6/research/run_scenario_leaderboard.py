@@ -11,7 +11,7 @@ Real OHLCV only (backtests/data/backtest_historical_ohlcv_*.json).
 Usage:
   python3 phase6/research/run_scenario_leaderboard.py
   python3 phase6/research/run_scenario_leaderboard.py --pack phase6/research/scenarios/r1_arch4_smoke_three.json
-  python3 phase6/research/run_scenario_leaderboard.py --record-learning
+  python3 phase6/research/run_scenario_leaderboard.py --compare-production --record-learning
 
 Isolation test: exit 0 + leaderboard JSON + jsonl append.
 """
@@ -29,6 +29,11 @@ sys.path.insert(0, str(ROOT))
 from phase6.backtest.backtest_engine import BacktestEngine
 from phase6.backtest.metrics import calculate_max_drawdown, calculate_sharpe, collect_metrics
 from phase6.research.arch4_scenario_runner import run_arch4_scenario
+from phase6.research.production_period_baseline import (
+    compare_to_production,
+    compute_production_metrics,
+    compute_since_go_live,
+)
 from phase6.research.scenario_knobs import ScenarioKnobs
 
 
@@ -40,7 +45,10 @@ def _parse_date(s: str) -> date:
 def _rank_key(primary: str, metrics: dict) -> float:
     if primary == "max_drawdown_pct":
         return -float(metrics.get(primary, 999))
-    return float(metrics.get(primary, -999))
+    val = metrics.get(primary)
+    if val is None:
+        return -9999.0
+    return float(val)
 
 
 def load_pack(path: Path) -> dict:
@@ -50,18 +58,21 @@ def load_pack(path: Path) -> dict:
 
 def run_scenario(pack: dict, scenario: dict) -> dict:
     knobs = ScenarioKnobs.from_scenario(scenario, pack)
+    dr = pack["date_range"]
+    w_start, w_end = _parse_date(dr["start"]), _parse_date(dr["end"])
+
     if knobs.engine == "arch4":
-        out = run_arch4_scenario(knobs)
+        out = run_arch4_scenario(knobs, w_start, w_end)
         return {
             "id": scenario["id"],
             "label": scenario.get("label", scenario["id"]),
             "engine": "arch4",
             "metrics": out["metrics"],
             "basket_size": len(out.get("basket") or []),
+            "simulation_window": out.get("simulation_window"),
         }
 
-    dr = pack["date_range"]
-    cfg = knobs.to_backtest_config(_parse_date(dr["start"]), _parse_date(dr["end"]))
+    cfg = knobs.to_backtest_config(w_start, w_end)
     engine = BacktestEngine(cfg)
     result = engine.run()
     result.max_drawdown_pct = calculate_max_drawdown(result.equity_curve)
@@ -83,22 +94,26 @@ def append_learning(
     winner: dict,
     baseline: dict,
     engine_mode: str,
+    production_since: dict | None,
 ) -> None:
     data = {"schema_version": 1, "last_updated": "", "learnings": []}
     if learnings_path.exists():
         with open(learnings_path) as f:
             data = json.load(f)
     cycle = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    thesis = f"Scenario pack {pack_id} ({engine_mode}) should improve {winner.get('primary_metric', 'sharpe')} vs baseline."
+    thesis = f"Scenario pack {pack_id} ({engine_mode}) should improve {winner.get('primary_metric', 'sharpe')} vs baseline and vs production."
+    prod_note = ""
+    if production_since and (production_since.get("metrics") or {}).get("total_return_pct") is not None:
+        prod_note = f" production_return_pct={production_since['metrics'].get('total_return_pct')};"
     outcome = (
         f"run_id={run_id} winner={winner['id']} engine={winner.get('engine')} "
         f"sharpe={winner['metrics'].get('sharpe_ratio')} "
         f"return_pct={winner['metrics'].get('total_return_pct')} "
         f"max_dd={winner['metrics'].get('max_drawdown_pct')}; "
-        f"baseline sharpe={baseline['metrics'].get('sharpe_ratio')}."
+        f"baseline sharpe={baseline['metrics'].get('sharpe_ratio')};{prod_note}"
     )
     note = (
-        "Path B arch4 leaderboard; promotion still requires gap matrix gates + shadow."
+        "Path B arch4 + production comparison; promotion requires gap matrix gates + shadow."
         if engine_mode == "arch4"
         else "Path A simple only; not promotion-eligible."
     )
@@ -133,6 +148,11 @@ def main() -> int:
         default=str(ROOT / "phase6/research/scenarios/r0_smoke_three.json"),
     )
     parser.add_argument("--record-learning", action="store_true")
+    parser.add_argument(
+        "--compare-production",
+        action="store_true",
+        help="Attach live production metrics (overlap + since go-live) and vs_production deltas",
+    )
     args = parser.parse_args()
 
     pack_path = Path(args.pack)
@@ -142,6 +162,7 @@ def main() -> int:
     primary = pack["primary_metric"]
     baseline_id = pack["baseline_scenario_id"]
     engine_mode = pack_engine_mode(pack)
+    dr = pack["date_range"]
 
     results = []
     for sc in pack["scenarios"]:
@@ -152,6 +173,14 @@ def main() -> int:
     baseline_row = next((r for r in results if r["id"] == baseline_id), results[-1])
     winner = results[0]
 
+    production = None
+    since_go_live = None
+    vs_production = []
+    if args.compare_production:
+        production = compute_production_metrics(dr["start"], dr["end"])
+        since_go_live = compute_since_go_live()
+        vs_production = compare_to_production(results, production, primary)
+
     run_id = f"OPT-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
     leaderboard = {
         "run_id": run_id,
@@ -160,9 +189,14 @@ def main() -> int:
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "primary_metric": primary,
         "baseline_scenario_id": baseline_id,
+        "pack_date_range": dr,
         "ranking": ranking,
         "scenarios": results,
     }
+    if args.compare_production:
+        leaderboard["production"] = production
+        leaderboard["production_since_go_live"] = since_go_live
+        leaderboard["vs_production"] = vs_production
 
     state_dir = ROOT / "data/state"
     state_dir.mkdir(parents=True, exist_ok=True)
@@ -171,20 +205,10 @@ def main() -> int:
         json.dump(leaderboard, f, indent=2)
 
     jsonl_path = state_dir / "analyst_scenario_runs.jsonl"
-    ledger_line = {
-        "run_id": run_id,
-        "pack_id": pack["pack_id"],
-        "engine_mode": engine_mode,
-        "started_at": leaderboard["generated_at"],
-        "data_fingerprint": {
-            "source": "backtests/data/backtest_historical_ohlcv_*",
-            "pack_path": str(pack_path.relative_to(ROOT)),
-        },
-        "baseline_scenario_id": baseline_id,
-        "primary_metric": primary,
-        "ranking": ranking,
-        "scenarios": results,
-    }
+    ledger_line = {**leaderboard, "data_fingerprint": {
+        "source": "backtests/data/backtest_historical_ohlcv_*",
+        "pack_path": str(pack_path.relative_to(ROOT)),
+    }}
     with open(jsonl_path, "a") as f:
         f.write(json.dumps(ledger_line) + "\n")
 
@@ -196,6 +220,18 @@ def main() -> int:
             f"  {r['id']} ({r.get('engine')}): sharpe={m.get('sharpe_ratio')} "
             f"return_pct={m.get('total_return_pct')} max_dd={m.get('max_drawdown_pct')}"
         )
+    if args.compare_production and since_go_live:
+        sm = (since_go_live.get("metrics") or {})
+        print(
+            f"production since go-live: return_pct={sm.get('total_return_pct')} "
+            f"equity=${sm.get('end_equity_usd')} trades={sm.get('trade_count')}"
+        )
+        if production:
+            print(f"production overlap coverage={production.get('coverage')} window={production.get('overlap_window')}")
+        for c in vs_production:
+            print(
+                f"  vs prod {c['scenario_id']}: delta={c.get('delta')} beats={c.get('beats_production')}"
+            )
     print(f"wrote {latest_path}")
 
     if args.record_learning:
@@ -206,6 +242,7 @@ def main() -> int:
             {**winner, "primary_metric": primary},
             baseline_row,
             engine_mode,
+            since_go_live,
         )
         print("appended analyst_learnings.json")
 

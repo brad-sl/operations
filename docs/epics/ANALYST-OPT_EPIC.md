@@ -62,9 +62,15 @@ EXECUTION (Phase 6): deterministic runner; shadow first; real data only
 - Pack: `phase6/research/scenarios/r1_arch4_smoke_three.json` (rotation 7d/14d + rebalance 7d)
 - Leaderboard field `engine_mode`; metrics normalized for Sharpe ranking on ARCH-4 equity curve
 
-### R2 — Cron + brief integration (queued)
+### R2 — Cron + brief integration ✅ (2026-07-07)
 
-- Weekly Hermes cron: run default scenario pack → analyst brief **Optimization results** section  
+- `production_period_baseline.py` — overlap + since-go-live metrics from real ledger/state
+- Leaderboard `--compare-production` + `vs_production` deltas
+- `optimization_brief.py` — brief section for intelligence report
+- `run_analyst_opt_weekly.py` — weekly pack + learnings dedup
+- Intelligence report prints **Optimization results (scenario vs production)**
+
+### R3 — Proposal linkage (queued)
 - Auto-ingest winning proposals to MASTER backlog only if `gate` rules pass  
 - Deduplicate stale learnings (fix duplicate 2026-07-04 entries)
 

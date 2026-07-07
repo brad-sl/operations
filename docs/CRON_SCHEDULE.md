@@ -28,6 +28,7 @@
 
 12:05 / 18:05 (opt)   : cron_rebalance.py --live   (lighter hybrid check)
 03:00                 : generate_trading_intelligence_report.py (deep maintenance + brief)
+Sun 04:00             : run_analyst_opt_weekly.py (scenario vs production)
 06:00                 : Daily Triage (planning/kanban)
 ```
 
@@ -47,6 +48,7 @@
 | Rebalance (evening)         | `5 21 * * *`       | 21:05           | `phase6/scripts/cron_rebalance.py --live`          | Phase6 Daily Rebalance - Evening        | Main trigger. 5-min buffer after 21:00. |
 | Midday opportunistic        | `5 12,18 * * *`    | 12:05, 18:05    | `phase6/scripts/cron_rebalance.py --live`          | Phase6 Midday Rebalance Check           | Lighter hybrid rebalance. Follows recent refresh. |
 | Deep maintenance            | `0 3 * * *`        | 03:00           | `phase6/scripts/generate_trading_intelligence_report.py` | Phase6 Deep Maintenance Brief           | Early report + opportunity for state cleanup. Extend as needed. |
+| ANALYST-OPT weekly          | `0 4 * * 0`        | Sun 04:00       | `phase6/research/run_analyst_opt_weekly.py`              | Phase6 Analyst Optimization Weekly      | Path B leaderboard + production compare; feeds brief via `analyst_scenario_leaderboard_latest.json`. |
 | Daily Triage                | `0 6 * * *`        | 06:00           | (existing triage prompt/job)                       | Daily Triage and Prioritization         | Planning/kanban. Keep as-is. |
 
 ## Hermes Cron Job Configuration

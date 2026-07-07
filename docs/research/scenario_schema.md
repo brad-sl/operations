@@ -39,7 +39,7 @@ Version: **1.0** (R0 — backtest engine knobs only; ARCH knobs added in R1)
 
 ## Future (R1) — reserved keys
 
-- `engine`: `"simple"` (default, Path A) | `"arch4"` (Path B harness — **ANALYST-OPT-R1b**)
+- `default_engine`: optional pack-level default (`simple` | `arch4`)
 - `arch4.strategy`: `"rotation"` | `"rebalance"`
 - `evaluation.mode`, `allocator.strategy`, `signals.weights`, `env.min_reserve`, `shadow_only` (ARCH-1+)
 

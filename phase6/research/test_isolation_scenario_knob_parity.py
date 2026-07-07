@@ -34,7 +34,7 @@ def test_pack_mappings(pack_path: Path) -> None:
     end = _parse_date(dr["end"])
 
     for sc in pack["scenarios"]:
-        knobs = ScenarioKnobs.from_scenario(sc)
+        knobs = ScenarioKnobs.from_scenario(sc, pack)
         cfg = knobs.to_backtest_config(start, end)
         assert cfg.rebalance_frequency_days == knobs.rebalance_frequency_days
         assert cfg.initial_capital == knobs.initial_capital
@@ -58,7 +58,7 @@ def test_arch4_smoke_from_knobs(pack_path: Path) -> None:
         pack = json.load(f)
     baseline_id = pack["baseline_scenario_id"]
     sc = next(s for s in pack["scenarios"] if s["id"] == baseline_id)
-    knobs = ScenarioKnobs.from_scenario(sc)
+    knobs = ScenarioKnobs.from_scenario(sc, pack)
     params = knobs.to_arch4_params()
 
     from phase6.scripts.backtest_arch4_isolation_harness import (
@@ -93,10 +93,27 @@ def test_arch4_smoke_from_knobs(pack_path: Path) -> None:
     )
 
 
+def test_r1b_arch4_leaderboard_one_scenario() -> None:
+    from phase6.research.arch4_scenario_runner import run_arch4_scenario
+
+    pack_path = ROOT / "phase6/research/scenarios/r1_arch4_smoke_three.json"
+    with open(pack_path) as f:
+        pack = json.load(f)
+    sc = pack["scenarios"][0]
+    knobs = ScenarioKnobs.from_scenario(sc, pack)
+    assert knobs.engine == "arch4"
+    out = run_arch4_scenario(knobs)
+    assert out["metrics"]["engine"] == "arch4"
+    assert "sharpe_ratio" in out["metrics"]
+    print(f"r1b arch4 runner OK id={knobs.scenario_id} sharpe={out['metrics']['sharpe_ratio']}")
+
+
 def main() -> int:
     pack = ROOT / "phase6/research/scenarios/r0_smoke_three.json"
     test_pack_mappings(pack)
     test_arch4_smoke_from_knobs(pack)
+    test_pack_mappings(ROOT / "phase6/research/scenarios/r1_arch4_smoke_three.json")
+    test_r1b_arch4_leaderboard_one_scenario()
     print("ANALYST-OPT R1 isolation PASS")
     return 0
 

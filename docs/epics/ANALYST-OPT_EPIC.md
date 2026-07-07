@@ -55,9 +55,14 @@ EXECUTION (Phase 6): deterministic runner; shadow first; real data only
 - ARCH-4 smoke from `baseline_7d` knobs: return_pct=-27.75, max_dd=29.63, trades=144
 - **Promotion still blocked** on documented gaps until R1b (`engine: arch4` leaderboard)
 
-### R1b — Path B leaderboard (queued)
+### R1b — Path B leaderboard ✅ (2026-07-07)
 
-### R2 — Cron + brief integration
+- `engine: arch4` + pack `default_engine` in `run_scenario_leaderboard.py`
+- `phase6/research/arch4_scenario_runner.py`
+- Pack: `phase6/research/scenarios/r1_arch4_smoke_three.json` (rotation 7d/14d + rebalance 7d)
+- Leaderboard field `engine_mode`; metrics normalized for Sharpe ranking on ARCH-4 equity curve
+
+### R2 — Cron + brief integration (queued)
 
 - Weekly Hermes cron: run default scenario pack → analyst brief **Optimization results** section  
 - Auto-ingest winning proposals to MASTER backlog only if `gate` rules pass  

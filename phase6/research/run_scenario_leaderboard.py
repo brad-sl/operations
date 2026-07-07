@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """
-ANALYST-OPT R0: Run a scenario pack through BacktestEngine and emit a ranked leaderboard.
+ANALYST-OPT: Run a scenario pack and emit a ranked leaderboard.
+
+Engines per scenario (or pack `default_engine`):
+  - simple  → Path A BacktestEngine
+  - arch4   → Path B ARCH-4 isolation harness (promotion-eligible stack)
 
 Real OHLCV only (backtests/data/backtest_historical_ohlcv_*.json).
 
 Usage:
   python3 phase6/research/run_scenario_leaderboard.py
-  python3 phase6/research/run_scenario_leaderboard.py --pack phase6/research/scenarios/r0_smoke_three.json
+  python3 phase6/research/run_scenario_leaderboard.py --pack phase6/research/scenarios/r1_arch4_smoke_three.json
   python3 phase6/research/run_scenario_leaderboard.py --record-learning
 
 Isolation test: exit 0 + leaderboard JSON + jsonl append.
@@ -22,8 +26,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from phase6.backtest.backtest_engine import BacktestConfig, BacktestEngine
+from phase6.backtest.backtest_engine import BacktestEngine
 from phase6.backtest.metrics import calculate_max_drawdown, calculate_sharpe, collect_metrics
+from phase6.research.arch4_scenario_runner import run_arch4_scenario
 from phase6.research.scenario_knobs import ScenarioKnobs
 
 
@@ -44,40 +49,64 @@ def load_pack(path: Path) -> dict:
 
 
 def run_scenario(pack: dict, scenario: dict) -> dict:
+    knobs = ScenarioKnobs.from_scenario(scenario, pack)
+    if knobs.engine == "arch4":
+        out = run_arch4_scenario(knobs)
+        return {
+            "id": scenario["id"],
+            "label": scenario.get("label", scenario["id"]),
+            "engine": "arch4",
+            "metrics": out["metrics"],
+            "basket_size": len(out.get("basket") or []),
+        }
+
     dr = pack["date_range"]
-    knobs = ScenarioKnobs.from_scenario(scenario)
     cfg = knobs.to_backtest_config(_parse_date(dr["start"]), _parse_date(dr["end"]))
     engine = BacktestEngine(cfg)
     result = engine.run()
     result.max_drawdown_pct = calculate_max_drawdown(result.equity_curve)
     result.sharpe_ratio = calculate_sharpe(result.equity_curve)
     metrics = collect_metrics(result)
+    metrics["engine"] = "simple"
     return {
         "id": scenario["id"],
         "label": scenario.get("label", scenario["id"]),
+        "engine": "simple",
         "metrics": metrics,
     }
 
 
-def append_learning(learnings_path: Path, pack_id: str, run_id: str, winner: dict, baseline: dict) -> None:
+def append_learning(
+    learnings_path: Path,
+    pack_id: str,
+    run_id: str,
+    winner: dict,
+    baseline: dict,
+    engine_mode: str,
+) -> None:
     data = {"schema_version": 1, "last_updated": "", "learnings": []}
     if learnings_path.exists():
         with open(learnings_path) as f:
             data = json.load(f)
     cycle = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    thesis = f"Scenario pack {pack_id} should improve {winner.get('primary_metric', 'sharpe')} vs baseline."
+    thesis = f"Scenario pack {pack_id} ({engine_mode}) should improve {winner.get('primary_metric', 'sharpe')} vs baseline."
     outcome = (
-        f"run_id={run_id} winner={winner['id']} "
+        f"run_id={run_id} winner={winner['id']} engine={winner.get('engine')} "
         f"sharpe={winner['metrics'].get('sharpe_ratio')} "
         f"return_pct={winner['metrics'].get('total_return_pct')} "
         f"max_dd={winner['metrics'].get('max_drawdown_pct')}; "
         f"baseline sharpe={baseline['metrics'].get('sharpe_ratio')}."
     )
+    note = (
+        "Path B arch4 leaderboard; promotion still requires gap matrix gates + shadow."
+        if engine_mode == "arch4"
+        else "Path A simple only; not promotion-eligible."
+    )
     entry = {
         "cycle": cycle,
         "thesis": thesis,
         "outcome": outcome,
-        "evolution_note": "R0 harness only; R1 must align knobs with live allocator before promotion.",
+        "evolution_note": note,
         "date": datetime.now(timezone.utc).isoformat(),
     }
     data["learnings"].append(entry)
@@ -85,6 +114,16 @@ def append_learning(learnings_path: Path, pack_id: str, run_id: str, winner: dic
     learnings_path.parent.mkdir(parents=True, exist_ok=True)
     with open(learnings_path, "w") as f:
         json.dump(data, f, indent=2)
+
+
+def pack_engine_mode(pack: dict) -> str:
+    de = pack.get("default_engine")
+    if de:
+        return de
+    engines = {ScenarioKnobs.from_scenario(sc, pack).engine for sc in pack.get("scenarios", [])}
+    if len(engines) == 1:
+        return next(iter(engines))
+    return "mixed"
 
 
 def main() -> int:
@@ -102,6 +141,7 @@ def main() -> int:
     pack = load_pack(pack_path)
     primary = pack["primary_metric"]
     baseline_id = pack["baseline_scenario_id"]
+    engine_mode = pack_engine_mode(pack)
 
     results = []
     for sc in pack["scenarios"]:
@@ -116,6 +156,7 @@ def main() -> int:
     leaderboard = {
         "run_id": run_id,
         "pack_id": pack["pack_id"],
+        "engine_mode": engine_mode,
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "primary_metric": primary,
         "baseline_scenario_id": baseline_id,
@@ -133,6 +174,7 @@ def main() -> int:
     ledger_line = {
         "run_id": run_id,
         "pack_id": pack["pack_id"],
+        "engine_mode": engine_mode,
         "started_at": leaderboard["generated_at"],
         "data_fingerprint": {
             "source": "backtests/data/backtest_historical_ohlcv_*",
@@ -146,12 +188,12 @@ def main() -> int:
     with open(jsonl_path, "a") as f:
         f.write(json.dumps(ledger_line) + "\n")
 
-    print(f"ANALYST-OPT R0 OK run_id={run_id} pack={pack['pack_id']}")
+    print(f"ANALYST-OPT OK run_id={run_id} pack={pack['pack_id']} engine_mode={engine_mode}")
     print(f"primary_metric={primary} winner={winner['id']}")
     for r in results:
         m = r["metrics"]
         print(
-            f"  {r['id']}: sharpe={m.get('sharpe_ratio')} "
+            f"  {r['id']} ({r.get('engine')}): sharpe={m.get('sharpe_ratio')} "
             f"return_pct={m.get('total_return_pct')} max_dd={m.get('max_drawdown_pct')}"
         )
     print(f"wrote {latest_path}")
@@ -163,6 +205,7 @@ def main() -> int:
             run_id,
             {**winner, "primary_metric": primary},
             baseline_row,
+            engine_mode,
         )
         print("appended analyst_learnings.json")
 

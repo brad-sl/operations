@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "r1_arch4_smoke_three",
+  "description": "R1b: same knob matrix as R0 but Path B (ARCH-4) for promotion-eligible ranking",
+  "default_engine": "arch4",
+  "primary_metric": "sharpe_ratio",
+  "baseline_scenario_id": "baseline_7d",
+  "date_range": {
+    "start": "2025-04-20",
+    "end": "2026-04-19"
+  },
+  "scenarios": [
+    {
+      "id": "baseline_7d",
+      "label": "ARCH-4 rotation, weekly stride",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "baseline_14d",
+      "label": "ARCH-4 rotation, biweekly stride",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 14,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "rebalance_7d",
+      "label": "ARCH-4 rebalance strategy (not rotation), weekly",
+      "engine": "arch4",
+      "arch4": { "strategy": "rebalance" },
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    }
+  ]
+}

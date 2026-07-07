@@ -1,5 +1,11 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-07** — **ANALYST-OPT R1b** Path B leaderboard (`engine: arch4`).
+- `arch4_scenario_runner.py`, pack `r1_arch4_smoke_three.json`
+- Verified full pack: winner `rebalance_7d` sharpe=-2.12 (rotation baselines worse on period); `engine_mode=arch4`
+- Handoff: `handoffs/analyst/Handoff_ANALYST-OPT_R1b_PathB.md`
+- **Next:** R2 cron+brief; live promotion still needs shadow + gap gates.
+
 **2026-07-07** — **ANALYST-OPT R1** complete (gap matrix + knob parity + ARCH-4 smoke).
 - `docs/research/BACKTEST_LIVE_GAP_MATRIX.md`, `phase6/research/scenario_knobs.py`
 - Isolation PASS: `phase6/research/test_isolation_scenario_knob_parity.py`

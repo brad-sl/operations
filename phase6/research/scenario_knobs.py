@@ -26,9 +26,10 @@ class ScenarioKnobs:
     allocator_strategy: str = "rotation"  # rotation | rebalance
 
     @classmethod
-    def from_scenario(cls, scenario: dict) -> "ScenarioKnobs":
+    def from_scenario(cls, scenario: dict, pack: dict | None = None) -> "ScenarioKnobs":
         bt = scenario.get("backtest") or {}
         arch = scenario.get("arch4") or {}
+        pack_default = (pack or {}).get("default_engine", "simple")
         return cls(
             scenario_id=scenario["id"],
             initial_capital=float(bt.get("initial_capital", 1000)),
@@ -36,7 +37,7 @@ class ScenarioKnobs:
             rebalance_cap_usd=float(bt.get("rebalance_cap_usd", 200)),
             enable_pair_expansion=bool(bt.get("enable_pair_expansion", False)),
             candidate_universe=list(bt.get("candidate_universe") or []),
-            engine=str(scenario.get("engine") or arch.get("engine") or "simple"),
+            engine=str(scenario.get("engine") or arch.get("engine") or pack_default),
             allocator_strategy=str(arch.get("strategy") or "rotation"),
         )
 
@@ -96,7 +97,7 @@ def parity_report(pack: dict) -> Dict[str, Any]:
 
     rows = []
     for sc in pack.get("scenarios", []):
-        knobs = ScenarioKnobs.from_scenario(sc)
+        knobs = ScenarioKnobs.from_scenario(sc, pack)
         rows.append(
             {
                 "scenario_id": knobs.scenario_id,

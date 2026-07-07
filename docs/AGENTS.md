@@ -208,3 +208,21 @@ The goal: Be helpful without being annoying. Check in a few times a day, do usef
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
+
+
+## Data Flow, File Locations & Configuration Hygiene (Phase 6)
+
+**CRITICAL: Always follow docs/DATA_FLOW_AND_LOCATIONS.md**
+
+- Canonical project root: /home/brad/projects/crypto-trading-bot (run with CWD here or derive via phase6/core/paths.py:get_project_root())
+- State files ONLY in data/state/ (phase6_live_state.json, phase6_runner_state.json, rsi_cache.json, sentiment_*.json, etc.)
+- NEVER hardcode absolute paths ("/home/brad/...") in code or scripts. Use:
+  from phase6.core.paths import PROJECT_ROOT, STATE_DIR, PHASE6_LIVE_STATE, RSI_CACHE, SENTIMENT_CACHE, X_SENTIMENT_CACHE, REDDIT_SENTIMENT_CACHE, load_project_dotenv
+- Config: trading_config_phase6.json + canonical config_loader.py + paths
+- .env loading: use load_project_dotenv() early (supports project + hermes profile + home)
+- On any "file not found", config drift, or path error: FIRST read DATA_FLOW_AND_LOCATIONS.md + audit ls data/state + cat .env
+- All new code, scripts, entrypoints must reference this doc + use paths.py
+- Root scripts/ and phase6/ copies: prefer phase6/core/ and phase6/scripts/ as canonical for live Phase 6.
+- Tests/legacy may have fallbacks but active production must be clean.
+
+See also: phase6/core/paths.py , docs/MASTER_TASK_TRACKING.md , phase6/README.md

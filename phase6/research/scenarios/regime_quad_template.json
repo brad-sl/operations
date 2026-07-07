@@ -9,29 +9,43 @@
     {
       "regime": "bull",
       "label": "Bull (example)",
-      "date_range": { "start": "2025-10-01", "end": "2025-12-31" }
+      "date_range": {
+        "start": "2025-10-01",
+        "end": "2025-12-31"
+      }
     },
     {
       "regime": "bear",
       "label": "Bear stress (SL)",
-      "date_range": { "start": "2025-08-01", "end": "2025-09-30" }
+      "date_range": {
+        "start": "2025-08-01",
+        "end": "2025-09-30"
+      }
     },
     {
       "regime": "flat",
       "label": "Flat / chop",
-      "date_range": { "start": "2026-01-01", "end": "2026-03-31" }
+      "date_range": {
+        "start": "2026-01-01",
+        "end": "2026-03-31"
+      }
     },
     {
       "regime": "recent",
       "label": "Recent OHLCV tail",
-      "date_range": { "start": "2026-02-01", "end": "2026-04-19" }
+      "date_range": {
+        "start": "2026-02-01",
+        "end": "2026-07-07"
+      }
     }
   ],
   "scenarios": [
     {
       "id": "baseline_7d",
       "label": "Rotation weekly",
-      "arch4": { "strategy": "rotation" },
+      "arch4": {
+        "strategy": "rotation"
+      },
       "backtest": {
         "initial_capital": 1000,
         "enable_pair_expansion": false,
@@ -43,7 +57,9 @@
     {
       "id": "rebalance_7d",
       "label": "Rebalance weekly",
-      "arch4": { "strategy": "rebalance" },
+      "arch4": {
+        "strategy": "rebalance"
+      },
       "backtest": {
         "initial_capital": 1000,
         "enable_pair_expansion": false,
@@ -52,5 +68,8 @@
         "rebalance_cap_usd": 200
       }
     }
-  ]
+  ],
+  "date_range": {
+    "end": "2026-07-07"
+  }
 }

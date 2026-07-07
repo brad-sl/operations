@@ -4,45 +4,82 @@
   "regimes": {
     "bull": {
       "scenario_id": "rebalance_7d",
-      "note": "Example: favor rebalance churn in strong tape — replace with scorecard winner",
+      "note": "scorecard bull winner=rebalance_7d primary_metric={'start': '2025-10-01', 'end': '2025-12-31'} return_pct=0.13 max_dd=0.84",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 180.0
+        "global_settings.rebalance_cap_usd": 200.0
       },
       "arch4_params": {
         "use_rotation": false,
         "rebal_freq": 7
+      },
+      "scorecard": {
+        "winner_id": "rebalance_7d",
+        "beats_baseline": true,
+        "date_range": {
+          "start": "2025-10-01",
+          "end": "2025-12-31"
+        }
       }
     },
     "bear": {
-      "scenario_id": "baseline_7d",
-      "note": "Tighter rotation / defensive — tune from bear scorecard",
+      "scenario_id": "rebalance_7d",
+      "note": "scorecard bear winner=rebalance_7d primary_metric={'start': '2025-08-01', 'end': '2025-09-30'} return_pct=-0.31 max_dd=0.31",
       "live_overlay": {
         "global_settings.rebalance_cap_usd": 120.0,
         "risk_management.sl_max_pct": 0.04
       },
       "arch4_params": {
-        "use_rotation": true,
+        "use_rotation": false,
         "rebal_freq": 7
+      },
+      "scorecard": {
+        "winner_id": "rebalance_7d",
+        "beats_baseline": true,
+        "date_range": {
+          "start": "2025-08-01",
+          "end": "2025-09-30"
+        }
       }
     },
     "flat": {
-      "scenario_id": "baseline_14d",
+      "scenario_id": "rebalance_7d",
+      "note": "scorecard flat winner=rebalance_7d primary_metric={'start': '2026-01-01', 'end': '2026-03-31'} return_pct=-0.12 max_dd=1.09",
       "live_overlay": {
         "global_settings.rebalance_cap_usd": 140.0
       },
       "arch4_params": {
-        "use_rotation": true,
-        "rebal_freq": 14
+        "use_rotation": false,
+        "rebal_freq": 7
+      },
+      "scorecard": {
+        "winner_id": "rebalance_7d",
+        "beats_baseline": true,
+        "date_range": {
+          "start": "2026-01-01",
+          "end": "2026-03-31"
+        }
       }
     },
     "transition": {
-      "scenario_id": "baseline_7d",
-      "note": "Hold prior or default until confidence rises",
-      "live_overlay": {},
+      "scenario_id": "rebalance_7d",
+      "note": "scorecard recent winner=rebalance_7d primary_metric={'start': '2026-02-01', 'end': '2026-07-07'} return_pct=0.9 max_dd=3.41",
+      "live_overlay": {
+        "global_settings.rebalance_cap_usd": 200.0
+      },
       "arch4_params": {
-        "use_rotation": true,
+        "use_rotation": false,
         "rebal_freq": 7
+      },
+      "scorecard": {
+        "winner_id": "rebalance_7d",
+        "beats_baseline": true,
+        "date_range": {
+          "start": "2026-02-01",
+          "end": "2026-07-07"
+        }
       }
     }
-  }
+  },
+  "updated_from_scorecard_at": "2026-07-07T21:46:29.673256+00:00",
+  "scorecard_generated_at": "2026-07-07T21:46:25.210103+00:00"
 }

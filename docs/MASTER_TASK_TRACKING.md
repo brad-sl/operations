@@ -1,5 +1,7 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-07** — **Scorecard + OHLCV extend** — Coinbase public daily extend to 2026-07-07; regime scorecard; `regime_knob_map.json` from winners; prod overlap partial (2026-06-06→07-07).
+
 **2026-07-07** — **ANALYST-OPT R5** persona + `analyst_narrative` in daily brief; skill `crypto-analyst-scenario-run` (Hermes + repo).
 
 **2026-07-07** — **ANALYST-OPT R4** shadow overlay, drift monitor (`bf79baababb0`), regime-adaptive knob map + detector.

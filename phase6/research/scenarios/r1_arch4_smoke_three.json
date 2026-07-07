@@ -7,14 +7,16 @@
   "baseline_scenario_id": "baseline_7d",
   "date_range": {
     "start": "2025-04-20",
-    "end": "2026-04-19"
+    "end": "2026-07-07"
   },
   "scenarios": [
     {
       "id": "baseline_7d",
       "label": "ARCH-4 rotation, weekly stride",
       "engine": "arch4",
-      "arch4": { "strategy": "rotation" },
+      "arch4": {
+        "strategy": "rotation"
+      },
       "backtest": {
         "initial_capital": 1000,
         "enable_pair_expansion": false,
@@ -27,7 +29,9 @@
       "id": "baseline_14d",
       "label": "ARCH-4 rotation, biweekly stride",
       "engine": "arch4",
-      "arch4": { "strategy": "rotation" },
+      "arch4": {
+        "strategy": "rotation"
+      },
       "backtest": {
         "initial_capital": 1000,
         "enable_pair_expansion": false,
@@ -40,7 +44,9 @@
       "id": "rebalance_7d",
       "label": "ARCH-4 rebalance strategy (not rotation), weekly",
       "engine": "arch4",
-      "arch4": { "strategy": "rebalance" },
+      "arch4": {
+        "strategy": "rebalance"
+      },
       "backtest": {
         "initial_capital": 1000,
         "enable_pair_expansion": false,

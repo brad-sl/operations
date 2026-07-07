@@ -1,5 +1,13 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-07** — **ANALYST-OPT R1** complete (gap matrix + knob parity + ARCH-4 smoke).
+- `docs/research/BACKTEST_LIVE_GAP_MATRIX.md`, `phase6/research/scenario_knobs.py`
+- Isolation PASS: `phase6/research/test_isolation_scenario_knob_parity.py`
+  - `analyst_scenario_parity_latest.json` (3 scenarios)
+  - ARCH-4 from baseline_7d knobs: return_pct=-27.75, max_dd=29.63, trades=144
+- Handoff: `handoffs/analyst/Handoff_ANALYST-OPT_R1_Gap_Matrix.md`
+- **Next:** R1b Path B leaderboard; R2 cron+brief; ARCH-0 baselines still recommended for live parity.
+
 **2026-07-07** — Epic **ANALYST-OPT** kickoff (Crypto-Analyst scenario optimization + learning foundation).
 - Epic: `docs/epics/ANALYST-OPT_EPIC.md`
 - Memory/learning: `docs/research/MEMORY_AND_LEARNING.md`, schema `docs/research/scenario_schema.md`

@@ -24,6 +24,7 @@ sys.path.insert(0, str(ROOT))
 
 from phase6.backtest.backtest_engine import BacktestConfig, BacktestEngine
 from phase6.backtest.metrics import calculate_max_drawdown, calculate_sharpe, collect_metrics
+from phase6.research.scenario_knobs import ScenarioKnobs
 
 
 def _parse_date(s: str) -> date:
@@ -44,16 +45,8 @@ def load_pack(path: Path) -> dict:
 
 def run_scenario(pack: dict, scenario: dict) -> dict:
     dr = pack["date_range"]
-    bt = scenario["backtest"]
-    cfg = BacktestConfig(
-        start_date=_parse_date(dr["start"]),
-        end_date=_parse_date(dr["end"]),
-        initial_capital=float(bt.get("initial_capital", 1000)),
-        enable_pair_expansion=bool(bt.get("enable_pair_expansion", False)),
-        candidate_universe=list(bt.get("candidate_universe") or []),
-        rebalance_frequency_days=int(bt.get("rebalance_frequency_days", 7)),
-        rebalance_cap_usd=float(bt.get("rebalance_cap_usd", 200)),
-    )
+    knobs = ScenarioKnobs.from_scenario(scenario)
+    cfg = knobs.to_backtest_config(_parse_date(dr["start"]), _parse_date(dr["end"]))
     engine = BacktestEngine(cfg)
     result = engine.run()
     result.max_drawdown_pct = calculate_max_drawdown(result.equity_curve)

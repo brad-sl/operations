@@ -48,11 +48,14 @@ EXECUTION (Phase 6): deterministic runner; shadow first; real data only
 - `phase6/research/scenarios/r0_smoke_three.json` — smoke pack  
 - **Success:** `python3 phase6/research/run_scenario_leaderboard.py` exits 0, writes `data/state/analyst_scenario_leaderboard_latest.json`, appends `analyst_scenario_runs.jsonl`
 
-### R1 — Align harness with live strategy surface
+### R1 — Align harness with live strategy surface ✅ (2026-07-07)
 
-- Map scenario knobs to **ARCH** evaluation/allocator entry points (same code path as shadow rebalance)  
-- Walk-forward split in schema (`train_window`, `holdout_window`)  
-- **Blocked until:** ARCH-0/ARCH-1 baseline isolation tests exist (see `docs/phase6/ARCHITECTURE_ISOLATED_COMPONENTS.md`)
+- Gap matrix: `docs/research/BACKTEST_LIVE_GAP_MATRIX.md`
+- `phase6/research/scenario_knobs.py` + `test_isolation_scenario_knob_parity.py` (PASS)
+- ARCH-4 smoke from `baseline_7d` knobs: return_pct=-27.75, max_dd=29.63, trades=144
+- **Promotion still blocked** on documented gaps until R1b (`engine: arch4` leaderboard)
+
+### R1b — Path B leaderboard (queued)
 
 ### R2 — Cron + brief integration
 

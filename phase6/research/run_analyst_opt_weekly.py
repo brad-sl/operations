@@ -47,6 +47,38 @@ def main() -> int:
     if removed:
         print(f"deduped analyst_learnings.json removed={removed} duplicate entries")
 
+    from phase6.research.optimization_brief import format_optimization_section, load_leaderboard
+    from phase6.research.analyst_narrative import (
+        build_evolution_note,
+        format_honest_assessment,
+        persist_weekly_assessment,
+    )
+
+    lb = load_leaderboard()
+    opt_brief = None
+    if lb:
+        _, opt_brief = format_optimization_section(lb)
+    lines = format_honest_assessment(
+        full_coverage_count=0,
+        total_pairs=11,
+        sl_risks={},
+        opt_brief=opt_brief,
+        leaderboard=lb,
+    )
+    evolution = build_evolution_note(
+        full_coverage_count=0,
+        total_pairs=11,
+        opt_brief=opt_brief,
+        leaderboard=lb,
+    )
+    path = persist_weekly_assessment(lines, evolution, opt_brief)
+    print(f"weekly assessment: {path}")
+
+    from phase6.research.sync_analyst_skill_pitfall import sync_repo_skill
+
+    if sync_repo_skill():
+        print("repo skill pitfalls updated")
+
     print("ANALYST-OPT weekly OK")
     return 0
 

@@ -85,6 +85,12 @@ EXECUTION (Phase 6): deterministic runner; shadow first; real data only
 - `regime_detector.py`, `config/regime_knob_map.json`, `REGIME_ADAPTIVE_KNOBS.md`
 - `activate_shadow_trial.py [--regime-adaptive]`
 
+### R5 — Analyst personality & skills ✅ (2026-07-07)
+
+- `CRYPTO_ANALYST_PERSONALITY.md`, `analyst_narrative.py` (honest assessment + OPT proposals)
+- Daily brief wired; weekly `analyst_weekly_assessment_latest.json`
+- Hermes skill `crypto-analyst-scenario-run` + repo skill + `sync_analyst_skill_pitfall.py`
+
 ---
 
 ## 4. Primary metrics (default ranking)

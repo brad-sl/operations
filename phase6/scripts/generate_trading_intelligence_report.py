@@ -220,13 +220,20 @@ def save_proposed_backlog(data):
         json.dump(data, f, indent=2)
 
 
-def generate_strategic_proposals(sl_risks, coverage, total_pairs, poly, learnings, state, existing_ids):
+def generate_strategic_proposals(sl_risks, coverage, total_pairs, poly, learnings, state, existing_ids, opt_brief=None, leaderboard=None):
     """
     Derive strategic modification proposals.
     Assigns stable IDs.
     Dedupes against existing_ids.
     """
     candidates = []
+    try:
+        from phase6.research.analyst_narrative import optimization_proposal_candidates
+
+        candidates.extend(optimization_proposal_candidates(opt_brief, leaderboard))
+    except Exception:
+        pass
+
     heuristics = learnings.get("heuristics", {})
     known_weaknesses = heuristics.get("known_weaknesses", [])
 
@@ -432,7 +439,7 @@ def main():
     print(f"Date: {date.today().isoformat()}")
     print(f"Generated: {datetime.utcnow().isoformat()} UTC")
     print()
-    print("Persona: Truth-seeking, direct, no fluff. Honest assessments mandatory. Occasional dry humor.")
+    print("Persona: Truth-seeking, direct, no fluff. Cite run_id + metrics. Production P&L before scenario hype. Occasional dry humor.")
     print()
 
     basket = load_basket()
@@ -652,19 +659,32 @@ def main():
             print(opt_text)
             print()
         else:
+            lb = None
             opt_brief = None
     except Exception as e:
         print(f"=== Optimization results ===\n(skipped: {e})\n")
         opt_brief = None
+        lb = None
 
-    # === Honest Assessment (mandatory) ===
+    # === Honest Assessment (mandatory, data-driven) ===
     print("=== Honest Assessment ===")
-    if full_count >= len(basket) - 2:
-        print("Coverage is genuinely good. RSI refresher + centralized scorer is working.")
-        print("New allocator is deploying real positions. Progress from heavy cash.")
-        print("SL layer remains the weak link — post-buy previews frequently fail on INSUFFICIENT_FUND / precision even with reduce_only=True.")
-    else:
-        print("Coverage still patchy. Allocator decisions are running on incomplete information.")
+    try:
+        from phase6.research.analyst_narrative import format_honest_assessment
+
+        for line in format_honest_assessment(
+            full_coverage_count=full_count,
+            total_pairs=len(basket),
+            sl_risks=sl_risks,
+            opt_brief=opt_brief,
+            leaderboard=lb,
+        ):
+            print(line)
+    except Exception as e:
+        print(f"(assessment fallback: {e})")
+        if full_count >= len(basket) - 2:
+            print("Coverage is genuinely good. SL layer remains a weak link.")
+        else:
+            print("Coverage still patchy.")
     print()
 
     # === Evolution Notes ===
@@ -676,11 +696,21 @@ def main():
         print(f"Previous evolution: {recent.get('evolution_note', 'N/A')}")
     print()
 
-    new_evolution = {
-        "thesis": "Platform + new allocator should deliver better-timed rotation.",
-        "outcome": f"Allocator active. {full_count} FULL signals. SL still fragile on low-priced names.",
-        "evolution_note": "Need pre-flight settlement + tick handling. Tag pairs as SL-risky."
-    }
+    try:
+        from phase6.research.analyst_narrative import build_evolution_note
+
+        new_evolution = build_evolution_note(
+            full_coverage_count=full_count,
+            total_pairs=len(basket),
+            opt_brief=opt_brief,
+            leaderboard=lb,
+        )
+    except Exception:
+        new_evolution = {
+            "thesis": "Platform + allocator should deliver better-timed rotation.",
+            "outcome": f"Allocator active. {full_count} FULL signals.",
+            "evolution_note": "Run regime scorecard; shadow before live knobs.",
+        }
     learnings = add_evolution_note(learnings, new_evolution)
     print(f"New note recorded: {new_evolution['evolution_note']}")
     print()
@@ -696,7 +726,9 @@ def main():
         poly=poly,
         learnings=learnings,
         state=state,
-        existing_ids=existing_ids
+        existing_ids=existing_ids,
+        opt_brief=opt_brief,
+        leaderboard=lb,
     )
 
     print("=== Strategic Modification Proposals ===")

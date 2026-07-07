@@ -53,7 +53,7 @@ Schema version 1. Each learning:
 | User preferences (21:00 PT, no fake data, delegation style) | Numeric outcomes, run IDs, leaderboards |
 | Stable conventions (isolation tests, MASTER as SoT) | Anything that must survive profile resets |
 
-After a verified optimization workflow, offer `skill_manage` for `crypto-analyst-scenario-run` (R2).
+After a verified optimization workflow, load Hermes skill `crypto-analyst-scenario-run` (R5). Repo copy: `phase6/research/skills/crypto-analyst-scenario-run/SKILL.md`. Persona: `docs/research/CRYPTO_ANALYST_PERSONALITY.md`.
 
 ---
 

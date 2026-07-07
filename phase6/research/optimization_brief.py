@@ -89,6 +89,23 @@ def format_optimization_section(lb: Dict[str, Any]) -> Tuple[str, Dict[str, Any]
         )
     lines.append(f"Deployment hint: {deploy}")
 
+    drift_path = ROOT / "data/state/analyst_shadow_drift_latest.json"
+    overlay_path = ROOT / "data/state/analyst_shadow_overlay.json"
+    if overlay_path.exists():
+        ov = json.loads(overlay_path.read_text())
+        if ov.get("active"):
+            lines.append(
+                f"Shadow overlay ACTIVE: {ov.get('proposal_id')} scenario={ov.get('scenario_id')} "
+                f"regime_policy={ov.get('regime_policy', {}).get('enabled')}"
+            )
+    if drift_path.exists():
+        dr = json.loads(drift_path.read_text())
+        if dr.get("status") == "active":
+            lines.append(
+                f"Shadow drift: live_return={dr.get('live_return_pct')}% "
+                f"pred={dr.get('predicted_return_pct')}% ok={dr.get('monitor_ok')}"
+            )
+
     brief = {
         "run_id": lb.get("run_id"),
         "pack_id": lb.get("pack_id"),

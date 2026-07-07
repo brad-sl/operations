@@ -78,7 +78,12 @@ EXECUTION (Phase 6): deterministic runner; shadow first; real data only
 - `run_regime_scorecard.py` + `REGIME_SCENARIO_PROCEDURE.md` (bull/bear/flat/recent)
 - `regime_quad_template.json`
 
-### R4 — Shadow promotion pipeline (queued)
+### R4 — Shadow promotion pipeline ✅ (2026-07-07)
+
+- `shadow_overlay_store.py`, `config_overlay.py` (runner in-memory merge)
+- `shadow_drift_monitor.py` + daily cron `bf79baababb0`
+- `regime_detector.py`, `config/regime_knob_map.json`, `REGIME_ADAPTIVE_KNOBS.md`
+- `activate_shadow_trial.py [--regime-adaptive]`
 
 ---
 

@@ -1,5 +1,7 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-07** — **ANALYST-OPT R4** shadow overlay, drift monitor (`bf79baababb0`), regime-adaptive knob map + detector.
+
 **2026-07-07** — **ANALYST-OPT R3** gated proposals + regime procedure (`REGIME_SCENARIO_PROCEDURE.md`, `run_regime_scorecard.py`).
 - Ingest only when gates pass (current winner blocked: negative Sharpe)
 

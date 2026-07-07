@@ -136,6 +136,16 @@ class Phase6Runner:
         # Load configuration
         cfg_loader = ConfigLoader(config_path)
         self.config_dict = cfg_loader._config          # raw dict for convenience
+        try:
+            from phase6.core.config_overlay import apply_analyst_overlays, shadow_params_from_overlay
+
+            self.config_dict = apply_analyst_overlays(self.config_dict)
+            sp = shadow_params_from_overlay()
+            if sp:
+                self.shadow_params.update(sp)
+                logger.info("[ANALYST-OPT] shadow overlay active: %s", sp.get("proposal_id"))
+        except Exception as e:
+            logger.warning("analyst shadow overlay skipped: %s", e)
         self.config = cfg_loader.get_config()
 
         # Set dynamic full universe from config (replaces previous class-level 6-pair hardcoded FIXED_UNIVERSE)
@@ -694,7 +704,13 @@ class Phase6Runner:
             logger.info(f"[ATTEMPT {buy_attempts}] {pair}: weight={weight:.4f} | attempting BUY ${usd_amount:.2f}")
 
             try:
-                result = self.order_executor.execute_buy(pair, usd_amount)
+                # P4-04: prefer platform TradeExecutor (default for ARCH-4) ; legacy only on explicit fallback
+                if getattr(self, "use_platform_executor", False) and getattr(self, "trade_executor", None):
+                    result = self.trade_executor.execute_buy(pair, usd_amount)
+                    self.logger.info("[P4-04] Fresh start BUY via platform TradeExecutor")
+                else:
+                    result = self.order_executor.execute_buy(pair, usd_amount)
+                    self.logger.info("[P4-04] Fresh start BUY via legacy OrderExecutor (fallback)")
                 if result.get('success'):
                     successful_buys += 1
                     # Log to trade ledger

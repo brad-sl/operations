@@ -1,0 +1,48 @@
+{
+  "schema_version": "1",
+  "description": "Regime -> scenario knob set (Path B winners per REGIME_SCENARIO_PROCEDURE). Swap when regime_detector signals change.",
+  "regimes": {
+    "bull": {
+      "scenario_id": "rebalance_7d",
+      "note": "Example: favor rebalance churn in strong tape — replace with scorecard winner",
+      "live_overlay": {
+        "global_settings.rebalance_cap_usd": 180.0
+      },
+      "arch4_params": {
+        "use_rotation": false,
+        "rebal_freq": 7
+      }
+    },
+    "bear": {
+      "scenario_id": "baseline_7d",
+      "note": "Tighter rotation / defensive — tune from bear scorecard",
+      "live_overlay": {
+        "global_settings.rebalance_cap_usd": 120.0,
+        "risk_management.sl_max_pct": 0.04
+      },
+      "arch4_params": {
+        "use_rotation": true,
+        "rebal_freq": 7
+      }
+    },
+    "flat": {
+      "scenario_id": "baseline_14d",
+      "live_overlay": {
+        "global_settings.rebalance_cap_usd": 140.0
+      },
+      "arch4_params": {
+        "use_rotation": true,
+        "rebal_freq": 14
+      }
+    },
+    "transition": {
+      "scenario_id": "baseline_7d",
+      "note": "Hold prior or default until confidence rises",
+      "live_overlay": {},
+      "arch4_params": {
+        "use_rotation": true,
+        "rebal_freq": 7
+      }
+    }
+  }
+}

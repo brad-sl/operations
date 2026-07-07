@@ -1,0 +1,46 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "r0_smoke_three",
+  "description": "R0 smoke: rebalance frequency and pair expansion on real OHLCV JSON",
+  "primary_metric": "sharpe_ratio",
+  "baseline_scenario_id": "baseline_7d",
+  "date_range": {
+    "start": "2025-04-20",
+    "end": "2026-04-19"
+  },
+  "scenarios": [
+    {
+      "id": "baseline_7d",
+      "label": "Baseline weekly rebalance, no expansion",
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "baseline_14d",
+      "label": "Biweekly rebalance, no expansion",
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": false,
+        "candidate_universe": [],
+        "rebalance_frequency_days": 14,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "expanded_7d",
+      "label": "Weekly rebalance with pair expansion universe",
+      "backtest": {
+        "initial_capital": 1000,
+        "enable_pair_expansion": true,
+        "candidate_universe": ["AVAX-USD", "LINK-USD", "NEAR-USD", "ARB-USD"],
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    }
+  ]
+}

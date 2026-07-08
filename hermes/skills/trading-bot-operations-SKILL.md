@@ -1,12 +1,17 @@
 ---
 name: trading-bot-operations
-description: Class-level patterns for deploying, monitoring, debugging, and verifying crypto trading bots (Phase 6 style). Covers dashboards, lightweight alerting, backtesting/reality checks, systemd services, and common live-mode pitfalls.
+description: Class-level patterns for deploying, monitoring, debugging, and verifying crypto trading bots (Phase 6 style). Covers dashboards, alerting, backtests, systemd pitfalls; ANALYST-OPT scenario research (Path B + production compare for deploy decisions) → references/analyst-opt-scenario-research.md.
 tags: [trading, crypto, dashboard, monitoring, backtest, deployment, verification]
 ---
 
 # Trading Bot Operations (Umbrella)
 
 This skill consolidates all operational concerns for long-running crypto trading bots.
+
+## Crypto-Analyst optimization (ANALYST-OPT)
+
+- Runbook: `references/analyst-opt-scenario-research.md` (Path B `arch4`, weekly cron, brief integration).
+- When ranking scenarios for deploy or shadow promotion, **always** use `--compare-production` and surface since-go-live ledger P&L; if OHLCV and live calendars do not overlap, say so explicitly — do not treat sim as beating production on different dates.
 
 ## Phase 6 live runner singleton + restart
 

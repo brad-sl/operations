@@ -1,6 +1,7 @@
 agent-behavior
 agent-delegation
 agentic-architecture
+agent-methodology
 apify-reddit-sentiment
 apple
 autonomous-ai-agents

@@ -7,41 +7,166 @@
     Name:      Daily Kanban Backup
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-07-08T03:00:00-07:00
+    Next run:  2026-07-09T03:00:00-07:00
     Deliver:   local
     Script:    backup-kanban.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-07-07T03:00:39.066599-07:00  ok
+    Last run:  2026-07-08T03:00:40.879294-07:00  ok
 
   5c1207235cf6 [active]
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-07-07T04:45:00-07:00
+    Next run:  2026-07-08T04:45:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-07T04:30:48.937380-07:00  ok
+    Last run:  2026-07-08T04:30:49.725993-07:00  ok
 
   8612a817fe55 [active]
     Name:      sentiment-30min-refresh
     Schedule:  */30 * * * *
     Repeat:    ∞
-    Next run:  2026-07-07T05:00:00-07:00
+    Next run:  2026-07-08T05:00:00-07:00
     Deliver:   local
     Script:    run_sentiment_cron.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-07T04:30:50.730233-07:00  ok
+    Last run:  2026-07-08T04:30:51.612060-07:00  ok
 
   92d0bbe12216 [active]
     Name:      daily-git-hermes-management
     Schedule:  30 4 * * *
     Repeat:    ∞
-    Next run:  2026-07-08T04:30:00-07:00
+    Next run:  2026-07-09T04:30:00-07:00
     Deliver:   local
     Script:    git-daily-management.sh
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   /home/brad/projects/crypto-trading-bot
+    Last run:  2026-07-07T04:30:55.596858-07:00  error: Script exited with code 1
+stdout:
+========== Git daily management @ 2026-07-07T04:30:50-07:00 ==========
+Project: /home/brad/projects/crypto-trading-bot
+=== Hermes Git Health Check @ 2026-07-07T04:30:50-07:00 ===
+Repo path: /home/brad/projects/crypto-trading-bot
+Branch: phase-6.1
+Last commit: 23f1b022 ops: singleton start script for live dashboard (8502)
+Remote: https://github.com/brad-sl/operations.git
+Unpushed commits vs upstream: 0
+--- hermes/ mirror ---
+?? hermes/skills/crypto_analyst/
+Hermes state mirror (sanitized, non-secret only). Last sync: 2026-06-14_111919
+--- hermes-state/ baseline (Phase 1) ---
+hermes-state present (10 entries)
+Dirty tracked/untracked (excl logs/data/pyc): 128
+Git health: OK
+Branch: phase-6.1 | dirty (excl noise): 128 | untracked: 46
+=== Hermes State Sync (Phase 2) @ 2026-07-07_043051 ===
+Live source: /home/brad/.hermes
+Git mirror : /home/brad/projects/crypto-trading-bot/hermes
+--- Syncing profiles (crypto-* + code-reviewer) ---
+sending incremental file list
+
+sent 64 bytes  received 19 bytes  166.00 bytes/sec
+total size is 693  speedup is 8.35
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 513  speedup is 6.58
+sending incremental file list
+
+sent 64 bytes  received 19 bytes  166.00 bytes/sec
+total size is 286  speedup is 3.45
+sending incremental file list
+SOUL.md
+
+sent 618 bytes  received 42 bytes  1,320.00 bytes/sec
+total size is 513  speedup is 0.78
+sending incremental file list
+
+sent 63 bytes  received 19 bytes  164.00 bytes/sec
+total size is 2,497  speedup is 30.45
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 1,599  speedup is 20.50
+sending incremental file list
+profile.yaml
+
+sent 444 bytes  received 42 bytes  972.00 bytes/sec
+total size is 333  speedup is 0.69
+sending incremental file list
+SOUL.md
+
+sent 619 bytes  received 42 bytes  1,322.00 bytes/sec
+total size is 513  speedup is 0.78
+sending incremental file list
+
+sent 64 bytes  received 19 bytes  166.00 bytes/sec
+total size is 674  speedup is 8.12
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 513  speedup is 6.58
+--- Syncing cron definitions ---
+sending incremental file list
+git-health-check.yaml
+git-mirror-sync.yaml
+
+sent 1,031 bytes  received 61 bytes  2,184.00 bytes/sec
+total size is 1,566  speedup is 1.43
+--- Syncing relevant skills (names only + key SKILL.md excerpts) ---
+--- Syncing hardware snapshot + plans + PHASE_GOALS ---
+sending incremental file list
+./
+2026-06-17_153000-opportunity-score-expansion.md
+2026-06-17_154500-long-term-pnl-backtest.md
+2026-06-17_163000-sl-emergency-audit.md
+2026-06-17_170000-emergency-fix-and-smoke.md
+2026-06-17_180000-production-deployment.md
+
+sent 9,673 bytes  received 114 bytes  19,574.00 bytes/sec
+total size is 11,694  speedup is 1.19
+--- Sanitized config excerpt ---
+--- Git add & commit ---
+[phase-6.1 971ba860] hermes: sync state mirror 2026-07-07_043051
+ 18 files changed, 1656 insertions(+), 90 deletions(-)
+ create mode 100644 hermes/plans/2026-06-17_153000-opportunity-score-expansion.md
+ create mode 100644 hermes/plans/2026-06-17_154500-long-term-pnl-backtest.md
+ create mode 100644 hermes/plans/2026-06-17_163000-sl-emergency-audit.md
+ create mode 100644 hermes/plans/2026-06-17_170000-emergency-fix-and-smoke.md
+ create mode 100644 hermes/plans/2026-06-17_180000-production-deployment.md
+ create mode 100644 hermes/skills/crypto_analyst/polymarket_overlay.py
+Committed.
+--- Pushing ---
+To https://github.com/brad-sl/operations.git
+   23f1b022..971ba860  phase-6.1 -> phase-6.1
+=== Sync complete ===
+hardware: PASS
+git: FAIL/MISMATCH
+processes: PASS
+
+VERIFICATION ISSUES: Review diffs above. Re-export if needed.
+========== Daily git management finished (rc=1) ==========
+
+  e039d96c4732 [active]
+    Name:      Phase6 Analyst Optimization Weekly
+    Schedule:  0 4 * * 0
+    Repeat:    ∞
+    Next run:  2026-07-12T04:00:00-07:00
+    Deliver:   local
+    Script:    phase6/research/run_analyst_opt_weekly.sh
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   /home/brad/projects/crypto-trading-bot
+
+  bf79baababb0 [active]
+    Name:      Phase6 Shadow Drift Monitor
+    Schedule:  0 5 * * *
+    Repeat:    ∞
+    Next run:  2026-07-08T05:00:00-07:00
+    Deliver:   local
+    Script:    phase6/research/run_shadow_drift_check.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
 

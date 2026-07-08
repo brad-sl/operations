@@ -1,18 +1,31 @@
-trading_pairs:
+global_settings:
+  max_deployable_usd: 1000
+  pairs:
   - BTC-USD
   - ETH-USD
+  - SOL-USD
   - XRP-USD
-
-rsi:
-  period: 14
-  oversold: 30
-  overbought: 70
-
+  - DOGE-USD
+  - ADA-USD
+  - AVAX-USD
+  - LINK-USD
+  - UNI-USD
+  - ARB-USD
+  - OP-USD
+  total_capital: 1000
+  use_new_allocator: true
 risk:
-  max_position_size_pct: 0.1  # 10% of capital per trade
-  stop_loss_pct: 0.02  # 2%
-  take_profit_pct: 0.04  # 4%
-
+  max_position_size_pct: 0.1
+  stop_loss_pct: 0.02
+  take_profit_pct: 0.04
+rsi:
+  overbought: 70
+  oversold: 30
+  period: 14
 sentiment:
-  weight: 0.3  # 30% weight in signal
   threshold: 0.5
+  weight: 0.3
+trading_pairs:
+- BTC-USD
+- ETH-USD
+- XRP-USD

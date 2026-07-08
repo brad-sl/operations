@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 
 # Real data paths (project root relative)
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 REBALANCE_HISTORY = PROJECT_ROOT / "data/state/rebalance_history/default.jsonl"
 LIVE_STATE = PROJECT_ROOT / "data/state/phase6_live_state.json"
 PRICE_HISTORY = PROJECT_ROOT / "data/state/price_history.json"

@@ -1,3 +1,6 @@
+# See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths, state, config hygiene and drift prevention.
+# All code must derive PROJECT_ROOT via paths.py and avoid absolute hardcodes.
+
 """
 LivePortfolioManager
 Maintains current positions by querying the exchange.

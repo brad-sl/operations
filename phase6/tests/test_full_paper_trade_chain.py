@@ -10,6 +10,8 @@ End-to-end simulation for paper trade scenario:
 - Dashboard cache written with old-style data (newly deployed code feeds dashboard)
 - Verifies the full chain: signals -> deploy_capital -> plan/execution -> dashboard
 
+Updated for TESTS-01: explicitly loads/uses central basket via runner (which delegates to load_trading_basket) and asserts full 11-pair exercise for proposals/rebalance.
+
 Old-style now primary per diagnostics. Prepares for live.
 
 Run with: PYTHONPATH=. python3 phase6/tests/test_full_paper_trade_chain.py
@@ -26,12 +28,12 @@ from datetime import datetime
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from phase6.core.phase6_runner import Phase6Runner, NEW_ALLOCATOR_AVAILABLE
+from phase6.core.paths import load_trading_basket
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
-CACHE_PATH = PROJECT_ROOT / "data/state/phase6_live_state.json"
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 
 def create_paper_config() -> str:
     cfg = {
@@ -66,6 +68,10 @@ def test_full_paper_trade_chain():
         print("NEW_ALLOCATOR_AVAILABLE=False. Cannot run full chain test.")
         return False
 
+    # Explicit central basket per TESTS-01 (runner will use it internally too)
+    central_basket = load_trading_basket()
+    print(f"Central basket loaded for test: {len(central_basket)} pairs (should be 11)")
+
     config_path = create_paper_config()
     try:
         runner = Phase6Runner(config_path=config_path, mode="shadow")
@@ -76,6 +82,11 @@ def test_full_paper_trade_chain():
         print(f"  rebalance_style: {style}")
         print(f"  mode: {runner.mode} (shadow = paper trading)")
         print(f"  FIXED_UNIVERSE: {runner.FIXED_UNIVERSE}")
+        print(f"  Basket len from runner: {len(getattr(runner, 'FIXED_UNIVERSE', []))}")
+
+        # TESTS-01: assert full 11 exercised
+        assert len(runner.FIXED_UNIVERSE) >= 10, f"Expected full ~11 pair basket, got {len(runner.FIXED_UNIVERSE)}"
+        assert len(runner.FIXED_UNIVERSE) == len(central_basket), "Runner basket should match load_trading_basket"
 
         # Force rebalance for this cycle
         runner._force_next_rebalance = True
@@ -90,7 +101,7 @@ def test_full_paper_trade_chain():
         last_proposals = getattr(runner, "_last_proposals", [])
 
         print(f"\nNew stack results:")
-        print(f"  Proposals computed: {len(last_proposals)}")
+        print(f"  Proposals computed: {len(last_proposals)} (full basket expected)")
         if last_proposals:
             for p in last_proposals[:3]:
                 print(f"    {p.pair}: {p.side} (score={p.score:.2f}, src={p.source})")
@@ -102,6 +113,7 @@ def test_full_paper_trade_chain():
 
         # Check dashboard cache was written with new fields
         print("\n--- Dashboard cache check (fed by new code) ---")
+        CACHE_PATH = PROJECT_ROOT / "data/state/phase6_live_state.json"
         if CACHE_PATH.exists():
             with open(CACHE_PATH) as f:
                 cache = json.load(f)
@@ -140,6 +152,7 @@ def test_full_paper_trade_chain():
             "timestamp": datetime.utcnow().isoformat(),
             "mode": "shadow (paper)",
             "use_new_allocator": True,
+            "basket_size": len(runner.FIXED_UNIVERSE),
             "proposals_count": len(last_proposals),
             "plan_strategy": last_plan.strategy_used if last_plan else None,
             "dashboard_arch4_present": "arch4" in cache if 'cache' in locals() else False,

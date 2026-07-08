@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import sys
 """
 Reddit Sentiment Fetcher for Crypto Trading Bot
 
@@ -20,6 +21,8 @@ import os
 import json
 from datetime import datetime
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from phase6.core.paths import REDDIT_SENTIMENT_CACHE, load_project_dotenv
 
 try:
     from apify_client import ApifyClient
@@ -47,7 +50,8 @@ logger = logging.getLogger(__name__)
 def load_full_trading_basket():
     """Load full dynamic basket from config for consistency with runner, x-fetch, rsi-refresher, scorer."""
     try:
-        with open("/home/brad/projects/crypto-trading-bot/config/trading_config_phase6.json") as f:
+        from phase6.core.paths import TRADING_CONFIG_PHASE6
+        with open(TRADING_CONFIG_PHASE6) as f:
             cfg = json.load(f)
         pairs = cfg.get("global_settings", {}).get("pairs", []) or cfg.get("phase_6_specific", {}).get("opportunity_pool", [])
         if pairs:
@@ -59,7 +63,8 @@ def load_full_trading_basket():
 
 
 # Configuration
-REDDIT_CACHE_FILE = Path(__file__).parent / 'reddit_sentiment_cache.json'
+REDDIT_CACHE_FILE = REDDIT_SENTIMENT_CACHE
+load_project_dotenv()
 APIFY_USER_ID = os.getenv('APIFY_USER_ID')
 APIFY_API_TOKEN = os.getenv('APIFY_API_TOKEN')
 

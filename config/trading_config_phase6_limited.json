@@ -1,0 +1,63 @@
+{
+  "global_settings": {
+    "total_capital": 1000,
+    "pairs": [
+      "LINK-USD",
+      "OP-USD",
+      "ADA-USD"
+    ],
+    "cycle_interval_seconds": 1800,
+    "rebalance_cap_usd": 50.0,
+    "max_deployable_usd": 300,
+    "use_new_allocator": true,
+    "rebalance_style": "permissive_deploy",
+    "trade_buffer_hours": 24,
+    "signal_freshness_enforced": true,
+    "use_platform_executor": true,
+    "apply_analyst_heuristics": true,
+    "ab_mode": false,
+    "compare_strategies": true,
+    "rebalance_strategy": "rotation"
+  },
+  "risk_management": {
+    "max_daily_loss_pct": 0.02,
+    "var_threshold": 0.015,
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": null,
+    "min_reserve_usd": 200.0,
+    "deploy_pct": 0.30
+  },
+  "phase_6_specific": {
+    "expansion_rules": {
+      "max_pairs": 3,
+      "correlation_threshold": 0.3,
+      "reserve_min_pct": 0.2
+    },
+    "opportunity_pool": [
+      "LINK-USD",
+      "OP-USD",
+      "ADA-USD",
+      "BTC-USD",
+      "ETH-USD"
+    ]
+  },
+  "withdrawal_reserve": {
+    "min_reserve_usd": 200.0,
+    "max_deployable_usd": 300.0,
+    "alert_pct": 1.1,
+    "reserve_breach_action": "flag_and_adjust"
+  },
+  "scheduler": {
+    "daily_rebalance_times": [
+      "09:00",
+      "21:00"
+    ]
+  },
+  "_live_deployment": {
+    "enabled": true,
+    "paper_test_passed": "2026-06-15",
+    "strategy": "ARCH-4 new stack limited scope: evaluate_universe -> RotationStrategy allocator -> TradePlan -> _execute_trade_plan -> OrderExecutor (Coinbase)",
+    "mode_default": "live requires --confirm-live",
+    "dashboard_feed": "full new chain limited to 3 pairs, low deploy_pct=0.30"
+  }
+}

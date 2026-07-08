@@ -6,6 +6,8 @@ Combines X (15-min half-life) and Reddit (60-min half-life) sentiment.
 Applies exponential time decay so stale data loses influence.
 
 This is the unified signal path that was missing in the initial Phase 6 port.
+
+See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py (prefer main core/sentiment_scorer.py for canonical).
 """
 
 import json
@@ -14,10 +16,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
-# Phase 6 paths
-PHASE6_DIR = Path("/home/brad/projects/crypto-trading-bot/phase6")
-X_CACHE = PHASE6_DIR / "data" / "sentiment" / "x_sentiment_cache.json"
-REDDIT_CACHE = PHASE6_DIR / "data" / "sentiment" / "reddit_sentiment_cache.json"
+from ..paths import X_SENTIMENT_CACHE, REDDIT_SENTIMENT_CACHE, load_trading_basket  # per DATA_FLOW_AND_LOCATIONS.md ; note relative from subdir
+
+X_CACHE = X_SENTIMENT_CACHE
+REDDIT_CACHE = REDDIT_SENTIMENT_CACHE
 
 # Staleness thresholds (Grok Build review intent: zero instead of decayed old values)
 X_STALENESS_THRESHOLD_MIN = 120      # 2h for X
@@ -72,7 +74,7 @@ def load_sentiment_scores(pairs: Optional[list] = None) -> Dict[str, Dict[str, A
     }
     """
     if pairs is None:
-        pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD"]
+        pairs = load_trading_basket()
 
     x_data = {}
     reddit_data = {}

@@ -1,3 +1,6 @@
+# See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths, state, config hygiene and drift prevention.
+# All code must derive PROJECT_ROOT via paths.py and avoid absolute hardcodes.
+
 # allocation_engine.py - Lightweight portfolio rebalancing engine (Phase 5)
 """
 Simple, codifiable helpers to calculate target allocations and rebalance plans for a multi-coin crypto portfolio.
@@ -62,7 +65,7 @@ def plan_static_allocations(targets_pct: Dict[str, float], total_capital: float)
         except Exception:
             p = 0.0
         allocations[coin] = max(0.0, total_capital * p)
-    # Normalize to exact total_capital to account for rounding
+    # Normalize to exact total_capital to account for float math (P0-02.8: avoid early round-to-2 on usd; final by quantize)
     total = sum(allocations.values())
     if total > 0:
         scale = total_capital / total
@@ -72,10 +75,11 @@ def plan_static_allocations(targets_pct: Dict[str, float], total_capital: float)
 
 
 def rebalance_plan(current_allocs: Dict[str, float], target_allocs_pct: Dict[str, float], total_capital: float, min_move: float = 0.0) -> List[Dict[str, any]]:
-    """Compute a simple rebalance plan from current allocations toward target allocations.
-    Each move is a dict: { from_coin: str, to_coin: str, amount_usd: float }
-    If from_coin == to_coin, no move is produced.
+    """Compute a rebalance plan from current allocations toward target allocations.
+    Each move is a dict: {"pair": str, "action": "BUY"|"SELL", "usd_amount": float }
+    Deltas are full (no artificial 25% cap) so full rebalance legs are produced when deltas large.
     min_move is the minimum USD amount to move per coin to avoid noise.
+    SELL/BUY ordering is enforced at execution time (see order_executor.execute_rebalance_plan).
     """
     plan: List[Dict[str, any]] = []
     if not current_allocs or not target_allocs_pct or total_capital <= 0:
@@ -89,31 +93,17 @@ def rebalance_plan(current_allocs: Dict[str, float], target_allocs_pct: Dict[str
         cur = cur_val.get("usd_value", cur_val) if isinstance(cur_val, dict) else cur_val
         tgt = target_allocs_usd.get(coin, 0.0)
         deltas[coin] = tgt - float(cur)
-    # Sort by magnitude of delta
+    # Sort by magnitude of delta (for logging/diagnostics; exec layer forces SELL-first atomic)
     moves = []
     for coin, diff in deltas.items():
         if abs(diff) >= max(min_move, 1e-6):
             moves.append((coin, diff))  # positive diff = need to buy, negative = sell
     moves.sort(key=lambda x: abs(x[1]), reverse=True)
-    # Build plan: pairwise transfers to keep accounting simple
-    # We'll aggregate sells first to USD, then buys from USD; actual execution layer handles order routing
-    usd_needed = 0.0
-    usd_available = 0.0
+    # Emit full-delta moves (P0-02.7: no 0.25*total cap; quantize happens in executor)
     for coin, diff in moves:
-        if diff < 0:
-            # need to liquidate some amount from this coin
-            usd_needed += -diff
-        else:
-            usd_available += diff
-    # Create per-coin moves: for simplicity, create a buy move for each positive diff up to available USD, and a corresponding sell move for negatives
-    # In a real system, this would be split into multiple smaller trades to respect liquidity; here we provide a straightforward plan
-    for coin, diff in moves:
-        if diff < 0:
-            # Sell to reduce position
-            plan.append({"pair": coin, "action": "SELL", "usd_amount": min(-diff, total_capital * 0.25)})
-        else:
-            # Buy to increase position
-            plan.append({"pair": coin, "action": "BUY", "usd_amount": min(diff, total_capital * 0.25)})
+        amt = abs(diff)
+        action = "SELL" if diff < 0 else "BUY"
+        plan.append({"pair": coin, "action": action, "usd_amount": amt})
     return plan
 
 # Simple convenience for quick testing in interactive sessions

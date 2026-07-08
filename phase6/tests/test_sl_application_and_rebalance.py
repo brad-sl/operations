@@ -19,7 +19,7 @@ from pathlib import Path
 from typing import Dict, Any
 from unittest.mock import MagicMock
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from phase6.core.stop_loss_manager import StopLossManager
@@ -50,6 +50,7 @@ def mock_exchange():
         def __init__(self):
             self.shadow_mode = True
             self._prices = {"ETH-USD": 1728.1, "XRP-USD": 1.165, "OP-USD": 0.104}
+            self.poll_calls = []
         def get_price(self, pair):
             return self._prices.get(pair, 100.0)
         def get_product_metadata(self, pair):
@@ -58,8 +59,24 @@ def mock_exchange():
             return str(round(price / increment) * increment)
         def _quantize_size(self, size, increment):
             return str(round(size / increment) * increment)
+        def quantize_price(self, product_id, price):
+            meta = self.get_product_metadata(product_id)
+            inc = float(meta.get("price_increment", 0.01))
+            return self._quantize_price(price, inc)
+        def quantize_size(self, product_id, size):
+            meta = self.get_product_metadata(product_id)
+            inc = float(meta.get("base_increment", 0.001))
+            return self._quantize_size(size, inc)
         def place_stop_limit_sell(self, **kwargs):
             return True
+        def get_order_fill_details(self, order_id):
+            return {"average_filled_price": 100.0, "filled_size": 0.5, "status": "FILLED"}
+        def poll_for_settlement(self, asset_or_pair, timeout=30.0, max_polls=5, expected_delta=0.0, order_id=None):
+            self.poll_calls.append({"pair": asset_or_pair, "order_id": order_id, "timeout": timeout})
+            print(f"[MOCK POLL] poll_for_settlement called: pair={asset_or_pair}, order_id={order_id}, timeout={timeout}")
+            return True
+        def get_crypto_available(self, asset):
+            return 1.0
     return MockExchange()
 
 def run_test():
@@ -79,6 +96,13 @@ def run_test():
     buy_result = executor.execute_buy("OP-USD", 50.0)
     print(f"Buy OP $50 result: success={buy_result.get('success')}, sl_attached={buy_result.get('sl_attached')}")
     print(f"  Simulated entry: ${buy_result.get('entry_price')}, size={buy_result.get('size')}")
+
+    # Evidence of pre-flight settlement poll (ANALYST-20260703-051)
+    ex = executor.exchange  # the mock
+    if hasattr(ex, "poll_calls"):
+        print(f"  Pre-flight poll calls during buy: {ex.poll_calls}")
+    print("  (In live: would show [PRE-FLIGHT SETTLEMENT POLL] logs + order_id tied get_order_fill_details wait)")
+
     print("  (In live: attach_stop_loss called with real fill price/size after market buy)")
     print()
 

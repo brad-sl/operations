@@ -16,7 +16,7 @@ from pathlib import Path
 # Add phase6 to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.sentiment.sentiment_scorer import (
+from phase6.core.sentiment_scorer import (  # P2-01: canonical (migrated from legacy sentiment/ subdir)
     load_sentiment_scores,
     get_sentiment_adjusted_weights
 )

@@ -25,15 +25,19 @@ Run manually or via hermes rsi-15min-refresher cron.
 
 import json
 import sqlite3
+import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any
 
-BASE_DIR = Path("/home/brad/projects/crypto-trading-bot")
-CONFIG_PATH = BASE_DIR / "config" / "trading_config_phase6.json"
-PRICE_HISTORY_PATH = BASE_DIR / "data" / "state" / "price_history.json"
-RSI_CACHE_PATH = BASE_DIR / "data" / "state" / "rsi_cache.json"
-DB_PATH = BASE_DIR / "data" / "phase6.db"
+# P2-01 fix: no hardcoded absolute paths; use canonical paths + load_trading_basket
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # root/scripts location
+from phase6.core.paths import PROJECT_ROOT, RSI_CACHE as _RSI_CACHE, PHASE6_DB, load_trading_basket
+
+CONFIG_PATH = PROJECT_ROOT / "config" / "trading_config_phase6.json"
+PRICE_HISTORY_PATH = PROJECT_ROOT / "data" / "state" / "price_history.json"
+RSI_CACHE_PATH = _RSI_CACHE
+DB_PATH = PHASE6_DB
 
 # --- Real RSI calculation (Wilder's, 14-period) ---
 # Exact match to the implementation in phase6/core/phase6_runner.py
@@ -59,22 +63,45 @@ def calculate_rsi(prices: List[float], period: int = 14) -> List[float]:
     return rsi_values
 
 
+def calculate_stochastic_rsi(
+    prices: List[float], rsi_period: int = 14, k_period: int = 14, d_period: int = 3
+) -> tuple[list[float], list[float]]:
+    """Pure-Python StochRSI (no numpy). Returns (k_values, d_values)."""
+    rsi_values = calculate_rsi(prices, rsi_period)
+    if len(rsi_values) < k_period:
+        return [], []
+
+    k_values: list[float] = []
+    for i in range(k_period - 1, len(rsi_values)):
+        window = rsi_values[i - k_period + 1 : i + 1]
+        min_r = min(window)
+        max_r = max(window)
+        if max_r == min_r:
+            k = 50.0
+        else:
+            k = 100.0 * (rsi_values[i] - min_r) / (max_r - min_r)
+        k_values.append(round(k, 2))
+
+    d_values: list[float] = []
+    for i in range(d_period - 1, len(k_values)):
+        d = sum(k_values[i - d_period + 1 : i + 1]) / d_period
+        d_values.append(round(d, 2))
+
+    return k_values, d_values
+
+
 # --- Basket loading (config-driven, full coverage) ---
+# P2-01: delegate to central load_trading_basket for single source (avoids dupe fallback logic)
 def load_full_basket() -> List[str]:
     try:
-        with open(CONFIG_PATH) as f:
-            cfg = json.load(f)
-        pairs = cfg.get("global_settings", {}).get("pairs", [])
-        if not pairs:
-            pairs = cfg.get("phase_6_specific", {}).get("opportunity_pool", [])
-        if not pairs:
-            # Fallback to known full set (should never be needed if config is correct)
-            pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
-                     "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD"]
-        return pairs
+        pairs = load_trading_basket()
+        if pairs:
+            return pairs
     except Exception as e:
-        print(f"[ERROR] Failed to load basket from config: {e}")
-        return []
+        print(f"[WARN] central load_trading_basket failed, falling back: {e}")
+    # last resort fallback (should not hit)
+    return ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
+            "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD"]
 
 
 # --- PriceHistoryManager (lightweight inline for standalone; mirrors core) ---
@@ -112,32 +139,40 @@ def main():
     db_rows = []
 
     for pair in basket:
-        if not mgr.has_enough_data(pair, 15):
-            print(f"  {pair}: insufficient history (skipped for RSI)")
+        if not mgr.has_enough_data(pair, 30):  # raised for StochRSI(14,14) safety
+            print(f"  {pair}: insufficient history (skipped for RSI/StochRSI)")
             continue
 
-        prices = mgr.get_prices(pair, n=30)
+        prices = mgr.get_prices(pair, n=100)  # Longer-term: use up to 100 points (full available history)
         rsi_list = calculate_rsi(prices, period=14)
         if not rsi_list:
             print(f"  {pair}: not enough deltas for RSI (skipped)")
             continue
 
         rsi_val = rsi_list[-1]
+        k_list, d_list = calculate_stochastic_rsi(prices, rsi_period=14, k_period=14, d_period=3)
+        stoch_k = k_list[-1] if k_list else None
+        stoch_d = d_list[-1] if d_list else None
+
         candle_count = len(prices)
 
         rsi_entries[pair] = {
             "rsi": rsi_val,
+            "stoch_k": stoch_k,
+            "stoch_d": stoch_d,
             "timestamp": now_iso,
-            "source": "15m_candles_from_history",
+            "source": "15m_candles_from_history_longer_term",
             "candle_count": candle_count,
             "age_minutes": 0,
-            "fresh": True
+            "fresh": True,
         }
 
-        db_rows.append((now_iso, pair, rsi_val, "refresh_15m"))
+        db_rows.append((now_iso, pair, rsi_val, "refresh_15m_long"))
 
         print(f"  {pair}: fetched {candle_count} candles from price_history, {candle_count} valid closes")
         print(f"    -> RSI={rsi_val} (from {candle_count} closes, Wilder)")
+        if stoch_k is not None:
+            print(f"    -> StochRSI %K={stoch_k} %D={stoch_d}")
 
     # Write rsi_cache.json (full basket)
     cache_payload = {

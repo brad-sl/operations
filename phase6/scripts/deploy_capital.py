@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# See docs/DATA_FLOW_AND_LOCATIONS.md + phase6/core/paths.py for paths, state, config hygiene
 """
 Capital Deployment Module (Standalone)
 
@@ -46,7 +47,7 @@ def get_deployment_thresholds() -> dict:
         "min_new_pair_sentiment": 0.20,
         "min_rsi": 30.0,
         "new_capital_cap": 50.0,
-        "withdrawal_reserve_min": 250.0,
+        "withdrawal_reserve_min": 50.0,
     }
 
 # Recovery mode constants
@@ -75,6 +76,7 @@ def deploy_capital(
     rsi_values: Optional[Dict[str, float]] = None,
     min_rsi: float = 30.0,
     cooldown_pairs: Optional[List[str]] = None,   # pairs on 24h cooldown after stop-loss
+    withdrawal_reserve_min: Optional[float] = None,
 ) -> Dict[str, float]:
     """
     Deploy new capital using sentiment-driven allocation.
@@ -209,23 +211,27 @@ def deploy_capital(
         total_weight += adjusted[pair]
 
     if total_weight > 0:
-        # P6-145: Ensure reserve is respected as a global floor.
+        # P6-145 / PROD-03 fix: reserve logic for takeover (low cash, high holdings)
+        if withdrawal_reserve_min is None:
+            withdrawal_reserve_min = get_deployment_thresholds().get("withdrawal_reserve_min", 50.0)
         
-        withdrawal_reserve_min = 500.0 # From config
-        
-        # Calculate available capital
-        # P6-145: Reserve must be respected. Total capital = sum(active) + new_capital
-        # Available for DEPLOYMENT is (Total - Reserve)
+        cur_deployed = sum(current_allocations.values())
         available_capital = max(0.0, total_capital - withdrawal_reserve_min)
         
-        # Scale down allocations proportionally IF total needed > available
-        if sum(adjusted.values()) > available_capital:
-            # Scale factor
-            scale = available_capital / sum(adjusted.values())
-            print(f"DEBUG: reserve breach, scaling by {scale}")
-            adjusted = {k: round(v * scale, 2) for k, v in adjusted.items()}
+        proposed = sum(adjusted.values())
+        if proposed > available_capital:
+            if cur_deployed >= available_capital:
+                # takeover / low-cash state: already deployed to limit; do not scale existing down, block net new
+                # P0-02.8: preserve full float precision for usd allocs; quantization layer (quantize_price) handles final rounding
+                adjusted = {k: current_allocations.get(k, v) for k, v in adjusted.items()}
+                print(f"DEBUG: reserve breach (takeover), keeping current (cur={cur_deployed:.1f} >= avail={available_capital:.1f}); no net deploy")
+            else:
+                scale = available_capital / proposed if proposed > 0 else 0
+                print(f"DEBUG: reserve breach, scaling by {scale}")
+                # P0-02.8: full precision (no early round-to-2 on deploy usd)
+                adjusted = {k: v * scale for k, v in adjusted.items()}
         
-        print(f"DEBUG: after scaling available={available_capital} weight={total_weight} adjusted={adjusted}")
+        print(f"DEBUG: after reserve available={available_capital} weight={total_weight} adjusted={adjusted}")
 
     logger.info(f"Deployed ${new_capital:.2f} from {source} | New pairs: {new_pairs_added}")
     return adjusted

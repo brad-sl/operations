@@ -175,7 +175,7 @@ def rebalance_plan_enhanced(
             plan.append({
                 "pair": coin,
                 "action": action,
-                "usd_amount": round(abs(diff), 2),
+                "usd_amount": abs(diff),  # P0-02.8 full prec
                 "reason": "enhanced-allocation"
             })
 

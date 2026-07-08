@@ -15,7 +15,7 @@ import math
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from phase6.core.sentiment.sentiment_scorer import load_sentiment_scores
+from phase6.core.sentiment_scorer import load_sentiment_scores  # P2-01: canonical scorer (migrated from legacy subdir)
 from phase6.core.allocation.enhanced_allocation_engine import (
     apply_liquidity_bias,
     apply_sentiment_adjustment,

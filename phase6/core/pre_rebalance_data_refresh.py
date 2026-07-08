@@ -12,6 +12,7 @@ import logging
 import os
 import subprocess
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any, Dict, List, TYPE_CHECKING
 
@@ -165,18 +166,29 @@ def assess_basket_coverage(basket: List[str], project_root: Path) -> Dict[str, A
     }
 
 
-def _run_refresh_script(project_root: Path, rel: str, timeout: float) -> bool:
+def _python_executable(project_root: Path) -> str:
+    venv = project_root / ".venv/bin/python3"
+    if venv.is_file():
+        return str(venv)
+    return os.environ.get("PYTHON", "python3")
+
+
+def _run_refresh_script(project_root: Path, rel: str, timeout: float, extra_env: Dict[str, str] | None = None) -> bool:
     script = project_root / rel
     if not script.exists():
         logger.warning(f"[PRE-REBAL REFRESH] missing script {script}")
         return False
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     try:
         subprocess.run(
-            ["python3", str(script)],
+            [_python_executable(project_root), str(script)],
             cwd=str(project_root),
             timeout=timeout,
             capture_output=True,
             check=False,
+            env=env,
         )
         return True
     except subprocess.TimeoutExpired:
@@ -185,6 +197,25 @@ def _run_refresh_script(project_root: Path, rel: str, timeout: float) -> bool:
     except Exception as e:
         logger.warning(f"[PRE-REBAL REFRESH] failed {rel}: {e}")
         return False
+
+
+def _refresh_missing_pairs_on_demand(
+    project_root: Path,
+    missing_rsi: List[str],
+    missing_sent: List[str],
+    timeout: float,
+) -> None:
+    """Lightweight second pass: full refresher scripts (cap already enforced by caller)."""
+    if not missing_rsi and not missing_sent:
+        return
+    logger.info(
+        f"[PRE-REBAL REFRESH] on-demand pass missing_rsi={missing_rsi} missing_sent={missing_sent}"
+    )
+    half = max(2.0, timeout / 2)
+    if missing_rsi:
+        _run_refresh_script(project_root, "scripts/refresh_rsi_prices.py", half)
+    if missing_sent:
+        _run_refresh_script(project_root, "phase6/scripts/refresh_sentiment.py", half)
 
 
 def ensure_basket_signals_ready(
@@ -207,16 +238,38 @@ def ensure_basket_signals_ready(
     need_refresh = force_refresh or not report["complete"] or report["stale_rsi"] or report["stale_sentiment"]
     if need_refresh:
         remaining = max(2.0, cap_sec - (time.time() - started))
-        half = remaining / 2
+        per_script = max(3.0, remaining * 0.45)
         logger.info(
-            f"[PRE-REBAL REFRESH] starting (cap={cap_sec}s) missing_rsi={report['missing_rsi']} "
+            f"[PRE-REBAL REFRESH] starting parallel (cap={cap_sec}s) missing_rsi={report['missing_rsi']} "
             f"missing_sent={report['missing_sentiment']}"
         )
-        _run_refresh_script(PROJECT_ROOT, "scripts/refresh_rsi_prices.py", half)
-        _run_refresh_script(PROJECT_ROOT, "phase6/scripts/refresh_sentiment.py", half)
+        futures = {}
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures[pool.submit(
+                _run_refresh_script, PROJECT_ROOT, "scripts/refresh_rsi_prices.py", per_script
+            )] = "rsi"
+            futures[pool.submit(
+                _run_refresh_script, PROJECT_ROOT, "phase6/scripts/refresh_sentiment.py", per_script
+            )] = "sentiment"
+            for fut in as_completed(futures, timeout=remaining):
+                try:
+                    fut.result()
+                except Exception as exc:
+                    logger.warning(f"[PRE-REBAL REFRESH] parallel task {futures[fut]}: {exc}")
         runner._update_price_history_and_calculate_rsi()
         report = assess_basket_coverage(basket, PROJECT_ROOT)
         runner._data_coverage = report  # type: ignore[attr-defined]
+        if report["missing_rsi"] or report["missing_sentiment"]:
+            leftover = max(2.0, cap_sec - (time.time() - started))
+            _refresh_missing_pairs_on_demand(
+                PROJECT_ROOT,
+                report["missing_rsi"],
+                report["missing_sentiment"],
+                leftover,
+            )
+            runner._update_price_history_and_calculate_rsi()
+            report = assess_basket_coverage(basket, PROJECT_ROOT)
+            runner._data_coverage = report  # type: ignore[attr-defined]
 
     elapsed = time.time() - started
     if not report["complete"]:

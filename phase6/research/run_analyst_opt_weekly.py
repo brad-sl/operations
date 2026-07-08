@@ -16,7 +16,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-DEFAULT_PACK = ROOT / "phase6/research/scenarios/r1_arch4_smoke_three.json"
+DEFAULT_PACK = ROOT / "phase6/research/scenarios/r2_defensive_sharpe_gate.json"
+LEGACY_PACK = ROOT / "phase6/research/scenarios/r1_arch4_smoke_three.json"
 
 
 def main() -> int:

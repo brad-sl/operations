@@ -288,5 +288,3 @@ def resolve_sl_attach_size(
         return 0.0, meta
 
     return effective, meta
-
-    return stop_f, limit_f, stop_str, limit_str

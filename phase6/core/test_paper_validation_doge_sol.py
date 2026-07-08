@@ -22,7 +22,7 @@ from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, List
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.sim.paper_trader import PaperTrader, PaperTrade, create_fresh_paper_trader

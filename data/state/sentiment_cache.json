@@ -1,17 +1,56 @@
 {
-  "timestamp": "2026-04-29T17:00:02.432902",
-  "sentiments": {
-    "ADA-USD": 0.0006,
-    "DOGE-USD": 0.0,
-    "BTC-USD": 0.0,
-    "SOL-USD": 0.0011,
-    "XRP-USD": 0.0045,
-    "ETH-USD": 0.0054
+  "timestamp": "2026-07-08T13:34:05.887386+00:00",
+  "schema_version": 3,
+  "sentiment": {
+    "BTC-USD": {
+      "sentiment_score": -0.027,
+      "source": "x"
+    },
+    "ETH-USD": {
+      "sentiment_score": -0.1219,
+      "source": "x"
+    },
+    "SOL-USD": {
+      "sentiment_score": 0.5627,
+      "source": "x"
+    },
+    "XRP-USD": {
+      "sentiment_score": 0.1558,
+      "source": "x"
+    },
+    "DOGE-USD": {
+      "sentiment_score": 0.5104,
+      "source": "x"
+    },
+    "ADA-USD": {
+      "sentiment_score": 0.1586,
+      "source": "x"
+    },
+    "AVAX-USD": {
+      "sentiment_score": 0.0,
+      "source": "x"
+    },
+    "LINK-USD": {
+      "sentiment_score": 0.4967,
+      "source": "x"
+    },
+    "UNI-USD": {
+      "sentiment_score": 0.2235,
+      "source": "x"
+    },
+    "ARB-USD": {
+      "sentiment_score": 0.0,
+      "source": "x"
+    },
+    "OP-USD": {
+      "sentiment_score": 0.3796,
+      "source": "x"
+    }
   },
   "meta": {
-    "twitter_half_life_min": 15,
-    "reddit_half_life_min": 60,
-    "twitter_weight": 0.5,
-    "reddit_weight": 0.5
+    "source": "refresh_sentiment.py (P2-01 fixed)",
+    "x_cache": "/home/brad/projects/crypto-trading-bot/data/state/x_sentiment_cache.json",
+    "reddit_cache": "/home/brad/projects/crypto-trading-bot/data/state/reddit_sentiment_cache.json",
+    "basket_size": 11
   }
 }

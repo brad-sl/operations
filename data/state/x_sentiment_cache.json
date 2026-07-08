@@ -1,14 +1,68 @@
 {
   "BTC-USD": {
-    "sentiment": 0.03,
-    "timestamp": "2026-04-18T21:07:39.849188Z",
-    "source": "X API v2 (search/recent)",
-    "query": "bitcoin BTC price -scam"
+    "sentiment": -0.027,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 6,
+    "confidence": 0.24
+  },
+  "ETH-USD": {
+    "sentiment": -0.1219,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 2,
+    "confidence": 0.1
+  },
+  "SOL-USD": {
+    "sentiment": 0.5627,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 17,
+    "confidence": 0.68
   },
   "XRP-USD": {
-    "sentiment": 0.1,
-    "timestamp": "2026-04-18T21:07:39.849235Z",
-    "source": "X API v2 (search/recent)",
-    "query": "XRP ripple price -scam"
+    "sentiment": 0.1558,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 4,
+    "confidence": 0.2
+  },
+  "DOGE-USD": {
+    "sentiment": 0.5104,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 1,
+    "confidence": 0.05
+  },
+  "ADA-USD": {
+    "sentiment": 0.1586,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 3,
+    "confidence": 0.15
+  },
+  "AVAX-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 0,
+    "confidence": 0.0
+  },
+  "LINK-USD": {
+    "sentiment": 0.4967,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 26,
+    "confidence": 1.0
+  },
+  "UNI-USD": {
+    "sentiment": 0.2235,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 1,
+    "confidence": 0.05
+  },
+  "ARB-USD": {
+    "sentiment": 0.0,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 0,
+    "confidence": 0.0
+  },
+  "OP-USD": {
+    "sentiment": 0.3796,
+    "timestamp": "2026-07-08T13:34:03.024502",
+    "post_count": 7,
+    "confidence": 0.28
   }
 }

@@ -22,6 +22,9 @@ Isolation test: phase6/core/test_isolation_opportunity_scanner.py (must pass fir
 Proposals logged to data/state/opportunity_proposals.jsonl + logs/opportunity_scanner/*.md
 
 Parallel to #5/#1. Starter only.
+
+See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths and rules.
+Enforcement: import constants from .paths (no absolute paths, no overrides).
 """
 
 import json
@@ -32,21 +35,32 @@ from typing import Dict, List, Tuple, Any, Optional
 
 import sys
 from pathlib import Path
-sys.path.append("/home/brad/projects/crypto-trading-bot")
+
+from .paths import (
+    PROJECT_ROOT,
+    RSI_CACHE,
+    PRICE_HISTORY,
+    X_SENTIMENT_CACHE,
+    SENTIMENT_CACHE,
+    REBALANCE_HISTORY,
+    PHASE6_LIVE_STATE,
+    load_trading_basket,
+)  # per DATA_FLOW_AND_LOCATIONS.md
+
+sys.path.append(str(PROJECT_ROOT))  # per DATA_FLOW
 
 # Core imports for signal pipeline extension (light)
 from phase6.core.sentiment_scorer import load_sentiment_scores
 from phase6.core.phase6_runner import calculate_rsi  # reuse for consistency if needed for edge
 from phase6.core.regime_switcher import get_active_regime
 
-# Fixed universe and basket
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
-RSI_CACHE_PATH = PROJECT_ROOT / "data" / "state" / "rsi_cache.json"
-PRICE_HISTORY_PATH = PROJECT_ROOT / "data" / "state" / "price_history.json"
-X_SENTIMENT_PATH = PROJECT_ROOT / "phase6" / "data" / "sentiment" / "x_sentiment_cache.json"
-CANONICAL_SENTIMENT_PATH = PROJECT_ROOT / "sentiment_cache.json"
-REBALANCE_HISTORY_PATH = PROJECT_ROOT / "data" / "state" / "rebalance_history" / "default.jsonl"
-LIVE_STATE_PATH = PROJECT_ROOT / "data" / "state" / "phase6_live_state.json"
+# Fixed universe and basket - canonical from paths.py per DATA_FLOW_AND_LOCATIONS.md
+RSI_CACHE_PATH = RSI_CACHE
+PRICE_HISTORY_PATH = PRICE_HISTORY
+X_SENTIMENT_PATH = X_SENTIMENT_CACHE
+CANONICAL_SENTIMENT_PATH = SENTIMENT_CACHE
+REBALANCE_HISTORY_PATH = REBALANCE_HISTORY
+LIVE_STATE_PATH = PHASE6_LIVE_STATE
 
 # Scoring Mode Weights
 SCORING_MODES = {
@@ -70,18 +84,14 @@ SCORING_MODES = {
     }
 }
 
-# Dynamic per-trader trading basket (loaded from config so runner/rebalancer can dynamically promote/liquidate).
-# Sentiment/RSI queries now take the basket dynamically.
-# Values cached in DB (rsi_values, sentiment_scores) so any trader with similar basket benefits from shared data.
-try:
-    cfg = json.load(open(str(PROJECT_ROOT / "config" / "trading_config_phase6.json")))
-    OPPORTUNITY_POOL = cfg.get("phase_6_specific", {}).get("opportunity_pool") or cfg.get("global_settings", {}).get("pairs", [])
-except Exception:
-    OPPORTUNITY_POOL = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD", "MATIC-USD"]
-FIXED_UNIVERSE = OPPORTUNITY_POOL
-
-# Active trading pool (subset for performance; max 12). Proposals help choose which to promote/liquidate.
-CURRENT_BASKET = OPPORTUNITY_POOL[:4]  # or load from live_state / rebalance_history for the specific trader
+# Single source: use central load_trading_basket() for full dynamic basket (11 pairs).
+# No more local config load or reduced slices/hardcodes here.
+# All pairs are first-class; opportunity scoring and CURRENT_BASKET use the full trading basket.
+BASKET = load_trading_basket()
+FIXED_UNIVERSE = BASKET
+CURRENT_BASKET = BASKET  # full basket (was sliced; now centralized via paths.py for uniformity per BASKET-01)
+# Full basket treatment: every pair in the trading basket is a candidate for scoring/proposals.
+# See paths.py:load_trading_basket() and sentiment_scorer.DEFAULT_UNIVERSE.
 
 
 def load_real_data() -> Dict[str, Any]:

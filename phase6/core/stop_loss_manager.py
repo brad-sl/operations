@@ -70,7 +70,16 @@ class StopLossManager:
             risk = get_sl_risk(pair)
             risk_level = risk.get("level", "LOW")
             params = settlement_poll_params(pair, order_id=order_id, risk_level=risk_level)
-            if not self.shadow_mode:
+            skip_poll = (
+                not order_id
+                and risk_level == "LOW"
+                and not risk.get("recent_sl_failures")
+            )
+            if skip_poll:
+                logger.debug(
+                    f"[PRE-FLIGHT] Skipping settlement poll for {pair} (LOW risk, no fresh buy order_id)"
+                )
+            elif not self.shadow_mode:
                 settled = self.exchange.poll_for_settlement(
                     pair,
                     timeout=params["timeout"],

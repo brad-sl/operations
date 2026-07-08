@@ -5,7 +5,9 @@ from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
 import json
 import sys
-sys.path.insert(0, "/home/brad/projects/crypto-trading-bot")
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from phase6.core.exchange_client import CoinbaseExchangeClient
 from phase6.core.trade_ledger import TradeLedger
@@ -13,10 +15,10 @@ from phase6.core.trade_ledger import TradeLedger
 from phase6.core.sentiment_scorer import load_sentiment_scores
 
 PORT = 8501
-HTML_PATH = Path("/home/brad/projects/crypto-trading-bot/phase6_dashboard.html")
+HTML_PATH = Path(__file__).resolve().parent / "phase6_dashboard.html"
 LEDGER = TradeLedger()
-LIVE_STATE_PATH = Path("/home/brad/projects/crypto-trading-bot/data/state/phase6_live_state.json")
-RECOVERY_STATE_PATH = Path("/home/brad/projects/crypto-trading-bot/data/state/recovery_state.json")
+LIVE_STATE_PATH = Path(__file__).resolve().parent / "data/state/phase6_live_state.json"
+RECOVERY_STATE_PATH = Path(__file__).resolve().parent / "data/state/recovery_state.json"
 
 
 class Handler(SimpleHTTPRequestHandler):

@@ -1,5 +1,5 @@
 # Crypto Trading Bot - Phase 6 runtime dependencies
-# Install with: pip install -r requirements.txt
+# Install with: pip install -r requirements.txt (from project .venv)
 
 aiohttp>=3.9
 python-dotenv>=1.0
@@ -8,10 +8,9 @@ pandas>=2.0
 numpy>=1.26
 # For backtests and analysis (optional but recommended)
 matplotlib>=3.8
-# For sentiment / external (if using Apify or similar)
-# apify-client
-# For scheduling / monitoring
-# schedule
+# For sentiment / external APIs (used by fetch_x_sentiment.py and fetch_reddit_sentiment.py)
+apify-client>=1.0
+textblob>=0.17
 
 # Note: Coinbase Advanced Trade uses their SDK or direct REST + JWT.
 # Add specific if using coinbase-advanced-trade-python or similar.

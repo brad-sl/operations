@@ -10,6 +10,8 @@ Compares trading logic methods & parameters:
 
 Uses the EXACT same historical data loading and simulation pattern as the working archived backtests that produce >8-9% returns (layer0_pure_inverse_vol_backtest.py, sentiment_enhanced_allocation_backtest.py, rebalancing_strategy_comparison.py).
 
+Updated per TESTS-01: Uses central 11-pair basket via load_trading_basket() (no hardcoded 5-pair). Exercises full basket in sentiment/proxy loops, candidate_pairs etc. (historical data files cover subset ~8/11; sim gracefully handles).
+
 Key fixes from first run:
 - Proper daily mark-to-market of portfolio_value using actual close prices on holdings (captures real market P&L from the data).
 - Larger initial capital ($10,000) to avoid reserve starvation (deploy_capital has withdrawal_reserve_min ~$500).
@@ -33,9 +35,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from phase6.scripts.deploy_capital import deploy_capital
 from phase6.core.allocation_engine import compute_inverse_vol_allocations  # if available
+from phase6.core.paths import load_trading_basket
 
-PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
-DATA_DIR = Path("/home/brad/projects/crypto-trading-bot/backtests/data")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
+PAIRS = load_trading_basket()  # central 11-pair (TESTS-01)
+DATA_DIR = PROJECT_ROOT / "backtests/data"
 
 def load_historical_data():
     data = {}
@@ -54,6 +58,7 @@ def load_historical_data():
                 })
             data[pair] = sorted(cleaned, key=lambda x: x["timestamp"])
             print(f"  Loaded {pair}: {len(data[pair])} rows")
+    print(f"  Total loaded from central basket: {len(data)}/{len(PAIRS)} pairs (full basket used for scoring/candidate even if hist partial)")
     return data
 
 def compute_simple_inv_vol(prices_list, window=20):
@@ -280,7 +285,7 @@ def run_isolation_backtest_comparison():
         "initial_capital": 10000.0,
         "data_source": "real historical OHLCV backtests/data/ (same as layer0/sentiment backtests showing +9.4%)",
         "results": results,
-        "comparison_notes": "Uses proven daily MTM + rebalance simulation from archived positive backtests. Phase 6 variants call the REAL deploy_capital function with exact current parameters (including withdrawal_reserve_min=500). Phase 5 emulates strict AND signal logic. Proxy momentum for sentiment/RSI (real caches injectable). This baseline now captures actual market P&L while isolating the effect of the different trading decision methods & parameters.",
+        "comparison_notes": "Uses proven daily MTM + rebalance simulation from archived positive backtests. Phase 6 variants call the REAL deploy_capital function with exact current parameters (including withdrawal_reserve_min=500). Phase 5 emulates strict AND signal logic. Proxy momentum for sentiment/RSI (real caches injectable). This baseline now captures actual market P&L while isolating the effect of the different trading decision methods & parameters. TESTS-01: central 11 basket used for candidate_pairs, scoring loops.",
         "archived_baseline_reference": "Pure inverse-vol (last 120d): +9.40%. Sentiment-enhanced: +9.47%. (See layer0_pure_inverse_vol_backtest.py and sentiment_enhanced_allocation_backtest.py)"
     }
 

@@ -17,7 +17,7 @@ Basket: 11 pairs from global_settings (config), expanded to 12 in pool.
 Success criteria (per user request + trading-bot-operations patterns):
 - Report per-pair: RSI value + source/freshness (or MISSING), Sentiment (X score + posts + confidence, Reddit if real non-zero, or 0.0/damped)
 - Summary counts of full coverage (both RSI and non-zero sentiment for the pair)
-- Real data only — no fabricated values. Flags the mock in scripts/refresh_rsi_prices.py (only 6 pairs hardcoded).
+- Real data only — no fabricated values. Uses central load_trading_basket() + full refresh script (now config-driven 11).
 - Matches twice-daily intelligence report expectations.
 
 This is the canonical isolation test for signal coverage. Run it after any refresher or to audit the twice-daily status.
@@ -46,20 +46,23 @@ try:
         load_sentiment_scores,
         load_x_sentiment_details,
         load_latest_sentiment_for_basket,
-        DEFAULT_UNIVERSE,
     )
+    from phase6.core.paths import load_trading_basket
     SCORER_AVAILABLE = True
 except Exception as e:
     print(f"[WARN] Could not import sentiment_scorer: {e}")
     SCORER_AVAILABLE = False
 
 def load_basket() -> List[str]:
-    with open(CONFIG) as f:
-        cfg = json.load(f)
-    pairs = cfg.get("global_settings", {}).get("pairs", [])
-    if not pairs:
-        pairs = cfg.get("phase_6_specific", {}).get("opportunity_pool", DEFAULT_UNIVERSE)
-    return pairs
+    try:
+        return load_trading_basket()
+    except Exception:
+        with open(CONFIG) as f:
+            cfg = json.load(f)
+        pairs = cfg.get("global_settings", {}).get("pairs", [])
+        if not pairs:
+            pairs = cfg.get("phase_6_specific", {}).get("opportunity_pool", [])
+        return pairs
 
 def load_rsi_from_cache() -> Dict[str, Any]:
     if not RSI_CACHE.exists():
@@ -108,7 +111,6 @@ def main():
 
     basket = load_basket()
     print(f"Current trading basket ({len(basket)} pairs): {basket}")
-    print(f"DEFAULT_UNIVERSE in scorer: {len(DEFAULT_UNIVERSE)} pairs")
     print()
 
     # RSI sources
@@ -193,15 +195,15 @@ def main():
 
     print("=== Summary ===")
     print(f"Basket size: {len(basket)}")
-    print(f"Pairs with RSI data: {rsi_coverage} (note: rsi_cache + DB; refresher mock covers only 6)")
+    print(f"Pairs with RSI data: {rsi_coverage} (note: rsi_cache + DB; full 11 from refresher when history sufficient)")
     print(f"Pairs with real non-trivial Sentiment: {sentiment_coverage}")
     print(f"Pairs with BOTH RSI + real Sentiment: {full_coverage_count}")
     print()
 
     # Note the known issue
     print("=== Known Gaps / Issues (real data audit) ===")
-    print("- scripts/refresh_rsi_prices.py is a MOCK: hardcodes only 6 pairs (BTC/ETH/SOL/XRP/DOGE/ADA), fake RSI values, writes to rsi_cache.")
-    print("  Hermes rsi-15min-refresher cron runs this stub -> incomplete RSI for full 11-pair basket.")
+    print("- scripts/refresh_rsi_prices.py now config-driven full basket via central loader; real RSI from price_history for 11.")
+    print("  Refresher now full via central; coverage limited only by price_history data freshness per pair.")
     print("- DB rsi_values last updated ~2026-06-14 (stale).")
     print("- Sentiment caches (X + canonical) cover all 12 pairs with real (if low-volume) X posts today.")
     print("  Scorer correctly damps low-post signals and only uses Reddit on real non-empty results.")
@@ -213,7 +215,7 @@ def main():
         print("ALL PAIRS HAVE FULL REAL COVERAGE. Test PASS.")
         sys.exit(0)
     else:
-        print(f"INCOMPLETE COVERAGE for {len(basket) - full_coverage_count} pairs. Test documents current state (real data).")
+        print(f"COVERAGE STATUS: {full_coverage_count}/{len(basket)} pairs have BOTH; {len(basket) - full_coverage_count} partial (see details). Real data only.")
         # Non-zero exit only if we want strict; here we always succeed the test as audit
         sys.exit(0)
 

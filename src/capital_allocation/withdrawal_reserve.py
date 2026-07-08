@@ -19,7 +19,7 @@ def load_withdrawal_reserve_config(config_path: str = None) -> Dict[str, Any]:
         config_path = '/home/brad/projects/crypto-trading-bot/config/capital_allocation_config.json'
     
     default = {
-        "min_reserve_usd": 500.0,
+        "min_reserve_usd": 50.0,
         "reserve_breach_action": "flag_and_adjust",  # options: flag_only, flag_and_adjust, stop_trading
         "alert_threshold_pct": 1.1,  # alert if reserve < min * 1.1
     }

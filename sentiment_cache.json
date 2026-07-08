@@ -1,6 +1,6 @@
 {
   "schema_version": 3,
-  "timestamp": "2026-06-18T19:00:24.971855Z",
+  "timestamp": "2026-07-08T13:31:02.373145Z",
   "data": {
     "ADA-USD": {
       "score": 0.0074,
@@ -133,7 +133,7 @@
   },
   "meta": {
     "min_posts_gate": 5,
-    "duration_sec": 0.75,
+    "duration_sec": 0.77,
     "note": "Canonical no-fab gate per RSI-SENT-003 / P6-121/122. Prior ts preserved on low data."
   }
 }

@@ -41,7 +41,7 @@ from phase6.core.evaluation import evaluate_universe, Proposal
 from phase6.core.allocator import create_allocator, AllocatorConfig, TradePlan
 
 # Historical data location (same as all prior positive backtests)
-DATA_DIR = Path("/home/brad/projects/crypto-trading-bot/backtests/data")
+DATA_DIR = PROJECT_ROOT / "backtests/data"
 PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
 
 FEE_RATE = 0.001  # 0.1% per trade side (conservative; Coinbase advanced is often lower)

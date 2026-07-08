@@ -8,6 +8,8 @@ Design goals for future scale:
 - One JSONL file per portfolio_id (avoids giant single files)
 - Minimal fields (easy to extend or migrate to DB later)
 - Fast appends, efficient tail reads for dashboards
+
+See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for canonical paths.
 """
 
 import json
@@ -15,7 +17,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 
-REBALANCE_LOG_DIR = Path("/home/brad/projects/crypto-trading-bot/data/state/rebalance_history")
+from .paths import PROJECT_ROOT, STATE_DIR  # per DATA_FLOW_AND_LOCATIONS.md
+
+REBALANCE_LOG_DIR = STATE_DIR / "rebalance_history"
 
 
 def get_log_path(portfolio_id: str = "default") -> Path:

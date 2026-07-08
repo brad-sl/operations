@@ -26,8 +26,9 @@ from phase6.core.sentiment_scorer import load_sentiment_scores
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
-FIXED_UNIVERSE = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
+from phase6.core.paths import load_trading_basket
+FIXED_UNIVERSE = load_trading_basket()  # central 11-pair (TESTS-01)
 
 def get_real_rsi_and_sentiment():
     """Pull real-ish RSI from recent (use proxy or cache if present; fall back to scorer for sentiment)."""

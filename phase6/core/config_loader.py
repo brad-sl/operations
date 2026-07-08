@@ -1,15 +1,18 @@
 """
 Configuration loader for Crypto Trading Bot
 
-Loads trading_config.json and provides validated access to:
+Loads canonical trading_config_phase6.json (via paths) and provides validated access to:
 - Trading pairs
 - Position limits per pair
 - Daily spend/loss limits
 - Settings (order type, sandbox mode, approval required)
-"""
+
+
+See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths and rules."""
 
 import json
 from pathlib import Path
+from .paths import PROJECT_ROOT, TRADING_CONFIG_PHASE6
 from typing import Dict, Any, List
 from dataclasses import dataclass
 
@@ -44,7 +47,13 @@ class ConfigLoader:
     
     def __init__(self, config_path: str = None):
         if config_path is None:
-            config_path = Path(__file__).parent / "trading_config.json"
+            # Prefer canonical per DATA_FLOW_AND_LOCATIONS.md
+            candidates = [
+                PROJECT_ROOT / "trading_config_phase6.json",
+                PROJECT_ROOT / "config" / "trading_config_phase6.json",
+                Path(__file__).parent / "trading_config.json",  # legacy fallback
+            ]
+            config_path = next((p for p in candidates if p.exists()), candidates[0])
         else:
             config_path = Path(config_path)
         
@@ -67,16 +76,24 @@ class ConfigLoader:
 
         pairs = gs.get("pairs", [])
 
-        # Provide sensible defaults for fields not present in the new config
+        # Map from Phase 6 config structure (see trading_config_phase6.json)
+        total_cap = float(gs.get("total_capital", 1000.0))
+        rebal_cap = float(gs.get("rebalance_cap_usd", 150.0))
+        max_daily_loss_pct = float(rm.get("max_daily_loss_pct", 0.02))
+        max_daily_loss_usd = total_cap * max_daily_loss_pct
+        stop_loss_pct = float(rm.get("stop_loss_pct", 0.03))
+        # position limits can be derived or extended; use per-pair or default to rebal size
+        pos_limits = {p: rebal_cap for p in pairs} if pairs else {}
+        sandbox = gs.get("sandbox_mode", True)
         return TradingConfig(
-            trading_pairs=pairs,
-            daily_spend_usd=500.0,  # default
-            max_single_order_usd=200.0,  # default
-            max_daily_loss_usd=50.0,  # default
-            position_limits={p: 200.0 for p in pairs},  # default
+            trading_pairs=pairs or [],
+            daily_spend_usd=total_cap,
+            max_single_order_usd=rebal_cap,
+            max_daily_loss_usd=max_daily_loss_usd,
+            position_limits=pos_limits,
             order_type="market",
-            sandbox_mode=True,
-            approval_required=False,
+            sandbox_mode=sandbox,
+            approval_required=gs.get("approval_required", False),
         )
     
     def validate(self) -> bool:

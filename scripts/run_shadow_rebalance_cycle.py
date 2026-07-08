@@ -54,7 +54,7 @@ CURRENT_POSITIONS = {
     "ETH-USD": {"amount": 0.08572777, "entry_price": 3200.0, "value_usd": 153.446, "current_price": 1789.92},
 }
 
-def setup_runner(mode="shadow", use_new_allocator=False, rebalance_cap=200.0):
+def setup_runner(mode="shadow", use_new_allocator=True, rebalance_cap=200.0):
     """Create Phase6Runner. For shadow uses mocks; live uses real client."""
     config = {
         "mode": mode,
@@ -117,7 +117,7 @@ def setup_runner(mode="shadow", use_new_allocator=False, rebalance_cap=200.0):
         pr.load_sentiment_scores = lambda **k: CURRENT_SENTIMENT
         return runner, runner.exchange
 
-def run_rebalance(mode="shadow", use_new_allocator=False, rebalance_cap=200.0, confirm=None):
+def run_rebalance(mode="shadow", use_new_allocator=True, rebalance_cap=200.0, confirm=None):  # default True for WIRING-01
     print("=" * 70)
     print(f"REBALANCE CYCLE - MODE: {mode.upper()} | NEW_ALLOCATOR: {use_new_allocator}")
     print("Using user's RSI/Sent snapshot + post-SL-fix paths")
@@ -170,14 +170,14 @@ def run_rebalance(mode="shadow", use_new_allocator=False, rebalance_cap=200.0, c
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Rebalance cycle runner (shadow/live)")
     parser.add_argument("--mode", choices=["shadow", "live"], default="shadow")
-    parser.add_argument("--new-allocator", action="store_true", help="Force use_new_allocator=True")
+    parser.add_argument("--new-allocator", action="store_true", default=True, help="Prefer new allocator (WIRING-01); --no-new or omit for legacy (but runner now defaults prefer)")
     parser.add_argument("--rebalance-cap", type=float, default=200.0, help="Cap for new capital deploy")
     parser.add_argument("--confirm", type=str, default=None, help="Required phrase for live: 'I accept real trades and loss risk'")
     args = parser.parse_args()
 
     run_rebalance(
         mode=args.mode,
-        use_new_allocator=args.new_allocator,
+        use_new_allocator=getattr(args, "new_allocator", True) or True,
         rebalance_cap=args.rebalance_cap,
         confirm=args.confirm
     )

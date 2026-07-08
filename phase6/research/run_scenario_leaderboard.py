@@ -58,7 +58,7 @@ def load_pack(path: Path) -> dict:
 
 def run_scenario(pack: dict, scenario: dict) -> dict:
     knobs = ScenarioKnobs.from_scenario(scenario, pack)
-    dr = pack["date_range"]
+    dr = scenario.get("date_range") or pack["date_range"]
     w_start, w_end = _parse_date(dr["start"]), _parse_date(dr["end"])
 
     if knobs.engine == "arch4":

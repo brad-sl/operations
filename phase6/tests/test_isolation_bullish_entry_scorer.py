@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import Dict, Any
 
 # Ensure we can import the module
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from phase6.core.opportunity_scanner import score_opportunity, compute_vol_and_momentum, load_real_data

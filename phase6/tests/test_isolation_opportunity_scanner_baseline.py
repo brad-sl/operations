@@ -6,6 +6,8 @@ Re-runs / exercises the existing opportunity_scanner in isolation mode (it alrea
 Confirms: Scanner produces ranked proposals with real data, but they are shadow-only (jsonl logs).
 Not wired into the Allocator or runner for actual deployment.
 
+Updated for TESTS-01: uses central 11-pair basket via load_trading_basket() (no 5-pair subset).
+
 This complements the other ARCH-0 tests showing full divergence (signals + scanner + hybrid all evaluate but don't drive the single active rebalance/deploy path).
 """
 
@@ -15,6 +17,9 @@ from pathlib import Path
 from datetime import datetime
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from phase6.core.paths import load_trading_basket
+from phase6.core.sentiment_scorer import load_sentiment_scores
 
 # Reuse the existing scanner test logic by importing and running its main or key function if exposed.
 # For standalone baseline, we import and exercise the scanner module directly with real data.
@@ -27,7 +32,9 @@ except:
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
+
+FIXED_UNIVERSE = load_trading_basket()  # central 11-pair source (BASKET-01 / TESTS-01)
 
 def test_opportunity_scanner_shadow_only():
     print("=== ARCH-0: Opportunity Scanner Isolation (Baseline) ===")
@@ -35,14 +42,12 @@ def test_opportunity_scanner_shadow_only():
     print("Expected: Proposals logged to jsonl / state (shadow). Not fed to allocator/runner for execution.\n")
 
     # The scanner has its own isolation test. We run a minimal direct exercise here for ARCH-0 completeness.
-    # Load real sentiment for the pool.
-    from phase6.core.sentiment_scorer import load_sentiment_scores
-    universe = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
-    sent = load_sentiment_scores(universe=universe)
+    # Load real sentiment for the full central basket.
+    sent = load_sentiment_scores(universe=FIXED_UNIVERSE)
 
     # Simulate the kind of scoring the scanner does (momentum + sentiment + edge)
     proposals = []
-    for p in universe:
+    for p in FIXED_UNIVERSE:
         s = sent.get(p, 0.0)
         # Simple proxy score (real scanner uses more: RSI from cache, vol from price_history, diversification)
         score = s * 10 + (10 if s > 0.1 else 0)
@@ -56,7 +61,7 @@ def test_opportunity_scanner_shadow_only():
 
     proposals = sorted(proposals, key=lambda x: x["score"], reverse=True)[:3]
 
-    print("--- Scanner-like Proposals (real sentiment) ---")
+    print("--- Scanner-like Proposals (real sentiment, full 11-pair basket) ---")
     for pr in proposals:
         print(pr)
 
@@ -64,7 +69,8 @@ def test_opportunity_scanner_shadow_only():
         "timestamp": datetime.utcnow().isoformat(),
         "real_sentiment": {p: round(s,4) for p,s in sent.items()},
         "proposals_generated": proposals,
-        "note": "Scanner (phase6/core/opportunity_scanner.py) writes to data/state/opportunity_proposals.jsonl or logs. These are shadow-only per design (IDEALOOP-005). Not consumed by runner _perform_daily_rebalance or deploy_capital. Another evaluation layer that does not drive action."
+        "universe_size": len(FIXED_UNIVERSE),
+        "note": "Scanner (phase6/core/opportunity_scanner.py) writes to data/state/opportunity_proposals.jsonl or logs. These are shadow-only per design (IDEALOOP-005). Not consumed by runner _perform_daily_rebalance or deploy_capital. Another evaluation layer that does not drive action. TESTS-01: now uses full central basket."
     }
     out_path = PROJECT_ROOT / "data/state/arch0_isolation_scanner_evidence.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
@@ -82,4 +88,4 @@ def test_opportunity_scanner_shadow_only():
 
 if __name__ == "__main__":
     test_opportunity_scanner_shadow_only()
-    print("\n[ARCH-0 Opportunity Scanner] PASSED - baseline captured.")
+    print("\n[ARCH-0 Opportunity Scanner] PASSED - baseline captured (full 11-pair).")

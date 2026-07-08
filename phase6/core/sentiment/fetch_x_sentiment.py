@@ -5,7 +5,7 @@ Ported and adapted from Phase 4/5 (fetch_x_sentiment.py)
 - Separate module (X only)
 - 30-minute frequency target (expensive API)
 - Outputs cache with timestamp for 15-minute half-life decay + 2h staleness zeroing in scorer (t_ceb0da78)
-- Paths updated for Phase 6 structure
+- Paths updated for Phase 6 structure. See docs/DATA_FLOW_AND_LOCATIONS.md + phase6/core/paths.py
 """
 
 import requests
@@ -18,11 +18,11 @@ from typing import List, Dict, Any, Optional
 
 from textblob import TextBlob
 
-# Phase 6 paths
-PHASE6_DIR = Path("/home/brad/projects/crypto-trading-bot/phase6")
-DATA_DIR = PHASE6_DIR / "data" / "sentiment"
-CACHE_FILE = DATA_DIR / "x_sentiment_cache.json"
-ENV_FILE = PHASE6_DIR / ".env"   # or fall back to project root .env
+# Phase 6 paths per DATA_FLOW_AND_LOCATIONS.md + central paths.py
+from ..paths import PROJECT_ROOT, X_SENTIMENT_CACHE, load_trading_basket
+DATA_DIR = PROJECT_ROOT / "data" / "state"
+CACHE_FILE = X_SENTIMENT_CACHE
+ENV_FILE = PROJECT_ROOT / ".env"
 
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -31,7 +31,7 @@ def load_bearer_token():
     """Load X API Bearer token from .env (robust parsing)"""
     candidates = [
         ENV_FILE,
-        Path("/home/brad/projects/crypto-trading-bot/.env"),
+        PROJECT_ROOT / ".env",
         Path.home() / ".env"
     ]
 
@@ -164,10 +164,9 @@ def main():
     # TODO: Load pairs from Phase 6 config (for now use sensible default set)
     # Dynamic from trader basket config (full opportunity pool)
     try:
-        cfg = json.load(open("../../../config/trading_config_phase6.json"))
-        pairs = cfg.get("phase_6_specific", {}).get("opportunity_pool") or cfg.get("global_settings", {}).get("pairs", ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD"])
-    except:
-        pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD", "MATIC-USD"]
+        pairs = load_trading_basket()
+    except Exception:
+        pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD"]
 
     keywords_dict = {pair: pair.split('-')[0] for pair in pairs}
 

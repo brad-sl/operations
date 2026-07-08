@@ -5,7 +5,8 @@ Production version:
 - Fetches all sources (Reddit, X).
 - Enforces v3 schema.
 - Strict gate logic: preserves prior data if results are insufficient.
-- Writes to canonical sentiment_cache.json.
+- Writes to canonical sentiment_cache.json (data/state/ per DATA_FLOW).
+See docs/DATA_FLOW_AND_LOCATIONS.md + phase6/core/paths.py
 """
 
 import os
@@ -16,12 +17,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from dotenv import load_dotenv
 
-# Ensure the project root is in sys.path for internal imports
-project_root = Path("/home/brad/projects/crypto-trading-bot")
-if str(project_root) not in sys.path:
-    sys.path.insert(0, str(project_root))
+from ..paths import PROJECT_ROOT, SENTIMENT_CACHE, X_SENTIMENT_CACHE, load_project_dotenv  # per DATA_FLOW_AND_LOCATIONS.md
 
-load_dotenv()
+# Ensure the project root is in sys.path for internal imports
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+load_project_dotenv()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,7 +31,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-CANONICAL_CACHE = Path("/home/brad/projects/crypto-trading-bot/sentiment_cache.json")
+CANONICAL_CACHE = SENTIMENT_CACHE
 
 def load_prior_cache():
     if CANONICAL_CACHE.exists():
@@ -61,7 +63,7 @@ def refresh_sentiment():
     try:
         from phase6.core.sentiment.fetch_x_sentiment import main as fetch_x
         fetch_x()
-        x_cache_path = Path("/home/brad/projects/crypto-trading-bot/phase6/data/sentiment/x_sentiment_cache.json")
+        x_cache_path = X_SENTIMENT_CACHE
         with open(x_cache_path) as f:
             x_data = json.load(f)
     except Exception as e:

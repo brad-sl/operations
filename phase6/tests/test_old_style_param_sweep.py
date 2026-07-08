@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from phase6.scripts.deploy_capital import deploy_capital
 
-DATA_DIR = Path("/home/brad/projects/crypto-trading-bot/backtests/data")
+DATA_DIR = PROJECT_ROOT / "backtests/data"
 PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
 FEE_RATE = 0.001
 

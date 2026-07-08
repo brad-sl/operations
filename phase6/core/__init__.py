@@ -15,6 +15,7 @@ from .allocation_engine import (
     rebalance_plan,
 )
 from .stop_loss_manager import StopLossManager
+from .sl_risk_scorer import get_all_sl_risks, get_sl_risk
 
 __all__ = [
     "Phase6Runner",
@@ -22,4 +23,6 @@ __all__ = [
     "plan_static_allocations",
     "rebalance_plan",
     "StopLossManager",
+    "get_all_sl_risks",
+    "get_sl_risk",
 ]

@@ -25,7 +25,7 @@ import os
 import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from phase6.core.price_history_manager import PriceHistoryManager

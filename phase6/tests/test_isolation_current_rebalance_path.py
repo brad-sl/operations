@@ -27,8 +27,9 @@ from phase6.core.allocation_engine import compute_inverse_vol_allocations
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
-FIXED_UNIVERSE = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
+from phase6.core.paths import load_trading_basket
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
+FIXED_UNIVERSE = load_trading_basket()  # central 11-pair source (BASKET-01 / TESTS-01)
 
 def load_real_snapshot():
     """Load real-ish current state for isolation (prefer live state or paper; fall back to minimal real)."""

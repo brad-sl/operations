@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths, state, config hygiene and drift prevention.
+# All code must derive PROJECT_ROOT via paths.py and avoid absolute hardcodes.
+
 """
 Phase 6 Error Notification & Alerting System
 Structured logging with Telegram integration.

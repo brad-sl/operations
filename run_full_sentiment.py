@@ -10,7 +10,8 @@ from apify_client import ApifyClient
 load_dotenv()
 client = ApifyClient(os.getenv("APIFY_API_TOKEN"))
 
-PAIRS = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD']
+from phase6.core.paths import load_trading_basket
+PAIRS = load_trading_basket()
 KEYWORDS = {
     'BTC-USD': 'bitcoin',
     'ETH-USD': 'ethereum',

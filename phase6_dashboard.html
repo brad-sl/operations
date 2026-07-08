@@ -22,13 +22,14 @@
                     <span id="mode-badge" class="px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5">
                         <i class="fa-solid fa-circle text-[8px]"></i> <span id="mode-text">PAPER</span>
                     </span>
-                    <span class="text-slate-500 text-sm">Last updated: <span id="last-updated">--</span></span>
+                    <span class="text-slate-500 text-sm">Updated: <span id="last-updated">--</span></span>
                 </div>
             </div>
             <div class="text-right">
                 <div class="text-xs text-slate-400">Total Portfolio Value</div>
                 <div id="total-balance" class="text-4xl font-semibold tabular-nums">$0.00</div>
-                <div id="balance-source" class="text-xs text-slate-500"></div>
+                <div id="balance-source" class="mt-1 text-xs px-3 py-1 bg-slate-800 text-emerald-400 rounded-2xl font-medium inline-block"></div>
+                <div id="last-source-note" class="text-[10px] text-slate-500 mt-0.5"></div>
             </div>
         </div>
 
@@ -53,6 +54,41 @@
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
                 <div class="text-slate-400 text-sm">Win Ratio</div>
                 <div id="win-ratio" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+        </div>
+
+        <!-- Observability Metrics (P1: proposals accepted, utilization, SL success rate, churn) -->
+        <div class="mt-4 mb-8">
+            <h2 class="font-semibold mb-3 flex items-center gap-2 text-sm uppercase tracking-widest text-slate-400"><i class="fa-solid fa-chart-bar"></i> Observability (P1)</h2>
+            <div class="grid grid-cols-2 md:grid-cols-7 gap-2">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">Utilization</div>
+                    <div id="obs-utilization" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">Proposal Accept</div>
+                    <div id="obs-acceptance" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">SL Success Rate</div>
+                    <div id="obs-sl-rate" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">Churn (trades/pos)</div>
+                    <div id="obs-churn" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">Rebalances</div>
+                    <div id="obs-rebalances" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">Recovery Attempts</div>
+                    <div id="obs-recovery" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
+                    <div class="text-[10px] text-slate-400">Replay Match</div>
+                    <div id="obs-replay" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
             </div>
         </div>
 
@@ -127,27 +163,31 @@
             const sentimentData = await fetchData('/api/sentiment');
             const rsiData = await fetchData('/api/rsi');
             const rebalData = await fetchData('/api/rebalances');
+            const metricsData = await fetchData('/api/metrics');
+            const briefData = await fetchData('/api/brief');
             // Update recovery with current position count
             if (typeof updateRecoveryStatus === 'function') updateRecoveryStatus(posData);
 
-            // Header/Balance
-            // Total Portfolio Value - prefer balances API for accuracy
+            // Header/Balance - PURE CONSUMER from view-backed API (pre-enriched total/source/positions from v_phase6_dashboard + v_enriched_positions)
+            // All values (total, source, last_updated, positions) pre-computed in DB views; JS only fetches + renders
             const balData = await fetchData('/api/balances');
             const totalEl = document.getElementById('total-balance');
             const sourceEl = document.getElementById('balance-source');
+            const lastNoteEl = document.getElementById('last-source-note');
             
-            let total = 0;
-            if (balData && balData.total_usd !== undefined) {
-                total = balData.total_usd;
-                if (sourceEl) sourceEl.textContent = balData.source || 'Live (cached)';
-            } else if (posData && posData.total_usd !== undefined) {
-                total = posData.total_usd;
+            const mainData = balData || posData || {};
+            const total = mainData.total_usd || 0;  // always provided by view-backed serve
+            
+            if (sourceEl) sourceEl.textContent = mainData.source || 'Live (DB view)';
+            if (lastNoteEl) {
+                const lu = mainData.last_updated || '';
+                lastNoteEl.textContent = lu ? ('@ ' + lu.split(' ').pop() || lu) : '';
             }
             
             if (totalEl) {
                 const tsEl = document.getElementById('last-updated');
                 if (tsEl) {
-                    const lastUpd = balData?.last_updated || posData?.last_updated || new Date().toISOString();
+                    const lastUpd = mainData.last_updated || new Date().toISOString();
                     try {
                         const d = new Date(lastUpd.replace(' ', 'T'));
                         tsEl.textContent = d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -158,23 +198,43 @@
                 totalEl.textContent = '$' + parseFloat(total).toFixed(2);
             }
             
-            // Positions data
+            // Positions data - PURE CONSUMER: pre-split cash/trading from server (no client filter/calc)
             const container = document.getElementById('positions-table');
             const countEl = document.getElementById('position-count');
-            let positions = posData?.positions || [];
-
-            // Separate cash from trading positions
-            let tradingPositions = positions.filter(p => !["USD", "USDC"].includes(p.pair));
-            let cashPositions = positions.filter(p => ["USD", "USDC"].includes(p.pair));
+            let cashPositions = posData?.cash_positions || [];
+            let tradingPositions = posData?.trading_positions || [];
+            if ((!cashPositions.length && !tradingPositions.length) && posData?.positions) {
+                // fallback only: assume all provided positions are trading (cash handled server side now)
+                cashPositions = [];
+                tradingPositions = posData.positions || [];
+            }
 
             if (countEl) countEl.textContent = `${tradingPositions.length} pairs`;
+
+            // P1 Observability metrics (pure from /api/metrics -> v_dashboard_metrics)
+            if (metricsData && metricsData.status === "ok" && metricsData.metrics) {
+                const m = metricsData.metrics;
+                const utilEl = document.getElementById("obs-utilization");
+                const accEl = document.getElementById("obs-acceptance");
+                const slEl = document.getElementById("obs-sl-rate");
+                const churnEl = document.getElementById("obs-churn");
+                const rebalEl = document.getElementById("obs-rebalances");
+                if (utilEl) utilEl.textContent = (m.utilization != null ? (parseFloat(m.utilization)*100).toFixed(0) + "%" : "--");
+                if (accEl) accEl.textContent = (m.proposal_acceptance != null ? (parseFloat(m.proposal_acceptance)*100).toFixed(1) + "%" : "--");
+                if (slEl) slEl.textContent = (m.sl_success_rate != null ? (parseFloat(m.sl_success_rate)*100).toFixed(0) + "%" : "--");
+                if (churnEl) churnEl.textContent = (m.churn != null ? parseFloat(m.churn).toFixed(1) : "--");
+                if (rebalEl) rebalEl.textContent = (m.rebalance_count != null ? m.rebalance_count : "--");
+                const recEl = document.getElementById("obs-recovery");
+                const repEl = document.getElementById("obs-replay");
+                if (recEl) recEl.textContent = (m.recovery_attempts != null ? m.recovery_attempts : "--");
+                if (repEl) repEl.textContent = (m.replay_match_rate != null ? (parseFloat(m.replay_match_rate)*100).toFixed(0) + "%" : "--");
+            }
 
             if (!tradingPositions.length && !cashPositions.length) {
                 container.innerHTML = `<div class="text-slate-500 text-sm py-4">No active positions or cash</div>`;
             } else {
                 let html = `<table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-slate-800">
                     <th class="text-left py-2 font-normal">Asset</th>
-                    <th class="text-right py-2 font-normal">Side</th>
                     <th class="text-right py-2 font-normal">Size</th>
                     <th class="text-right py-2 font-normal">Value</th>
                     <th class="text-right py-2 font-normal">PnL</th></tr></thead><tbody>`;
@@ -183,7 +243,6 @@
                 cashPositions.forEach(pos => {
                     html += `<tr class="border-b border-slate-800 last:border-0 bg-slate-900/40">
                         <td class="py-2.5 font-medium text-amber-300">${pos.pair}</td>
-                        <td class="py-2.5 text-right tabular-nums text-amber-400">Cash</td>
                         <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums text-slate-500">—</td>
@@ -193,10 +252,8 @@
                 // Trading positions
                 tradingPositions.forEach(pos => {
                     const pnlVal = parseFloat(pos.unrealized_pnl_pct || 0);
-                    const sideLabel = pos.side === 'Cash' ? 'Cash' : (pos.side === 'BUY' || pos.side === 'long' || !pos.side ? 'Long' : 'Short');
                     html += `<tr class="border-b border-slate-800 last:border-0">
                         <td class="py-2.5 font-medium">${pos.pair || 'N/A'}</td>
-                        <td class="py-2.5 text-right tabular-nums ${sideLabel === 'Long' ? 'text-emerald-400' : 'text-red-400'}">${sideLabel}</td>
                         <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(4)}</td>
                         <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}">${(pnlVal * 100).toFixed(2)}%</td>
@@ -227,15 +284,10 @@
                 }
             }
 
-            // Sentiment - show for held pairs; fall back to available data + show score
+            // Sentiment - PURE CONSUMER: server provides label/color (pre-computed), no client filter/ifs/calc
             const sentContainer = document.getElementById('sentiment-grid');
             if (sentContainer && sentimentData && sentimentData.status === 'ok') {
-                const heldPairs = new Set((posData?.positions || []).map(p => p.pair));
                 let pairs = Object.keys(sentimentData.data || {});
-                if (heldPairs.size > 0) {
-                    const filtered = pairs.filter(p => heldPairs.has(p));
-                    if (filtered.length > 0) pairs = filtered;
-                }
                 pairs = pairs.slice(0, 6);
 
                 if (pairs.length === 0) {
@@ -244,10 +296,8 @@
                     sentContainer.innerHTML = pairs.map(p => {
                         const entry = sentimentData.data[p] || {};
                         const val = (entry.sentiment !== undefined ? entry.sentiment : (typeof entry === 'number' ? entry : 0));
-                        let label = 'Neutral';
-                        let color = 'text-slate-400';
-                        if (val > 0.1) { label = 'Bullish'; color = 'text-emerald-400'; }
-                        else if (val < -0.1) { label = 'Bearish'; color = 'text-red-400'; }
+                        const label = entry.label || 'Neutral';
+                        const color = entry.color ? ('text-' + entry.color) : 'text-slate-400';
                         return `
                         <div class="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded-lg text-xs">
                             <span>${p}</span>
@@ -258,7 +308,7 @@
             } else if (sentContainer) {
                 sentContainer.innerHTML = '<div class="text-slate-500 text-sm">No sentiment data available</div>';
             }
-            // RSI (15m) - per pair, text notation like refresher / twice-daily status: "RSI=xx.xx (Neutral|Oversold|Overbought)"
+            // RSI (15m) - PURE CONSUMER: server pre-labels, no client if/calc
             const rsiContainer = document.getElementById('rsi-grid');
             if (rsiContainer && rsiData && rsiData.status === 'ok') {
                 let pairs = Object.keys(rsiData.data || {});
@@ -269,15 +319,13 @@
                     rsiContainer.innerHTML = pairs.map(p => {
                         const entry = rsiData.data[p] || {};
                         const val = (entry.rsi !== undefined ? entry.rsi : (typeof entry === 'number' ? entry : 50.0));
-                        let label = 'Neutral';
-                        let color = 'text-slate-400';
-                        if (val < 30) { label = 'Oversold'; color = 'text-emerald-400'; }
-                        else if (val > 70) { label = 'Overbought'; color = 'text-red-400'; }
+                        const label = entry.label || 'Neutral';
+                        const colorClass = entry.color ? ('text-' + entry.color) : 'text-slate-400';
                         const note = entry.source ? ` (${entry.source})` : '';
                         return `
                         <div class="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded-lg text-xs">
                             <span>${p}</span>
-                            <span class="${color}">RSI=${Number(val).toFixed(2)} (${label})${note}</span>
+                            <span class="${colorClass}">RSI=${Number(val).toFixed(2)} (${label})${note}</span>
                         </div>`;
                     }).join('');
                 }
@@ -314,12 +362,9 @@
                 tradesContainer.innerHTML = '<div class="text-slate-500 text-xs">No trades recorded yet</div>';
             }
 
-            // Recent Rebalances (wired to /api/rebalances) - ONLY actually executed (executed > 0), recovery-aware message
+            // Recent Rebalances - pure from server pre-filtered executed list
             const rebalContainer = document.getElementById('rebalances-list');
-            let goodRebals = [];
-            if (rebalData && rebalData.rebalances) {
-                goodRebals = rebalData.rebalances.filter(r => (r.executed || 0) > 0);
-            }
+            const goodRebals = (rebalData && rebalData.rebalances) ? rebalData.rebalances : [];  // pre-filtered by server
             if (rebalContainer) {
                 if (goodRebals.length) {
                     rebalContainer.innerHTML = goodRebals.slice(0, 5).map(r => {
@@ -342,20 +387,19 @@
                         </div>`;
                     }).join('');
                 } else {
-                    rebalContainer.innerHTML = '<div class="text-slate-500 text-xs">No executed rebalances (recovery mode - 2 pairs active, capital preserved)</div>';
+                    rebalContainer.innerHTML = '<div class="text-slate-500 text-xs">No executed rebalances</div>';
                 }
             }
         }
-        // Initial load - force live data fetch
+        // Initial load - pure consumer bootstrap (uses same fetchData as updates)
         async function initDashboard() {
             try {
-                const balancesRes = await fetch('/api/balances');
-                const balances = await balancesRes.json();
+                const balances = await fetchData('/api/balances');
                 
                 // Update mode badge
                 const modeText = document.getElementById('mode-text');
                 const modeBadge = document.getElementById('mode-badge');
-                if (balances.mode === 'live') {
+                if (balances && balances.mode === 'live') {
                     modeText.textContent = 'LIVE';
                     modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-red-900 text-red-400 font-medium flex items-center gap-1.5';
                 } else {
@@ -363,57 +407,32 @@
                     modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5';
                 }
                 
-                // Update total balance
-                const totalEl = document.getElementById('total-balance');
-                if (totalEl && balances.total_usd !== undefined) {
-                    totalEl.textContent = '$' + balances.total_usd.toFixed(2);
-                }
-                
-                // Update source
-                const sourceEl = document.getElementById('balance-source');
-                if (sourceEl) sourceEl.textContent = balances.source || '';
-                
-                // fixed: removed broken date line (undefined vars short/numeric)
+                // Pure consumer bootstrap - server does calcs/labels/filters; JS fetch + render only
             } catch (e) {
                 console.error('Init failed', e);
             }
             
-            // Then start the regular polling
+            // Then start the regular polling (updateDashboard is the main pure renderer)
             setInterval(updateDashboard, 5000);
             updateDashboard();
         }
         
         initDashboard();
     
-        // Recovery Status - use API + dynamic based on active positions ( <=2 pairs => recovery )
-        async function updateRecoveryStatus(posDataForRec = null) {
+        // Recovery Status - pure from /api/recovery
+                async function updateRecoveryStatus(posDataForRec = null) {
             try {
                 const res = await fetch('/api/recovery');
                 let data = {mode: 'normal', cooldown_pairs: [], last_update: ''};
                 if (res.ok) data = await res.json();
-                
-                let mode = data.mode || 'normal';
-                let cooldown = (data.cooldown_pairs || []).join(', ') || 'None';
-                let lastRec = data.last_update ? data.last_update.slice(11,16) : '-';
-                
-                // Dynamic: if only 2 or fewer pairs active (from positions data), force recovery
-                if (posDataForRec && (posDataForRec.active_positions || 0) <= 2) {
-                    mode = 'recovery';
-                    cooldown = 'Limited deployment (capital preservation)';
-                }
-                
                 const modeEl = document.getElementById('recovery-mode');
                 const coolEl = document.getElementById('cooldown-pairs');
                 const lastEl = document.getElementById('last-recovery');
-                if (modeEl) modeEl.textContent = mode;
-                if (coolEl) coolEl.textContent = cooldown;
-                if (lastEl) lastEl.textContent = lastRec;
+                if (modeEl) modeEl.textContent = data.mode || 'normal';
+                if (coolEl) coolEl.textContent = (data.cooldown_pairs || []).join(', ') || 'None';
+                if (lastEl) lastEl.textContent = data.last_update ? data.last_update.slice(11,16) : '-';
             } catch(e) {
-                // Fallback if API fails
-                const modeEl = document.getElementById('recovery-mode');
-                if (modeEl && posDataForRec && (posDataForRec.active_positions || 0) <= 2) {
-                    modeEl.textContent = 'recovery';
-                }
+                // silent pure consumer
             }
         }
         setInterval(() => updateRecoveryStatus(), 30000);

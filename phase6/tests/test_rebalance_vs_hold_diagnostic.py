@@ -35,7 +35,7 @@ from phase6.core.evaluation import evaluate_universe
 from phase6.core.allocator import create_allocator, AllocatorConfig, TradePlan
 from phase6.scripts.deploy_capital import deploy_capital
 
-DATA_DIR = Path("/home/brad/projects/crypto-trading-bot/backtests/data")
+DATA_DIR = PROJECT_ROOT / "backtests/data"
 PAIRS = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
 FEE_RATE = 0.001
 

@@ -3,6 +3,9 @@
 Reddit Sentiment Fetcher (Production)
 Uses TwqHBuZZPHJxiQrTU with native sentiment when available,
 falls back to keyword scoring.
+
+See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for canonical paths, state files, config hygiene.
+All reads/writes use central paths (no hardcodes, data/state/ for caches).
 """
 
 import logging
@@ -12,7 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
-load_dotenv()
+from ..paths import PROJECT_ROOT, REDDIT_SENTIMENT_CACHE, load_project_dotenv  # per DATA_FLOW_AND_LOCATIONS.md
+
+load_project_dotenv()
 
 try:
     from apify_client import ApifyClient
@@ -23,7 +28,7 @@ except Exception:
 
 logger = logging.getLogger(__name__)
 
-REDDIT_CACHE_FILE = Path(__file__).parent / 'reddit_sentiment_cache.json'
+REDDIT_CACHE_FILE = REDDIT_SENTIMENT_CACHE
 APIFY_API_TOKEN = os.getenv('APIFY_API_TOKEN')
 
 # Production actor with best parameters found

@@ -1,6 +1,12 @@
 {
-  "last_rebalance_date": "2026-06-17",
-  "last_updated": "2026-06-18T12:29:01.563035",
+  "last_rebalance_date": "2026-07-08",
+  "rebalance_slots_completed": [
+    "2026-07-06|09:00",
+    "2026-07-06|21:00",
+    "2026-07-07|09:00",
+    "2026-07-07|21:00"
+  ],
+  "last_updated": "2026-07-08T06:41:15.962328",
   "last_trade": {
     "ts": "2026-06-13T17:52:24.790240",
     "pair": "OP-USD",
@@ -11,5 +17,6 @@
     },
     "sentiment": 0.9228,
     "mode": "live"
-  }
+  },
+  "last_rebalance_digest_ts": 1783353688.429023
 }

@@ -1,16 +1,25 @@
+# See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths, state, config hygiene and drift prevention.
+# All code must derive PROJECT_ROOT via paths.py and avoid absolute hardcodes.
+
 """
 SignalGenerator (Phase 6 Core Module)
 
 Centralized signal generation logic supporting multiple modes.
-Consumes RSI, ATR, and Sentiment to produce BUY/SELL/HOLD signals.
+**Uniform per-pair decision tree**: the EXACT same scoring rules are applied
+identically to every pair passed in (no pair-specific ifs or subsets).
+Called from evaluate_universe for the full central basket (11 pairs).
+Consumes RSI, ATR, and Sentiment (real from central scorer) to produce BUY/SELL/HOLD signals.
+Other factors (e.g. price_declining) are computed downstream in allocator for tie-breaks.
 
 Modes:
-- weighted     : Balanced combination (default)
+- weighted     : Balanced combination (default) -- primary used in ARCH-4
 - conservative : Strict AND conditions (RSI extreme + sentiment alignment)
 - rsi_primary  : RSI dominant, others as filters
 
 Public API:
 - generate_signal(pair, rsi, atr, sentiment, mode="weighted") -> Signal
+
+All pairs get identical input treatment and identical output Proposal shape when used via evaluate_universe.
 """
 
 from dataclasses import dataclass
@@ -40,7 +49,10 @@ class SignalGenerator:
         mode: str = "weighted"
     ) -> Signal:
         """
-        Generate a single trading signal.
+        Generate a single trading signal for ONE pair.
+        The implementation (called in a loop over full basket in evaluate_universe)
+        ensures UNIFORM decision tree: identical logic, thresholds, and scoring
+        applied to every pair without exception.
         """
         if mode == "conservative":
             return self._conservative_signal(pair, rsi, sentiment)
@@ -54,7 +66,7 @@ class SignalGenerator:
     # ------------------------------------------------------------------
 
     def _weighted_signal(self, pair, rsi, atr, sentiment) -> Signal:
-        """Balanced weighted approach."""
+        """Balanced weighted approach. (Uniform: same weights/thresholds for any pair)"""
         score = 0.0
         reasons = []
 
@@ -88,7 +100,7 @@ class SignalGenerator:
             return Signal(pair, "HOLD", 0.5, "No strong signal")
 
     def _conservative_signal(self, pair, rsi, sentiment) -> Signal:
-        """Strict AND conditions (legacy Phase 5 style)."""
+        """Strict AND conditions (legacy Phase 5 style). (Uniform application)"""
         if rsi < 30 and sentiment > 0.3:
             return Signal(pair, "BUY", 0.9, "RSI < 30 AND sentiment > 0.3")
         elif rsi > 70 and sentiment < -0.3:
@@ -97,7 +109,7 @@ class SignalGenerator:
             return Signal(pair, "HOLD", 0.4, "Conservative filter not met")
 
     def _rsi_primary_signal(self, pair, rsi, atr, sentiment) -> Signal:
-        """RSI dominant with ATR and sentiment as filters."""
+        """RSI dominant with ATR and sentiment as filters. (Uniform)"""
         if rsi < 30:
             conf = 0.7
             if sentiment > 0:

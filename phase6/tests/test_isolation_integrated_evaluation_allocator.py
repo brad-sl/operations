@@ -32,8 +32,9 @@ from phase6.scripts.deploy_capital import deploy_capital, get_deployment_thresho
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
-FIXED_UNIVERSE = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD"]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
+from phase6.core.paths import load_trading_basket
+FIXED_UNIVERSE = load_trading_basket()  # central 11 (TESTS-01)
 
 def load_real_runner_snapshot():
     """Mimic what runner pulls for positions/cash."""

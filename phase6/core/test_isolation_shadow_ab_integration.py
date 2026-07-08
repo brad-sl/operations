@@ -27,7 +27,7 @@ from unittest.mock import patch, MagicMock
 from datetime import datetime
 
 # Add project root
-PROJECT_ROOT = Path("/home/brad/projects/crypto-trading-bot")
+PROJECT_ROOT = Path(__file__).resolve().parents[2]  # dynamic per DATA_FLOW_AND_LOCATIONS.md (enforced)
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from phase6.core.phase6_runner import Phase6Runner

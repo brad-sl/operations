@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# See docs/DATA_FLOW_AND_LOCATIONS.md + phase6/core/paths.py for paths, state, config hygiene
 """
 sentiment_loader.py — Production sentiment integration for Phase 6
 

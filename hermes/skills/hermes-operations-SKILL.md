@@ -210,6 +210,18 @@ This pattern prevents repeated "connection refused" issues across reboots and di
 ## Telegram Integration
 Always store bot token and chat ID in the project's `.env` file. Use `load_dotenv()` with explicit path when running from outside the project directory.
 
+### Outbound cron / shell scripts (`hermes send`)
+**Do not use** `--target` or `--message` with `hermes send` — current CLI rejects them (exit 2).
+
+**Correct:** pipe report/body on stdin and pass target only:
+```bash
+phase6/scripts/generate_trading_intelligence_report.py 2>&1 | hermes send -t telegram
+```
+
+Use repo wrapper `phase6/scripts/cron_intelligence_telegram.sh` for twice-daily crypto-analyst briefs; log to `logs/intelligence_cron.log`. If users report missing Telegram briefs but syslog shows cron fired, **first** reproduce the crontab pipe — `|| true` on a broken `hermes send` causes silent no-delivery.
+
+See `references/hermes-send-cli-cron-intelligence-2026-07-08.md`.
+
 ## Telegram single-owner conflicts (Hermes multi-profile + OpenClaw)
 **Class pattern**: More than one process long-polls the same Telegram bot token (`getUpdates`). Telegram allows **one** consumer per token.
 

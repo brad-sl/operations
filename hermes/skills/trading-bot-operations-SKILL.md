@@ -13,6 +13,16 @@ This skill consolidates all operational concerns for long-running crypto trading
 - Runbook: `references/analyst-opt-scenario-research.md` (Path B `arch4`, weekly cron, brief integration).
 - When ranking scenarios for deploy or shadow promotion, **always** use `--compare-production` and surface since-go-live ledger P&L; if OHLCV and live calendars do not overlap, say so explicitly — do not treat sim as beating production on different dates.
 
+## Analyst proposal deploy — verification lane (anti–Nodding Loop)
+
+When the user approves numbered proposals (**proceed with 1, 2, and 3** or similar):
+
+1. **Generator** (this session or implementer): code + isolation tests + backlog/MASTER updates only after step 2.
+2. **Evaluator** (mandatory): `delegate_task` **leaf** with a **separate** goal — ASSUME BROKEN; run the exact isolation commands from the handoff; inspect `git diff --stat`; return **PASS** or **REJECT** with enumerated reasons. The generator must **not** claim "deployed" until evaluator PASS.
+3. **Stop:** no live config promotion without shadow/gates; no runner restart unless runbook says so.
+
+Detail: `references/analyst-deploy-evaluator-lane.md`. Daily ops discovery: skill `phase6-ops-triage` + Hermes cron `phase6-ops-triage-daily`.
+
 ## Phase 6 live runner singleton + restart
 
 - **Runbook (2026-07-06):** `references/phase6-runner-singleton-sl-reattach.md` — systemd duplicate runners, rebalance/Telegram spam, SL order_id + **SL-ENTRY-ANCHOR-01** + **SL-INSUFFICIENT-FUND-02** (stop OC key detection), strategic brief hook, `reattach_sl_once.py`.

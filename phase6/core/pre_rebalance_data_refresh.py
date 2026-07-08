@@ -44,14 +44,59 @@ def _load_rsi_map(project_root: Path) -> Dict[str, Any]:
 
 
 def _load_sentiment_map(project_root: Path) -> Dict[str, float]:
+    """Parse canonical sentiment_cache.json (schema v3 ``sentiment`` block or legacy ``scores``)."""
     p = project_root / "data/state/sentiment_cache.json"
     if not p.exists():
         return {}
     try:
         data = json.loads(p.read_text())
-        scores = data.get("scores", data)
-        if isinstance(scores, dict):
-            return {k: float(v) for k, v in scores.items() if isinstance(v, (int, float))}
+        out: Dict[str, float] = {}
+
+        legacy = data.get("scores")
+        if isinstance(legacy, dict):
+            for k, v in legacy.items():
+                if isinstance(k, str) and isinstance(v, (int, float)):
+                    out[k] = float(v)
+
+        schema_ver = data.get("schema_version", 0)
+        try:
+            schema_ver = int(schema_ver)
+        except (TypeError, ValueError):
+            schema_ver = 0
+
+        if schema_ver >= 3:
+            block = data.get("sentiment") or data.get("data") or {}
+            if isinstance(block, dict):
+                for pair, entry in block.items():
+                    if not isinstance(pair, str) or "-USD" not in pair:
+                        continue
+                    if isinstance(entry, dict):
+                        raw = entry.get(
+                            "sentiment_score",
+                            entry.get("score", entry.get("sentiment", None)),
+                        )
+                    else:
+                        raw = entry
+                    if raw is not None:
+                        try:
+                            out[pair] = float(raw)
+                        except (TypeError, ValueError):
+                            pass
+        elif not out and isinstance(data, dict):
+            # Pre-v3 flat pair keys at top level
+            for k, v in data.items():
+                if not isinstance(k, str) or "-USD" not in k:
+                    continue
+                if isinstance(v, (int, float)):
+                    out[k] = float(v)
+                elif isinstance(v, dict):
+                    raw = v.get("sentiment_score", v.get("score", v.get("sentiment")))
+                    if raw is not None:
+                        try:
+                            out[k] = float(raw)
+                        except (TypeError, ValueError):
+                            pass
+        return out
     except Exception:
         pass
     return {}
@@ -61,12 +106,15 @@ def assess_basket_coverage(basket: List[str], project_root: Path) -> Dict[str, A
     now = time.time()
     rsi_map = _load_rsi_map(project_root)
     sent_map = _load_sentiment_map(project_root)
-    if not sent_map:
+    missing_from_cache = [p for p in basket if sent_map.get(p) is None and sent_map.get(p.replace("-USD", "")) is None]
+    if missing_from_cache:
         try:
             from phase6.core.sentiment_scorer import load_sentiment_scores
 
             loaded = load_sentiment_scores(basket) or {}
-            sent_map = {k: float(v) for k, v in loaded.items() if v is not None}
+            for k, v in loaded.items():
+                if v is not None and k not in sent_map:
+                    sent_map[k] = float(v)
         except Exception:
             pass
     rsi_m = _mtime(project_root / "data/state/rsi_cache.json")

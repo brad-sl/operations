@@ -8,7 +8,7 @@ to retrieve current sentiment scores.
 - Reads exclusively from the canonical cache: sentiment_cache.json (project root)
 - Written by the canonical fetcher: run_full_sentiment_v3.py
 - Simple, reliable, no duplicate logic or caches.
-- Always returns scores for the requested universe (defaults to core 5 pairs).
+- Always returns scores for the requested universe (defaults to dynamic load_trading_basket() / 11 pairs).
 - Includes timestamp for freshness checks.
 - Applies appropriate sentiment aging (exponential decay, half-life 60min default) for conservative use of stale data.
 - Real data only.
@@ -20,6 +20,10 @@ Consumers:
 - any future loops or signal generators
 """
 
+from .paths import (
+    PROJECT_ROOT, SENTIMENT_CACHE, X_SENTIMENT_CACHE, load_trading_basket
+)  # per DATA_FLOW_AND_LOCATIONS.md
+
 import json
 import logging
 import math
@@ -30,13 +34,11 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-CANONICAL_CACHE = "/home/brad/projects/crypto-trading-bot/sentiment_cache.json"
-X_CACHE = "/home/brad/projects/crypto-trading-bot/phase6/data/sentiment/x_sentiment_cache.json"
+CANONICAL_CACHE = str(SENTIMENT_CACHE)
+X_CACHE = str(X_SENTIMENT_CACHE)
 
-DEFAULT_UNIVERSE = [
-    "BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD",
-    "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD", "MATIC-USD"
-]  # Expanded for Dynamic Trading Pool / Opportunity Pool selection (DYNAMIC-POOL-SELECTION-001)
+DEFAULT_UNIVERSE = load_trading_basket()  # Dynamic from config via paths.py; falls back to 11. All basket pairs are first-class.
+# (Includes opportunity_pool candidates like MATIC when promoted)
 
 
 def load_x_sentiment_scores(
@@ -130,7 +132,7 @@ def _load_reddit_from_db(universe: List[str]) -> Dict[str, float]:
     This allows using Reddit when it provides value (backtest ROI benefit) but dropping when empty.
     """
     scores: Dict[str, float] = {pair: 0.0 for pair in universe}
-    db_path = "/home/brad/projects/crypto-trading-bot/data/phase6.db"
+    db_path = str(PROJECT_ROOT / "data/phase6.db")
     try:
         conn = __import__("sqlite3").connect(db_path)
         cur = conn.cursor()
@@ -203,14 +205,19 @@ def load_sentiment_scores(
                 for pair in pairs_still_zero:
                     if pair in block:
                         entry = block[pair]
-                        val = entry.get("score", entry.get("sentiment", 0.0)) if isinstance(entry, dict) else entry
+                        val = entry.get(
+                            "sentiment_score",
+                            entry.get("score", entry.get("sentiment", 0.0)),
+                        ) if isinstance(entry, dict) else entry
                         # Conservative: only take if looks like real (not blindly 0 from empty)
                         if val != 0.0:
                             scores[pair] = float(val)
         except Exception:
             pass
 
-    logger.info(f"Sentiment loaded for dynamic basket ({len(universe)} pairs). X primary; Reddit only on real results.")
+    # P2-01: Data quality logging
+    non_zero = sum(1 for v in scores.values() if v != 0.0)
+    logger.info(f"Sentiment loaded for dynamic basket ({len(universe)} pairs). X primary; Reddit only on real results. Non-zero scores: {non_zero}.")
     return scores
 
 
@@ -218,7 +225,7 @@ def load_latest_sentiment_for_basket(basket: List[str]) -> Dict[str, float]:
     """Convenience for runner/rebalancer: query cached RSI + Sentiment for a trader's basket from DB (shared)."""
     # RSI from DB
     rsi = {}
-    db_path = "/home/brad/projects/crypto-trading-bot/data/phase6.db"
+    db_path = str(PROJECT_ROOT / "data/phase6.db")
     try:
         conn = __import__("sqlite3").connect(db_path)
         cur = conn.cursor()

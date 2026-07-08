@@ -47,8 +47,8 @@ fi
 
 # Repo-specific signals for agents/monitors
 BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
-DIRTY=$(git status --porcelain 2>/dev/null | grep -vE '^.. (__pycache__|\.pyc|logs/|data/state/)' | wc -l | tr -d ' ')
-UNTRACKED=$(git status --porcelain 2>/dev/null | grep '^??' | wc -l | tr -d ' ')
+DIRTY=$(git status --porcelain 2>/dev/null | { grep -vE '^.. (__pycache__|\.pyc|logs/|data/state/)' || true; } | wc -l | tr -d ' ')
+UNTRACKED=$(git status --porcelain 2>/dev/null | { grep '^??' || true; } | wc -l | tr -d ' ')
 echo "Branch: $BRANCH | dirty (excl noise): $DIRTY | untracked: $UNTRACKED"
 
 if ! git remote | grep -q .; then
@@ -80,6 +80,11 @@ if [[ -f "${PROJECT_ROOT}/hermes-state/verify_baseline.py" ]]; then
 fi
 
 RC=0
-if [[ "${HEALTH_RC:-0}" -ne 0 || "${SYNC_RC:-0}" -ne 0 ]]; then RC=1; fi
+if [[ "${SYNC_RC:-0}" -ne 0 ]]; then
+  RC=1
+fi
+if [[ "${HEALTH_RC:-0}" -ne 0 ]]; then
+  echo "NOTE: git health ATTENTION (non-fatal for daily cron; see ops triage)"
+fi
 echo "========== Daily git management finished (rc=$RC) =========="
 exit $RC

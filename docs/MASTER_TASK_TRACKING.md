@@ -1,5 +1,11 @@
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
+**2026-07-08** — **Five-move loop ops** (user: proceed on loop enhancements).
+- **Crons fixed:** shadow drift wrapper `~/.hermes/scripts/phase6/research/` + `chmod +x` project script; git-daily `pipefail`+grep exit + health non-fatal RC.
+- **Intel dedupe:** Linux crontab intelligence lines removed; primary = Hermes `twice-daily-trading-intelligence-v2` (`c16b620103dc`).
+- **Ops triage:** skill `phase6-ops-triage` + cron `phase6-ops-triage-daily` (`a4541bb6be69`) 06:00 PT → `data/state/ops_triage.md`.
+- **Verification lane:** `trading-bot-operations` + `references/analyst-deploy-evaluator-lane.md` (mandatory evaluator `delegate_task` before deploy claims).
+
 **2026-07-08** — **Analyst proposals 004/005/006 deployed** (user: proceed with 1, 2, and 3).
 - **004:** `r2_defensive_sharpe_gate.json` (6 ARCH-4 scenarios incl. bear-window `date_range`); weekly OPT default pack switched; per-scenario window in `run_scenario_leaderboard.py`.
 - **005:** SL pre-flight hardened — skip settlement poll for LOW risk re-attach without `order_id`; dead code removed in `sl_preflight.py` (tick/settlement path already wired in `stop_loss_manager`).
@@ -7424,4 +7430,58 @@ Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI
 Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
 Priority: Medium | Effort: Low-Medium | Category: Data / Runner
 Source: Daily Intelligence Briefing 2026-07-08 13:28 UTC
+
+
+**ANALYST-20260708-007** — Tighten scenario pack toward positive Sharpe on ARCH-4 holdout
+Status: Proposed — Awaiting Review/Acceptance
+Description: Current gates block promotion when winner Sharpe < 0. Add scenarios with defensive rotation, longer rebalance_freq, and bear-window validation. Document in scenario pack YAML.
+Benefits: Only shadow trials with non-losing risk-adjusted profiles reach proposals.
+Risks + Mitigations: May reduce nominal return in bull-only sims (mitigation: regime map handles bull separately).
+Priority: Medium | Effort: Medium | Category: ANALYST-OPT / Gates
+Source: Daily Intelligence Briefing 2026-07-08 14:19 UTC
+
+
+**ANALYST-20260708-008** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-08 14:19 UTC
+
+
+**ANALYST-20260708-009** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-08 14:19 UTC
+
+
+**ANALYST-20260708-010** — Tighten scenario pack toward positive Sharpe on ARCH-4 holdout
+Status: Proposed — Awaiting Review/Acceptance
+Description: Current gates block promotion when winner Sharpe < 0. Add scenarios with defensive rotation, longer rebalance_freq, and bear-window validation. Document in scenario pack YAML.
+Benefits: Only shadow trials with non-losing risk-adjusted profiles reach proposals.
+Risks + Mitigations: May reduce nominal return in bull-only sims (mitigation: regime map handles bull separately).
+Priority: Medium | Effort: Medium | Category: ANALYST-OPT / Gates
+Source: Daily Intelligence Briefing 2026-07-08 14:20 UTC
+
+
+**ANALYST-20260708-011** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-08 14:20 UTC
+
+
+**ANALYST-20260708-012** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-08 14:20 UTC
 

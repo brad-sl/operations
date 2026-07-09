@@ -1,7 +1,7 @@
 name: code-reviewer
 display_name: "Code Reviewer"
 provider: openrouter
-model: anthropic/claude-3.5-sonnet  # Cheap & good at catching issues
+model: moonshotai/kimi-k2.7-code  # Deploy evaluator (OpenRouter provider)
 
 description: |
   Independent code reviewer. Focuses on correctness, gaps, edge cases, 

@@ -9,6 +9,21 @@ version: 1.0.0
 ## Execution Preference
 **Strong user preference:** When possible, run commands directly using the `terminal` tool instead of telling the user to copy-paste and run them. Only give the user commands when absolutely required (e.g., long-running services like `hermes gateway start`).
 
+## Profiles for one-shot tasks (alternate model)
+
+Profiles are separate Hermes homes (`~/.hermes/profiles/<name>/`). Each can pin its own `model.provider` + `model.default`.
+
+**Pattern:** Parent session uses fast default model + `delegate_task` for implementers; **deploy / code-review gate** runs as a one-shot in another profile:
+
+```bash
+hermes profile alias code-reviewer    # creates ~/.local/bin/code-reviewer → hermes -p code-reviewer
+code-reviewer config set model.provider openrouter
+code-reviewer config set model.default moonshotai/kimi-k2.7-code
+code-reviewer chat -Q -q '<self-contained packet>' -t file,terminal
+```
+
+`-Q` = quiet/non-interactive for scripts. Do not conflate this with `delegation.model` (global for all subagents). See `agent-delegation` → `references/hermes-hybrid-implementer-profile-reviewer.md`.
+
 ## Cron Job Creation
 Hermes cron creation is finicky with argument parsing. Preferred pattern:
 
@@ -157,6 +172,24 @@ X Developer (Twitter API) billing is completely independent of SuperGrok / xAI /
 - Combine with isolation tests / live verification for any modified fetch/report logic.
 
 See `references/hermes-grok-build-cost-playbook.md` (or the throttling reference) for concrete commands, profile diffs, cron before/after, and logging examples from 2026-06-24 audit.
+
+## xAI model availability (SuperGrok OAuth)
+
+Probe access with a one-shot call — `~/.hermes/provider_models_cache.json` can lag behind live `/v1/models`:
+
+```bash
+hermes -z 'reply exactly: ok' -m grok-4.5 --provider xai-oauth
+```
+
+- `grok-composer-2.5-fast` = coding default; `grok-4.5` = flagship. Switch: `hermes config set model.default grok-4.5`.
+- Refresh picker (interactive TTY): `hermes model --refresh`.
+- Invalid `XAI_API_KEY` on REST does not disprove OAuth access.
+
+See `references/xai-oauth-grok-model-probe-2026-07-08.md`.
+
+## Auxiliary summarizer (context compression)
+
+When `openrouter/owl-alpha` (or any aux model) 404s, compaction degrades. **Fix:** `auxiliary.compression` → `xai-oauth` + `grok-4.5`; other stale `owl-alpha` slots → `provider: auto`. Audit with `grep owl-alpha ~/.hermes/config.yaml`. New session/gateway restart required. Playbook: `references/auxiliary-compression-owl-alpha-fix-2026-07-08.md`.
 
 **Analyst Report Output Caching & Live Verification Patterns (2026-06-24 extension)**
 The Phase 6 `generate_trading_intelligence_report.py` (and Hermes copies) is now largely deterministic Python (rule-based assessment, evolution notes, and strategic proposals from learnings + heuristics + live data). The ANALYST_PERSONA is flavor only; no direct LLM calls inside the script. Real cost is in the Hermes crypto-analyst gateway context + repeated manual re-runs.

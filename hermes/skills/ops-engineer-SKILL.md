@@ -79,6 +79,7 @@ See `references/proactive-notification-intervention.md` for the concrete 2026-06
 - CYCLE_ERRORS_SPIKE (count in recent tail)
 - STATE_WRITE_UNBOUND_OS ( "cannot access local variable 'os'" in state file write path)
 - DASHBOARD_DB_LOCKED ("database is locked" or "DB persist failed" in dashboard/persist_facts_to_db)
+- DASHBOARD_STALE_WRONG_PORT — exchange balances current, UI frozen; check `serve_dashboard_phase4d` on **8501** vs Phase 6 **8502** — `references/dashboard-stale-port-8501-2026-07-08.md`
 - REBALANCE_TELEGRAM_SPAM — `trading-bot-operations` → `references/rebalance-scheduler-telegram-spam-2026-07-06.md` + `references/phase6-runner-singleton-sl-reattach.md`
 - MULTIPLE_PHASE6_RUNNERS — `.venv` + `/usr/bin/python3`; `scripts/phase6/disable_systemd_runner.sh`; monitor keeps `.venv`
 
@@ -164,8 +165,8 @@ See `references/credential-loading-resilience-2026-06-12.md` for .env discovery 
 - Every tick: check crons via log tail or hermes cron list (rsi-15min-refresher, sentiment-30min-refresh — both no_agent, workdir=project).
 - DB freshness: sqlite3 "SELECT pair, value, datetime(ts) FROM rsi_values WHERE ts=(SELECT MAX(ts) FROM rsi_values s2 WHERE s2.pair=rsi_values.pair) ORDER BY pair;" (and equiv for sentiment). Alert if >30m old for RSI or >2h for sentiment (or all 0s on sentiment when volume should be high).
 - Dual-write: tail refresh_rsi_prices.log + sentiment logs for "Dual-written", "refresher complete", errors.
-- Dashboard: systemctl --user status crypto-dashboard.service; curl -s http://localhost:8502/api/rsi | jq .status (expect "ok"); check logs/phase6_dashboard.log for startup/DB connect.
-- Port: ss -tlnp | grep 8502; kill stray on 8501/8502 if conflict.
+- Dashboard: systemctl --user status crypto-dashboard.service; `curl -m 5 -s http://localhost:8502/api/balances` (recent `last_updated`); `stat data/state/phase6_live_state.json`; optional `scripts/refresh_dashboard_live_state.py`; confirm user URL is **8502** not legacy **8501**.
+- Port: ss -tlnp | grep 8502; kill stray listeners; see `references/dashboard-stale-port-8501-2026-07-08.md`.
 - Polish follow-up: watch for P6-163 freshness in /api/rsi; after dedup P6-160, re-verify no breakage in runner persist.
 - Immediate actions on handoff: 1. Watch next 1-2 cron cycles (confirm dual-write + non-zero sentiment when volume allows). 2. Verify serve logs after restart (no relative DB path errors). 3. Hard-refresh browser on http://localhost:8502/ and confirm RSI grid shows real values e.g. ETH ~47-52 (Neutral). 4. Add the new checks to scripts/ops/ops_engineer.py TARGETS + ERROR_PATTERNS + verify loop. 5. Update MASTER_TASK_TRACKING.md with this handoff section. 6. Re-run ops_engineer.py --verify on any related prior tickets.
 

@@ -7,60 +7,44 @@
     Name:      Daily Kanban Backup
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-07-09T03:00:00-07:00
+    Next run:  2026-07-10T03:00:00-07:00
     Deliver:   local
     Script:    backup-kanban.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-07-08T03:00:40.879294-07:00  ok
+    Last run:  2026-07-09T03:00:24.798510-07:00  ok
 
   5c1207235cf6 [active]
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-07-08T07:30:00-07:00
+    Next run:  2026-07-09T04:45:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-08T07:15:03.258341-07:00  ok
+    Last run:  2026-07-09T04:30:35.416533-07:00  ok
 
   8612a817fe55 [active]
     Name:      sentiment-30min-refresh
     Schedule:  */30 * * * *
     Repeat:    ∞
-    Next run:  2026-07-08T07:30:00-07:00
+    Next run:  2026-07-09T05:00:00-07:00
     Deliver:   local
     Script:    run_sentiment_cron.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-08T07:00:04.034492-07:00  ok
+    Last run:  2026-07-09T04:30:37.182978-07:00  ok
 
   92d0bbe12216 [active]
     Name:      daily-git-hermes-management
     Schedule:  30 4 * * *
     Repeat:    ∞
-    Next run:  2026-07-09T04:30:00-07:00
+    Next run:  2026-07-10T04:30:00-07:00
     Deliver:   local
     Script:    git-daily-management.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-08T07:19:54.493783-07:00  error: Script exited with code 1
-stdout:
-========== Git daily management @ 2026-07-08T07:19:54-07:00 ==========
-Project: /home/brad/projects/crypto-trading-bot
-=== Hermes Git Health Check @ 2026-07-08T07:19:54-07:00 ===
-Repo path: /home/brad/projects/crypto-trading-bot
-Branch: phase-6.1
-Last commit: 3e4af33d feat(phase6): deploy analyst 004/005/006 — defensive OPT pack, SL skip-poll, parallel pre-rebal refresh
-Remote: https://github.com/brad-sl/operations.git
-Unpushed commits vs upstream: 2
-WARN: unpushed commits exist
---- hermes/ mirror ---
-Hermes state mirror (sanitized, non-secret only). Last sync: 2026-07-08_043052
---- hermes-state/ baseline (Phase 1) ---
-hermes-state present (10 entries)
-Dirty tracked/untracked (excl logs/data/pyc): 3
-Git health: ATTENTION (1 issue(s))
+    Last run:  2026-07-08T07:20:20.945438-07:00  ok
 
   e039d96c4732 [active]
     Name:      Phase6 Analyst Optimization Weekly
@@ -87,11 +71,12 @@ Git health: ATTENTION (1 issue(s))
     Name:      twice-daily-trading-intelligence-v2
     Schedule:  0 9,21 * * *
     Repeat:    ∞
-    Next run:  2026-07-08T09:00:00-07:00
+    Next run:  2026-07-09T09:00:00-07:00
     Deliver:   telegram
     Script:    phase6/scripts/cron_intelligence_telegram.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
+    Last run:  2026-07-08T21:01:06.174996-07:00  ok
 
   a4541bb6be69 [active]
     Name:      phase6-ops-triage-daily
@@ -101,4 +86,15 @@ Git health: ATTENTION (1 issue(s))
     Deliver:   telegram
     Skills:    phase6-ops-triage
     Workdir:   /home/brad/projects/crypto-trading-bot
+
+  1dfedf1dd8c9 [active]
+    Name:      dashboard-live-state-5m
+    Schedule:  */5 * * * *
+    Repeat:    ∞
+    Next run:  2026-07-09T04:35:00-07:00
+    Deliver:   local
+    Script:    refresh_dashboard_live_state.sh
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   /home/brad/projects/crypto-trading-bot
+    Last run:  2026-07-09T04:25:35.565201-07:00  ok
 

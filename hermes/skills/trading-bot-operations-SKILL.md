@@ -18,7 +18,7 @@ This skill consolidates all operational concerns for long-running crypto trading
 When the user approves numbered proposals (**proceed with 1, 2, and 3** or similar):
 
 1. **Generator** (this session or implementer): code + isolation tests + backlog/MASTER updates only after step 2.
-2. **Evaluator** (mandatory): `delegate_task` **leaf** with a **separate** goal — ASSUME BROKEN; run the exact isolation commands from the handoff; inspect `git diff --stat`; return **PASS** or **REJECT** with enumerated reasons. The generator must **not** claim "deployed" until evaluator PASS.
+2. **Evaluator** (mandatory): `scripts/hermes/run_analyst_deploy_evaluator.sh` via **`code-reviewer`** profile (`moonshotai/kimi-k2.7-code` on OpenRouter) — ASSUME BROKEN; run isolation commands; **PASS** or **REJECT**. Implementers may use `delegate_task` on the parent model. No "deployed" claim until evaluator PASS.
 3. **Stop:** no live config promotion without shadow/gates; no runner restart unless runbook says so.
 
 Detail: `references/analyst-deploy-evaluator-lane.md`. Daily ops discovery: skill `phase6-ops-triage` + Hermes cron `phase6-ops-triage-daily`.

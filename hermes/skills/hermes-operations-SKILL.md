@@ -74,6 +74,8 @@ For `no_agent: true` cron jobs that reference a `script:` (e.g. report generator
 
 See `references/cron-no-agent-script-desync-and-project-imports-2026-06-23.md` for the exact traceback, commands used, and the 2026-06-23 fix (future annotations + copy + absolute path).
 
+**Nested paths** (`script: phase6/research/run_analyst_opt_weekly.sh`): file must live at `~/.hermes/scripts/phase6/research/...` with **absolute `ROOT=/home/brad/projects/crypto-trading-bot`** in the wrapper — `workdir` on the job does not substitute for a missing hermes copy. See `references/cron-nested-phase6-research-scripts.md`.
+
 **Standing practice**: After any change to a `no_agent` script or anything it imports (especially under phase6.core), immediately sync the hermes copy and run it directly from the hermes path as verification. Combine with code-isolation-testing for the report logic itself.
 
 Update this section whenever a new desync or import-side-effect incident occurs. Prefer `workdir` on the cron job + direct project script where possible for future jobs to reduce copy surface.

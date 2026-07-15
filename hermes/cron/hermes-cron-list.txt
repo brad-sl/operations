@@ -7,44 +7,44 @@
     Name:      Daily Kanban Backup
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-07-15T03:00:00-07:00
+    Next run:  2026-07-16T03:00:00-07:00
     Deliver:   local
     Script:    backup-kanban.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-07-14T03:00:26.913499-07:00  ok
+    Last run:  2026-07-15T03:00:55.129349-07:00  ok
 
   5c1207235cf6 [active]
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-07-14T04:45:00-07:00
+    Next run:  2026-07-15T04:45:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-14T04:30:37.756940-07:00  ok
+    Last run:  2026-07-15T04:30:04.692538-07:00  ok
 
   8612a817fe55 [active]
     Name:      sentiment-30min-refresh
     Schedule:  */30 * * * *
     Repeat:    ∞
-    Next run:  2026-07-14T05:00:00-07:00
+    Next run:  2026-07-15T05:00:00-07:00
     Deliver:   local
     Script:    run_sentiment_cron.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-14T04:30:39.591800-07:00  ok
+    Last run:  2026-07-15T04:30:06.468779-07:00  ok
 
   92d0bbe12216 [active]
     Name:      daily-git-hermes-management
     Schedule:  30 4 * * *
     Repeat:    ∞
-    Next run:  2026-07-15T04:30:00-07:00
+    Next run:  2026-07-16T04:30:00-07:00
     Deliver:   local
     Script:    git-daily-management.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-13T04:30:50.690551-07:00  ok
+    Last run:  2026-07-14T04:30:44.890935-07:00  ok
 
   e039d96c4732 [active]
     Name:      Phase6 Analyst Optimization Weekly
@@ -61,44 +61,44 @@
     Name:      Phase6 Shadow Drift Monitor
     Schedule:  0 5 * * *
     Repeat:    ∞
-    Next run:  2026-07-14T05:00:00-07:00
+    Next run:  2026-07-15T05:00:00-07:00
     Deliver:   local
     Script:    phase6/research/run_shadow_drift_check.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-13T05:00:49.911307-07:00  ok
+    Last run:  2026-07-14T05:00:43.760015-07:00  ok
 
   c16b620103dc [active]
     Name:      twice-daily-trading-intelligence-v2
     Schedule:  0 9,21 * * *
     Repeat:    ∞
-    Next run:  2026-07-14T09:00:00-07:00
+    Next run:  2026-07-15T09:00:00-07:00
     Deliver:   telegram
     Script:    phase6/scripts/cron_intelligence_telegram.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-13T21:00:26.886838-07:00  ok
+    Last run:  2026-07-14T21:00:40.344047-07:00  ok
 
   a4541bb6be69 [active]
     Name:      phase6-ops-triage-daily
     Schedule:  0 6 * * *
     Repeat:    ∞
-    Next run:  2026-07-14T06:00:00-07:00
+    Next run:  2026-07-15T06:00:00-07:00
     Deliver:   telegram
     Skills:    phase6-ops-triage
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-13T06:01:30.855610-07:00  ok
+    Last run:  2026-07-14T06:01:25.753523-07:00  ok
 
   1dfedf1dd8c9 [active]
     Name:      dashboard-live-state-5m
     Schedule:  */5 * * * *
     Repeat:    ∞
-    Next run:  2026-07-14T04:35:00-07:00
+    Next run:  2026-07-15T04:35:00-07:00
     Deliver:   local
     Script:    refresh_dashboard_live_state.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-14T04:25:37.854666-07:00  ok
+    Last run:  2026-07-15T04:25:04.523991-07:00  ok
 
   6f3fb1232ec5 [active]
     Name:      RSI vs StochRSI — 2-week review

@@ -1,6 +1,5 @@
 model:
   default: grok-composer-2.5-fast
-  base_url: https://api.x.ai/v1
 fallback_providers:
   - claude-haiku-4.5
 toolsets:
@@ -78,3 +77,4 @@ terminal:
   modal_image: nikolaik/python-nodejs:python3.11-nodejs20
   daytona_image: nikolaik/python-nodejs:python3.11-nodejs20
   container_cpu: 1
+  container_memory: 5120

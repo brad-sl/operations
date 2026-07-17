@@ -189,9 +189,17 @@ hermes -z 'reply exactly: ok' -m grok-4.5 --provider xai-oauth
 
 See `references/xai-oauth-grok-model-probe-2026-07-08.md`.
 
+## Model routing pack (default profile)
+
+No auto hard→flagship router. Layers: `model.default` = `grok-composer-2.5-fast` (volume); hard work = `/model grok-4.5` then demote; `delegation.model` = composer; `auxiliary.vision|compression|approval|titles` = OpenRouter `google/gemini-2.5-flash`; `fallback_providers` = outage only (e.g. Haiku), not quality. YAML: `references/model-routing-and-compaction-resilience.md`.
+
+## Context compression resilience
+
+Rapid “resets” often = aggressive compact, not wiped MEMORY.md. Prefer `threshold: 0.70`, `target_ratio: 0.30`, `protect_last_n: 40`, **`hygiene_hard_message_limit: 2500+`** (not **400** — that count-forces compact on tool loops). Detail: same reference.
+
 ## Auxiliary summarizer (context compression)
 
-When `openrouter/owl-alpha` (or any aux model) 404s, compaction degrades. **Fix:** `auxiliary.compression` → `xai-oauth` + `grok-4.5`; other stale `owl-alpha` slots → `provider: auto`. Audit with `grep owl-alpha ~/.hermes/config.yaml`. New session/gateway restart required. Playbook: `references/auxiliary-compression-owl-alpha-fix-2026-07-08.md`.
+When `openrouter/owl-alpha` (or any aux model) 404s, compaction degrades. **Prefer** `auxiliary.compression` → OpenRouter `google/gemini-2.5-flash`. Alternate: `xai-oauth` + `grok-4.5`. Audit `grep owl-alpha ~/.hermes/config.yaml`. Playbooks: `references/auxiliary-compression-owl-alpha-fix-2026-07-08.md`, `references/model-routing-and-compaction-resilience.md`.
 
 **Analyst Report Output Caching & Live Verification Patterns (2026-06-24 extension)**
 The Phase 6 `generate_trading_intelligence_report.py` (and Hermes copies) is now largely deterministic Python (rule-based assessment, evolution notes, and strategic proposals from learnings + heuristics + live data). The ANALYST_PERSONA is flavor only; no direct LLM calls inside the script. Real cost is in the Hermes crypto-analyst gateway context + repeated manual re-runs.

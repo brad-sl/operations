@@ -7,99 +7,111 @@
     Name:      Daily Kanban Backup
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-07-19T03:00:00-07:00
+    Next run:  2026-07-20T03:00:00-07:00
     Deliver:   local
     Script:    backup-kanban.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-07-18T03:00:01.328333-07:00  ok
+    Last run:  2026-07-19T03:00:20.352544-07:00  ok
 
   5c1207235cf6 [active]
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-07-18T04:45:00-07:00
+    Next run:  2026-07-19T04:45:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-18T04:30:11.917555-07:00  ok
+    Last run:  2026-07-19T04:30:30.269319-07:00  ok
 
   92d0bbe12216 [active]
     Name:      daily-git-hermes-management
     Schedule:  30 4 * * *
     Repeat:    ∞
-    Next run:  2026-07-19T04:30:00-07:00
+    Next run:  2026-07-20T04:30:00-07:00
     Deliver:   local
     Script:    git-daily-management.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-17T04:30:26.592935-07:00  ok
+    Last run:  2026-07-18T04:30:18.347344-07:00  ok
 
   e039d96c4732 [active]
     Name:      Phase6 Analyst Optimization Weekly
     Schedule:  0 4 * * 0
     Repeat:    ∞
-    Next run:  2026-07-19T04:00:00-07:00
+    Next run:  2026-07-26T04:00:00-07:00
     Deliver:   local
     Script:    phase6/research/run_analyst_opt_weekly.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-17T08:52:46.821439-07:00  error: Script exited with code 3
+    Last run:  2026-07-19T04:00:31.918363-07:00  error: Script exited with code 3
 stderr:
-2026-07-17 08:52:46,112 - coinbase_wrapper_FIXED - INFO - ✅ CoinbaseWrapper initialized (LIVE)
-2026-07-17 08:52:46,112 - coinbase_wrapper_FIXED - INFO -    API Key: 7844bd57-7d56-42d6-8c37-c26cd87df31b...
-2026-07-17 08:52:46,113 - coinbase_wrapper_FIXED - INFO -    Private Key loaded: 227 chars
-2026-07-17 08:52:46,113 - phase6.core.exchange_client - INFO - Live Coinbase SDK (RESTClient) initialized for orders
-2026-07-17 08:52:46,113 - phase6.core.exchange_client - INFO - Live Coinbase client initialized on-demand
-2026-07-17 08:52:46,347 - phase6.core.exchange_client - INFO - Key permissions: {'can_view': True, 'can_trade': True, 'can_transfer': False, 'portfolio_uuid': '3176ac3f-deca-4fca-9c67-87ba91f96558', 'portfolio_type': 'CONSUMER'}
+Traceback (most recent call last):
+  File "/home/brad/projects/crypto-trading-bot/phase6/research/run_regime_cash_validation.py", line 394, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/home/brad/projects/crypto-trading-bot/phase6/research/run_regime_cash_validation.py", line 350, in main
+    for v in sorted(set(verdicts))
+             ^^^^^^^^^^^^^^^^^^^^^
+TypeError: '<' not supported between instances of 'str' and 'NoneType'
+2026-07-19 04:00:30,952 - coinbase_wrapper_FIXED - INFO - ✅ CoinbaseWrapper initialized (LIVE)
+2026-07-19 04:00:30,955 - coinbase_wrapper_FIXED - INFO -    API Key: 7844bd57-7d56-42d6-8c37-c26cd87df31b...
+2026-07-19 04:00:30,955 - coinbase_wrapper_FIXED - INFO -    Private Key loaded: 227 chars
+2026-07-19 04:00:30,956 - phase6.core.exchange_client - INFO - Live Coinbase SDK (RESTClient) initialized for orders
+2026-07-19 04:00:30,956 - phase6.core.exchange_client - INFO - Live Coinbase client initialized on-demand
+2026-07-19 04:00:31,199 - phase6.core.exchange_client - INFO - Key permissions: {'can_view': True, 'can_trade': True, 'can_transfer': False, 'portfolio_uuid': '3176ac3f-deca-4fca-9c67-87ba91f96558', 'portfolio_type': 'CONSUMER'}
 
 ANALYST-OPT blocked: live param confidence gate failed
   - live_param_audit: run_param_audit.py exited 2
 stdout:
+REGIME-CASH continuous OK regime=flat mode=deploy → /home/brad/projects/crypto-trading-bot/data/state/regime_cash_optimization_latest.json
+  [P1] deploy_gated: Regime flat: allow buys only if RSI≤55.0 and sentiment≥0.25
+  [P2] review_detector_thresholds: Param sweep found better score than current detector knobs — review candidate_detector, do not auto-
+  [P1] continue_scorecard_opt: Weekly OPT + regime scorecard remain source of strategy_mode winners; cash policy enforces entry
 /home/brad/projects/crypto-trading-bot/.venv/bin/python3 /home/brad/projects/crypto-trading-bot/phase6/research/run_scenario_leaderboard.py --pack /home/brad/projects/crypto-trading-bot/phase6/research/scenarios/r2_defensive_sharpe_gate.json --compare-production --record-learning --refresh-param-audit
 
   bf79baababb0 [active]
     Name:      Phase6 Shadow Drift Monitor
     Schedule:  0 5 * * *
     Repeat:    ∞
-    Next run:  2026-07-18T05:00:00-07:00
+    Next run:  2026-07-19T05:00:00-07:00
     Deliver:   local
     Script:    phase6/research/run_shadow_drift_check.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-17T05:00:24.149588-07:00  ok
+    Last run:  2026-07-18T05:00:15.338536-07:00  ok
 
   c16b620103dc [active]
     Name:      twice-daily-trading-intelligence-v2
     Schedule:  0 9,21 * * *
     Repeat:    ∞
-    Next run:  2026-07-18T09:00:00-07:00
+    Next run:  2026-07-19T09:00:00-07:00
     Deliver:   telegram
     Script:    phase6/scripts/cron_intelligence_telegram.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-17T21:00:38.463385-07:00  ok
+    Last run:  2026-07-18T21:00:57.688962-07:00  ok
 
   a4541bb6be69 [active]
     Name:      phase6-ops-triage-daily
     Schedule:  0 6 * * *
     Repeat:    ∞
-    Next run:  2026-07-18T06:00:00-07:00
+    Next run:  2026-07-19T06:00:00-07:00
     Deliver:   telegram
     Skills:    phase6-ops-triage
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-17T06:02:34.031666-07:00  ok
+    Last run:  2026-07-18T06:01:57.200966-07:00  ok
 
   1dfedf1dd8c9 [active]
     Name:      dashboard-live-state-5m
     Schedule:  */5 * * * *
     Repeat:    ∞
-    Next run:  2026-07-18T04:35:00-07:00
+    Next run:  2026-07-19T04:35:00-07:00
     Deliver:   local
     Script:    refresh_dashboard_live_state.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-07-18T04:25:11.942930-07:00  ok
+    Last run:  2026-07-19T04:25:30.077008-07:00  ok
 
   6f3fb1232ec5 [active]
     Name:      RSI vs StochRSI — 2-week review

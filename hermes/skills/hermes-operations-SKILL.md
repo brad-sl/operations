@@ -110,75 +110,81 @@ See `references/cron-hygiene-redundancy-avoidance.md` for the full session trans
 
 Add a "Cron Hygiene" review to any long-lived trading bot cron setup or monitor profile. Prefer fewer, higher-signal scheduled jobs. Runner activity is the default coverage for access checks.
 
-## External API Cost Control for Sentiment & Polling Jobs
-**Trigger**: User reports high bills on "X Developer" (or similar platform API) while running Hermes + trading bot. Distinguish from xAI/SuperGrok (Grok chats, reports, agents) — they are separate billings.
+## External API + Agent Cost Control (multi-vendor)
 
-**Diagnosis pattern (run via terminal)**:
-- `crontab -l | grep -E 'fetch|sentiment|run_sentiment'` **and** `hermes cron list` (stacked jobs are the usual root cause).
-- Read fetch scripts (`fetch_x_sentiment.py` → `api.twitter.com/2/tweets/search/recent`; Reddit often Apify).
-- Count: 11–12 pair basket + batches per run. **Hermes 30m + system half-hourly refresh + 2h fetch_x** stacked → ~$50–$150/day.
-- Check `.env` keys (X_API_BEARER vs APIFY_*).
+**Trigger**: User reports high bills (X Developer, Apify, OpenRouter, xAI) while running Hermes + trading bot. **Never conflate vendors** — each has its own console.
 
-**Canonical Phase 6 policy (2026-07-17 user cost cut — do not regress):**
-- **X only 2×/day**, ~**10 min before** rebalance (**09:00** / **21:00** PT → fetch **08:50** / **20:50**).
-- Active: system crontab `50 8,20 * * *` → `phase6/scripts/refresh_sentiment.py`.
-- **Paused/disabled:** Hermes `sentiment-30min-refresh`; crontab `fetch_x_sentiment` 2h; old `4,34` half-hourly refresh.
-- Reddit 2h OK (no X fee). RSI 15m = prices only.
-- Project: `docs/X_SENTIMENT_COST_CONTROL.md`. Detail: `references/x-sentiment-pre-rebalance-2x-day.md`.
+### Vendor attribution first (2026-07-21 evidence)
 
-**Lead-time vs X primacy (user correction):**
-- Do **not** default to 30 min early "for safety" without decay math — user called out Reddit dominance risk.
-- Live loader: X primary; Reddit fills zeros; aging often 60m HL → 10m age fine.
-- Merge path with **15m X half-life**: 30m age → X decay ~0.25. Prefer **~10 min** lead; nudge earlier only if fetch overruns rebalance.
+| Provider | Typical role | Example evidence | Default stance |
+|----------|--------------|------------------|----------------|
+| **Apify** | Reddit scrapers (pay-per-event) | ~**$70.66**/period; scrapesmith results dominated | **OFF** — `SENTIMENT_REDDIT_APIFY_ENABLED=0` |
+| **X Developer** | `fetch_x_sentiment` Twitter search | Stacked 30m jobs historically $50+/day | **2×/day only** 08:50/20:50 PT |
+| **OpenRouter** | Aux flash / rare tools | **~$0.75/7d** Gemini Flash | Keep aux-only; set **daily key limit** |
+| **xAI OAuth** | Main chat + agents | Multi‑M tokens/day busy | `delegation`→`grok-build-0.1`; no 25-turn goal default |
 
-**Secondary levers** (after frequency is 2×/day): max_results 30–50; `since_id`; Apify if still expensive; verify crontab + hermes list + one manual refresh.
+Full pack: project `docs/research/AI_CHARGES_BY_PROVIDER_2026-07-21.md`, `docs/research/COST_REDUCTION_EXECUTION_PLAN_2026-07-20.md`, `references/multi-vendor-cost-attribution-and-free-sentiment.md`.
 
-Older throttle notes: `references/x-api-cost-control-sentiment-throttling.md` (2026-06-24 30m→2h — **superseded** for Phase 6 by pre-rebalance 2×/day).
+### Diagnosis pattern (always both crontabs)
 
-**Pitfall**: Treating "X bills" as Grok cost. Re-enabling 30m Hermes sentiment "for freshness". Moving fetch 30m early without checking half-life.
+```bash
+crontab -l | grep -E 'fetch|sentiment|reddit|apify|refresh'
+hermes cron list
+rg -n 'apify|Actor|SENTIMENT_REDDIT' phase6/scripts/refresh_sentiment.py fetch_reddit_sentiment.py
+```
 
-**Hermes-specific notes**:
-- Scripts under Hermes often run from `~/.hermes/scripts/` copies — sync after edits; OPENBLAS wrappers for NumPy.
-- Always pair system `crontab -l` with Hermes inspection.
-- Cron create examples: do **not** use `schedule="*/30 * * * *"` for X sentiment under current policy.
+**Pitfall:** Disabling a **standalone** 2h Reddit cron while `refresh_sentiment.py` still calls Apify 2×/day → bill continues. Kill **all call sites**, not just one crontab line.
 
-**Broader LLM / Agent Token Cost Control (Grok/xAI side, separate from data APIs)**
-X Developer (Twitter API) billing is completely independent of SuperGrok / xAI / Grok Build. High X bills do **not** go away by subscribing to SuperGrok.
+### Canonical Phase 6 sentiment schedule (do not regress)
 
-**Full repeatable audit + reduction playbook** (used successfully to target ~$10/day total):
-1. List all crons: `crontab -l` + `hermes cron list` + check `~/.hermes/cron/jobs.json`. Identify LLM-heavy ones (ops_engineer every 10m, intelligence reports 2×/day, sentiment system, monitors).
-2. Distinguish billings explicitly in diagnosis: X Developer (bearer, search/recent, resources per post) vs. xAI/Grok (chat, reports, agents via api.x.ai or OpenRouter).
-3. Throttle frequency aggressively for non-real-time signals (sentiment, ops diagnostics).
-4. Switch expensive direct data sources to Apify (see above + apify-reddit-sentiment).
-5. For Grok/agent tokens: 
-   - Install xAI CLI safely: `curl -fsSL https://x.ai/cli/install.sh -o /tmp/xai_install.sh && bash /tmp/xai_install.sh` (avoids shell injection flags).
-   - Create/update `~/.grok/config.toml` with cost controls:
-     ```toml
-     [models]
-     default = "grok-build"
+| When (PT) | Job | Live? | Notes |
+|-----------|-----|-------|-------|
+| **08:40 / 20:40** | `scripts/phase6/run_free_sentiment_shadow.sh` | **Shadow only** | OKX funding + F&G + RSS → `sentiment_cache_free.json` |
+| **08:50 / 20:50** | `phase6/scripts/refresh_sentiment.py` | **Live** | **X only**; Reddit/Apify skipped unless env=1 |
+| Rebalance | 09:00 / 21:00 | Live | Warm X cache from 08:50/20:50 |
 
-     [model.grok-build]
-     model = "grok-build"
-     max_completion_tokens = 4096
-     temperature = 0.3
-     context_window = 128000
-     ```
-   - Re-point heavy profiles in `~/.hermes/profiles/<name>/config.yaml` (crypto-analyst, crypto-engineer, crypto-orchestrator, code-reviewer, creative-director etc.) to:
-     `default: grok-build-0.1`
-     `provider: xai-oauth`
-     `base_url: https://api.x.ai/v1`
-   - Global default already favors grok-build-0.1 where possible. Verify with `grok models` (shows grok-build as default after login).
-6. Add lightweight usage logging (model, prompt_len, response_len as token proxy, source, "via Apify") in report generators, fetchers, and ops paths.
-7. Verify: run scripts manually with timeout/tee, watch logs, check dashboards, update MASTER + before/after.
+- **Paused/disabled:** Hermes `sentiment-30min-refresh`; `fetch_x` 2h; old half-hourly refresh; standalone `fetch_reddit` 2h; **Apify in refresh** (default off).
+- Docs: `docs/X_SENTIMENT_COST_CONTROL.md`, `docs/FREE_SENTIMENT_SHADOW.md`.
+- X lead-time: ~**10 min** before rebalance (not 30m) — Reddit-dominance / decay math; see `references/x-sentiment-pre-rebalance-2x-day.md`.
+
+### Apify Reddit — kill-switch (mandatory after 2026-07 overage)
+
+```bash
+# Default OFF everywhere
+export SENTIMENT_REDDIT_APIFY_ENABLED=0   # or omit; code defaults to 0
+# Re-enable ONLY with explicit budget + free-shadow gates:
+# SENTIMENT_REDDIT_APIFY_ENABLED=1
+```
+
+- `fetch_reddit_sentiment.py` hard no-ops unless env ∈ {1,true,yes,on}.
+- `refresh_sentiment.py` skips Reddit when off.
+- **Do not** raise Apify monthly limit to “unstick” production — leave actors disabled; use free hybrid + X.
+- **Do not** treat Apify as the cheap alternative to X for high-frequency pair scrapes (pay-per-event scales with results × starts × pairs). Older playbooks that said “switch X to Apify” are **superseded for Reddit volume**.
+
+### Free sentiment shadow (near-$0, promote gated)
+
+1. Fetchers: `fetch_fng_sentiment.py`, `fetch_funding_sentiment.py` (**OKX** primary; Bybit/Binance often geo-blocked), `fetch_rss_sentiment.py`.
+2. Merge: `phase6/scripts/refresh_sentiment_free.py` → `data/state/sentiment_cache_free.json` (`live_primary: false`).
+3. Gates: `phase6/scripts/correlate_free_vs_x_sentiment.py` → multi-day `promote_ready` before cutting X.
+4. **Never** write free scores into live `sentiment_cache.json` until Phase 3 cutover + user go.
+
+### Agent / LLM cost (separate from data APIs)
+
+1. `delegation.model` → **`grok-build-0.1`** (not composer-fast for multi-turn workers).
+2. **Kanban / `ops_issue_loop`:** default **no `--goal`**; `--goal` only rank≤1 max **12** turns; `--force-goal` rare.
+3. Morning triage: prefer **`ops_triage_discover.py` no_agent** over full LLM skill every day.
+4. OpenRouter = **aux flash only**; never main Sonnet (historical multi-$100/day trap).
+5. Telemetry: `scripts/ops/llm_token_daily_rollup.py` → `data/state/llm_token_daily.jsonl`.
+6. code-reviewer: if `provider: openrouter`, **clear** wrong `base_url: https://api.x.ai/v1`.
 
 **Standing rules**:
-- Always run `crontab -l` (system) in addition to Hermes tools.
-- Prefer `grok-build-0.1` + xai-oauth for cost-sensitive recurring analyst / ops work.
-- Apify for social sentiment (X or Reddit) when volume would otherwise trigger pay-per-resource billing.
-- Document changes with exact commands, before/after, and impact in MASTER_TASK_TRACKING.md.
-- Combine with isolation tests / live verification for any modified fetch/report logic.
+- Attribute $ from **vendor dashboards**, not guesses; update AI_CHARGES doc when user pastes CSVs/screenshots.
+- Always `crontab -l` + Hermes list.
+- Prefer free/public market data + shadow correlate before paid social scrapers.
+- Document MASTER + cost docs on every kill-switch or cadence change.
 
-See `references/hermes-grok-build-cost-playbook.md` (or the throttling reference) for concrete commands, profile diffs, cron before/after, and logging examples from 2026-06-24 audit.
+See also: `references/hermes-grok-build-cost-playbook.md`, `references/multi-vendor-cost-attribution-and-free-sentiment.md`. Older X-only throttle notes: `references/x-api-cost-control-sentiment-throttling.md` (superseded for cadence by 2×/day pre-rebalance).
+
 
 ## xAI model availability (SuperGrok OAuth)
 
@@ -196,7 +202,8 @@ See `references/xai-oauth-grok-model-probe-2026-07-08.md`.
 
 ## Model routing pack (default profile)
 
-No auto hard→flagship router. Layers: `model.default` = `grok-composer-2.5-fast` (volume); hard work = `/model grok-4.5` then demote; `delegation.model` = composer; `auxiliary.vision|compression|approval|titles` = OpenRouter `google/gemini-2.5-flash`; `fallback_providers` = outage only (e.g. Haiku), not quality. YAML: `references/model-routing-and-compaction-resilience.md`.
+No auto hard→flagship router. Layers: `model.default` = `grok-composer-2.5-fast` (volume chat); hard work = `/model grok-4.5` then demote; `delegation.model` = **`grok-build-0.1`** (Phase1 cost — not composer for multi-turn workers); `auxiliary.vision|compression|approval|titles` = OpenRouter `google/gemini-2.5-flash`; `fallback_providers` = outage only (e.g. Haiku), not quality. YAML: `references/model-routing-and-compaction-resilience.md`.
+
 
 **OpenRouter Sonnet-class trap:** Main agent on `anthropic/claude-sonnet-*` via OpenRouter + high-iteration Kanban/tool loops → multi-hundred-$ days (user ~$500 Apr 2026; Apr 2–3 export ~99% Sonnet). Keep main/deleg on **xAI OAuth**; OpenRouter = **cheap aux only**. Prefer a hard **key daily limit** when `limit: null`. Never chase marketplace bot ROI screenshots by buying flagship models.
 

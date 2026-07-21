@@ -19,6 +19,7 @@ frontend-design
 gaming
 gifs
 github
+hermes-desktop-plugins
 hermes-operations
 inference-sh
 marketing

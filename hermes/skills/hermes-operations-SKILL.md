@@ -80,6 +80,8 @@ See `references/cron-no-agent-script-desync-and-project-imports-2026-06-23.md` f
 
 Update this section whenever a new desync or import-side-effect incident occurs. Prefer `workdir` on the cron job + direct project script where possible for future jobs to reduce copy surface.
 
+**2026-07-21 — RSI refresher desync killed Stoch trial data:** Hermes job `rsi-15min-refresher` ran a *stale* `~/.hermes/scripts/refresh_rsi_prices.py` (6-pair FIXED_UNIVERSE, no StochRSI) that continuously overwrote `rsi_cache.json`, while the project `scripts/refresh_rsi_prices.py` already had full-basket + Stoch. Fix pattern: make the hermes file a **thin wrapper** (`runpy.run_path` / exec) pointing at the absolute project script so cron cannot drift. Verify with `python3 ~/.hermes/scripts/refresh_rsi_prices.py` and assert cache has `stoch_k` for full basket. Related trial cycle: project `docs/testing/ANALYST_TEST_CYCLE.md`.
+
 ## Common Pitfalls
 - Using `--prompt` or `--schedule` flags with `hermes cron create` often fails due to CLI parsing.
 - Dropping YAML files in `~/.hermes/cron/` does not always auto-register the job.

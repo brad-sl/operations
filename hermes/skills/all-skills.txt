@@ -2,6 +2,10 @@ agent-behavior
 agent-delegation
 agentic-architecture
 agent-methodology
+analyst-test-execute
+analyst-test-pickup
+analyst-test-strategy
+analyst-trial-report
 apify-reddit-sentiment
 apple
 autonomous-ai-agents

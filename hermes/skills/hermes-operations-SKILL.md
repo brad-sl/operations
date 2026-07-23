@@ -141,9 +141,9 @@ rg -n 'apify|Actor|SENTIMENT_REDDIT' phase6/scripts/refresh_sentiment.py fetch_r
 
 | When (PT) | Job | Live? | Notes |
 |-----------|-----|-------|-------|
-| **08:40 / 20:40** | `scripts/phase6/run_free_sentiment_shadow.sh` | **Shadow only** | OKX funding + F&G + RSS → `sentiment_cache_free.json` |
-| **08:50 / 20:50** | `phase6/scripts/refresh_sentiment.py` | **Live** | **X only**; Reddit/Apify skipped unless env=1 |
-| Rebalance | 09:00 / 21:00 | Live | Warm X cache from 08:50/20:50 |
+| **08:40 / 20:40** | `scripts/phase6/run_free_sentiment_shadow.sh` | Free file | OKX funding + F&G + RSS → `sentiment_cache_free.json` |
+| **08:50 / 20:50** | `phase6/scripts/refresh_sentiment.py` | **Live** | X attempt; on fail/0 posts → **free → live canonical**; Reddit OFF unless env=1 |
+| Rebalance | 09:00 / 21:00 | Live | Prefer warm X; else free_fallback scores via scorer |
 
 - **Paused/disabled:** Hermes `sentiment-30min-refresh`; `fetch_x` 2h; old half-hourly refresh; standalone `fetch_reddit` 2h; **Apify in refresh** (default off).
 - Docs: `docs/X_SENTIMENT_COST_CONTROL.md`, `docs/FREE_SENTIMENT_SHADOW.md`.
@@ -163,12 +163,14 @@ export SENTIMENT_REDDIT_APIFY_ENABLED=0   # or omit; code defaults to 0
 - **Do not** raise Apify monthly limit to “unstick” production — leave actors disabled; use free hybrid + X.
 - **Do not** treat Apify as the cheap alternative to X for high-frequency pair scrapes (pay-per-event scales with results × starts × pairs). Older playbooks that said “switch X to Apify” are **superseded for Reddit volume**.
 
-### Free sentiment shadow (near-$0, promote gated)
+### Free sentiment + live free_fallback (Phase 3 on 2026-07-22)
 
 1. Fetchers: `fetch_fng_sentiment.py`, `fetch_funding_sentiment.py` (**OKX** primary; Bybit/Binance often geo-blocked), `fetch_rss_sentiment.py`.
-2. Merge: `phase6/scripts/refresh_sentiment_free.py` → `data/state/sentiment_cache_free.json` (`live_primary: false`).
-3. Gates: `phase6/scripts/correlate_free_vs_x_sentiment.py` → multi-day `promote_ready` before cutting X.
-4. **Never** write free scores into live `sentiment_cache.json` until Phase 3 cutover + user go.
+2. Merge free file: `phase6/scripts/refresh_sentiment_free.py` → `data/state/sentiment_cache_free.json`.
+3. **Live fallback (default):** `sentiment.primary=x_with_free_fallback` in `trading_config_phase6.json`. When X fails or total posts=0, `refresh_sentiment.py` **promotes free → live** `sentiment_cache.json`; scorer mode=`free_fallback`. Kill: `SENTIMENT_FREE_FALLBACK=0`.
+4. Full X-off cutover still optional (`primary=free_hybrid`) after multi-day correlation; do **not** leave dashboard at all-zero while free is healthy.
+5. Class skill: **`phase6-sentiment-pipeline`** (refs: free-fallback cutover + spend-cap zeros).
+6. X hard fail: `fetch_x_sentiment` exit **2**, no zero-clobber of X cache.
 
 ### Agent / LLM cost (separate from data APIs)
 

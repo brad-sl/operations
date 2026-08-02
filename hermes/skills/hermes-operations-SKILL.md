@@ -9,6 +9,15 @@ version: 1.0.0
 ## Execution Preference
 **Strong user preference:** When possible, run commands directly using the `terminal` tool instead of telling the user to copy-paste and run them. Only give the user commands when absolutely required (e.g., long-running services like `hermes gateway start`).
 
+**Aggressive go-ahead:** If Brad says kick off / no need to wait for approval on a planned gate chain, **execute** end-to-end (e.g. venue probe → economics → MVP docs) without re-asking mid-stream. Still no silent live product enable or large capital moves beyond agreed probe micro-caps.
+
+**Plain English for gates/PRDs:** Lead with implications (Hold vs DeRisk, E1, venue A/B/C, G1–G3) — opaque shorthand without translation frustrates Brad.
+
+## Independent review crons (frontier pass)
+- One-shot `cronjob` + fresh session + stronger model for adversarial PRD review; write full report path + short exec brief to origin.
+- If stream dies (`Codex stream produced no SSE…` / empty), **do not leave empty**: produce the adversarial report in-session (note independence limits) and/or reschedule on OpenRouter alternate.
+- Pin `provider`+`model`; toolsets `file,terminal` (+`web`); `workdir` = project root.
+
 ## Profiles for one-shot tasks (alternate model)
 
 Profiles are separate Hermes homes (`~/.hermes/profiles/<name>/`). Each can pin its own `model.provider` + `model.default`.

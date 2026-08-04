@@ -9,14 +9,12 @@ analyst-trial-report
 apify-reddit-sentiment
 apple
 autonomous-ai-agents
-computer-use
 creative
 crypto_analyst
 crypto-data-acquisition
 data-science
 devops
 diagramming
-dogfood
 domain
 email
 frontend-design

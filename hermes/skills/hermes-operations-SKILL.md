@@ -360,6 +360,24 @@ hermes dashboard --host 0.0.0.0 --insecure
 Access from remote Windows machine via:
 `http://<linux-ip>:9119`
 
+### `hermes update` Node/npm mixed state (web UI fail)
+
+**Symptom after update:** mixed-state Node deps + Web UI npm install failed (Python agent may still work).
+
+**Cause:** `engine-strict=true` + `engines.npm: "<11.10.0 || >=11.17.0"`. npm **11.10–11.16** banned. Fix PATH npm **and** `~/.hermes/node`.
+
+**Fix (agent runs it):**
+```bash
+npm install -g npm@11.17.0
+test -x "$HOME/.hermes/node/bin/npm" && \
+  "$HOME/.hermes/node/bin/npm" install -g npm@11.17.0 --prefix "$HOME/.hermes/node"
+cd ~/.hermes/hermes-agent && export PATH="$HOME/.hermes/node/bin:$PATH"
+npm install --no-fund --no-audit --prefer-offline --progress=false --workspaces=false
+npm install --no-fund --no-audit --prefer-offline --progress=false --workspace ui-tui --workspace web
+npm run build --workspace web
+```
+Verify: `hermes doctor` → ✓ web. Detail: `references/hermes-update-npm-engine-strict-mixed-state.md`.
+
 ## Git-Enabled Operationalization and Resilience
 When hardening Hermes on legacy hardware or building migration/resilience, treat git (operations repo) as the durable source of truth for Hermes state.
 

@@ -1,1 +1,1 @@
-Hermes state mirror (sanitized, non-secret only). Last sync: 2026-08-04_043059
+Hermes state mirror (sanitized, non-secret only). Last sync: 2026-08-05_043030

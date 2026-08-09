@@ -261,21 +261,14 @@ When setting up persistent monitors (e.g. `crypto-monitor`), always:
 ## Custom Dashboards as Systemd Services
 When turning a custom Python HTTP dashboard (e.g. `serve_dashboard.py`) into a reliable always-on service:
 
-1. Create a systemd unit at `/etc/systemd/system/<name>.service` with:
-   - `WorkingDirectory` set to the exact folder containing the script
-   - `ExecStart` using the full path to the interpreter + script + args
-   - `Restart=always` + `RestartSec=5`
-   - `User` set to the non-root user
+1. Prefer **user** units under `~/.config/systemd/user/` with bind **127.0.0.1** unless remote is intentional and auth exists.
+2. If using system unit: `WorkingDirectory`, full `ExecStart` path, `User=`, `Restart=always`.
+3. After `daemon-reload`, `enable` + `start`.
+4. "Address already in use" → identify **which unit** owns the port (`ss -lntp` + cgroup) before kill — another unit may respawn.
+5. Do **not** default to `ufw allow` + `0.0.0.0` for agent admin UIs (see Phase A host security above).
+6. Store unit templates under project `references/` when useful.
 
-2. After `daemon-reload`, always `enable` + `start`.
-
-3. Common failure: "Address already in use" → kill existing process on the port first (`fuser -k <port>/tcp`).
-
-4. Firewall: `sudo ufw allow <port>/tcp` is almost always required for remote access.
-
-5. Store the unit file in the project under `references/<dashboard-name>.service` for reproducibility.
-
-This pattern prevents repeated "connection refused" issues across reboots and disconnects.
+Hermes-specific dual-unit trap: system `hermes-dashboard` on `:8080 --insecure` vs user unit on `:9119` — see `references/host-security-phase-a-balanced.md`.
 
 ## Telegram Integration
 Always store bot token and chat ID in the project's `.env` file. Use `load_dotenv()` with explicit path when running from outside the project directory.
@@ -342,23 +335,46 @@ For long-running trading infrastructure, create isolated profiles (e.g. `crypto-
 
 This gives a dedicated, scheduled "free AI" monitor that keeps scripts alive and surfaces real problems without polluting the primary agent's context. Update both the profile prompt and the cron yaml in lockstep when evolving the behavior. See also `trading-bot-operations` for related trading-specific monitoring patterns.
 
-## Hermes Web Dashboard (Control Panel)
-To expose the Hermes Agent web dashboard to remote machines (e.g. Windows PC on the same LAN):
+## Hermes Web Dashboard (Control Panel) + host security (Phase A)
 
-**Correct command:**
+### Default safe posture (preferred)
+- **User** unit `hermes-dashboard.service`: bind **`127.0.0.1:9119`** with normal auth (login redirect) — **no** `--insecure`.
+- Drop-in: `~/.config/systemd/user/hermes-dashboard.service.d/phase-a-bind.conf`
+- Remote access: SSH/Tailscale **tunnel** to localhost — not open LAN insecure.
+
+### Do NOT casually recommend
 ```bash
-hermes dashboard --host 0.0.0.0 --insecure
+hermes dashboard --host 0.0.0.0 --insecure   # opens admin on LAN/Tailscale without auth gate
 ```
+Only if Brad explicitly accepts that exposure.
 
-- `--host 0.0.0.0` binds to all interfaces
-- `--insecure` is required when not binding to localhost (acknowledges network exposure of API keys)
+### Dual unit trap (2026-08-08)
+| Unit | Typical | Risk |
+|------|---------|------|
+| `~/.config/systemd/user/hermes-dashboard.service` | `:9119` | OK if loopback + auth |
+| **`/etc/systemd/system/hermes-dashboard.service`** | `0.0.0.0:8080 --insecure` | **High** — `Restart=always` respawns after kill |
 
-**Default local behavior** (`hermes dashboard`) only binds to 127.0.0.1.
+Finish (sudo once, **outside** gateway agent):  
+`bash ~/.hermes/scripts/phase_a_security_finish.sh`  
+Detail: `references/host-security-phase-a-balanced.md`
 
-**Note:** The legacy `hermes gateway run --host ... --port ...` syntax is no longer supported. Use the dedicated `dashboard` subcommand instead.
+### Approvals UX (do not re-lock files)
+| Fact | Implication |
+|------|-------------|
+| File `read_file` / `write_file` | **Never** go through approval prompts |
+| Shell | `approvals.mode: smart` (not `manual` / not `off`) |
+| Fat `command_allowlist` | Hollows smart mode — prefer **`[]`** |
+| `HERMES_EXEC_ASK=1` | Prompt spam — set **0** via gateway drop-in |
+| `delegation.subagent_auto_approve` | Prefer **false** |
+| Trading `.env` | Mode **600** |
 
-Access from remote Windows machine via:
-`http://<linux-ip>:9119`
+### Gateway cannot self-restart
+Agent terminal **blocks** restarting `hermes-gateway` from inside the gateway process. For EXEC_ASK/env/unit changes: Brad runs finish script in a **local shell**. Do not loop on blocked restart attempts.
+
+### Agent traps (indirect prompt injection)
+Partial defenses (untrusted web framing, private URL block, policy rails). Not a full shield. Prefer structured APIs; money/config apply stays human-gated. Project review: `docs/security/reviews/2026-08-08_hermes-host_vuln_review_patch_plan.md`.
+
+**Note:** Legacy `hermes gateway run --host ... --port ...` is not the dashboard path — use `hermes dashboard`.
 
 ### `hermes update` Node/npm mixed state (web UI fail)
 

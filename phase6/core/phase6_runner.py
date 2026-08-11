@@ -22,7 +22,7 @@ import logging
 import os
 import time
 import requests
-from datetime import datetime, date, time as dt_time
+from datetime import datetime, date, time as dt_time, timezone
 from typing import Dict, List, Optional, Any
 
 from .config_loader import ConfigLoader
@@ -39,6 +39,24 @@ from .exchange_client import CoinbaseExchangeClient
 from .live_portfolio_manager import LivePortfolioManager
 from pathlib import Path
 from .trade_ledger import TradeLedger
+
+# T0-02: AccountContext injection (feature flag MULTI_TENANT_ENABLED) + dual legacy path
+try:
+    from .context import (
+        AccountContext,
+        get_current_context,
+        with_account,
+        create_legacy_context,
+        is_multi_tenant_enabled,
+        create_test_context,
+    )
+except Exception:  # pragma: no cover - pure legacy fallback
+    AccountContext = None
+    get_current_context = lambda: None
+    with_account = lambda ctx: (lambda f: f)  # identity no-op
+    create_legacy_context = lambda account_id="brad-primary", **kw: None
+    is_multi_tenant_enabled = lambda default=False: False
+    create_test_context = lambda account_id="test", **kw: None
 
 # Early dotenv for runner (project .env has the trading keys)
 from dotenv import load_dotenv
@@ -112,6 +130,10 @@ class Phase6Runner:
     # Fallback to 6 for safety if config load fails.
     def _load_full_universe(self, config_path: str):
         try:
+            from phase6.core.paths import TRADING_CONFIG_PHASE6, load_trading_basket
+
+            if Path(config_path).resolve() == Path(TRADING_CONFIG_PHASE6).resolve():
+                return load_trading_basket()
             with open(config_path) as f:
                 cfg = json.load(f)
             pairs = cfg.get("global_settings", {}).get("pairs", [])
@@ -121,7 +143,7 @@ class Phase6Runner:
         except Exception:
             return ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD"]
 
-    def __init__(self, config_path: str, mode: str):
+    def __init__(self, config_path: str, mode: str, account_context: Optional["AccountContext"] = None):
         """
         :param config_path: Path to trading_config_phase6.json
         :param mode: "shadow" or "live" - required, no default inside the class
@@ -132,6 +154,8 @@ class Phase6Runner:
 
         self.shadow_mode = (self.mode == "shadow")
         self.shadow_params = {}  # For IDEALOOP-005 A/B: e.g. {'rsi_threshold': 45, 'sentiment_tilt': 0.1, 'test_alloc_pair': 'DOGE-USD'}
+        self.config_path = config_path
+        self._basket_config_mtime = None
 
         # Load configuration
         cfg_loader = ConfigLoader(config_path)
@@ -148,8 +172,36 @@ class Phase6Runner:
             logger.warning("analyst shadow overlay skipped: %s", e)
         self.config = cfg_loader.get_config()
 
+        # T0-02: AccountContext (shadow injection, dual path - legacy preserved)
+        self.account_context = account_context
+        if self.account_context is None:
+            # Legacy single-account path (Brad api_key direct) - behavior unchanged when flag off
+            self.account_context = create_legacy_context(
+                account_id="brad-primary",
+                tier="elite",
+                config=self.config_dict,
+                flags={"multi_tenant_enabled": bool(getattr(self.config, "MULTI_TENANT_ENABLED", False) or is_multi_tenant_enabled(False))},
+            )
+        self.account_id = getattr(self.account_context, "account_id", "default") if self.account_context else "default"
+        try:
+            is_mt = bool(
+                (self.account_context and getattr(self.account_context, "flags", {}).get("multi_tenant_enabled", False))
+                or is_multi_tenant_enabled(False)
+            )
+        except Exception:
+            is_mt = False
+        if is_mt:
+            logger.info(f"[T0-02 CONTEXT] multi-tenant active for account_id={self.account_id}")
+        else:
+            logger.info(f"[T0-02 LEGACY] single-account Brad path preserved for account_id={self.account_id}")
+
+
         # Set dynamic full universe from config (replaces previous class-level 6-pair hardcoded FIXED_UNIVERSE)
         self.FIXED_UNIVERSE = self._load_full_universe(config_path)
+        try:
+            self._basket_config_mtime = Path(config_path).stat().st_mtime
+        except OSError:
+            self._basket_config_mtime = None
 
         # ARCH-4: primary allocator path (P4-01) — default on when config omits flag
         gs_flags = self.config_dict.get("global_settings", {})
@@ -186,6 +238,8 @@ class Phase6Runner:
         state_path = Path("data/state/phase6_runner_state.json")
         self.last_rebalance_date = None
         self._rebalance_slots_completed: set = set()
+        # Quality-gate deferrals (cycle_coordinator calls these when gate blocks/allows)
+        self._deferred_rebalance_slots: dict = {}
         self.state_file = str(state_path)  # ensure attr always present for _save_state / _load_state (prevents AttributeError on unconditional saves)
         if state_path.exists():
             try:
@@ -199,7 +253,7 @@ class Phase6Runner:
             logger.info("No previous runner state found; last_rebalance_date remains None")
 
         # Hybrid Rebalancer (new primary rebalancing engine)
-        self.hybrid_rebalancer = HybridRebalancer(config=self.config_dict)
+        self.hybrid_rebalancer = HybridRebalancer(config=self.config_dict, account_context=self.account_context)
         self.atr_calculator = ATRCalculator()
         self.regime_detector = RegimeDetector()
         self.signal_generator = SignalGenerator()
@@ -229,7 +283,7 @@ class Phase6Runner:
         )
         # Structured logging initialization
         self.notifier = Phase6Notifier(log_dir="logs/phase6")
-        self.trade_ledger = TradeLedger()
+        self.trade_ledger = TradeLedger(account_context=self.account_context)
         self.price_history = PriceHistoryManager(max_history=100, persist_path="data/state/price_history.json")
         self.rsi_values = {}
 
@@ -273,10 +327,10 @@ class Phase6Runner:
 
         from phase6.core.cycle_coordinator import CycleCoordinator
 
-        self._cycle_coordinator = CycleCoordinator()
+        self._cycle_coordinator = CycleCoordinator()  # T0-02 ctx via runner or param
         from phase6.core.rebalance_coordinator import RebalanceCoordinator
 
-        self._rebalance_coordinator = RebalanceCoordinator()
+        self._rebalance_coordinator = RebalanceCoordinator()  # T0-02 ctx support
         self._recent_buy_order_ids: Dict[str, str] = {}
         self._data_coverage: Dict[str, Any] = {}
 
@@ -379,15 +433,22 @@ class Phase6Runner:
         except Exception:
             pass
 
-    def _get_recently_stopped_pairs(self, hours: int = 24) -> List[str]:
+    def _get_recently_stopped_pairs(self, hours: int = 72) -> List[str]:
         """Return pairs that had stop-loss exits in the last N hours."""
         if not hasattr(self, "trade_ledger"):
             return []
         try:
             recent_trades = self.trade_ledger.get_recent_trades(hours=hours)
             stopped = []
+            stop_reasons = {
+                "stop_loss",
+                "sl",
+                "stoploss",
+                "stop_loss_exchange",
+            }
             for trade in recent_trades:
-                if trade.get("reason") in ("stop_loss", "sl", "stoploss"):
+                reason = str(trade.get("reason") or trade.get("exit_reason") or "").lower()
+                if reason in stop_reasons or "stop_loss" in reason:
                     pair = trade.get("pair")
                     if pair:
                         stopped.append(pair)
@@ -409,7 +470,7 @@ class Phase6Runner:
                 state["last_rebalance_date"] = self.last_rebalance_date.isoformat()
             if getattr(self, "_rebalance_slots_completed", None):
                 state["rebalance_slots_completed"] = sorted(self._rebalance_slots_completed)
-            state["last_updated"] = datetime.now().isoformat()
+            state["last_updated"] = datetime.now(timezone.utc).isoformat()
             with open(self.state_file, "w") as f:
                 json.dump(state, f, indent=2)
             logger.debug(f"State saved to {self.state_file}")
@@ -486,6 +547,18 @@ class Phase6Runner:
                 cycle += 1
                 self._run_cycle(cycle)
                 self._write_dashboard_cache()
+                try:
+                    from phase6.core.shadow_tp import apply_shadow_tp_from_runner
+
+                    apply_shadow_tp_from_runner(self)
+                except Exception as _stp_e:
+                    logger.debug("shadow_tp cycle: %s", _stp_e)
+                try:
+                    from phase6.core.regime_exit_shadow import apply_regime_exit_shadow_from_runner
+
+                    apply_regime_exit_shadow_from_runner(self)
+                except Exception as _rex_e:
+                    logger.debug("regime_exit_shadow cycle: %s", _rex_e)
                 time.sleep(60)
             except KeyboardInterrupt:
                 logger.info("Shutdown requested")
@@ -495,11 +568,13 @@ class Phase6Runner:
                 time.sleep(60)
 
     def _update_price_history_and_calculate_rsi(self):
-        """Fetch current prices and update RSI using 15-minute candles when possible.
-        Prefers exchange client 15m candles for relevant trading signals.
-        Now prefers canonical decoupled rsi_cache.json from the 15min refresher (RSI-SENT-002).
+        """Fetch current prices every cycle; RSI may come from 15m cache without skipping prices.
+
+        BUGFIX 2026-07-19: previously `if pair in self.rsi_values: continue` skipped
+        exchange price updates whenever RSI cache was fresh, freezing price_history
+        last_updated and blanking dashboard PnL (price_stale / pnl_unreliable).
         """
-        # Prefer fresh canonical RSI cache (decoupled 15min pipeline)
+        rsi_from_cache = set()
         try:
             cache_path = Path("/home/brad/projects/crypto-trading-bot/data/state/rsi_cache.json")
             if cache_path.exists():
@@ -508,24 +583,24 @@ class Phase6Runner:
                 for pair, data in cache.get("rsi", {}).items():
                     if pair in self.FIXED_UNIVERSE and data.get("fresh"):
                         self.rsi_values[pair] = data["rsi"]
-                        continue  # use decoupled value, skip local fetch/calc for freshness
+                        rsi_from_cache.add(pair)
         except Exception as e:
             logger.debug(f"Canonical RSI cache load failed (falling back): {e}")
 
         for pair in self.FIXED_UNIVERSE:
-            if pair in self.rsi_values:
-                # Fresh value from canonical 15m decoupled refresher cache (RSI-SENT-002)
-                # Skip local fetch/calc to honor the independent pipeline and reduce API load
-                continue
             try:
+                # Always refresh spot for dashboard PnL / snapshot freshness
                 price = self.exchange.get_price(pair)
                 if price and price > 0:
                     self.price_history.add_price(pair, price)
 
-                # Primary path: use 15-minute candles from exchange when history is short
+                # RSI already fresh from decoupled cache — no local RSI recompute
+                if pair in rsi_from_cache:
+                    continue
+
+                # Primary path: 15-minute candles when history is short
                 if not self.price_history.has_enough_data(pair, 15):
                     try:
-                        # 900 seconds = 15 minutes
                         candles = self.exchange.get_recent_prices(pair, limit=30, granularity=900)
                         if candles and len(candles) >= 15:
                             rsi_series = calculate_rsi(candles, period=14)
@@ -533,9 +608,8 @@ class Phase6Runner:
                                 self.rsi_values[pair] = rsi_series[-1]
                                 continue
                     except Exception:
-                        pass  # fall through to price_history
+                        pass
 
-                # Fallback to accumulated price history
                 if self.price_history.has_enough_data(pair, 15):
                     prices = self.price_history.get_prices(pair)
                     rsi_series = calculate_rsi(prices, period=14)
@@ -543,9 +617,15 @@ class Phase6Runner:
                         self.rsi_values[pair] = rsi_series[-1]
 
             except Exception as e:
-                logger.debug(f"RSI update failed for {pair}: {e}")
+                logger.debug(f"RSI/price update failed for {pair}: {e}")
                 if pair not in self.rsi_values:
                     self.rsi_values[pair] = 50.0
+
+        # Persist price history so dashboard quote ages stay current
+        try:
+            self.price_history.flush()
+        except Exception:
+            pass
 
         # Persist occasionally
         if len(self.rsi_values) > 0:
@@ -553,7 +633,13 @@ class Phase6Runner:
 
     def _run_cycle(self, cycle_num: int):
         """P4-05: delegate per-cycle orchestration to CycleCoordinator."""
-        self._cycle_coordinator.run_cycle(self, cycle_num)
+        try:
+            from phase6.core.basket_hot_reload import maybe_reload_trading_basket
+
+            maybe_reload_trading_basket(self, getattr(self, "config_path", None))
+        except Exception as e:
+            logger.warning("[BASKET-RELOAD] cycle hook failed: %s", e)
+        self._cycle_coordinator.run_cycle(self, cycle_num, getattr(self, "account_context", None))
 
     def _due_rebalance_slot_id(self, now: Optional[datetime] = None) -> Optional[str]:
         """Latest configured daily slot whose local time has passed (for 1x or 2x daily)."""
@@ -807,33 +893,73 @@ class Phase6Runner:
         else:
             logger.info("[TELEGRAM] Skipping digest for no-op rebalance (0 executed, 0 skipped)")
 
+    def _defer_rebalance_slot(self, slot_id: Optional[str], reasons=None) -> None:
+        """Record a quality-gate deferral so we retry next cycle without crashing."""
+        if not slot_id:
+            return
+        if not hasattr(self, "_deferred_rebalance_slots") or self._deferred_rebalance_slots is None:
+            self._deferred_rebalance_slots = {}
+        reason_list = list(reasons) if reasons else []
+        self._deferred_rebalance_slots[slot_id] = {
+            "reasons": reason_list,
+            "deferred_at": datetime.now().isoformat(timespec="seconds"),
+        }
+        logger.warning(
+            "[REBALANCE DEFER] slot=%s reasons=%s",
+            slot_id,
+            reason_list or ["unspecified"],
+        )
+
+    def _clear_deferred_rebalance_slot(self, slot_id: Optional[str] = None) -> None:
+        """Clear gate deferral for slot (or all) once the gate allows rebalance."""
+        if not hasattr(self, "_deferred_rebalance_slots") or self._deferred_rebalance_slots is None:
+            self._deferred_rebalance_slots = {}
+            return
+        if slot_id is None:
+            if self._deferred_rebalance_slots:
+                logger.info("[REBALANCE DEFER] cleared all deferred slots")
+            self._deferred_rebalance_slots = {}
+            return
+        if slot_id in self._deferred_rebalance_slots:
+            self._deferred_rebalance_slots.pop(slot_id, None)
+            logger.info("[REBALANCE DEFER] cleared slot=%s", slot_id)
+
     def _perform_daily_rebalance(self):
         """P4-05b: delegate daily rebalance body to RebalanceCoordinator."""
-        self._rebalance_coordinator.perform_daily(self)
+        self._rebalance_coordinator.perform_daily(self, getattr(self, "account_context", None))
 
     # ------------------------------------------------------------------
     # Data Enrichment Helpers
     # ------------------------------------------------------------------
-    def _calculate_average_entry_prices(self) -> Dict[str, float]:
-        """Parse trades log to calculate average entry price per pair."""
-        averages = {}
+    def _calculate_average_entry_prices(
+        self, qty_by_pair: Optional[Dict[str, float]] = None
+    ) -> Dict[str, float]:
+        """Lot-aware average entry per pair (FIFO + LIFO-to-exchange-qty).
+
+        Do **not** lifetime-average BUYs only — that ignored SELLs and inflated
+        legacy bags (e.g. BTC entry ~43k vs true current lot ~63k).
+        """
+        averages: Dict[str, float] = {}
         try:
-            trades = self.trade_ledger.get_recent_trades(limit=1000)
-            totals = {} # {pair: {'qty': 0.0, 'total_cost': 0.0}}
-            for t in trades:
-                if t.get("side", "").upper() == "BUY":
-                    pair = t.get("pair")
-                    qty = float(t.get("qty", 0))
-                    price = float(t.get("entry_price", 0))
-                    if pair and qty > 0 and price > 0:
-                        if pair not in totals:
-                            totals[pair] = {'qty': 0.0, 'total_cost': 0.0}
-                        totals[pair]['qty'] += qty
-                        totals[pair]['total_cost'] += (qty * price)
-            
-            for pair, data in totals.items():
-                if data['qty'] > 0:
-                    averages[pair] = data['total_cost'] / data['qty']
+            from phase6.core.position_cost_basis import average_cost_for_pair
+
+            pairs = set((qty_by_pair or {}).keys())
+            for t in self.trade_ledger.get_recent_trades(limit=2000):
+                p = t.get("pair")
+                if p:
+                    pairs.add(str(p))
+            for pair in pairs:
+                eq = None
+                if qty_by_pair and pair in qty_by_pair:
+                    try:
+                        eq = float(qty_by_pair[pair])
+                    except (TypeError, ValueError):
+                        eq = None
+                entry, _basis = average_cost_for_pair(
+                    self.trade_ledger, pair, expected_qty=eq
+                )
+                if entry and float(entry) > 0:
+                    averages[pair] = float(entry)
         except Exception as e:
             self.logger.warning(f"Error calculating entry prices: {e}")
         return averages
@@ -851,15 +977,33 @@ class Phase6Runner:
             except Exception:
                 usdc = 0.0
 
-            # Build price snapshot for enrichment (no exchange fallback)
+            # Build price snapshot for enrichment (basket + preserve sleeve asset)
             price_snapshot = {}
-            for pair in self.FIXED_UNIVERSE:
+            pairs_for_px = list(self.FIXED_UNIVERSE or [])
+            try:
+                from phase6.core.preserve_hold import load_preserve_config, load_state
+
+                pcfg = load_preserve_config(getattr(self, "config_dict", None) or {})
+                pst = load_state()
+                pax = str(pst.get("asset") or pcfg.get("asset") or "PAXG-USD")
+                if pax not in pairs_for_px:
+                    pairs_for_px.append(pax)
+            except Exception:
+                if "PAXG-USD" not in pairs_for_px:
+                    pairs_for_px.append("PAXG-USD")
+            for pair in pairs_for_px:
                 latest = self.price_history.get_latest_price(pair)
                 if latest is not None:
                     price_snapshot[pair] = latest
                 else:
-                    # If still missing after update, skip pair (prevents stale fallback)
-                    logger.warning(f"[DASHBOARD] No recent price for {pair} in history; skipping")
+                    try:
+                        px = self.exchange.get_price(pair)
+                        if px and float(px) > 0:
+                            price_snapshot[pair] = float(px)
+                            continue
+                    except Exception:
+                        pass
+                    logger.warning(f"[DASHBOARD] No recent price for {pair} in history; skipping snapshot only")
                     continue
 
             
@@ -875,9 +1019,6 @@ class Phase6Runner:
                     sl_tp_info["active_protective_orders"] = len(suspended)
             except Exception:
                 pass
-
-            # Get calculated average entry prices
-            avg_entries = self._calculate_average_entry_prices()
 
             enriched = {}
             # Prefer cached portfolio state to avoid rate limits
@@ -902,6 +1043,26 @@ class Phase6Runner:
                     pos_map = enriched  # flat { "BTC-USD": {...} or "BTC": amount }
             else:
                 pos_map = {}
+
+            # Exchange qtys first so lot-aware basis can LIFO-slice to current size
+            qty_by_pair: Dict[str, float] = {}
+            for key, data in pos_map.items():
+                if key in ("USD", "USDC", "positions", "verified", "error", "value_usd"):
+                    continue
+                if isinstance(key, str) and key.endswith("-USD"):
+                    pair_name = key
+                else:
+                    pair_name = f"{key}-USD"
+                if isinstance(data, (int, float)):
+                    amt = float(data)
+                elif isinstance(data, dict):
+                    amt = float(data.get("amount", 0) or 0)
+                else:
+                    amt = 0.0
+                if amt > 0:
+                    qty_by_pair[pair_name] = amt
+
+            avg_entries = self._calculate_average_entry_prices(qty_by_pair)
 
             positions = []
             total_holdings_value = 0.0
@@ -935,21 +1096,39 @@ class Phase6Runner:
                 positions.append({
                     "pair": pair_name,
                     "amount": amount,
+                    "available": float(data.get("available", amount)) if isinstance(data, dict) else amount,
+                    "hold": float(data.get("hold", 0) or 0) if isinstance(data, dict) else 0.0,
                     "current_price": price,
                     "value_usd": value,
                     "entry_price": float(entry) if entry else 0.0,
                     "unrealized_pnl_pct": round(pnl_pct, 4),
+                    "price_as_of": (
+                        self.price_history.quote_timestamp(pair_name)
+                        if hasattr(self.price_history, "quote_timestamp")
+                        else datetime.now(timezone.utc).isoformat()
+                    ),
                     "side": "long",
+                    "sleeve": "preserve" if pair_name.upper().startswith("PAXG") else "trade",
                 })
-                total_holdings_value += value
+                if amount > 0 and value >= 0:
+                    total_holdings_value += value
+
+            # Canonical lot math (merge fills + LIFO to exchange qty) — never trust
+            # lifetime BUY-only averages left on state for open-book PnL / shadow TP.
+            try:
+                from phase6.core.position_cost_basis import recompute_trading_positions_pnl
+
+                positions = recompute_trading_positions_pnl(positions, self.trade_ledger)
+            except Exception as _basis_e:
+                logger.warning("[DASHBOARD] position cost basis recompute failed: %s", _basis_e)
 
             total_usd = usd + usdc + total_holdings_value
 
-            # Recent activity from TradeLedger
+            # Recent activity from TradeLedger (newest-first)
             recent_trades = self.trade_ledger.get_recent_trades(6)
             bought_recently = []
             sold_recently = []
-            for t in reversed(recent_trades):
+            for t in recent_trades:
                 side = t.get("side", "").upper()
                 if side == "BUY":
                     bought_recently.append(t.get("pair"))
@@ -974,7 +1153,8 @@ class Phase6Runner:
                 "total_usd": total_usd,
                 "total_holdings_value": total_holdings_value,
                 "cash_usd": usd,
-                "last_updated": datetime.now().isoformat(),
+                "last_updated": datetime.now(timezone.utc).isoformat(),
+                "data_as_of": datetime.now(timezone.utc).isoformat(),
                 "rsi": self.rsi_values,
                 "performance_metrics": {
                     "daily_pnl_est": daily_pnl_est,
@@ -1126,12 +1306,13 @@ def main():
                         help="Runtime mode. 'shadow' = log only (default/safe). 'live' = real orders.")
     parser.add_argument("--confirm-live", action="store_true", default=False,
                         help="Required when --mode=live to reduce accidental real trading")
+    parser.add_argument("--account-id", default=None, help="T0-02 stub per-account (if MULTI_TENANT_ENABLED)")
     args = parser.parse_args()
 
     if args.mode == "live" and not args.confirm_live:
         parser.error("--mode=live requires --confirm-live flag for safety")
 
-    runner = Phase6Runner(config_path=args.config, mode=args.mode)
+    runner = Phase6Runner(config_path=args.config, mode=args.mode, account_context=None)  # T0-02: pass ctx in full impl
     runner.run()
 
 

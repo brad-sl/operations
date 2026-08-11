@@ -64,11 +64,19 @@ class HybridRebalancer:
     No generate_rebalance_plan; callers must use the unified allocator path.
     """
 
-    def __init__(self, config: Optional[Dict] = None, cache_path: str = DEFAULT_CACHE_PATH):
+    def __init__(self, config: Optional[Dict] = None, cache_path: str = DEFAULT_CACHE_PATH, account_context: Optional["AccountContext"] = None):
         self.config = {**DEFAULT_CONFIG, **(config or {})}
         self.cache_path = cache_path
         self.last_rebalance_time: Optional[datetime] = None
         logger.info("HybridRebalancer initialized with thresholds: %s", self.config)
+        self.account_context = account_context
+        self.account_id = getattr(account_context, "account_id", "default") if account_context else "default"
+        if account_context and getattr(account_context, "flags", {}).get("multi_tenant_enabled"):
+            # per-account cache for isolation (shadow)
+            from pathlib import Path
+            p = Path(cache_path)
+            self.cache_path = str(p.parent / f"{self.account_id}_{p.name}")
+            logger.info(f"[T0-02] per-account cache: {self.cache_path}")
 
     def _load_sentiment(self, universe: List[str]) -> Dict[str, float]:
         """Canonical delegation for consistency with runner/scorer.
@@ -247,8 +255,26 @@ class HybridRebalancer:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     rebal = HybridRebalancer()
+    try:
+        from phase6.core.paths import load_trading_basket
+
+        _universe = load_trading_basket()
+    except Exception:
+        _universe = [
+            "BTC-USD",
+            "ETH-USD",
+            "SOL-USD",
+            "XRP-USD",
+            "DOGE-USD",
+            "ADA-USD",
+            "AVAX-USD",
+            "LINK-USD",
+            "UNI-USD",
+            "ARB-USD",
+            "ICP-USD",
+        ]
     decision = rebal.evaluate(
-        universe=["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD"],  # full basket for consistency
+        universe=_universe,
         previous_sentiment={"BTC-USD": 0.1, "ETH-USD": -0.05, "XRP-USD": 0.2},
         volatility={"BTC-USD": 0.3},
         drawdown=0.05,

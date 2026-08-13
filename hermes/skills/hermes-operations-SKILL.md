@@ -111,8 +111,10 @@ When the user indicates a scheduled job is "overkill", "redundant", or "I don’
 
 Example (from session): Hourly RobustSmokeTest.py (system crontab `0 * * * *`) for access/SL logic was removed after user noted the runner already exercises the paths frequently enough. The file was retained as manual-only with updated header.
 
+**2026-08-13 — Linux crontab cutover (Phase 6):** User crontab is **comment-only**. SSOT `docs/HERMES_CRON_SSOT.md`. Do **not** add `refresh_sentiment`, `fetch_x`, Apify, or runner monitors back to `crontab -e`. New jobs → Hermes `cronjob` on the **default** gateway. `no_agent` scripts must `export PATH=$HOME/.local/bin:$PATH`. `hermes send` = stdin + `-t telegram` only. Dropped: `phase6_rebalance_monitor.sh` (obsolete flags).
+
 **Verification pattern after any cron change:**
-1. `crontab -l`
+1. `crontab -l` — must show **no executable Phase 6 lines**
 2. Hermes cron list (via tool or terminal)
 3. `ps aux | grep -E 'phase|runner|smoke'` (or equivalent)
 4. Confirm no unintended overlap with trading paths.

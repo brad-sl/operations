@@ -126,8 +126,10 @@ DENY_SUFFIXES = (
 )
 
 # Extra path regex denies
+# Note: do NOT match .env.example (template is allowlisted).
 DENY_RE = re.compile(
-    r"(^|/)\.env($|\.)|"
+    r"(^|/)\.env$|"
+    r"(^|/)\.env\.(?!example(?:$|\.))[A-Za-z0-9_.-]+$|"
     r"(^|/)__pycache__(/|$)|"
     r"(^|/)\.pytest_cache(/|$)|"
     r"\.bak($|\.)|"
@@ -199,9 +201,14 @@ for line in out.splitlines():
             skipped.append((path, f"too-large:{sz}"))
             continue
         # Under allow dirs, skip obvious non-source binaries without extension gate
+        name = p.name
         ext = p.suffix.lower()
-        if path not in ALLOW_ROOT_FILES and ext and ext not in PREFER_EXT:
-            # allow extensionless scripts only at root of allow dirs if executable-ish
+        # Dockerfiles / Compose often use dotted suffixes (Dockerfile.gateway)
+        if name == "Dockerfile" or name.startswith("Dockerfile.") or name in {
+            "docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml",
+        }:
+            pass
+        elif path not in ALLOW_ROOT_FILES and ext and ext not in PREFER_EXT:
             if ext not in {"", ".md"}:
                 skipped.append((path, f"ext:{ext}"))
                 continue

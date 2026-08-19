@@ -1,6 +1,0 @@
-timestamp,pair,side,qty,entry_price,exit_price,pnl,pnl_pct,signal_source,regime_bias
-2026-07-06T16:01:26.338416,SOL-USD,BUY,0.12757541,81.37,None,0.0,0.0,phase6_rebalance_arch4,
-2026-07-07T02:18:27.827724,BTC-USD,BUY,0.01,100.0,None,0.0,0.0,phase6_fresh_start,
-2026-07-07T02:18:27.839476,ETH-USD,BUY,0.01,100.0,None,0.0,0.0,phase6_fresh_start,
-2026-07-07T02:19:01.222421,BTC-USD,BUY,0.01,100.0,None,0.0,0.0,phase6_fresh_start,
-2026-07-07T02:19:01.222935,ETH-USD,BUY,0.01,100.0,None,0.0,0.0,phase6_fresh_start,

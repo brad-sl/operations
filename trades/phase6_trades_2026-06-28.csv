@@ -1,6 +1,0 @@
-timestamp,pair,side,qty,entry_price,exit_price,pnl,pnl_pct,signal_source,regime_bias
-2026-06-29T03:37:37.222802,TEST-USD,BUY,100,1.2345,None,0,0,test,
-2026-06-20T10:00:00Z,UNI-USD,BUY,45.4707,2.82,None,0.0,0.0,backfill_current_holdings,
-2026-06-20T10:01:00Z,OP-USD,BUY,3902.79,0.095,None,0.0,0.0,backfill_current_holdings,
-2026-06-20T10:02:00Z,LINK-USD,BUY,16.88,7.1,None,0.0,0.0,backfill_current_holdings,
-2026-06-20T10:03:00Z,ADA-USD,BUY,304.1966,0.139,None,0.0,0.0,backfill_current_holdings,

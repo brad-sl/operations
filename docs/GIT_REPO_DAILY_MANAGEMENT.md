@@ -90,7 +90,8 @@ cd /home/brad/projects/crypto-trading-bot
 5. **Merge:** back to `phase-6.1`; leave user on canonical branch
 6. **Handoffs:** include Git apply/verify/rollback section (`HANDOFF_GIT_ENHANCED.md`)
 
-Do **not** commit: `.env`, `*.pem`, `data/state/*.json`, logs, `__pycache__`, live credentials.
+Do **not** commit: `.env`, `*.pem`, `data/state/**`, `trades/**`, logs, `__pycache__`, live credentials.
+Runtime state is **gitignored** and untracked — restore holds/sleeves from a host-level backup of `data/state/capital_controls/` if needed; positions come from the exchange.
 
 ---
 

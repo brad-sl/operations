@@ -17,12 +17,11 @@ logs/
 *.db-journal
 *.db-shm
 *.db-wal
-data/state/*.json
-data/state/*.jsonl
-data/state/*.pid
-trades/*.jsonl
-trades/*.jsonl.bak*
+# Live runtime — never commit (restored from host backup / exchange, not git)
+data/state/
+trades/
 sentiment_cache.json
+sentiment_cron.log
 *.pid
 
 # Local Hermes planning scratch (not durable ops state)

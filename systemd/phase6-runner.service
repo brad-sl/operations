@@ -7,7 +7,7 @@ Type=simple
 User=brad
 WorkingDirectory=/home/brad/projects/crypto-trading-bot
 Environment=PYTHONPATH=/home/brad/projects/crypto-trading-bot
-ExecStart=/usr/bin/python3 -m phase6.core.phase6_runner --mode live --confirm-live
+ExecStart=/home/brad/projects/crypto-trading-bot/.venv/bin/python -m phase6.core.phase6_runner --mode live --confirm-live
 Restart=always
 RestartSec=30
 StandardOutput=append:/home/brad/projects/crypto-trading-bot/logs/phase6_runner.log

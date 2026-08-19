@@ -16,6 +16,7 @@ Canonical files:
 - `price_history.json`, `rsi_cache.json`, `rebalance_history/default.jsonl`
 - Sentiment caches, `intel_*.json`, analyst outputs, `opportunity_proposals.jsonl`, recovery_state.json, etc.
 - **ANALYST-OPT (2026-07-07):** `analyst_scenario_leaderboard_latest.json`, `analyst_scenario_runs.jsonl` (append-only run ledger), `analyst_learnings.json`, `analyst_proposed_backlog.json` — see `docs/research/MEMORY_AND_LEARNING.md`.
+- **USDC park (2026-07-09):** `data/state/usdc_park/<account>_transitions.json`, `<account>_latest.json` — toggle FSM + last park/unwind run.
 
 **Rules**:
 - Read/write using relative paths: `Path("data/state/phase6_live_state.json")` or `PROJECT_ROOT / "data/state/..."`
@@ -35,6 +36,7 @@ Current verified (2026-06-26):
   - Primary: `trading_config_phase6.json` (root or config/).
   - Canonical loader: `phase6/core/config_loader.py`.
   - Other: `config/trading_config.json`, `sentiment_config.json`, `references/sentiment_sources.yaml`.
+  - **Per-trader options:** `config/trader_accounts.json` — `live_usdc_park` toggle per Coinbase `portfolio_uuid` (see `docs/LIVE_USDC_PARK.md`).
 - Avoid: proliferation of `trading_config_*.bak`, `*_limited`, `*_test` without explicit override mechanism (env var or CLI flag).
 
 **Rules**:
@@ -103,3 +105,35 @@ Last updated: 2026-06-29 for kanban t_591b0df0
 Follow-ups: consolidate sentiment duplicates (root/phase6 copies), full root scripts audit if drift appears, add to more entrypoints/tests as needed.
 
 Last updated for t_591b0df0: 2026-06-29 (verification + extension pass)
+
+
+## Postgres Multi-Tenant Registry (SCALING-1000 T0-01+)
+
+**Canonical state owner:** Postgres (via Alembic migrations in `db/migrations/`)
+
+**Tables (new for multi-tenant):**
+- `traders` — primary registry: id (uuid), ghl_contact_id, ghl_location_id, portfolio_uuid, coinbase_account_id, tier (starter/pro/elite), billing_status, coinbase_status, auth_mode (oauth|api_key), timestamps (created/updated/last_*), flags (json), notes
+- `trader_configs` — per-account overrides: trader_id (fk, unique), pairs (json), risk_params (json), allocation_overrides, rebalance_frequency, max_deploy_usd, pair_count_cap, tier_template_snapshot, overrides
+- `oauth_tokens` — encrypted at rest: trader_id (fk), access_token_enc, refresh_token_enc, expires_at, scopes (json), portfolio_uuid. Use ENCRYPTION_KEY + fernet helpers in db/models.py
+- `job_runs` — audit/metrics: trader_id (fk), run_id, started/ended, status, metrics (json), error_summary, duration_seconds
+
+**Isolation:** All queries/filter by trader_id or portfolio_uuid. No cross-account leakage (enforced in T0-05 tests).
+
+**GHL mirror:** GHL Custom Object `TradingAccount` is read-only UX mirror. Platform (Postgres) is source of truth. Sync worker (future T1) upserts rounded fields only. Never put tokens/balances/full precision in GHL.
+
+**Migration:**
+- `alembic.ini` (script_location = db/migrations)
+- `db/migrations/versions/002_registry_tables.py` (additive on top of 001)
+- `db/models.py` (SQLAlchemy ORM + encrypt/decrypt helpers)
+- Test: `test_t0_registry.py` (2 accounts, create/query/rollback exercised; alembic attempted)
+
+**Config / Secrets:**
+- DATABASE_URL in env (postgresql+asyncpg://...)
+- ENCRYPTION_KEY (fernet 32-byte key). Generate: python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())". Never commit.
+- Use db/session.py patterns.
+
+**Legacy note:** Old `data/phase6.db` (sqlite) + json states remain for single-tenant Brad path until MULTI_TENANT flag + T0-02. New registry parallel for spike.
+
+**Update rules:** Schema change → new alembic rev + update this doc + test + MASTER. Project root CWD.
+
+Last updated: 2026-07-16 for kanban t_617c4635 (T0-01 SCALING)

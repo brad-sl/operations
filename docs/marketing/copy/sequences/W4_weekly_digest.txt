@@ -1,0 +1,31 @@
+# W4b — Weekly digest (optional cadence for quieter users)
+# Trigger: weekly schedule if daily muted OR product flag weekly_digest=true
+# Same compliance rules as daily
+
+SUBJECT: ARCH weekly status — {{tier_name}}
+
+PREHEADER: Week-in-review process snapshot for your automation.
+
+---
+
+Hi {{first_name}},
+
+Weekly process summary for your ARCH Automation **{{tier_name}}** account:
+
+**Health trend**
+- Current runner: {{runner_health}}
+- Connection: {{coinbase_status}}
+
+**Week snapshot**
+{{weekly_summary_body}}
+
+Review anytime: {{member_status_link}}  
+Support: {{support_email}}
+
+This is software status communication only — not investment advice. Cryptocurrency trading involves substantial risk of loss.
+
+— ARCH Automation
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.

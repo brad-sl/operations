@@ -1,0 +1,78 @@
+{
+  "schema": "regime_exit_policy_map_v1",
+  "philosophy": "Profit-side exits are regime-dependent. Shadow-only until each regime has enough real evidence. One global TP/RSI is forbidden by default.",
+  "mode": "shadow",
+  "live_apply": false,
+  "enabled": true,
+  "note": "Source study: reports/EXIT_THRESHOLD_REGIME_STUDY_2026-08-06.md. SL (~3%) stays exchange-live everywhere. This map only shadows profit-side TP/trail and RSI hard-exit would-fires. No orders. operator_approve / take_profit.mode stay separate gates.",
+  "sl_floor_pct": 0.03,
+  "min_position_usd": 25.0,
+  "notify_on_would_fire": false,
+  "notify_dedupe_hours": 24,
+  "notify_note": "OFF by default (Brad 2026-08-06): weekly status review, not per-episode Telegram. Still logs to state/events.",
+  "defaults": {
+    "fixed_tp": { "enabled": false, "pct": null },
+    "trail": { "enabled": false, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
+    "rsi_hard_exit": { "enabled": false, "overbought": null, "note": "Shadow signal only; live still needs hard_exit.operator_approve false + live_apply" }
+  },
+  "regimes": {
+    "bull": {
+      "label": "Bull — bank gains; study favored ~6% TP vs SL-only",
+      "source_study_call": "prefer_tp_tp_06",
+      "fixed_tp": { "enabled": true, "pct": 0.06 },
+      "trail": { "enabled": true, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
+      "rsi_hard_exit": { "enabled": true, "overbought": 75.0, "note": "Higher bar in bull — avoid cutting strength early; still shadow-only" },
+      "confidence": "design_from_offline_n21"
+    },
+    "flat": {
+      "label": "Flat — earlier bank; study favored ~5% TP vs SL-only",
+      "source_study_call": "prefer_tp_tp_05",
+      "fixed_tp": { "enabled": true, "pct": 0.05 },
+      "trail": { "enabled": true, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
+      "rsi_hard_exit": { "enabled": true, "overbought": 65.0, "note": "Aligns with flat regime_cash overbought_rsi 65; shadow-only" },
+      "confidence": "design_from_offline_n34"
+    },
+    "bear": {
+      "label": "Bear — ride/SL prior; early TP hurt offline",
+      "source_study_call": "prefer_sl_ride",
+      "fixed_tp": { "enabled": false, "pct": null },
+      "trail": { "enabled": false, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
+      "rsi_hard_exit": { "enabled": false, "overbought": null, "note": "Do not shadow-force RSI exits in bear until overturned" },
+      "confidence": "design_from_offline_n21_plus_prior_ride_it_out"
+    },
+    "transition": {
+      "label": "Transition — conservative; no offline cell; default ride/SL + optional high RSI watch",
+      "source_study_call": "no_cell_default_sl_ride",
+      "fixed_tp": { "enabled": false, "pct": null },
+      "trail": { "enabled": false, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
+      "rsi_hard_exit": { "enabled": true, "overbought": 70.0, "note": "Watch only; thin prior" },
+      "confidence": "default_conservative"
+    },
+    "unknown": {
+      "label": "Unknown — fail-safe ride/SL",
+      "source_study_call": "fail_safe",
+      "fixed_tp": { "enabled": false, "pct": null },
+      "trail": { "enabled": false, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
+      "rsi_hard_exit": { "enabled": false, "overbought": null },
+      "confidence": "fail_safe"
+    }
+  },
+  "promotion": {
+    "auto_promote": false,
+    "require_brad_ok": true,
+    "shadow_min_calendar_days": 60,
+    "note_calendar": "Brad expectation: 1–2 months to cycle bull/bear/flat with enough points. Default gate 60d; 45d early review only if N gates met.",
+    "early_review_calendar_days": 45,
+    "min_closed_legs_per_regime": 15,
+    "min_would_fire_episodes_per_regime": 5,
+    "regimes_required_for_global_flip": ["bull", "bear", "flat"],
+    "min_regimes_ready": 3,
+    "allow_partial_regime_live": false,
+    "meaningful_edge_rules": {
+      "min_delta_sum_r_vs_sl": 0.15,
+      "min_delta_mean_r": 0.005,
+      "rerun_offline_study": "phase6/research/run_exit_threshold_regime_study.py"
+    },
+    "action_if_ready": "Human review only. Per-regime: may enable that regime's knobs in a future live map. Global live TP or auto RSI hard-exit only if all required regimes ready + Brad OK. Never auto_promote."
+  }
+}

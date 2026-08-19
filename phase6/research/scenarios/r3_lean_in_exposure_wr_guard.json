@@ -1,0 +1,97 @@
+{
+  "schema_version": "1.0",
+  "pack_id": "r3_lean_in_exposure_wr_guard",
+  "description": "ANALYST-20260711: Lean into active book — higher deploy clips / faster rotation vs current defensive 21d. Primary=sharpe_ratio; secondary gate=live exit WR >= 60% on overlap window (19/29=65.5% production anchor). Baseline=production-like weekly rotation cap 200.",
+  "default_engine": "arch4",
+  "primary_metric": "sharpe_ratio",
+  "baseline_scenario_id": "prod_like_rotation_7d_cap200",
+  "date_range": {
+    "start": "2025-04-20",
+    "end": "2026-07-11"
+  },
+  "gates": {
+    "max_drawdown_slack_pct": 3.0,
+    "min_sharpe_delta_vs_baseline": 0.0,
+    "notes": "Promotion shadow-only if winner beats baseline Sharpe AND live exit_wr replay >= 0.60 AND max_dd within slack vs baseline scenario row."
+  },
+  "scenarios": [
+    {
+      "id": "prod_like_rotation_7d_cap200",
+      "label": "Production-like: rotation 7d, cap $200",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 200
+      }
+    },
+    {
+      "id": "lean_cap_260_7d",
+      "label": "Lean-in: larger clips $260, weekly rotation",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 260
+      }
+    },
+    {
+      "id": "lean_cap_280_10d",
+      "label": "Lean-in: $280 clips, 10d stride",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 10,
+        "rebalance_cap_usd": 280
+      }
+    },
+    {
+      "id": "lean_cap_280_7d",
+      "label": "Aggressive lean: $280 clips, weekly",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 280
+      }
+    },
+    {
+      "id": "lean_rebalance_14d_cap220",
+      "label": "Lean rebalance (less rotation churn), 14d $220",
+      "engine": "arch4",
+      "arch4": { "strategy": "rebalance" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 14,
+        "rebalance_cap_usd": 220
+      }
+    },
+    {
+      "id": "defensive_rotation_21d_cap100",
+      "label": "Current defensive reference (scorecard winner style)",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 21,
+        "rebalance_cap_usd": 100
+      }
+    },
+    {
+      "id": "recent_window_lean_7d_cap240",
+      "label": "Recent 90d lean stress (2026-04-12..2026-07-11)",
+      "engine": "arch4",
+      "arch4": { "strategy": "rotation" },
+      "date_range": { "start": "2026-04-12", "end": "2026-07-11" },
+      "backtest": {
+        "initial_capital": 1000,
+        "rebalance_frequency_days": 7,
+        "rebalance_cap_usd": 240
+      }
+    }
+  ]
+}

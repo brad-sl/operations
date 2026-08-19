@@ -1,0 +1,321 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "# \ud83d\udd0d Keyword Research Complete\n\n## \ud83c\udfaf Keyword Research Results\n\n**Total Keywords Found:** 86\n**Recommended for Campaign:** 20\n\n### \ud83d\udcca Dynamic CPC Analysis\n\n**\ud83d\udccd Targeted Locations:** United States\n**\ud83d\udde3\ufe0f Language:** English (auto-detected from the account's campaign language targeting)\n**\ud83c\udf10 Network:** Google Search only (excludes partner sites for accurate CPCs)\n\n- **Median CPC:** $7.29 (average of low+high top-of-page bids)\n- **Average CPC:** $6.71\n- **HIGH Intent Threshold:** \u2265$8.02 (top 25% most expensive)\n- **MEDIUM Intent Range:** $5.99-$8.01 (middle 50%)\n- **LOW Intent Threshold:** <$5.99 (bottom 25%)\n\n*Note: CPCs shown are averages of the low and high top-of-page bid ranges, aggregated across all targeted locations. Actual competitive bids may be higher.*\n\n### \ud83d\udd25 HIGH INTENT KEYWORDS (CPC \u2265$8.02)\n\n| Keyword | Monthly Searches | CPC Range | Competition |\n|---------|------------------|-----------|-------------|\n| **3commas** | 3,600 | $3.84-$16.26 | LOW |\n| **crypto hopper** | 2,900 | $2.99-$14.50 | LOW |\n| **ai crypto trading bot** | 880 | $3.10-$14.21 | MEDIUM |\n| **artificial intelligence crypto trading** | 720 | $3.95-$17.37 | MEDIUM |\n| **cryptocurrency ai trading** | 720 | $3.95-$17.37 | MEDIUM |\n| **ai trading cryptocurrency** | 720 | $3.95-$17.37 | MEDIUM |\n| **pionex trading bot** | 590 | $0.05-$16.24 | LOW |\n| **best ai crypto trading bot** | 320 | $2.96-$14.19 | LOW |\n| **automated crypto trading** | 260 | $2.88-$13.44 | LOW |\n| **automated cryptocurrency trading** | 260 | $2.88-$13.44 | LOW |\n\n### \ud83d\udcbc MEDIUM INTENT KEYWORDS (CPC $5.99-$8.02)\n\n| Keyword | Monthly Searches | CPC Range | Competition |\n|---------|------------------|-----------|-------------|\n| **ai trading bots** | 6,600 | $2.81-$11.58 | MEDIUM |\n| **crypto trading bot** | 1,900 | $2.74-$11.95 | LOW |\n| **crypto bot trading** | 1,900 | $2.74-$11.95 | LOW |\n| **cryptocurrency trading bot** | 1,900 | $2.74-$11.95 | LOW |\n| **trading crypto bot** | 1,900 | $2.74-$11.95 | LOW |\n| **bot for trading cryptocurrency** | 1,900 | $2.74-$11.95 | LOW |\n| **trading bot for cryptocurrency** | 1,900 | $2.74-$11.95 | LOW |\n| **best ai trading bot** | 1,300 | $2.54-$13.20 | MEDIUM |\n| **automated trading bots** | 720 | $2.64-$10.29 | MEDIUM |\n| **best trading bot** | 390 | $2.36-$9.71 | MEDIUM |\n\n### \u2705 Selected Keywords for Campaign\n\nThe following **20 keywords** will be used (bolded above):\n\n- 3commas\n- crypto hopper\n- ai crypto trading bot\n- artificial intelligence crypto trading\n- cryptocurrency ai trading\n- ai trading cryptocurrency\n- pionex trading bot\n- best ai crypto trading bot\n- automated crypto trading\n- automated cryptocurrency trading\n- ai trading bots\n- crypto trading bot\n- crypto bot trading\n- cryptocurrency trading bot\n- trading crypto bot\n- bot for trading cryptocurrency\n- trading bot for cryptocurrency\n- best ai trading bot\n- automated trading bots\n- best trading bot\n\n### \ud83d\udcb0 Budget Recommendation\n\nBased on selected keywords with average CPC of **$8.20**:\n\n| Budget Tier | Daily Budget | Expected Clicks/Day | Approach |\n|-------------|--------------|---------------------|----------|\n| **Conservative** | $400.50 | ~50 clicks | Based on median CPC ($8.01), safe budget |\n| **Moderate** | $410.22 | ~50 clicks | Based on average CPC ($8.20), balanced |\n| **Aggressive** | $533.00 | ~50+ clicks | Based on max CPC ($10.66), compete for all keywords |\n\n**Recommendation:** Start with **$400.50-410.22/day** to gather data, then optimize.\n\n---\n\n*Match Type: All keywords will use **BROAD match** (Google's 2025 recommendation with Smart Bidding)*\n\n\n---\n\n## \ud83d\udcdd How to Use These Keywords\n\n**Recommended Keywords:** 20 keywords selected for optimal performance\n\n**Next Steps:**\n1. Review the keywords above - they're prioritized by commercial intent (CPC-based)\n2. If you want to modify the selection, let me know:\n   - \"Add keyword X\"\n   - \"Remove keyword Y\"\n   - \"Use only HIGH intent keywords\"\n3. When ready, I'll create your campaign with these keywords using BROAD match\n\n**Seed Keywords Used:** Coinbase Advanced trading bot, Coinbase trading bot, crypto trading bot, Coinbase portfolio rebalancing, crypto portfolio automation...\n**Total Keywords Found:** 86 from Google Keyword Planner\n"
+      }
+    ],
+    "isError": false,
+    "structuredContent": {
+      "recommended_keywords": [
+        "3commas",
+        "crypto hopper",
+        "ai crypto trading bot",
+        "artificial intelligence crypto trading",
+        "cryptocurrency ai trading",
+        "ai trading cryptocurrency",
+        "pionex trading bot",
+        "best ai crypto trading bot",
+        "automated crypto trading",
+        "automated cryptocurrency trading",
+        "ai trading bots",
+        "crypto trading bot",
+        "crypto bot trading",
+        "cryptocurrency trading bot",
+        "trading crypto bot",
+        "bot for trading cryptocurrency",
+        "trading bot for cryptocurrency",
+        "best ai trading bot",
+        "automated trading bots",
+        "best trading bot"
+      ],
+      "keyword_metrics": [
+        {
+          "keyword": "3commas",
+          "avg_monthly_searches": 3600,
+          "competition": "LOW",
+          "avg_cpc": 10.05,
+          "low_top_of_page_bid": 3.84,
+          "high_top_of_page_bid": 16.26
+        },
+        {
+          "keyword": "crypto hopper",
+          "avg_monthly_searches": 2900,
+          "competition": "LOW",
+          "avg_cpc": 8.75,
+          "low_top_of_page_bid": 2.99,
+          "high_top_of_page_bid": 14.5
+        },
+        {
+          "keyword": "ai crypto trading bot",
+          "avg_monthly_searches": 880,
+          "competition": "MEDIUM",
+          "avg_cpc": 8.66,
+          "low_top_of_page_bid": 3.1,
+          "high_top_of_page_bid": 14.21
+        },
+        {
+          "keyword": "artificial intelligence crypto trading",
+          "avg_monthly_searches": 720,
+          "competition": "MEDIUM",
+          "avg_cpc": 10.66,
+          "low_top_of_page_bid": 3.95,
+          "high_top_of_page_bid": 17.37
+        },
+        {
+          "keyword": "cryptocurrency ai trading",
+          "avg_monthly_searches": 720,
+          "competition": "MEDIUM",
+          "avg_cpc": 10.66,
+          "low_top_of_page_bid": 3.95,
+          "high_top_of_page_bid": 17.37
+        },
+        {
+          "keyword": "ai trading cryptocurrency",
+          "avg_monthly_searches": 720,
+          "competition": "MEDIUM",
+          "avg_cpc": 10.66,
+          "low_top_of_page_bid": 3.95,
+          "high_top_of_page_bid": 17.37
+        },
+        {
+          "keyword": "pionex trading bot",
+          "avg_monthly_searches": 590,
+          "competition": "LOW",
+          "avg_cpc": 8.15,
+          "low_top_of_page_bid": 0.05,
+          "high_top_of_page_bid": 16.24
+        },
+        {
+          "keyword": "best ai crypto trading bot",
+          "avg_monthly_searches": 320,
+          "competition": "LOW",
+          "avg_cpc": 8.58,
+          "low_top_of_page_bid": 2.96,
+          "high_top_of_page_bid": 14.19
+        },
+        {
+          "keyword": "automated crypto trading",
+          "avg_monthly_searches": 260,
+          "competition": "LOW",
+          "avg_cpc": 8.16,
+          "low_top_of_page_bid": 2.88,
+          "high_top_of_page_bid": 13.44
+        },
+        {
+          "keyword": "automated cryptocurrency trading",
+          "avg_monthly_searches": 260,
+          "competition": "LOW",
+          "avg_cpc": 8.16,
+          "low_top_of_page_bid": 2.88,
+          "high_top_of_page_bid": 13.44
+        },
+        {
+          "keyword": "ai trading bots",
+          "avg_monthly_searches": 6600,
+          "competition": "MEDIUM",
+          "avg_cpc": 7.19,
+          "low_top_of_page_bid": 2.81,
+          "high_top_of_page_bid": 11.58
+        },
+        {
+          "keyword": "crypto trading bot",
+          "avg_monthly_searches": 1900,
+          "competition": "LOW",
+          "avg_cpc": 7.34,
+          "low_top_of_page_bid": 2.74,
+          "high_top_of_page_bid": 11.95
+        },
+        {
+          "keyword": "crypto bot trading",
+          "avg_monthly_searches": 1900,
+          "competition": "LOW",
+          "avg_cpc": 7.34,
+          "low_top_of_page_bid": 2.74,
+          "high_top_of_page_bid": 11.95
+        },
+        {
+          "keyword": "cryptocurrency trading bot",
+          "avg_monthly_searches": 1900,
+          "competition": "LOW",
+          "avg_cpc": 7.34,
+          "low_top_of_page_bid": 2.74,
+          "high_top_of_page_bid": 11.95
+        },
+        {
+          "keyword": "trading crypto bot",
+          "avg_monthly_searches": 1900,
+          "competition": "LOW",
+          "avg_cpc": 7.34,
+          "low_top_of_page_bid": 2.74,
+          "high_top_of_page_bid": 11.95
+        },
+        {
+          "keyword": "bot for trading cryptocurrency",
+          "avg_monthly_searches": 1900,
+          "competition": "LOW",
+          "avg_cpc": 7.34,
+          "low_top_of_page_bid": 2.74,
+          "high_top_of_page_bid": 11.95
+        },
+        {
+          "keyword": "trading bot for cryptocurrency",
+          "avg_monthly_searches": 1900,
+          "competition": "LOW",
+          "avg_cpc": 7.34,
+          "low_top_of_page_bid": 2.74,
+          "high_top_of_page_bid": 11.95
+        },
+        {
+          "keyword": "best ai trading bot",
+          "avg_monthly_searches": 1300,
+          "competition": "MEDIUM",
+          "avg_cpc": 7.87,
+          "low_top_of_page_bid": 2.54,
+          "high_top_of_page_bid": 13.2
+        },
+        {
+          "keyword": "automated trading bots",
+          "avg_monthly_searches": 720,
+          "competition": "MEDIUM",
+          "avg_cpc": 6.47,
+          "low_top_of_page_bid": 2.64,
+          "high_top_of_page_bid": 10.29
+        },
+        {
+          "keyword": "best trading bot",
+          "avg_monthly_searches": 390,
+          "competition": "MEDIUM",
+          "avg_cpc": 6.03,
+          "low_top_of_page_bid": 2.36,
+          "high_top_of_page_bid": 9.71
+        }
+      ],
+      "keywords_by_intent": {
+        "high": [
+          "3commas",
+          "crypto hopper",
+          "ai crypto trading bot",
+          "artificial intelligence crypto trading",
+          "cryptocurrency ai trading",
+          "ai trading cryptocurrency",
+          "pionex trading bot",
+          "best ai crypto trading bot",
+          "automated crypto trading",
+          "automated cryptocurrency trading",
+          "ai bots for trading",
+          "ai trading bot crypto",
+          "crypto snipe bot",
+          "pionex crypto",
+          "crypto bot telegram",
+          "software for crypto trading",
+          "ai crypto bot",
+          "artificial intelligence crypto bot",
+          "crypto telegram bot",
+          "cryptocurrency bot telegram",
+          "telegram crypto bot"
+        ],
+        "medium": [
+          "ai trading bots",
+          "crypto trading bot",
+          "crypto bot trading",
+          "cryptocurrency trading bot",
+          "trading crypto bot",
+          "bot for trading cryptocurrency",
+          "trading bot for cryptocurrency",
+          "best ai trading bot",
+          "automated trading bots",
+          "best trading bot",
+          "free ai trading bot",
+          "best crypto trading bot",
+          "3commas trading bot",
+          "best crypto trading bots",
+          "ai trading bot free",
+          "ai bots trading",
+          "best trading bots crypto",
+          "artificial intelligence bot trading",
+          "best crypto bot trading",
+          "best crypto bot trader",
+          "best trading bot cryptocurrency",
+          "auto trading bots",
+          "crypto arbitrage bot",
+          "arbitrage crypto bot",
+          "arbitrage bot crypto",
+          "crypto bot arbitrage",
+          "crypto ai trading bot",
+          "crypto ai trading bots",
+          "free trading bot",
+          "telegram trading bot",
+          "coinbase trading bot",
+          "free crypto trading bot",
+          "automated crypto trading bot",
+          "automated ai trading bot",
+          "crypto trading bot free",
+          "crypto trade bot free",
+          "best automated crypto trading platform",
+          "best automated trading bots",
+          "grid trading bot",
+          "trading bot ai",
+          "cryptocurrency auto trading",
+          "auto trade cryptocurrency"
+        ],
+        "low": [
+          "trading bot",
+          "trade bot",
+          "bitsgap",
+          "crypto bot",
+          "bot for trading",
+          "crypto algo trading",
+          "day trading bot",
+          "arbitrage bot",
+          "binance trading bot",
+          "trading bot binance",
+          "pionex crypto trading bot",
+          "binance bot trading",
+          "cryptohopper trading bot",
+          "bot day trading",
+          "trading bots for binance",
+          "binance trader bot",
+          "bot crypto price",
+          "tradesanta",
+          "snipe bot crypto",
+          "bot trader",
+          "pionex exchange",
+          "tradingbots",
+          "market bots"
+        ]
+      },
+      "total_keywords_found": 86,
+      "budget_recommendation": {
+        "conservative": 400.5,
+        "moderate": 410.22,
+        "aggressive": 533.0,
+        "avg_cpc": 8.2,
+        "median_cpc": 8.01,
+        "max_cpc": 10.66,
+        "target_clicks_per_day": 50
+      }
+    },
+    "_meta": {
+      "openai/outputTemplate": "ui://adspirer/quota-pricing",
+      "openai/widgetAccessible": true,
+      "ui/template": "ui://adspirer/quota-pricing"
+    },
+    "_quota_data": {
+      "used": 4,
+      "limit": 150,
+      "tier": "plus",
+      "period_end": "2026-08-10",
+      "upgrade_url": "https://adspirer.ai/",
+      "usage_percent": 2.666666666666667,
+      "app_user_id": "5cbd3723-f770-4b09-8729-b5cd39ed8c83",
+      "user_id": "5cbd3723-f770-4b09-8729-b5cd39ed8c83",
+      "quota_period_kind": "monthly",
+      "annual_pool": null,
+      "period_label": "this month"
+    }
+  }
+}

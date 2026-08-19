@@ -1,5 +1,9 @@
 # Phase 5/6 Trading Bot – Architecture & Configuration
 
+> **LEGACY — not SSOT (banner 2026-08-13).**  
+> Paths under `~/.openclaw/workspace/operations/crypto-bot/` and Phase 5 pair lists are **historical**.  
+> Current repo: `/home/brad/projects/crypto-trading-bot`. Config: `config/trading_config_phase6.json`. Index: `docs/SPECS_INDEX.md`.
+
 ## Overview
 
 The trading bot is **fully configurable** – pairs, capital, risk parameters are loaded from JSON config files, not hardcoded.

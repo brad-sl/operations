@@ -54,9 +54,11 @@ class TradePlan:
 
 @dataclass
 class AllocatorConfig:
+    # Defaults match intended live policy (see runtime_knobs / trading_config_phase6.json).
+    # Prefer create_allocator_from_config() so live paths never drift from config.
     min_move_usd: float = 50.0
-    min_score_delta: float = 0.15
-    stop_loss_pct: float = 0.12
+    min_score_delta: float = 0.05
+    stop_loss_pct: float = 0.03
     rebalance_freq_days: int = 1
     fee_rate: float = 0.001
     use_inverse_vol_base: bool = True

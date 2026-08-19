@@ -1,10 +1,2424 @@
+## P6-RESEARCH-SQUEEZE-REGIME-BREAKOUT-20260819 — OPEN
+
+**Type:** research + paper (not Type:test auto_pickup)  
+**Status:** OPEN (2026-08-19)  
+**auto_pickup:** false  
+**Priority:** P2 analyst / entry timing  
+**Lane:** L2 capital timing (separate from membership)  
+**Flag:** COLLECTING  
+**Source:** Brad dialog — High/Medium squeeze→regime→confirm priorities
+
+### Plain English
+Detect **volatility compression (coil)** before break; apply **regime bias**; require **volume + ATR + close quality (+ efficiency)** confirmation. Link coil→breadth expansion into cash re-risk tags. Does not replace layered breakout silently; does not gate membership seats.
+
+### Shipped (2026-08-19)
+- Charter: `docs/research/SQUEEZE_REGIME_BREAKOUT_RESEARCH.md`
+- Pure: `phase6/research/squeeze_regime_breakout.py`
+- ISO: `phase6/research/test_isolation_squeeze_regime_breakout.py` **PASS**
+- Bake-off: `phase6/research/run_squeeze_regime_breakout_bakeoff.py` → `reports/SQUEEZE_REGIME_BREAKOUT_BAKEOFF_LATEST.md`
+- Cash-rerisk M2 tags: `coil_ready_wait_breadth` / `fire_coil_expansion` in `market_breadth_breakout.py` + shadow rule doc
+
+### Bake-off snapshot (BTC daily, ~20bps fee) — honest
+| Arm | N | 7d mean | Hit | Note |
+|-----|--:|--------:|----:|------|
+| S3_regime_eff | 10 | **+4.3%** | 70% | Best point estimate — **N too small** |
+| M2_coil_then_b4 | 39 | +1.9% | 46% | Coil→breadth path; near N floor |
+| S1/S2 | 13 | +1.8% | 62% | Thin |
+| C0b breakout+RSI | 387 | −0.8% | 43% | Control — weak on this tape |
+| BH BTC always | 1965 | +0.1% | 49% | Beta floor |
+
+**exploit_ready: false** — need more signals / multi-asset / stability before any live talk.  
+**Paper policy (Brad 2026-08-19):** **M2 primary** (provisional small-gain); **S3 challenger** only if N≥40 and still competitive — no swap on N=10.
+
+### Next
+1. Widen S3 sample (ETH/SOL + mild sensitivity) — still paper; challenge bar N≥40  
+2. Would-fire logger for M2 primary (+ S3 when it fires) alongside B4 cash rule  
+3. Keep separate from membership HC board  
+
+### Non-goals
+Live runner hook; pattern zoo; OI; squeeze as membership gate.
+
+---
+
+## P6-RESEARCH-BREADTH-MOMENTUM-BREAKOUT-20260819 — OPEN
+
+**Type:** research + paper shadow (not Type:test auto_pickup)  
+**Status:** OPEN (2026-08-19)  
+**auto_pickup:** false  
+**Priority:** P2 analyst / capital aftercare  
+**Lane:** L2 Capital + L5 basket/membership (Path B separate)  
+**Decision (outcome):** collecting / design  
+**Flag:** COLLECTING  
+**Source:** Brad 2026-08-19 — multi-pair green day; book ~cash; only LINK rode size; BTC rotation miss; encourage rotation paper arms (ZEC/HYPE)
+
+### Plain English
+When many high-value pairs run together (market momentum/breakout), we should (1) **research** which breadth indicator would have flagged it, and (2) **paper-shadow** a small cash re-risk into unblocked basket names after rotation left us cash-heavy — without live buys. Membership swaps (ZEC/HYPE) stay on discovery/arms CF path.
+
+### Hypothesis
+Multi-pair breadth + cash-idle after rotation is a catchable process gap; small rebalance sleeve and/or proven rotation arms can recover beta without full-book FOMO.
+
+### Success (research)
+1. Indicator bake-off B1–B4 on long tape → primary pick or kill  
+2. Case 2026-08-19 reconstructs **would-fire** for cash rule  
+3. Path A (cash re-risk) and Path B (membership) scored separately  
+4. No live promote without Brad + N floors
+
+### Shipped (2026-08-19)
+- Charter: `docs/research/MARKET_BREADTH_MOMENTUM_BREAKOUT_RESEARCH.md`
+- Shadow rule: `docs/research/CASH_RERISK_AFTER_ROTATION_SHADOW_RULE.md`
+- Pure helpers: `phase6/research/market_breadth_breakout.py`
+- ISO: `phase6/research/test_isolation_market_breadth_breakout.py` **PASS**
+- Case: `scripts/phase6/run_breadth_cash_rerisk_case_20260819.py` → `data/state/breadth_cash_rerisk_case_20260819.json`, `reports/BREADTH_CASH_RERISK_CASE_20260819.md`
+- Case result: breadth **ON** (6/8 ≥+3%); cash frac ~**0.87**; shadow **FIRE** paper $75 → BTC+ETH; BTC clip missed MTM ~$159
+- **Bake-off #1 DONE** (long tape 2021-01→2026-08-15): `phase6/research/run_breadth_momentum_bakeoff.py` → `reports/BREADTH_MOMENTUM_BAKEOFF_LATEST.md`
+  - Primary paper: **B4 vol-expand cluster** (7d +1.67% vs cash, hit~54%, N=76) — only ~+0.4pp vs always-long beta; **exploit_ready=false**
+  - Secondary paper: **B1b** breadth 2%/k4 (N=294, 7d +1.03%)
+  - **B3 drop** as breadth primary (negative vs cash)
+- Shadow swap CF refreshed + **confidence board**: `reports/BASKET_SWAP_CONFIDENCE_BOARD_LATEST.md`
+  - **HC=NO** all arms; decision point = 7d N≥12 + excess>0 + hit≥45% + sleeve>$0 (not p-value yet)
+  - `risk_adj_mom` sleeve ~+$20 after bounce but 7d N=0 — immature
+- **Related:** squeeze/regime track `P6-RESEARCH-SQUEEZE-REGIME-BREAKOUT-20260819` (coil→confirm + M2 tags)
+
+### Next
+1. Paper would-fire logger for B4 (+ B1b secondary), orders=0  
+2. Keep shadow swap CF until an arm hits HC board (or modify/drop at N7≥12 red)  
+3. Path B stays separate from Path A cash re-risk  
+4. Squeeze S3/M2 paper companion (see squeeze MASTER card)
+
+### Decision point (shadow-swap) — plain
+**Not reached.** No arm reliably picks winners yet. Continue collecting. Live promote blocked. Optional stats tests only after N7≥12 and sign-stable.
+
+### Membership boundary (2026-08-19)
+**Optimize bag, not expand. Heightened potential required; deploy-ready NOT required.**  
+Spec: `docs/research/MEMBERSHIP_HEIGHTENED_POTENTIAL_BOUNDARY.md`  
+Code: `phase6/core/membership_potential_gate.py` (M0–M3) + arm proposals tagged `membership_potential_ok`  
+ISO: `phase6/research/test_isolation_membership_potential_gate.py`
+
+### Non-goals
+Live auto-buy on green tape; discovery live promote; replace layered BTC re-entry; touch live book without Brad go.
+
+
+### Related
+`docs/research/BULL_REENTRY_LAYERED_SPEC.md` · `P6-SCALE-GAP-10-BASKET-CF-LONGTAPE` · pair discovery shadow
+
+---
+
+## P6-LIQ-REDEPLOY-POLICY-20260816 — DONE
+
+**Type:** product / offline evidence  
+**Status:** DONE (2026-08-16)  
+**auto_pickup:** false  
+**Priority:** P1 product clarity  
+**Lane:** L2 Capital + L3 Manufactured loss  
+**Decision (outcome):** `unreliable_as_default` · live_partial **NO-GO**  
+**Flag:** OK (policy+FAQ+study shipped; shadow still open)
+
+### Hypothesis
+Operators need a **clear** post-liquidation redeploy path (portion, gates, benefit) — not silent full hop, not silent forever-cash without docs.
+
+### Success (met)
+1. Ledger study regenerable: `phase6/research/run_liquidation_redeploy_study.py` → `reports/LIQUIDATION_REDEPLOY_STUDY_LATEST.md`  
+2. Policy: `docs/features/LIQUIDATION_ROTATION_REDEPLOY_POLICY.md` (modes off|shadow|live_partial)  
+3. FAQ internal + external updated  
+4. Evidence: free-cap follow buys net SL-lossy (~−$242 follow SL on window); default hold correct
+
+### Non-goals
+Live enable of hop; raise $75 cap; SL-proceeds chase.
+
+### Child
+- `P6-LIQ-REDEPLOY-SHADOW-20260816` — QUEUED would-fire logger only
+
+---
+
+## P6-LIQ-REDEPLOY-SHADOW-20260816 — ACTIVE (collecting)
+
+**Type:** eng / shadow  
+**Status:** ACTIVE collecting (2026-08-16)  
+**auto_pickup:** false  
+**Priority:** P2  
+**Parent:** `P6-LIQ-REDEPLOY-POLICY-20260816`  
+**Decision (outcome):** shadow **running** · live_partial still **NO-GO**  
+**Flag:** COLLECTING
+
+### Shipped
+1. Pure decision: `phase6/core/liquidation_redeploy_shadow.py` + ISO PASS  
+2. Backfill + live-once: `phase6/research/run_liquidation_redeploy_shadow.py`  
+3. Artifacts: `reports/LIQUIDATION_REDEPLOY_SHADOW_LATEST.md`, `data/state/liquidation_redeploy_shadow_summary.json`, append-only `liquidation_redeploy_shadow.jsonl`  
+4. **orders_placed always 0**
+
+### Live auto-append (2026-08-16)
+- `runner_capital_events` disposition → `record_from_disposition_event`
+- `exchange_fill_reconciler` SELL ingest → `record_from_ledger_sell_row`
+- Log: `data/state/liquidation_redeploy_shadow.jsonl` · **orders_placed always 0**
+
+### Still open
+Multi-week live collection; historical RSI-at-event reconstruction; weekly rollup cron optional.
+
+### Non-goals
+`live_partial` without Brad + §5 gates.
+
+---
+
+## P6-SCALE-TEST-LANE-MAP-20260816 — ACTIVE
+
+**Type:** program / testing map (not Type:test auto_pickup)  
+**Status:** ACTIVE (2026-08-16)  
+**auto_pickup:** false  
+**Priority:** high (platform-scale test portfolio)  
+**Role:** crypto-orchestrator (map) · crypto-analyst (OFF/TRIAL gaps) · crypto-engineer (ISO/OPS gaps)  
+**Canonical doc:** `docs/testing/SCALE_TEST_LANES.md`  
+**Source:** Brad 2026-08-16 — leave live book as-is; build for 100s traders / 1000s trades/day; inventory tests by scale lanes; gaps → MASTER  
+**Related:** `docs/testing/ANALYST_TEST_STRATEGY.md`, `data/state/trials/TEST_STRATEGY.json`, `reports/PLATFORM_PROFITABILITY_REVIEW_2026-08-13.md`, `P6-OPT-EXAMINE-PACK-20260813`
+
+### Plain English
+Map every material test/trial/shadow pack onto scale lanes (exits, capital/regime, manufactured loss, KPIs, promotion, runtime). Each row has a **Decision (outcome)** and a **Flag** (`NEEDS_DECIDE` / `NEEDS_VALIDATE` / `NEEDS_REEVAL` / `COLLECTING` / `BLOCKED`). Gap children below are ranked by probability of measurable **fleet** gain — not single-book fire drills.
+
+### Non-goals
+Live TP/hard-exit flip, mid-cycle enable, USDC park enable, new indicator grids, discretionary sleeve trims, SEO/SEM.
+
+### Doc deliverable
+- [x] `docs/testing/SCALE_TEST_LANES.md` v1 (2026-08-16)
+- [x] SPECS_INDEX §2.6 link
+- [x] GAP-01 + GAP-02 shipped 2026-08-16 (scoreboard + fleet wound KPI)
+- [x] Liquidation redeploy policy+FAQ+study 2026-08-16 (`P6-LIQ-REDEPLOY-POLICY`) · shadow child QUEUED
+- [ ] Refresh flags after bull knobs decide + OPT-EX MASTER hygiene
+
+### Attention board (from map §5)
+
+| Flag | Items (abbrev) |
+|------|----------------|
+| **NEEDS_DECIDE** | Bull knobs trial overdue; Fib/SR entry REPORT_READY→stamp drop; OPT-EX pack MASTER status vs idle-with-reason |
+| **NEEDS_VALIDATE** | Armed-stop 7d/30d ledger; KPI truth + `/api/performance` after cache fix; OPT_EX wounds refresh |
+| **NEEDS_REEVAL** | Stoch observe_only ~2026-09-03; Smart Park gates ~2026-08-22 |
+| **COLLECTING** | Exit map / shadow TP multi-regime; hard-exit T1 clock |
+
+### Children (gaps) — ranked
+
+**Kanban scan board:** `crypto-bot-project` · framework `docs/KANBAN_MASTER_STATUS_FRAMEWORK.md` · sync `scripts/phase6/sync_master_scale_to_kanban.py` · map `data/state/kanban_master_sync_latest.json`  
+**Hub card:** `t_7b7b55d9` · open backlog lives as **`scheduled` + tags** (not agent-ready).
+
+| Rank | Task ID | Lane | Status | Kanban | Kind |
+|------|---------|------|--------|--------|------|
+| 1 | `P6-SCALE-GAP-01-EXIT-PROMOTE-SCOREBOARD-20260816` | L1 Exit | **DONE** 2026-08-16 | — | OFF/OPS |
+| 2 | `P6-SCALE-GAP-02-FLEET-WOUND-KPI-20260816` | L3 Wounds | **DONE** 2026-08-16 | — | OPS+ISO |
+| 3 | `P6-SCALE-GAP-03-CAP-SCOPE-MATRIX-20260816` | L2 Capital | **STAGED NEXT** | `t_43d2abb0` `[STAGED]` | OFF+ISO |
+| 4 | `P6-SCALE-GAP-04-HARD-EXIT-EVIDENCE-CLOCK-20260816` | L1 Exit | QUEUED | `t_41c0933f` `[PARKED]` | OFF/OPS |
+| 5 | `P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816` | L3 Wounds | **DONE** 2026-08-18 | — | OFF |
+| 5b | `P6-SCALE-GAP-05b-ENFORCE-WATCH-20260818` | L3 Wounds | **OPEN watch** | `t_f210a83f` `[WATCH]` | OPS |
+| 6 | `P6-SCALE-GAP-06-PERF-API-SOAK-20260816` | L4 KPI | **DONE** 2026-08-18 | — | ISO/OPS |
+| 7 | `P6-SCALE-GAP-07-STRATEGY-QUEUE-UNSTICK-20260816` | L5/L2 | DONE/QUEUED | — | TRIAL hygiene |
+| 8 | `P6-SCALE-GAP-08-PROMO-FIREDRILL-20260816` | L5 Promo | QUEUED | `t_6b408109` `[PARKED]` | ISO/OPS |
+| 9 | `P6-SCALE-GAP-09-NRUNNER-ISOLATION-20260816` | L6 Runtime | QUEUED | `t_8238366d` `[PARKED]` | ISO |
+| 10 | `P6-SCALE-GAP-10-BASKET-CF-LONGTAPE-20260816` | L5 Promo | QUEUED | `t_da6c594d` `[SHADOW]` | SHAD/OFF |
+
+### Explicit low-priority (do not staff as scale wins)
+Kelly live · mid-cycle enable · indicator mashup reopen · USDC-as-P&L-fix · single-book trims.
+
+---
+
+## P6-SCALE-GAP-01-EXIT-PROMOTE-SCOREBOARD-20260816 — DONE (2026-08-16)
+
+**Type:** test / offline+ops  
+**Status:** **DONE** (2026-08-16)  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L1 Exit stack  
+**Decision (outcome):** `collecting_calendar` (live) · product enum path proven  
+**Flag:** COLLECTING (calendar ~10/60d; flat episodes OK; bull/bear missing)
+
+### Shipped
+- Runner: `phase6/research/run_exit_promote_scoreboard.py`
+- Wrapper: `scripts/phase6/run_exit_promote_scoreboard.sh`
+- Isolation: `phase6/research/test_isolation_exit_promote_scoreboard.py` **PASS**
+  - fixtures: partial→`collecting_calendar`, full multi-regime+60d→`ready_for_brad_review`, auto_promote→`blocked_misconfig`
+- Artifacts: `data/state/exit_promote_scoreboard_latest.json`, `reports/EXIT_PROMOTE_SCOREBOARD_LATEST.md`
+- Live read (2026-08-16): core_gates **5/9**, shadow_days **~10.0**, regimes_ok=`flat` only; rescue sketch SL legs 4 / prior shadow 2 / sum Δ$ ~+12.7 (order-of-magnitude)
+- **Does not** enable live TP
+
+### Verify
+```bash
+cd /home/brad/projects/crypto-trading-bot
+PYTHONPATH=. .venv/bin/python phase6/research/test_isolation_exit_promote_scoreboard.py
+bash scripts/phase6/run_exit_promote_scoreboard.sh
+```
+
+---
+
+## P6-SCALE-GAP-02-FLEET-WOUND-KPI-20260816 — DONE (2026-08-16)
+
+**Type:** ops / test  
+**Status:** **DONE** (2026-08-16)  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L3 Manufactured loss  
+**Decision (outcome):** `watch_pre_fix_residual` (live)  
+**Flag:** OK — post-fix window **0**; 7d still has pre-fix RAVE residual (2026-08-12)
+
+### Shipped
+- Module: `phase6/core/fleet_wound_kpi.py` (7d / 30d / post armed-stop fix windows)
+- Wrapper: `scripts/phase6/run_fleet_wound_kpi.sh`
+- Isolation: `phase6/core/test_isolation_fleet_wound_kpi.py` **PASS**
+  - pass / watch_historical / watch_pre_fix_residual / breach (+ alert file only on breach)
+- Artifacts: `data/state/fleet_wound_kpi_latest.json`, `reports/FLEET_WOUND_KPI_LATEST.md`
+- Alert file `fleet_wound_kpi_alert.json` written **only** on `breach`; cleared otherwise
+- Live: 7d=1 (RAVE pre-fix <5m), 30d=3, post_fix=0 · no alert
+
+### Verify
+```bash
+PYTHONPATH=. .venv/bin/python phase6/core/test_isolation_fleet_wound_kpi.py
+bash scripts/phase6/run_fleet_wound_kpi.sh
+```
+
+---
+
+## P6-SCALE-GAP-03-CAP-SCOPE-MATRIX-20260816 — STAGED NEXT
+
+**Type:** test / offline+iso  
+**Status:** **STAGED NEXT** (2026-08-18) — after GAP-05 closeout (BoN runner-up)  
+**auto_pickup:** false  
+**Priority:** P1 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L2 Capital / regime  
+**blocked_on:** none for offline; **live cap rewrite** needs Brad + gates  
+**Decision (outcome):** open  
+**Flag:** —  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** design frozen below — do not close without run+decide
+
+### Staging note
+- BoN BON-STAFF-20260818-2: primary pick GAP-05; this card distinct-primary runner-up (fleet_scale).
+- Staff after GAP-05 decide packet; offline only.
+
+### Hypothesis
+`rebalance_cap_usd=$75` is cash-deploy only; rotations uncapped → “flat lab” product is leaky. Explicit scope matrix (cash-only / cash+rotation / max position) is required before cloning option B to many traders.
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | flat_B_fingerprint_OHLCV |
+| min_n | ≥15 trades or explicit slice count in report |
+| arms | cash_only · cash+rotation · max_position |
+| beat bar | report P&L, DD, stop $, rotation $ per scope; pick enum with honesty class |
+| CR accept | only if enum ≠ inconclusive and N honest; shadow before live |
+| live_promote_allowed | false |
+
+### Success
+1. Offline CF + ISO: three scope definitions under flat B fingerprint; report P&L, DD, stop $ , rotation $.  
+2. Recommendation enum: `keep_cash_only` | `extend_to_rotations` | `add_max_position` | `inconclusive`.  
+3. No live config write.  
+4. `finalize-report` + Brad `decide` + decision packet + follow_on.
+
+### Non-goals
+Thaw util to 65% full; raise cap to chase path.
+
+---
+
+## P6-SCALE-GAP-04-HARD-EXIT-EVIDENCE-CLOCK-20260816 — QUEUED
+
+**Type:** test / ops  
+**Status:** QUEUED  
+**auto_pickup:** false  
+**Priority:** P1 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L1 Exit  
+**blocked_on:** shadow hard-exit collection quality; ties `P6-HARD-EXIT-AUTO-APPLY-GATES`  
+**Decision (outcome):** open  
+**Flag:** COLLECTING  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** success bar frozen — real ops test, not a stub to close early
+
+### Hypothesis
+Auto-apply cannot scale on per-trade chat. A **T1 evidence clock** (≥7d, ≥5 staged decisions, precision vs later SL) is the missing test product.
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | hard_exit_shadow_calendar ≥7d |
+| min_n | ≥5 staged decisions |
+| pass | precision/recall proxy vs subsequent SL meets “ready to stage live_apply with approve” |
+| fail | keep shadow |
+| live_promote_allowed | false (no operator_approve / live_apply flip without Brad) |
+
+### Success
+1. Dashboard or report: decision count, age, precision/recall proxy vs subsequent SL, pending backlog.  
+2. Pass/fail for “ready to stage live_apply with approve” vs “keep shadow”.  
+3. No flip of `operator_approve` / `live_apply` without Brad.  
+4. Decide + packet when clock matures.
+
+---
+
+## P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816 — DONE (2026-08-18)
+
+**Type:** test / offline  
+**Status:** **DONE** (2026-08-18)  
+**auto_pickup:** false  
+**Priority:** P1 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L3  
+**blocked_on:** none  
+**Decision (outcome):** **tighten**  
+**Flag:** OK  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** yes — real ledger CF  
+
+### Closeout evidence (2026-08-18)
+| Gate | Result |
+|------|--------|
+| min_n re-entry ≥15 | **PASS** n=**29** (core non-dust SL=38; dust SL=37 excluded) |
+| rebuy@24/48/72h (of core SL) | **0.105 / 0.158 / 0.395** |
+| second_sl_rate (of rebuys) | **0.793** |
+| early_rebuy &lt;72h frac | **0.517** |
+| recycle stack $ (1st+2nd SL ledger pnl) | **-361.47** |
+| enum | **tighten** |
+| live_promote | false |
+
+**Reasons:** early rebuy majority among re-entries + very high second-SL rate = active recycle wound; stacked ledger loss on recycle path.
+
+**Artifacts:** `reports/DECIDE_P6_SCALE_GAP_05_POST_SL_REENTRY_EFF_20260818.md`, `reports/POST_SL_REENTRY_EFF_LATEST.md`, `data/state/post_sl_reentry_eff_latest.json`, `scripts/phase6/run_post_sl_reentry_eff.py`, `scripts/phase6/test_isolation_post_sl_reentry_eff.py`  
+
+**Config:** enforcement aligned to 72h on recovery + deposit paths (2026-08-18); hold_cash 72h policy **unchanged**; **SL% unchanged (3% base)**. Do **not** shorten cooldown. Do **not** flip to 2% SL as first lever.
+
+**Follow-on:** `P6-SCALE-GAP-05b-ENFORCE-WATCH-20260818` — 14d early_rebuy≤0.10 gate. Optional later: 72 vs 96 CF only if watch pass + trickle remains. Next staff scale lever: GAP-03 STAGED.
+
+### Enforce ship (2026-08-18) — testable decision
+| Item | Result |
+|------|--------|
+| CR | **`enforce_config_72h + watch_14d + no_sl_pct_change`** |
+| Code | `rebalance_coordinator` recovery + `runner_capital_events` deposit redeploy: drop hardcoded 24h |
+| ISO | `scripts/phase6/test_isolation_post_sl_block_enforce.py` PASS |
+| Packet | `reports/DECIDE_GAP05_ENFORCE_72H_TESTABLE_20260818.md` |
+| Rejected | SL 3%→2% as anti-trickle lever (cuts upside; wrong failure mode) |
+
+### Hypothesis
+72h hold-cash ISO ≠ proven less-loss. Need before/after (or with/without counterfactual) **second-SL rate** and $ lost to recycle under enforce=true.
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | real ledger post-SL episodes |
+| min_n | ≥15 re-entry episodes or honest inconclusive |
+| metrics | rebuy@24/48/72h, second SL rate, $ PnL recycle |
+| CR accept | enum hold_ok/tighten only if N honest and less-loss proven — not bags-only |
+| live_promote_allowed | false |
+
+### Success
+1. Offline report on real ledger: rebuy@24/48/72h, second SL rate, $ PnL recycle.  ✅  
+2. Enum: `hold_ok` | `tighten` | `gap_in_code` | `inconclusive`.  ✅ **tighten**  
+3. No shortening cooldown to “catch bounce.”  ✅  
+4. Decide + packet + follow_on.  ✅
+
+---
+
+## P6-SCALE-GAP-05b-ENFORCE-WATCH-20260818 — OPEN (watch)
+
+**Type:** test / ops  
+**Status:** OPEN — 14d watch after enforce ship  
+**auto_pickup:** false  
+**Priority:** P1 scale (L3 wounds)  
+**Parent:** `P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816`  
+**blocked_on:** none  
+**Decision (outcome):** open until bars  
+**live_promote_allowed:** false  
+
+### Hypothesis
+Aligning all auto-BUY paths to config **72h** block reduces early rebuy and second-SL recycle without changing SL%.
+
+### Success criteria (frozen)
+| Gate | Pass | Fail |
+|------|------|------|
+| Window | ≥14d after 2026-08-18 enforce ship | — |
+| early_rebuy_frac_lt_72h (new episodes) | ≤0.10 | \>0.20 → path re-audit |
+| Auto-BUY while pair in 72h SL lockout | 0 (ledger+logs) | any → P0 |
+| ISO `test_isolation_post_sl_block_enforce` | PASS | fail |
+| SL% / block_hours config | unchanged unless Brad go | unapproved change = fail |
+| Enum at close | `hold_discipline_ok` \| `still_leaking` \| `inconclusive` | — |
+
+### Non-goals
+2% SL trial; 96h block promote; cap matrix (GAP-03).
+
+### Success
+1. Re-run `run_post_sl_reentry_eff.py` at day 14; publish early_rebuy + second_sl on post-ship slice.  
+2. Decide packet.  
+3. Only if pass + trickle remains: staff optional GAP-05c 72 vs 96 offline CF.
+
+---
+
+## P6-SCALE-GAP-06-PERF-API-SOAK-20260816 — DONE (2026-08-18)
+
+**Type:** test / iso+ops  
+**Status:** **DONE** (2026-08-18)  
+**auto_pickup:** false  
+**Priority:** P1 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L4 KPI  
+**blocked_on:** none  
+**Decision (outcome):** **ship**  
+**Flag:** OK  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** ISO bar frozen  
+
+### Hypothesis
+`/api/performance` timeout→N/A is a product class bug; at N accounts concurrent polls will recreate it without soak + cache contract tests.
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | soak run cold+warm+concurrent |
+| pass | non-null periods when history exists OR explicit timeout status (never silent wrong 0) |
+| SLA | warm p95 < 1s, cold < 8s (document in map L4) |
+| CR accept | ISO green + SLA met → ship; else gap_in_code |
+
+### Closeout evidence (2026-08-18)
+| Gate | Result |
+|------|--------|
+| cold | **6.71s** (&lt;8) numeric periods |
+| warm p95 | **~0.11s** (&lt;1) |
+| concurrent ×8 | all 200, max 0.96s, honesty clean |
+| kpi_truth ISO | PASS |
+| perf soak ISO | PASS enum=ship |
+
+**Artifacts:** `reports/DECIDE_P6_SCALE_GAP_06_PERF_API_SOAK_20260818.md`, `reports/PERF_API_SOAK_LATEST.md`, `data/state/perf_api_soak_latest.json`, `scripts/phase6/run_perf_api_soak.py`, `scripts/phase6/test_isolation_perf_api_soak.py`  
+
+**Code:** single-flight + 15s negative cache + tighter timeouts in `serve_dashboard.py` / `performance_api.py` (dash thrash fix during soak).  
+
+**Backup:** GAP-05 STAGED NEXT if re-soak fails.
+
+### Success
+1. ISO or soak script: cold miss + warm hit; concurrent requests; assert non-null periods when history exists OR explicit timeout status (never silent wrong 0).  ✅  
+2. Document SLA (e.g. warm p95 &lt; 1s, cold &lt; 8s) in map L4.  ✅  
+3. Extend `test_isolation_kpi_truth` or sibling.  ✅ `test_isolation_perf_api_soak.py`  
+4. Decide/ship via isolation gate + packet note.  ✅
+
+---
+## P6-SCALE-GAP-07-STRATEGY-QUEUE-UNSTICK-20260816 — DONE (2026-08-17)
+
+**Type:** test / trial hygiene  
+**Status:** **DONE** (2026-08-17)  
+**auto_pickup:** false  
+**Priority:** P1 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L5 + L2  
+**blocked_on:** none  
+**Decision (outcome):** **done** — bull zombie aborted; FIB/SR CR REJECT drop (evidence); review_pending=0; PLAN-BULL-KNOBS-002 parked bull-gate; BEAR/METHOD regimen-ready planned  
+**Flag:** OK  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`
+
+### Hypothesis
+`ANALYST-REGIME-BULL-KNOBS` RUNNING overdue blocks offline slot; bear park (scale survival) never emits.
+
+### Success
+1. Bull trial → CLOSED with Brad/agent decide enum + report path.  
+2. `analyst_test_strategy` sync; emit or queue `PLAN-BEAR-PARK-001` when slot free.  
+3. Stamp Fib/SR REPORT_READY drops if still open.  
+4. OPT-EX MASTER children status aligned to SYNTH idle-with-reason (hygiene).  
+5. Update `SCALE_TEST_LANES.md` §3/§5.
+
+### Close note (2026-08-17)
+All success items for decide/close path completed under TEST_REGIMEN_E2E. BEAR stays **planned** (real test, not closed). OPT-EX hygiene optional leftover.
+
+### Non-goals
+Live bull util loosen without gates.
+
+---
+
+## P6-SCALE-GAP-08-PROMO-FIREDRILL-20260816 — QUEUED
+
+**Type:** test / iso+ops  
+**Status:** QUEUED  
+**auto_pickup:** false  
+**Priority:** P2 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L5 Promotion  
+**blocked_on:** none  
+**Decision (outcome):** open  
+**Flag:** —  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** yes — fire-drill is a real ops test
+
+### Hypothesis
+Promotion ISOs exist; fleet needs a **fire-drill**: bad overlay → drift detect → rollback with zero residual live knobs.
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | controlled fire-drill run |
+| pass | drift detect + rollback; ISO clean end state; zero residual live knobs |
+| fail | residual knobs or undetected drift |
+| live_promote_allowed | false (temp overlay only) |
+
+### Success
+1. Controlled test (temp overlay or fixture) exercises drift monitor + rollback.  
+2. ISO asserts clean end state.  
+3. Runbook pointer in map L5.  
+4. No permanent live knob left on.  
+5. Decide/packet on pass/fail.
+
+---
+
+## P6-SCALE-GAP-09-NRUNNER-ISOLATION-20260816 — QUEUED
+
+**Type:** test / iso  
+**Status:** QUEUED  
+**auto_pickup:** false  
+**Priority:** P2 scale  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L6 Runtime  
+**blocked_on:** may align `SCALING-1000-RUNTIME-SLICE`  
+**Decision (outcome):** open  
+**Flag:** BLOCKED soft on epic creds only if live multi-key required — prefer fixture/sim first  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** design bar frozen — keep planned until ISO exists
+
+### Hypothesis
+100s of traders require account-namespaced orders, state, and failure isolation (kill one ≠ kill fleet).
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | ≥2 account contexts sim/fixture |
+| pass | no cross bleed on controls/orders/state; kill-one ≠ kill-fleet |
+| live_promote_allowed | false |
+
+### Success
+1. ISO/sim: ≥2 account contexts; no cross bleed on controls/orders/state paths exercised.  
+2. Document failure domains.  
+3. Link Scaling-1000 slice acceptance.
+
+### Non-goals
+Full GHL SaaS UI.
+
+---
+
+## P6-SCALE-GAP-10-BASKET-CF-LONGTAPE-20260816 — QUEUED
+
+**Type:** test / shadow offline  
+**Status:** QUEUED  
+**auto_pickup:** false  
+**Priority:** P3 scale (after L1–L3 progress)  
+**Parent:** `P6-SCALE-TEST-LANE-MAP-20260816`  
+**Lane:** L5 / methodology  
+**blocked_on:** prefer after exit scoreboard underway  
+**Decision (outcome):** open  
+**Flag:** COLLECTING precursor  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**regimen_ready:** long-tape bar frozen — real CF, not a stub
+
+### Hypothesis
+Basket/discovery promote stays wrong until long-tape CF beats `control_no_swap` on growth **and** DD.
+
+### Success criteria (frozen)
+| Gate | Value |
+|------|--------|
+| primary_window | long_tape |
+| baseline | control_no_swap |
+| min_n | ≥15 swap episodes or honest sparse |
+| require_both_ret_and_dd | true |
+| CR accept | keep_shadow or propose_scoped only if primary_pass; drop_family if no_edge |
+| live_promote_allowed | false |
+
+### Success
+1. Extended CF report vs control_no_swap.  
+2. Enum: `keep_shadow` | `propose_scoped` | `drop_family`.  
+3. No live pool apply.  
+4. finalize-report + decide + packet.
+
+---
+
+## P6-OPT-EXAMINE-PACK-20260813 — IN_PROGRESS
+
+**Type:** program / examine (not Type:test auto_pickup)  
+**Status:** IN_PROGRESS (2026-08-13)  
+**auto_pickup:** false  
+**Priority:** medium  
+**Role:** crypto-analyst ×4 · crypto-engineer ×1 · crypto-orchestrator SYNTH+REV  
+**Plan:** `docs/plans/2026-08-13-platform-opt-examine-pack.md`  
+**Handoff:** `handoffs/Handoff_P6_OPT_EXAMINE_PACK_20260813.md`  
+**Source:** leftover optimization ideas after P0 race/SL + Dose v4; user asked for discrete agent tasks + assessed results  
+
+### Plain English
+Do **not** invent new strategies. Five read-only lanes answer specific leftover questions. Then one scorecard. Live TP / mid-cycle / USDC stay off.
+
+### Children
+
+| # | Task ID | Assignee | Status | Report |
+|---|---------|----------|--------|--------|
+| 1 | `P6-OPT-EX-01-EXITS-20260813` | crypto-analyst | QUEUED | `reports/OPT_EX_01_EXITS_*.md` |
+| 2 | `P6-OPT-EX-02-WOUNDS-20260813` | crypto-analyst | QUEUED | `reports/OPT_EX_02_WOUNDS_*.md` |
+| 3 | `P6-OPT-EX-03-ALLOC-20260813` | crypto-analyst | QUEUED | `reports/OPT_EX_03_ALLOC_*.md` |
+| 4 | `P6-OPT-EX-04-HOLD-20260813` | crypto-analyst | QUEUED | `reports/OPT_EX_04_HOLD_*.md` |
+| 5 | `P6-OPT-EX-05-DOSE-20260813` | crypto-engineer | QUEUED | `reports/OPT_EX_05_DOSE_*.md` |
+| S | `P6-OPT-EX-SYNTH-20260813` | crypto-orchestrator | QUEUED (parents=1–5) | `reports/OPT_EX_SYNTH_SCORECARD_*.md` |
+| R | `P6-OPT-EX-REV-20260813` | crypto-orchestrator | QUEUED (parent=S) | MASTER note |
+
+### Non-goals
+Live profit-exit, hard-exit auto-apply, mid-cycle enable, new indicator grid, SEO/SEM, Mail Batch B, Bot Mode desk.
+
+### Kanban (`crypto-bot-project`)
+
+| Lane | Card | Status at create |
+|------|------|------------------|
+| EX-01 | `t_cb2061a7` | ready → crypto-analyst |
+| EX-02 | `t_9b3ab866` | ready → crypto-analyst |
+| EX-03 | `t_138d3c6b` | ready → crypto-analyst |
+| EX-04 | `t_df4e818c` | ready → crypto-analyst |
+| EX-05 | `t_27d27077` | ready → crypto-engineer |
+| SYNTH | `t_8835b8fd` | todo (parents=01–05) |
+| REV | `t_dc24f357` | todo (parent=SYNTH) |
+
+---
+
+## P6-CRON-LINUX-CUTOVER-20260813 — DONE
+
+**Type:** ops / hermes  
+**Status:** DONE (2026-08-13)  
+**SSOT:** `docs/HERMES_CRON_SSOT.md`
+
+### Done
+- Linux user crontab **emptied of jobs** (comment pointer only). Backup `~/.hermes/cron/linux-crontab.bak.20260813`.
+- Migrated to Hermes `no_agent`: X 08:50/20:50 (`e17a43bfbed6`), free shadow 08:40/20:40 (`655188d1df61`), runner monitor */15 (`f14dc4b04e34`), ops-engineer */30 (`3c83e4d2232c`), kanban frequent backup */15 (`387e688fc854`).
+- **Dropped:** `phase6_rebalance_monitor.sh` (dead `hermes send --target`); `/tmp/fable5_reminder.py`.
+- Dashboard: user unit `phase6-dashboard-8502.service` **enabled + active**, curl `/api/pair-signals` 200.
+
+### Guardrail
+Never add Phase 6 / X / Apify jobs back to Linux crontab.
+
+---
+
+## P6-DASH-SYSTEMD-8502-20260813 — DONE
+
+**Status:** DONE  
+**Unit:** `~/.config/systemd/user/phase6-dashboard-8502.service`  
+**Verify:** `systemctl --user is-active phase6-dashboard-8502.service` + curl :8502
+
+---
+
+## P6-SSOT-BANNERS-20260813 — DONE (partial hygiene)
+
+**Status:** DONE (banners only; full archive still `P6-SSOT-DOC-HYGIENE-20260807`)  
+**Bannered:** `docs/FUNCTIONAL_SPEC.md`, `docs/ARCHITECTURE.md`, `docs/CRON_SCHEDULE.md`  
+**Archived:** `handoffs/DELEGATION_QUEUE.md` → `handoffs/archive/DELEGATION_QUEUE.md.LEGACY_20260813` (stub left)
+
+## P6-NEAR-STOP-REBALANCE-RACE-20260813 — DONE (2026-08-13)
+**Type:** ops / risk product fix  
+**Status:** DONE  
+**Kanban:** t_f1d02d37 (crypto-orchestrator)  
+Hard [ARMED-STOP] gate + isolation PASS + live verify (test+audit 0 + registry armed + MASTER/SPECS). GH#22 closed. Real data only.
+
+---
+
+---
+
+## MAIL-GMAIL-BATCH-B-20260813 — IN_PROGRESS
+
+**Type:** personal mail (not crypto)  
+**Status:** IN_PROGRESS (2026-08-13) — waiter running; IMAP was rate-limited (os error 11) at kickoff  
+**Handoff:** `handoffs/Handoff_MAIL_GMAIL_BATCH_B_20260813.md`  
+**Kanban:** `t_ef68e0f0`  
+**Account:** `personal` / bradsl@gmail.com  
+**Runner:** `~/mail-agent/run_batch_b_when_ready.py` → `archive_inbox_before.py`  
+**State dir:** `~/mail-agent/inbox_archive_batch_b/` (separate from Batch A)  
+**Cutoff:** `ARCHIVE_BEFORE=2025-01-01` unflagged → `[Gmail]/All Mail` (no Trash)  
+**Action:** poll IMAP until healthy (max 6h), then archive 2024 unflagged; resume-safe  
+
+---
+
+## P6-NEAR-STOP-REBALANCE-RACE-20260813 — DONE (2026-08-13)
+
+**Type:** ops / risk product fix  
+**Status:** DONE  
+**Date:** 2026-08-13  
+**Priority:** P0  
+**auto_pickup:** false  
+**Role:** crypto-engineer · review crypto-orchestrator  
+**Parent:** `P6-NEAR-STOP-ADD-BLOCK-20260805` (DONE — this is the race / second-add follow-on)  
+**Handoff:** `handoffs/Handoff_P6_NEAR_STOP_REBALANCE_RACE_20260813.md`  
+**Kanban:** t_f1d02d37 (crypto-orchestrator ops fix)  
+**GitHub:** https://github.com/brad-sl/operations/issues/22  
+**Ops registry:** `P6-OPS-20260813-004`  
+**Source:** `reports/PLATFORM_PROFITABILITY_REVIEW_2026-08-13.md`
+
+### Plain English
+Rebalance must not add into an **armed stop** or race a fill (BUY then SL same pair minutes later). Soft near-stop gate is not enough — RAVE 2026-08-11 / BTC 2026-08-12 still happened.
+
+### Success
+Isolation covers in-flight stop + same-session add; live execute path wired; 7d ledger audit; no SL/TP/thaw/basket changes. Target: **0 new** manufactured add→SL after deploy.
+**Fix (kanban t_f1d02d37):** Hard [ARMED-STOP] gate in runner_capital_events.filter (any BUY on open-reg stop). Isolation updated+PASS. Ledger repro used. See phase6/core/runner_capital_events.py and test.
+
+
+### Non-goals
+Widen SL, live TP, mid-cycle on, cash-hold clear, discovery promote.
+
+### Verification (kanban t_f1d02d37 run 2026-08-13)
+- Reproduced: `PYTHONPATH=. python3 scripts/phase6/test_isolation_near_stop_add_block.py` → PASS (logs [ARMED-STOP] for rebalance_buy + empty-reason BUY into armed; soft cases too)
+- Audit: `python3 scripts/phase6/audit_rebalance_sl_gaps.py` → "BUY sl_attached=false (last 72h): 0"
+- Ledger repro: RAVE 08-12 rebal_buys → stop 6min/0.5min pre-fix only; no new post-fix races <2h
+- Live state: protective_orders_registry has open armed on BTC-USD, LINK-USD, ADA-USD, PAXG-USD (gate active)
+- Code path: filter in rebalance_coordinator.py:192 (ARCH-4 allocator plan) + hard block in runner_capital_events.py:660 before soft eval
+- Config: near_stop_add_block_enabled: True
+- GH#22: CLOSED (with kanban ref comment)
+- Registry P6-OPS-20260813-004: status=done (closed 2026-08-13)
+- SPECS_CODE_GAP.md: updated item 8 → DONE
+- No runner restart needed; module exercised via test import
+- Target met: 0 new manufactured add-into-armed-stop
+
+---
+
+## P6-SAME-SESSION-SL-METRIC-20260813 — DONE (2026-08-13)
+
+**Type:** observability / brief  
+**Status:** DONE  
+**Date:** 2026-08-13  
+**Priority:** P0  
+**auto_pickup:** false  
+**Role:** crypto-engineer · review crypto-orchestrator  
+**Sibling:** `P6-NEAR-STOP-REBALANCE-RACE-20260813` (DONE)  
+**Handoff:** `handoffs/Handoff_P6_SAME_SESSION_SL_METRIC_20260813.md`  
+**Kanban:** `t_872cae34` (primary) · closed duplicates `t_25022b2c`  
+**GitHub:** https://github.com/brad-sl/operations/issues/23  
+**Ops registry:** `P6-OPS-20260813-003` (canonical) · duplicate `002` closed  
+**Source:** `reports/PLATFORM_PROFITABILITY_REVIEW_2026-08-13.md`
+
+### Plain English
+Count BUY then `stop_loss_exchange` on the same pair inside **<2h** (also <5m). Show on intel brief Health line. Quiet `0` when none. Ops triage medium only if **3d** count > 0.
+
+### Delivered
+- `phase6/core/same_session_sl.py` — ledger auditor + `same_session_sl_latest.json`
+- Brief Health line in `generate_trading_intelligence_report.py`
+- Isolation: `scripts/phase6/test_isolation_same_session_sl.py` PASS
+- Ops hook: `ops_triage_discover.py` (3d lookback)
+- Sample: `Same-session SL (<2h): 5 (ADA-USD, ARB-USD, LINK-USD, OP-USD, RAVE-USD) | <5m: 4` (30d ledger; pre-fix history expected)
+
+### Non-goals
+Race fix (sibling DONE). Risk-knob changes. Telegram spam.
+
+---
+
+## BASKET-PROMOTE-001 — LIVE (2026-08-08)
+
+**Status:** PROMOTED  
+**Action:** `ADA-USD` → `RAVE-USD` in `global_settings.pairs`  
+**Why not OP→RAVE:** holdings loader bug treated all positions as $0; OP still ~$94 held. Loader fixed; protected ejects work. Flat dust ADA used instead.  
+**Backup:** `config/trading_config_phase6.json.bak_promote_20260808_223445`  
+**Metrics:** `phase6/core/basket_pick_metrics.py` ledger `data/state/basket_pick_metrics.jsonl` pick `8b47ff6a-9c6` baseline RAVE @$0.367  
+**Refresh cron:** `phase6-basket-pick-metrics-refresh` daily (local)  
+**Orders:** none placed by promote — eligibility only  
+
+## PAIR-DISCOVERY-FUNNEL-001 — SHADOW (2026-08-08)
+
+**Type:** platform / emerging pair acquisition  
+**Status:** SHADOW_READY  
+**Related:** `POOL-CYCLING-001`, `docs/research/PAIR_DISCOVERY_FUNNEL.md`  
+
+### Problem
+Fixed-list basket rotation misses **emerging high-energy** upside. Spending sentiment on a wide universe wastes budget.
+
+### Funnel
+0 Universe (public products) → 1 Prequal energy (`/stats`, free) → 2 Quality candles (shortlist only, free) → 3 Deep RSI/X **OFF** → 4 Promote via pool_cycling shadow.
+
+### Artifacts
+- `phase6/core/pair_discovery.py`
+- `scripts/phase6/run_pair_discovery_shadow.py`
+- Isolation: `scripts/phase6/test_isolation_pair_discovery.py` **PASS**
+- Live dry-run: 389 → 18 prequal → 12 quality → 5 contenders; **0 sentiment calls**
+
+### Next
+- ~~Schedule discovery 1–2×/day shadow; warm RSI only on contenders before cycler promote~~ **DONE 2026-08-08**
+  - Hermes cron `phase6-discovery-pipeline-shadow` @ **10:15 & 22:15 America/Los_Angeles** (`15 10,22 * * *` local PT)
+  - Script: `~/.hermes/scripts/run_discovery_pipeline_shadow.sh` → project `scripts/phase6/run_discovery_pipeline_shadow.py`
+  - Flow: discover (0 sentiment) → pump brake → RSI warm top-5 merge → pool cycle shadow (max 1 swap, sticky BTC/ETH)
+  - Telegram **only** on swap proposal or failure (quiet otherwise)
+  - First live dry-run proposal: **ADA-USD → ICP-USD** (config **not** applied)
+- Optional quality: spread/book, segment caps, meme denylist (PUMP ticker hygiene)
+- Brad OK required before any `--apply-config` basket mutation
+
+### Anti-bleed
+- `apply_config=False` hard-coded in pipeline
+- No orders, no X/Reddit in this path
+- RSI contender warm **merges** into `rsi_cache` (does not wipe basket)
+- Pump brake: |ret24h| > 80% drops promote eligibility
+- Cycler: sticky BTC/ETH, max 1 swap, prefer flat ejects (<$40 hold)
+
+---
+
+## POOL-CYCLING-001 — SHADOW IMPLEMENTED (2026-08-08)
+
+**Type:** platform / basket optimization  
+**Status:** SHADOW_READY (live config apply OFF)  
+**Date:** 2026-08-08  
+**auto_pickup:** false  
+
+### Why you saw no basket changes
+- **POOL-CYCLING-001** was designed 2026-06-13 as a *future* standalone script and was **never implemented** until today.
+- Live path only did **capital rotation inside** fixed `global_settings.pairs` (11 names).
+- Config `opportunity_pool` had only **MATIC-USD** outside the active 11; scanner scored the active basket, not a true replace cycle.
+- No Hermes/system cron mutated pairs.
+
+### What shipped (shadow)
+| Artifact | Path |
+|----------|------|
+| Core | `phase6/core/pool_cycling.py` |
+| CLI | `scripts/phase6/run_pool_cycling_shadow.py` |
+| Isolation | `scripts/phase6/test_isolation_pool_cycling.py` (PASS) |
+| Logs | `data/state/pool_cycling_latest.json`, `pool_cycling_proposals.jsonl` |
+
+**Behavior:** score active + opportunity + shadow candidates → propose weak→strong 1:1 swaps (BTC/ETH sticky). Default **does not** rewrite config. `--write-proposed` sidecar; `--apply-config` gated manual only.
+
+### Live shadow run 2026-08-08
+- Active 11 scored (ADA weakest ~0.27; ARB strongest active ~0.39).
+- Outside candidates (MATIC/AAVE/NEAR/SUI/DOT/ATOM/LTC/BCH) **NO_DATA** in RSI/sentiment/price caches → capped, **no swap**.
+- Prerequisite for useful swaps: extend RSI refresher + sentiment coverage to candidate set (or a one-shot warm-up).
+
+### Next (not auto)
+1. Warm RSI/price/sent for shadow candidates.  
+2. Weekly Hermes cron: shadow only → Telegram summary if swap≠0.  
+3. Promote via `--write-proposed` then human `--apply-config` after holdings check.  
+4. Do **not** auto-apply to live without Brad OK.
+
+---
+
+## P6-SPECS-GAP-BACKLOG-20260807 — PROGRAM (high-value gaps → tasks)
+
+**Type:** program / product backlog  
+**Status:** OPEN  
+**Date:** 2026-08-07  
+**Source:** `docs/SPECS_CODE_GAP.md` §3 (+ deprecation hygiene)  
+**Index:** `docs/SPECS_INDEX.md`  
+**auto_pickup:** false  
+
+Turn specs↔code high-value gaps into tracked work. Children below are **QUEUED** unless noted. Do **not** flip live risk knobs (exits, hard-exit, mid-cycle, USDC park, multi-tenant) without Brad explicit go + gates in each task.
+
+### Portfolio (priority order)
+
+| # | Task ID | Title | Status | blocked_on |
+|---|---------|-------|--------|------------|
+| 1 | `FEAT-PERSONALIZED-SETTINGS-IMPL-20260807` | Per-trader settings UI/API (hold, cooldown, park prefs) | **W1+W2 SHIPPED** · W3+ QUEUED | W3 banner UI |
+| 2 | `FEAT-PARK-USDC-PAXG-PACKAGE-20260807` | Unified USDC carry + PAXG Hold park package | **W0 SHIPPED · LIVE OFF** | Live enable: Brad OK + checklist |
+| 3 | `P6-EXIT-PROFIT-LIVE-GATES-20260807` | Profit-exit live path (regime map primary; global shadow secondary) | QUEUED / GATED | `P6-REGIME-EXIT-POLICY-MAP-20260806` collection gates + Brad OK |
+| 4 | `P6-HARD-EXIT-AUTO-APPLY-GATES-20260807` | Hard-exit auto-apply promotion criteria | QUEUED / GATED | operator-loop evidence + Brad OK |
+| 5 | `P6-MID-CYCLE-ALLOCATOR-EVAL-20260807` | Mid-cycle deploy: eval → optional gated enable | QUEUED | none for **study**; enable needs Brad OK |
+| 6 | `SCALING-1000-RUNTIME-SLICE-20260807` | First runtime multi-tenant slice (not full epic) | QUEUED | GHL-T0 admin / epic plans |
+| 7 | `P6-SSOT-DOC-HYGIENE-20260807` | Stale SSOT docs: banners, PRD status fix, optional archive | QUEUED | none |
+| 8 | `P6-NEAR-STOP-REBALANCE-RACE-20260813` | Rebalance must not add into armed stop / same-session SL race | **DONE** | hard armed gate + isolation (t_f1d02d37) | none (follow-on of DONE near-stop soft gate) |
+| 9 | `P6-SAME-SESSION-SL-METRIC-20260813` | Brief + JSON count of BUY→SL same pair <2h | **DONE** | none (sibling of #8) |
+
+### Explicit non-goals (do not open as “enable” tasks)
+- DeRisk ladder ON  
+- Reddit sentiment live  
+- Promote OPT from Path A backtest only  
+- Live TP without multi-regime shadow gates  
+
+---
+
+## FEAT-PERSONALIZED-SETTINGS-IMPL-20260807 — W1+W2 SHIPPED · W3+ QUEUED
+
+**Type:** feature  
+**auto_pickup:** false  
+**blocked_on:** none for W3  
+**Status:** **W1+W2 SHIPPED** (2026-08-08) · W3/W4 still open  
+**Priority:** high  
+**Role:** platform / product  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #1 (type A)  
+**Spec:** `docs/features/TRADER_PERSONALIZED_SETTINGS_SPEC.md` (`FEAT-TRADER-PERSONALIZED-SETTINGS-2026-08`)  
+**Related:** `docs/CAPITAL_AND_PORTFOLIO_EVENTS.md`, `phase6/core/capital_controls.py`, `phase6/core/capital_controls_store.py`, `phase6/core/capital_controls_api.py`, `config/trader_accounts.json`
+
+### Plain English
+Traders (and dash) need first-class **settings** for cash hold, rebuy cooldown policy, USDC park prefs, Preserve interest — not only operator flag files on one book.
+
+### W1 delivered (2026-08-08)
+1. `capital_controls` block in `config/trader_accounts.json` (defaults + primary + default accounts).  
+2. `trader_account_config.capital_controls_settings` / `capital_controls_for_runner` / `resolve_runner_account_id`.  
+3. `runner_capital_events._runner_capital_settings` overlays account policy over `global_settings` for hold/cooldown/cancel-stops (behavior-neutral vs current live GS).  
+4. `capital_user_controls.json` read model schema v2 includes `capital_controls_policy`.  
+5. Isolation: `phase6/core/test_isolation_capital_controls_policy.py` **PASS**.  
+
+### W2 delivered (2026-08-08)
+1. Per-account state SSOT: `data/state/capital_controls/{account_id}/state.json` (hold $ + cooldown map).  
+2. Primary book seeded/mirrored from `phase6_runner_state.json` (live hold preserved).  
+3. Service API: `phase6/core/capital_controls_api.py` + dash routes `GET/POST /api/capital/*`.  
+4. CLI `--account-id`; account-scoped flags under store dir.  
+5. Isolation: no cross-account bleed — `test_isolation_capital_controls_state.py` **PASS**.  
+
+### Remaining waves
+| Wave | Work |
+|------|------|
+| W3 | Banner + release UX on portfolio home |
+| W4 | Park pref linkage (Smart Park profile) |
+
+### Success criteria
+1. ~~Per-account **policy** in `trader_accounts.json`~~  
+2. ~~Per-account **state** for hold $ and cooldown map (W2)~~  
+3. ~~API actions: Release cash hold; clear rebuy cooldown (all/pair)~~ · banner W3.  
+4. Banner/KPI honesty: deployable cash never ignores hold (partial today; banner W3).  
+5. ~~Isolation tests for policy + state multi-account separation~~  
+6. Update SPECS_INDEX + SPECS_CODE_GAP row → PARTIAL_LIVE.  
+
+### Non-goals
+- Auto-arm full PAXG  
+- Changing REGIME-CASH winners from settings UI  
+
+### Verification
+```bash
+PYTHONPATH=. python phase6/core/test_isolation_capital_controls_policy.py
+PYTHONPATH=. python scripts/phase6/test_isolation_capital_controls.py
+```
+
+---
+
+## FEAT-PARK-USDC-PAXG-PACKAGE-20260807 — W0 SHIPPED · LIVE OFF
+
+**Type:** feature / product scenario  
+**auto_pickup:** false  
+**blocked_on:** live enable → Brad OK + operator checklist  
+**Status:** **W0 SHIPPED** (2026-08-07) · live package **OFF**  
+**Priority:** high  
+**Role:** platform / product  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #2 (type A → W0 closed; live enable remains)  
+**Spec:** `docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md`  
+**Checklist:** `docs/features/PARK_USDC_PAXG_OPERATOR_CHECKLIST.md`  
+**Config:** `config/park_package.json` · per-account `park_package` in `trader_accounts.json`  
+**Code:** `phase6/core/park_package.py` · hook `cycle_coordinator._maybe_park_package`  
+**Isolation:** `phase6/core/test_isolation_park_package.py` **PASS**  
+**Status JSON:** `data/state/park_package_status.json`  
+**Doctrine:** `PARK_BALLAST_DECISION_MATRIX.md`, `PARK_REGIME_POLICY.md`  
+**Layers:** `LIVE_USDC_PARK.md`, `PRESERVE_HOLD_MVP_SPEC.md`  
+**Parent prefs:** `FEAT-PERSONALIZED-SETTINGS-IMPL-20260807` (W4 prefs surface)
+
+### Plain English
+One coherent **park stack**: idle capital → USDC carry (venue-quoted; never hard-code unquoted APY in UI) **plus** optional PAXG Hold (micro → full only on explicit scale). Not three disconnected toggles.
+
+### W0 delivered (2026-08-07)
+1. Package FEAT spec (profiles, sequences, double-spend, waves).  
+2. Operator checklist.  
+3. `park_package` config (book + account); **enabled=false**, **profile=off**.  
+4. Coordinator evaluate/status; **orders=false**; **never auto-arm B**.  
+5. Runner cycle hook (status only).  
+6. Isolation PASS; primary USDC park remains off.  
+7. Index / gap / doctrine / LIVE_USDC_PARK linked.
+
+### Remaining (not W0)
+| Wave | Work | Gate |
+|------|------|------|
+| W2 | `allow_coordinate_toggles` apply USDC on/off from profile | Brad OK |
+| W3 | Auto trim B on deploy | Brad OK + shadow evidence |
+| W4 | Settings UI profile picker | settings FEAT |
+| W5 | Live enable primary `a_plus_b_micro` | Checklist §8 + Brad OK |
+
+### Success criteria (original)
+1. ~~Spec~~ 2. ~~Checklist~~ 3. ~~Config + coordinator~~ 4. ~~Safe off + isolation~~ 5. ~~Docs~~  
+Live enable / paper soak = **open** under W5.
+
+### Non-goals (unchanged)
+- Auto 20% PAXG · DeRisk · fixed 3.5% APY copy · silent live flips
+
+### Verification
+```bash
+PYTHONPATH=. .venv/bin/python phase6/core/test_isolation_park_package.py
+PYTHONPATH=. .venv/bin/python -c "from phase6.core.park_package import evaluate_and_write_status; print(evaluate_and_write_status().get('profile'), evaluate_and_write_status().get('orders'))"
+```
+
+---
+
+## P6-EXIT-PROFIT-LIVE-GATES-20260807 — QUEUED / GATED
+
+**Type:** product / risk promotion  
+**auto_pickup:** false  
+**blocked_on:** `P6-REGIME-EXIT-POLICY-MAP-20260806` shadow gates + Brad OK  
+**Status:** QUEUED / GATED — **no live TP now**  
+**Priority:** high (value) / low (urgency until data)  
+**Role:** risk / product  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #3 (type D)  
+**Live shadow:** `config/regime_exit_policy_map.json`, `config/exit_automation.json`  
+**Docs:** `docs/EXIT_AUTOMATION.md`, `docs/REGIME_EXIT_POLICY_MAP.md`  
+**Related live:** `P6-REGIME-EXIT-POLICY-MAP-20260806` (collection)
+
+### Plain English
+We instrument profit exits by regime but **never auto-take profit** yet. This task owns the **promotion checklist and implementation** when evidence is enough — regime map first, not blind global 6%.
+
+### Success criteria (before any live_apply)
+1. Shadow collection meets map gates: ~60d (or early_review 45d flag), ≥5 episodes/regime where required, bull+flat+bear preference.  
+2. Offline study re-run; no single global threshold.  
+3. Written promote plan: which regimes go live first; bear stays ride/SL unless evidence flips.  
+4. `auto_promote` stays false; Brad explicit OK.  
+5. Global shadow TP either remains backup log or `mode: off` after map trusted.  
+6. Isolation + kill switch documented.
+
+### Non-goals
+- Turning on live TP in this queue entry without gates  
+- Telegram would-fire spam (keep weekly review posture)
+
+### Verification
+- Status JSONs + episode counts pasted into this MASTER block at promote time  
+- Config diff reviewed  
+
+---
+
+## P6-HARD-EXIT-AUTO-APPLY-GATES-20260807 — QUEUED / GATED
+
+**Type:** product / risk promotion  
+**auto_pickup:** false  
+**blocked_on:** hard-exit operator-loop evidence quality + Brad OK  
+**Status:** QUEUED / GATED — operator_approve remains **true**  
+**Priority:** medium  
+**Role:** risk / ops  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #4 (type D)  
+**Docs:** `docs/HARD_EXIT_OPERATOR_LOOP.md`  
+**Config:** `regime_cash_policy.hard_exit` (`shadow_only`/`live_apply`/`operator_approve`)
+
+### Plain English
+Hard-exit can notify and wait for humans. Task defines when (if ever) `operator_approve=false` + `live_apply=true` is acceptable.
+
+### Success criteria
+1. Retrospective: false-positive / missed-bleed rate from operator loop history.  
+2. Written gates (min events, regime coverage, max adverse selection).  
+3. Staged enable plan (shadow→live_apply with approve→full auto) with rollback.  
+4. No enable without Brad OK recorded here.
+
+### Non-goals
+- Silent enable via config drive-by  
+
+### Verification
+- MASTER promote note + config commit reference  
+
+---
+
+## P6-MID-CYCLE-ALLOCATOR-EVAL-20260807 — QUEUED
+
+**Type:** platform / research → optional enable  
+**auto_pickup:** false  
+**blocked_on:** none for eval; **enable** blocked on Brad OK  
+**Status:** QUEUED  
+**Priority:** medium  
+**Role:** platform  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #5 (type C)  
+**Config:** `global_settings.mid_cycle_allocator_enabled` (currently **false**)  
+**Code:** `phase6/core/cycle_coordinator.py`, mid-cycle isolation tests
+
+### Plain English
+Good LINK/UNI-style scores after the 09:00/21:00 slot currently wait. Evaluate whether mid-cycle deploy is worth the extra turnover/risk under flat caps.
+
+### Success criteria
+1. Report: last N days of “would mid-cycle have deployed?” using logs/scores vs slot-only (counterfactual).  
+2. Risk notes: interaction with flat $75 cap, util 65%, entry RSI/sentiment gates, fees.  
+3. Go/no-go recommendation (keep off / shadow log only / enable with caps).  
+4. If enable: config flag + isolation PASS + monitor window; update SPECS_CODE_GAP.
+
+### Non-goals
+- Enabling mid-cycle in the eval-only phase  
+
+### Verification
+- `reports/MID_CYCLE_ALLOCATOR_EVAL_*.md` linked here  
+
+---
+
+## SCALING-1000-RUNTIME-SLICE-20260807 — QUEUED
+
+**Type:** platform / epic slice  
+**auto_pickup:** false  
+**blocked_on:** GHL-T0 admin readiness (credentials/Location) where required; epic plans exist  
+**Status:** QUEUED  
+**Priority:** medium (strategic)  
+**Role:** platform  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #6 (type A)  
+**Epic:** `docs/epics/SCALING-1000_EPIC.md`, `SCALING_1000_UNIFIED_ROADMAP.md`  
+**Integrations:** `docs/integrations/SCALING_1000_IMPLEMENTATION_PLAN.md`, GHL-T0 pack  
+**Config today:** `multi_tenant_enabled: false`
+
+### Plain English
+Plans ≠ runtime. Ship **one thin vertical slice**: two portfolio identities isolated (config/state/capital controls), not full GHL billing SaaS.
+
+### Success criteria
+1. Slice design note: what “account B” means in-process (uuid, state dir, credentials boundary).  
+2. Runner or supervisor can load ≥2 accounts without cross-hold/cash bleed (tie-in personalized settings state).  
+3. Feature flag remains default off for production primary.  
+4. Isolation tests for separation invariants.  
+5. Explicit out-of-scope list (billing, public launch, ads).
+
+### Non-goals
+- Full SCALING-1000 epic completion in this task  
+- Client SEO/SEM (`PROJECT_BOUNDARY`)  
+
+### Verification
+- Isolation output + design doc path on MASTER  
+
+---
+
+## P6-SSOT-DOC-HYGIENE-20260807 — QUEUED
+
+**Type:** docs / hygiene  
+**auto_pickup:** false  
+**blocked_on:** none  
+**Status:** QUEUED  
+**Priority:** medium (cheap win)  
+**Role:** docs  
+**Date:** 2026-08-07  
+**Gap:** SPECS_CODE_GAP §3 #7 + §4.1 (type E/B)  
+**Index:** `docs/SPECS_INDEX.md` §5
+
+### Plain English
+Stop agents implementing from May-era “unified SPEC” and fix Preserve PRD status lie.
+
+### Success criteria
+1. Banner at top of `docs/SPEC.md`, `docs/PHASE6.md`, `FUNCTIONAL_SPEC*.md`: **LEGACY — use SPECS_INDEX**.  
+2. Fix `docs/research/PRESERVE_MODE_PRD.md` status header to match micro live + MVP spec.  
+3. Optional: move worst offenders to `docs/archive/ssot-legacy/` with stub redirects.  
+4. `phase6/specs/README.md` already warns — confirm still accurate.  
+5. Tick SPECS_CODE_GAP §4.1 rows done/partial.
+
+### Non-goals
+- Mass rewrite of historical content  
+- Deleting evidence reports  
+
+### Verification
+- rg for files without LEGACY banner among §4.1 list  
+
+---
+
+## P6-SPECS-CODE-GAP-20260807 — DONE
+
+**Type:** docs / product hygiene  
+**Status:** DONE  
+
+- Living snapshot: `docs/SPECS_CODE_GAP.md` — specs↔code gap types, domain matrix, deprecation candidates.
+- Linked from `SPECS_INDEX.md` + `docs/README.md`.
+- **Finding:** no prior full product gap matrix; only ANALYST-OPT backtest↔live knob matrix + scattered MASTER/status tags.
+
+---
+
+## P6-SPECS-INDEX-CONSOLIDATION-20260807 — DONE
+
+**Type:** docs / product hygiene  
+**Status:** DONE  
+
+### Deliverable
+- **Canonical index:** `docs/SPECS_INDEX.md` — inventory + domain map + feature/epic registries + legacy “do not use as SSOT” + topic cheat sheet for humans/agents.
+- **Docs hub:** `docs/README.md` rewritten to point at index (was stale Phase 5.1 test readme).
+- **Features mini-registry:** `docs/features/README.md` linked upward.
+- **Legacy warning:** `phase6/specs/README.md` — mirrors not SSOT.
+- **Boundary pointer:** `docs/PROJECT_BOUNDARY.md` → SPECS_INDEX.
+
+### Consolidation approach
+Logical (index + homes for new work), **not** mass file moves (avoids breaking MASTER/handoffs/skills links). New FEATs → `docs/features/`; doctrine → `docs/research/`; programs → `docs/epics/`.
+
+### Inventory snapshot
+~300+ md under `docs/`; ~70 listed as canonical navigable; archive/legacy/trial noise excluded from SSOT.
+
+---
+
+## P6-CAPITAL-HOLD-CLEAR + FEAT-PERSONALIZED-SETTINGS — 2026-08-07
+
+**Type:** ops + product spec  
+**Status:** DONE (hold clear) · SPEC FILED (personalized settings)
+
+### Ops
+- Cleared **manual cash hold $627.86** (Aug 4 LINK manual liquidation residue).
+- State: `manual_liquidation_cash_hold_usd=0.0`; audit `capital_control_actions.jsonl` source=`flag_file`.
+- Deployable cash now ≈ full exchange cash minus reserves/regime caps (no sticky hold).
+- Did **not** force-rebalance; next slot **21:00** PT under flat gates.
+
+### Product
+- Feature spec: `docs/features/TRADER_PERSONALIZED_SETTINGS_SPEC.md` (`FEAT-TRADER-PERSONALIZED-SETTINGS-2026-08`)
+  - How/when **manual cash hold** arms, stays sticky, and trader releases it
+  - Per-account settings surface for hold policy, rebuy cooldown, USDC park, Preserve prefs
+  - Explicit gap: full **USDC carry + PAXG Hold** park package not implemented
+- Cross-links: `CAPITAL_AND_PORTFOLIO_EVENTS.md`, park/preserve doctrine, `LIVE_USDC_PARK.md`, features README
+
+### Preserve posture (unchanged live)
+- MICRO ~$75 left as last week; full USDC(~3.5% research class)+PAXG scenario **not** built — documented, not pretended live.
+
+---
+
+## P6-REGIME-EXIT-POLICY-MAP-20260806 — SHADOW MAP (profit opt by regime)
+
+**Type:** product / shadow instrumentation  
+**Status:** LIVE_SHADOW (no orders; runner hooked)  
+**Date:** 2026-08-06  
+**Goal:** Profit optimization after bleed control — **regime-dependent** TP/RSI map, shadow until multi-regime data (Brad: ~1–2 mo).
+
+### Artifacts
+| Piece | Path |
+|-------|------|
+| Map config | `config/regime_exit_policy_map.json` |
+| Evaluator | `phase6/core/regime_exit_shadow.py` |
+| Isolation | `phase6/core/test_isolation_regime_exit_shadow.py` |
+| Doc (plain) | `docs/REGIME_EXIT_POLICY_MAP.md` |
+| Status / collection | `data/state/regime_exit_shadow_status.json` · `…_collection.json` |
+| Offline study | `reports/EXIT_THRESHOLD_REGIME_STUDY_2026-08-06.md` |
+| Weekly SL counterfactual (TG) | Hermes cron `686741bc89ba` Sun 08:30 PT · `scripts/phase6/sl_exit_counterfactual_report.py` · `reports/SL_EXIT_COUNTERFACTUAL_LATEST.md` · `data/state/sl_exit_counterfactual_latest.json` (shipped 2026-08-11) |
+| Runner hook | `phase6_runner` cycle after shadow_tp |
+
+### Map (shadow knobs)
+| Regime | TP | Trail | RSI hard-exit watch |
+|--------|-----|-------|---------------------|
+| Bull | ~6% | on | ≥75 |
+| Flat | ~5% | on | ≥65 |
+| Bear | **off** | off | off (ride/SL) |
+| Transition | off | off | ≥70 watch |
+| Unknown | off | off | off |
+
+### Gates before any live discussion
+- **60 calendar days** shadow (`early_review` flag 45d)
+- ≥**5** unique would-fire **episodes**/regime (30m gap ≠ tick spam)
+- Prefer bull+bear+flat ready; `auto_promote=false`; Brad OK
+- Re-run offline study; no single global threshold
+
+### Go / no-go now
+| Item | Call |
+|------|------|
+| Shadow map on | **YES** |
+| Live TP / auto RSI hard-exit | **NO** |
+| Hard-exit operator loop | **KEEP** |
+| Assume 1 setup all regimes | **NO** |
+
+---
+
+## P6-EXIT-THRESHOLD-REGIME-STUDY-20260806 — OFFLINE PACK (TP + RSI vs SL by regime)
+
+**Type:** research / offline counterfactual  
+**Status:** DONE (runner + reports; **no live config writes**)  
+**Date:** 2026-08-06  
+**Question:** Ideal TP and RSI thresholds vs SL — **by Bull/Bear/Flat** (not one global setup).
+
+### Artifacts
+| Piece | Path |
+|-------|------|
+| Runner | `phase6/research/run_exit_threshold_regime_study.py` |
+| Report | `reports/EXIT_THRESHOLD_REGIME_STUDY_2026-08-06.md` (+ `.json`) |
+| State | `data/state/exit_threshold_regime_study_latest.json` |
+
+### Method (short)
+- Real ledger buy→sell legs + daily OHLCV path; BTC 30d regime at entry (same detector thresholds).
+- Engines: SL-only (−3%), fixed TP grid, RSI-overbought grid, first-hit wins; fee haircut 0.1% RT.
+- **Null prior:** ride/SL can beat early exit (old sims) — overturn only with N + meaningful Δ.
+
+### Headline (120d, N=76 usable; 31 no_ohlcv skipped)
+| Regime | N | Call | Best knobs (path sim) |
+|--------|--:|------|------------------------|
+| **Bear** | 21 | **`prefer_sl_ride`** | Early TP hurts; RSI barely fires → ride/SL |
+| **Bull** | 21 | **`prefer_tp_tp_06`** | TP **~6%** beats SL-only |
+| **Flat** | 34 | **`prefer_tp_tp_05`** | TP **~5%** beats SL-only |
+| Pooled | 76 | RSI~65 looks up in pool | **Do not** use pool as one global rule |
+
+**Enum:** `regime_dependent` — **no single threshold set across regimes.**
+
+### Go / no-go
+| Item | Call |
+|------|------|
+| Live global TP or RSI hard-exit from this pack alone | **NO** |
+| Shadow TP (esp. ~5–6% class) by regime story | **YES keep** — aligns bull/flat |
+| Auto hard-exit (`operator_approve` off) | **NO** — bear = ride; RSI edge not uniform |
+| Assume one setup for Bull/Bear/Flat | **NO** |
+
+### Next
+1. Regime-aware exit knobs design (policy map) — research only until shadow.  
+2. Refresh OHLCV (missing ADA/UNI/OP; lag past 2026-07-30).  
+3. Keep hard-exit operator loop; TP shadow clock clean basis.  
+4. Re-run: `python3 phase6/research/run_exit_threshold_regime_study.py 120`
+
+---
+
+## P6-EXIT-BASELINE-POST-BASIS-FIX-20260805 — BASELINE_PACK (profit-taking path)
+
+**Type:** research / evidence hygiene · exit stack  
+**Status:** DONE (reports + state + void rules)  
+**Date:** 2026-08-05  
+**Goal link:** cleaner **entry / exit / sizing** → optimal profit-taking (returns + less loss)
+
+### Void (do not use for promote / size / live TP)
+- **Open-MTM** narratives from pre–lot-basis live_state (e.g. BTC ~+49% @ ~$43k entry; SOL ~−12% lie)
+- **Shadow TP** `would_fire_count` / promo-ready **before** reset **2026-08-05T21:37:40Z**
+- Any “ready to flip live TP” claim based on those counters
+
+### Replacement evidence (this pack)
+| Artifact | Path |
+|----------|------|
+| Baseline pack (plain + structure map) | `reports/POST_BASIS_FIX_EXIT_BASELINE_PACK_2026-08-05.md` |
+| Pack JSON | `data/state/post_basis_fix_exit_baseline_pack_latest.json` |
+| Exit asymmetry 30d | `reports/EXIT_ASYMMETRY_2026-08-05.md` · `data/state/exit_asymmetry_latest.json` |
+| TP/trail path 60d | `reports/TP_TRAIL_PATH_STUDY_2026-08-05.md` (+ `.json`) |
+| Clean shadow clock | `data/state/shadow_tp_status.json` (`first_shadow_at` post-reset, would_fire=0) |
+
+### Key numbers (post-fix baseline)
+- Realized WR **~7.5%** (5/67) · SL **56** / **−$137** · rotations **+$38**
+- Path **rescue rate ~59%** (27/46 losses still touched +6%) · enum **`design_shadow`** · live TP writes **false**
+- Open book lot basis: BTC r ~**+2.6%** (not +49%)
+
+### Go / no-go
+| Item | Call |
+|------|------|
+| Live take-profit / trail | **NO** |
+| Keep shadow TP on honest basis | **YES** |
+| Size-up / thaw | **NO** (hold entry gates; 14D stabilize + exit stack first) |
+| Offline Analyst OPT leaderboards | **Keep** (not mass-invalidated; only trials that used live open % need review) |
+
+### Next toward optimal profit-taking
+1. Hold entry gates (regime cash, $75, near-stop add block).  
+2. Collect **≥7d** clean shadow + **≥5** honest would-fires → human review only.  
+3. Optional: finer-bar path study if daily overstates.  
+4. Sizing/OPT promote only after exit WR / banked-TP share improves and 14D ≥ flat.
+
+### Related code (basis honesty)
+- `position_cost_basis.py` · runner cache recompute · `shadow_tp` resolve + peak sanitize  
+- Prior: `P6-NEAR-STOP-ADD-BLOCK-20260805`
+
+---
+
+## P6-NEAR-STOP-ADD-BLOCK-20260805 — DONE (soft gate #2)
+
+**Type:** ops / risk product fix
+**Status:** DONE (code + isolation + runner restart)
+**Date:** 2026-08-05
+**Context:** LINK `light_tilt_cash` BUY ~30s before exchange SL (2026-08-04). Pieces correct under old rules; combo is product flaw. Brad chose soft gate #2 (not hard block all open-stop buys). No loss-acceleration spiral — deposit-adj still slow bleed (~−27.6% since go-live).
+
+### Policy
+Block `light_tilt_cash` / `opportunistic_rotation_from_weak` **adds** when:
+- stop gap < **2%** (`near_stop_min_gap_pct`), or
+- unrealized vs SL entry ≤ **−1%** (`near_stop_max_unrealized_pct`)
+- and existing position ≥ $25
+
+### Impl
+- `phase6/core/runner_capital_events.py` — `filter_trade_plan_near_open_stop` + `evaluate_near_stop_add_block`
+- `phase6/core/rebalance_coordinator.py` — after manual cooldown filter
+- `config/trading_config_phase6.json` — `risk_management.near_stop_*`
+- isolation: `scripts/phase6/test_isolation_near_stop_add_block.py` **PASS** (reproduces LINK 1.11% gap block)
+
+### Not done (optional later)
+- Hard gate #1 (no BUY with any open stop)
+- UX trade-row subtitle `rebal · open SL`
+
+---
+
+## FEAT-DAILY-DOSE-PUB-CYCLE-2026-08 — FIRST_DISK_PUBLISH (Phase A viability)
+
+**Type:** feature
+**auto_pickup:** false
+**blocked_on:** none
+**Status:** FIRST_DISK_PUBLISH — code + cycle live; disk-only; viability probe started
+**Spec:** `docs/features/DAILY_DOSE_PUBLICATION_CYCLE.md`
+**Handoff:** `handoffs/platform/Handoff_FEAT-DAILY-DOSE-PUB-CYCLE-20260803.md`
+**Board:** crypto-bot-project (NOT marketing-consultancy)
+**Date:** 2026-08-03
+**Updated:** 2026-08-04
+
+### Decision
+Yes — publication cycle. Reuse content-editor + publisher; keep SEO/SEM off. Machine draft; agents gate quality.
+
+### Kanban
+- Epic `t_aa220fdc` crypto-orchestrator
+- Impl `t_e48e3925` crypto-engineer (parent epic)
+- Editor `t_7c165e91` content-editor (parent impl)
+- Publisher `t_a54c1eae` DOSE-TPL-02
+
+### Stages
+D0 draft → D1 edit → D2 publish disk → D3 archive. Live TG only after Brad OK.
+
+### Impl
+- `phase6/core/daily_dose_publish.py`
+- `phase6/scripts/run_daily_dose_edit.py`
+- `phase6/scripts/run_daily_dose_publish.py`
+- isolation PASS; smoke APPROVED→publish_ready; REVISE blocked
+
+
+### Shipped (Phase A)
+- `phase6/scripts/run_daily_dose_edit.py` + `run_daily_dose_publish.py`
+- Core: `phase6/core/daily_dose_publish.py` (build_edited_package, format, gates, write, stub_tg, history)
+- Paths: DAILY_DOSE_* in phase6/core/paths.py + data/state/
+- Artifacts: daily_dose_edited.json (with editorial_review.status APPROVED), daily_dose_publish_ready.txt
+- First cycle executed: 2026-08-04 dose (5 items APPROVED, disk publish only, TG OFF)
+- Isolation: test_isolation_daily_dose_publish.py + editorial + rank PASS
+- History: daily_dose_history.jsonl appends publish events
+- Guarantees: never touches sentiment_*/allocator; no live TG without flags + Brad OK
+
+### Goal (Phase A)
+Disk-only publication cycle with editor gate for viability ("coffee test"). Brad reviews first outputs before Phase B TG enable.
+
+### Phase A scope
+- Editor produces edited.json with status + checklist + dropped count
+- Publisher requires APPROVED, writes publish_ready.txt (banner + formatted 5 bullets)
+- TG path: gated + stub (no send)
+- One in-flight per day
+
+### Non-goals (this phase)
+- No live Telegram / dash API until Brad OK
+- No trading wire
+- No SEO/SEM
+
+---
+
+### Next
+- Content-editor / publisher profiles run daily via cards or cron
+- Weekly viability scorecard (reports/DAILY_DOSE_VIABILITY_*.md)
+- Brad: set daily_dose_brad_telegram_ok.flag + env for Phase B?
+- Update epic kanban + close impl if scripts verified
+
+---
+
+## FEAT-DAILY-DOSE-NEWS-2026-08 — PHASE_A_RUNNABLE (product probe)
+
+**Type:** feature
+**auto_pickup:** false
+**blocked_on:** none
+**Status:** PHASE_A_RUNNABLE — code live; disk publish only; viability probe in progress
+**Priority:** normal
+**Role:** platform / product
+**Spec:** `docs/features/DAILY_DOSE_NEWS_FEED_PHASE_A_SPEC.md`
+**Handoff:** `handoffs/platform/Handoff_FEAT-DAILY-DOSE-NEWS-20260803.md`
+**Date:** 2026-08-03
+**Updated:** 2026-08-03
+
+### Shipped
+- `phase6/core/rss_feeds.py` · `phase6/scripts/run_daily_dose.py`
+- Artifacts: `data/state/daily_dose_latest.json`, `daily_dose_history.jsonl`, `daily_dose_telegram_preview.txt`
+- Isolation: `phase6/tests/test_isolation_daily_dose_rank.py` PASS
+- **Publication Phase A:** disk only (no Telegram send, no dash API, no trading wire)
+
+
+### Goal
+Phase A viability probe: rank public RSS into a short “daily dose” item list (dashboard/Telegram later; trader status pages = Phase C). Parallel to sentiment scores — **not** a trading signal.
+
+### Phase A scope
+- Keep top-N item cards (title, url, summary≤240, tickers, why) in `daily_dose_latest.json`
+- Dedupe + event/relevance ranking; no full article bodies; no LLM firehose
+- Viability = human-readable for ≥5 days (“coffee test”)
+- Phase B = dash + Telegram; only after Brad OK on probe
+
+### Non-goals
+No live sentiment/allocator wiring; no Apify default; no trader pages in A.
+
+---
+
+
+## TEST-COMBINED-INDICATOR-ABLATION-2026-08 — REPORT_READY (analyst · offline multipair)
+
+**Type:** test
+**auto_pickup:** false
+**blocked_on:** none
+**Status:** CLOSED — drop 2026-08-03 (long-tape WF fail; no live/standard opt)
+**Priority:** normal
+**trial_kind:** offline_analysis
+**family:** combined_indicator_ablation
+**duration_days:** 3
+**Handoff:** `handoffs/analyst/Handoff_TEST-COMBINED-INDICATOR-ABLATION-20260803.md`
+**Protocol:** `docs/testing/trials/TEST-COMBINED-INDICATOR-ABLATION-20260803-TRIAL_PROTOCOL.md`
+**Role:** crypto-analyst
+**North star:** returns AND less loss (honest; no wishful framing)
+**Source session:** @session:default/20260731_152450_773d89
+**Scope note:** Offline multi-pair ablation of Grok MACD+RSI+Stoch+BB + E0–E8 SL/entry enhancements. Brad lock = no live RSI+Stoch combo-fish without OK.
+
+### Universe (real project OHLCV)
+BTC, ETH, SOL, LINK, AVAX · daily · ~2025-05 → 2026-07 (~437 bars)
+
+### Pass-2 summary
+- **A0 full confluence:** N=0 all pairs — ops fail / unusable
+- **Best score arm:** E0 (MACD× + RSI&lt;40 + Stoch&lt;30) — less-loss vs multi-asset BH, N=12 exploratory
+- **Best N≥15:** E3 (MACD× + RSI&lt;40 + ATR trail) — still abs mean ret −10% (lost-less-than-alts, not promote)
+- **Avoid:** E1 MACD-only spam (worst DD)
+- **Recommendation:** `dig_further` (not shadow/promote)
+- Reports: `reports/COMBINED_INDICATOR_ABLATION_MULTIPAIR_2026-08-03.md`
+
+### Walk-forward long tape (2026-08-03) — CORRECTION
+- Runner: `phase6/research/macd_rsi_atr_walkforward.py`
+- Coinbase daily 2021→2026 in `backtests/data/long/`
+- Full-period EW mean **−20%** (BTC F2 **−53%**); OOS fold mean **−0.9%**; 5% bar **FAIL**
+- Short-window ~+5% **does not** survive multi-year WF
+- Rec: `unstable_or_no_edge` — **no standard opt / no live**; less-loss-only in alt stress is the residual story
+- Brief: `reports/MACD_RSI_ATR_WF_PLAIN_ENGLISH_2026-08-03.md`
+
+### MACD×RSI×ATR focused dig (2026-08-03)
+- Runner: `phase6/research/macd_rsi_atr_dig.py` · brief: `reports/MACD_RSI_ATR_PATTERN_BRIEF_2026-08-03.md`
+- **Champion recipe F2:** MACD× + RSI&lt;40 + 2×ATR + MACD-death + weak/deep-bear skip
+- Core4 mean ret **~+5%** (not 10–20% basket); SOL **+13.7%** selective pickup; N≈9 thin
+- RSI filter mandatory (MACD-only −40%+); RSI 40 &gt; 35/45; ATR 2× best
+- **Standard opt:** pattern yes · live no · shadow ok · no 10–20% portfolio claim yet
+
+### Next (scheduled dig)
+- Optional dig: longer history if OHLCV extended; secondary sensitivity RSI 35/40/45 on E3 only (pre-registered)
+- Decide after dig or drop if no longer tape in 3d
+
+### Decision
+- **value:** drop
+- **at:** 2026-08-03T22:40:52.038506+00:00
+- **by:** brad
+- **note:** Brad 2026-08-03: drop. Short-window ~+5% F2 did not survive Coinbase long-tape walk-forward (2021-2026 EW mean -20%, BTC F2 -53%). No standard opt / no live. Keep lessons: kill 4-way AND stack; RSI filter > MACD-only; no Stoch/BB required entry. Residual regime-gate idea only if Brad reopens.
+- Dig cron `fd35de6e517b` removed
+- Lessons retained: no 4-way AND stack; RSI filter > MACD-only; short-window less-loss ≠ multi-year edge
+
+
+## ANALYST-STOCH-SL-PREDICTOR-20260803 — CLOSED / no_utility_drop
+
+**Type:** test  
+**Date:** 2026-08-03  
+**Role:** Crypto-Analyst  
+**Status:** **DONE** — trial `ANALYST-STOCH-SL-PREDICTOR-20260803` decision=`drop`  
+**auto_pickup:** false  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** stoch_sl_predictor  
+**Parent:** `STOCH-RSI-PARALLEL-20260721` (scoped follow-on; does not replace parent final)  
+**Protocol:** `docs/testing/trials/ANALYST-STOCH-SL-PREDICTOR-20260803_PROTOCOL.md`  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-STOCH-SL-PREDICTOR-20260803.md`  
+**State:** `data/state/trials/ANALYST-STOCH-SL-PREDICTOR-20260803.json`
+
+### Goal
+Entry-time Stoch %K as **predictor of subsequent SL** (leading utility), not exit-time trailing label.
+
+### Hypothesis
+Buys with low entry Stoch hit SL more within 3–14d, including inside RSI-neutral band.
+
+### Result (2026-08-03) — real data
+| Window | n buys / with entry Stoch | Primary Stoch&lt;30 @7d | Rec enum |
+|--------|---------------------------|-------------------------|----------|
+| Parent launch→now | 9 / 6 | too thin (lift undefined) | **`extend_collect`** |
+| Dig history overlap 7/11→now | 53 / 29 | low 38.5% (n=13) vs high 50% (n=16) → **lift 0.77x inverted** | **`no_utility_drop`** |
+
+- Exit Stoch on SL hits still often low (trailing). Entry low-Stoch did **not** predict more stops on dig tape.
+- RSI-neutral additive lift 1.5x was n_low=4 only — **not** allowed to override inverted primary.
+- **Live SL change: no. Allocator: no. Shadow SL threshold: no.**
+
+### Reports
+- `reports/STOCH_SL_PREDICTOR_OFFLINE_2026-08-03.md` (+ `.json`)
+- `reports/STOCH_SL_PREDICTOR_DIG_2026-08-03.md` (+ `.json`)
+- Isolation: `phase6/research/test_isolation_stoch_sl_predictor.py` **PASS**
+
+### Decide (Brad)
+```bash
+cd /home/brad/projects/crypto-trading-bot
+.venv/bin/python3 phase6/research/trial_cycle.py decide ANALYST-STOCH-SL-PREDICTOR-20260803 no_utility_drop --note 'dig: entry stoch lift inverted 0.77x; trailing only; no shadow SL'
+```
+
+### Non-goals honored
+No live config / SL % / allocator writes.
+
+---
+
+## ANALYST-REGIME-BULL-KNOBS-20260803 — DONE (abort zombie)
+
+**Type:** test  
+**Date:** 2026-08-03  
+**Role:** Crypto-Analyst  
+**Status:** **DONE** — trial `ANALYST-REGIME-BULL-KNOBS-20260803-TRIAL` decision=`abort` @ 2026-08-17  
+**auto_pickup:** true (closed)  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** regime_bull_knobs  
+**duration_days:** 3  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-REGIME-BULL-KNOBS-20260803.md`  
+**Strategy plan:** `PLAN-BULL-KNOBS-001` · workstream `WS-REGIME-KNOBS`  
+**Regime focus:** bull  
+**Decision receipt:** `docs/testing/inbox/DECIDED_ANALYST-REGIME-BULL-KNOBS-20260803-TRIAL_20260817.md`
+
+### Goal
+Bull regime: util/cap/RSI vs leaving edge on table
+
+### Hypothesis
+Bull live knobs under-deploy or over-trade vs scorecard winner
+
+### Success
+Beat live bull + USDC hurdle on bull windows; DD bound
+
+### Close (2026-08-17)
+- **abort** — execute cron never produced `reports[]` (zombie RUNNING past final_at 2026-08-06).  
+- **Not** a market drop / no evidence against bull knobs.  
+- Offline slot freed.  
+- **Re-test path:** `PLAN-BULL-KNOBS-002` planned with `emit_only_when_regime=bull` (strategy emit skips while flat).  
+- Until bull dwell: layered bull re-entry stays **paper-only**; no live `regime_cash_policy` writes.
+
+### Non-goals
+- No live trading config / regime policy writes without Brad + promotion gates
+- Real data only
+
+### Queue
+Closed. Successor emit when live regime=bull via strategy roadmap.
+
+---
+
+## PARK-MICRO-PRESERVE-20260802 — LIVE
+
+**Date:** 2026-08-02  
+**Status:** **LIVE MICRO** (~$75 PAXG Hold)  
+**auto_pickup:** false  
+
+### Policy
+- `docs/research/PARK_REGIME_POLICY.md` — A cash + optional B gold + C deploy
+- Park default: mostly USD/USDC; gold sleeve optional; DeRisk off
+
+### Live micro sleeve (logging / E1 path)
+| Field | Value |
+|-------|--------|
+| Size | ~$74–75 PAXG (~0.01834) |
+| Arm VWAP | ~$4055.83 |
+| E1 | `b81e3750-595a-44d9-add4-322f8ec0501f` @ **$2757.96** (−32%) OPEN |
+| Badge | **MICRO** |
+| Log | `data/state/preserve_sleeve_log.jsonl` |
+| Config | `preserve_mode.enabled=true`, `micro_live=true`, `micro_usd=75` |
+
+### Not yet
+- Full 20% ballast (scale-up only after operator OK)
+- Forced SL fire test (E1 only at deep crash)
+
+### Ops
+```
+PYTHONPATH=. .venv/bin/python scripts/phase6/arm_preserve_hold.py status
+PYTHONPATH=. .venv/bin/python scripts/phase6/arm_preserve_hold.py disarm --i-understand
+```
+
+---
+
+## PRESERVE-DASH-KILLBOT-20260802 — DONE
+
+**Date:** 2026-08-02  
+**Status:** **DONE**  
+**auto_pickup:** false  
+
+### Delivered
+1. **Dashboard badge** — `preserve_mode` on `/api/metrics` + Preserve card in `phase6_dashboard.html` (OFF/STANDBY/ARMED; honest tooltip). Status file `data/state/preserve_hold_status.json`.
+2. **Kill-bot soak PASS** — micro ~$30 PAXG, E1 stayed OPEN while runner dead + after restart. Report: `reports/PRESERVE_KILLBOT_SOAK_2026-08-02.md`.
+3. Cleanup: PAXG flat, stops 0, `enabled=false`. Disarm hardened (cancel-all pair stops + sell retry). Cash path fix: USD via `get_account_balance("USD")`.
+
+### Live now
+- Runner up (restarted by soak)
+- Preserve **OFF**
+- Dashboard :8502 serving badge
+
+---
+
+## PRESERVE-HOLD-MVP-20260802 — CODE SHIPPED (live off)
+
+**Date:** 2026-08-02  
+**Type:** platform feature (gated)  
+**Status:** **IMPLEMENTED · LIVE OFF** (`preserve_mode.enabled=false`)  
+**auto_pickup:** false  
+**blocked_on:** Brad explicit arm (`scripts/phase6/arm_preserve_hold.py`) after crypto parked  
+**Depends:** `PRESERVE-FUNDAMENTALS-GATE-20260802` (G1 A / G2a PASS)  
+**Plan:** `.hermes/plans/2026-08-01_233225-preserve-hold-mvp-impl.md`  
+**Spec:** `docs/research/PRESERVE_HOLD_MVP_SPEC.md`
+
+### Shipped
+| Piece | Path |
+|-------|------|
+| Core | `phase6/core/preserve_hold.py` |
+| Config | `config/trading_config_phase6.json` → `preserve_mode` |
+| Sleeve-safe suspend | `stop_loss_manager.suspend_active_protective_orders` |
+| Dust skip | `sl_dust_sweep.sweep_orphan_dust` |
+| Registry sleeve | `protective_orders_registry` `sleeve=preserve` |
+| Cycle tick | `cycle_coordinator._maybe_preserve_hold` (no auto-arm) |
+| Operator CLI | `scripts/phase6/arm_preserve_hold.py` |
+| Isolation | `phase6/tests/test_isolation_preserve_hold.py` **12 PASS** |
+
+### Behavior
+- Hold only: E1 **−32%** stop-limit on Coinbase; adds_block latch at **−12%**
+- DeRisk forced off in loader
+- Arm requires enabled + crypto parked + successful E1 (no naked arm)
+- Crypto rebalance **cannot** cancel Preserve E1
+
+### Next (human)
+1. Keep enabled false until ready  
+2. Dry-run: `... arm_preserve_hold.py arm --dry-run`  
+3. Live arm: set enabled + `--i-understand` only when parked  
+
+---
+
+## PRESERVE-FUNDAMENTALS-GATE-20260802 — GATES GREEN (Hold MVP ready; live still off)
+
+**Date:** 2026-08-02  
+**Type:** platform + research gate  
+**Status:** **G0–G3 COMPLETE** — **LIVE PRESERVE STILL OFF** (no product enable)  
+**auto_pickup:** false  
+**blocked_on:** Brad go-ahead for *implementation plan / shadow code* only  
+**Plan:** `.hermes/plans/2026-08-01_222028-preserve-fundamentals-gate.md`  
+**Hold MVP spec:** `docs/research/PRESERVE_HOLD_MVP_SPEC.md`  
+**PRD:** `docs/research/PRESERVE_MODE_PRD.md`
+
+### Gate results (2026-08-02)
+| Gate | Result | Evidence |
+|------|--------|----------|
+| G1 Venue probe | **A** (3 concurrent PAXG-USD stop-limits OK; cleanup flat) | `reports/PRESERVE_VENUE_PROBE_2026-08-02.md` |
+| G2a Hold economics | **PASS** (E1 −32% does not fire on 2026 −28% peak-arm path) | `reports/PRESERVE_HOLD_DERISK_ECONOMICS_2026-08-02.md` |
+| G2b DeRisk ladder | **KEEP_DISABLED_DEFAULT** | same |
+| G3 Hold-only MVP | **SPEC FILED** | `docs/research/PRESERVE_HOLD_MVP_SPEC.md` |
+
+### Recommendation honored
+Venue first ✓ · economics with ladder sim ✓ · Hold-only initial product ✓ · no harmful DeRisk default ✓
+
+### Next
+Implementation plan for Hold E1 only when Brad requests build/shadow — not auto from OPT/brief.
+
+---
+## KANBAN-UNSTICK-20260730 — DONE
+**Date:** 2026-07-30  
+**Board:** crypto-bot-project  
+**Blocked (6) → disposition:**
+
+| id | title | action |
+|----|-------|--------|
+| t_cff262a8 | PHASE-A-01 brand pack | **complete** — docs/marketing/brand/* delivered; Brad domain purchase optional |
+| t_136c2da8 | PHASE-A-03 GHL T0 | **complete** — agent pack in docs/integrations/ghl_t0/*; Brad UI still ops |
+| t_0dc2e735 | T0-02 AccountContext | **complete** — context.py + flag off + ledger partition + isolation PASS |
+| t_7ea41b94 | #21 OP-USD SL gap | **complete** after audit green + registry `P6-OPS-20260720-001` closed; GH #21 already closed |
+| t_5e21287a | PHASE-A-06 copy | **complete (agent pack)** — docs/marketing/copy/* v2 W1–W7 + funnel skeleton + UTM/KPI; Brad skim + live GHL paste pending |
+| t_972e533c | PHASE-A-05 Adspirer research | **unblock** → ready, reassigned marketing-strategist (researcher protocol crash) |
+
+**Ops evidence:** `audit_rebalance_sl_gaps.py` → BUY sl_attached=false (last 72h): **0**.  
+**T0-02:** `python3 phase6/core/test_t0_02_context_isolation.py` PASS.
+
+---
+
+## SCALING-1000-PHASE-A-06 — COPY PACK (2026-07-30) — AGENT DONE
+
+**Kanban:** `t_5e21287a` · **Role:** marketing-strategist  
+**Status:** **DONE (repo pack)** — unlisted/invite copy only; no public publish; no ads  
+**Handoff:** `handoffs/scaling/Handoff_SCALING_1000_PHASE_A_06_COPY_20260730.md`
+
+### Artifacts
+| Area | Path |
+|------|------|
+| Index / master | `docs/marketing/copy/README.md`, `COMPLIANT_COPY_PACK.md` v2 |
+| Sequences W1–W7 | `docs/marketing/copy/sequences/*.txt` |
+| Pages | `docs/marketing/copy/pages/` (landing, pricing, checkout, risk/ToS/privacy shells, member, FAQ) |
+| Funnel skeleton | `docs/marketing/copy/funnel/UNLISTED_FUNNEL_SKELETON.md`, `ghl_workflows_skeleton.json`, `tags_pipelines.md` |
+| UTM/KPI | `docs/marketing/copy/metrics/UTM_KPI_TEMPLATE.md` (pay→connect) |
+| Pre-publish applied | `docs/marketing/copy/PRE_PUBLISH_APPLIED.md` |
+
+### Pilot prices (placeholders)
+Starter **$39** · Pro **$99** · Elite **$249** (field dict SKUs).
+
+### Still human
+1. Brad messaging + Claims Policy §9 checkbox  
+2. Paste into unlisted GHL funnel/workflows (no agent GHL admin)  
+3. Counsel before public paid checkout  
+4. Platform `connect_link` + paid_at/connected_at instrumentation  
+
+---
+
+## ANALYST-REGIME-FLAT-KNOBS-20260730 — QUEUED (strategy)
+**DIG layered (2026-07-30):** `REGIME_FLAT_KNOBS_DIG_LAYERED_2026-07-30.md` → `propose_scoped_experiment` shadow_layered=True live=false. Spec: `docs/research/BULL_REENTRY_LAYERED_SPEC.md`.
+
+
+**Type:** test  
+**Date:** 2026-07-30  
+**Role:** Crypto-Analyst  
+**Status:** **DONE** — trial `ANALYST-REGIME-FLAT-KNOBS-20260730-TRIAL` decision=`propose_scoped_experiment`  
+**Trial:** `ANALYST-REGIME-FLAT-KNOBS-20260730-TRIAL` → REVIEW_PENDING after inbox  
+**Report:** `reports/REGIME_FLAT_KNOBS_TEST_2026-07-30.md`  
+**Proposed:** `continue_observe_only` (keep flat B; rebalance≫rotation on DD; no grid promote; no live write)  
+**Decide:** `python3 phase6/research/trial_cycle.py decide ANALYST-REGIME-FLAT-KNOBS-20260730-TRIAL continue_observe_only --note '...'`  
+**auto_pickup:** true  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** regime_flat_knobs  
+**duration_days:** 3  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-REGIME-FLAT-KNOBS-20260730.md`  
+**Strategy plan:** `PLAN-FLAT-KNOBS-001` · workstream `WS-REGIME-KNOBS`  
+**Regime focus:** flat, live_overlap
+
+### Goal
+Flat option B: rebalance vs rotation + cap/RSI/sentiment grid
+
+### Hypothesis
+Under live flat option B envelope (cap $75, RSI≤55, sent≥0.25), rebalance beats rotation on real flat + live_overlap windows (Path B 2026-07-30 stress: rotation −3.5% flat / high DD; rebalance ~flat DD). A nearby cap/RSI/sent grid may improve return or DD without promoting bull-only rotation knobs.
+
+### Success
+Primary: rebalance_7d vs rotation_7d vs defensive_rebalance_14d under B fingerprint on flat + live_overlap OHLCV with honest RSI/sentiment notes (Path B gap). Secondary: grid cell beats live-B on return or maxDD with min n. No live write — shadow only if wins + param_audit clean.
+
+### Non-goals
+- No live trading config / regime policy writes without Brad + promotion gates
+- Real data only
+
+### Queue
+Emitted by `phase6/research/analyst_test_strategy.py` → pickup via `master_test_pickup.py`.
+
+---
+
+## TRAJECTORY-GAP-EXIT-STACK-20260729 — IN PROGRESS / PARTIAL LIVE
+
+**Type:** analysis + platform repair + instrumentation  
+**Date:** 2026-07-29  
+**Role:** Crypto-Analyst / ops  
+**Status:** **PARTIAL LIVE** — TG-01/02/03/04 executed this session; hard-exit **shadow only**  
+**auto_pickup:** false  
+**blocked_on:** none  
+**Doc:** `docs/analysis/TRAJECTORY_GAP_SCORE_20260729.md`  
+**Reports:** `reports/EXIT_ASYMMETRY_2026-08-05.md` · `reports/TP_TRAIL_PATH_STUDY_2026-08-05.md` · pack `reports/POST_BASIS_FIX_EXIT_BASELINE_PACK_2026-08-05.md` (supersedes 2026-07-29 for baseline; open-MTM/pre-reset shadow VOID)  
+**State:** `data/state/exit_asymmetry_latest.json` · `data/state/regime_hard_exit_shadow.json`  
+**Runner:** restarted PID live after TG-03 (confirm via `pgrep -af phase6_runner`)
+
+### Plain finding
+Course corrections fixed **entry/churn gates** more than **exits**. 30d ledger: Exit WR **~11%**; SL sum ≈ **−$94** / rotation ≈ **+$36**; rebuy after SL within 72h: **21** events.
+
+### Shipped 2026-07-29
+| ID | Work | Status |
+|----|------|--------|
+| TG-01 | `phase6/research/run_exit_asymmetry_report.py` | **DONE** — report written |
+| TG-02 | hard `prefer_exit` → shadow SELL in `apply_to_runner_plan` | **LIVE shadow** (`hard_exit.shadow_only=true`, `live_apply=false`) |
+| TG-03 | SL hold cash + 72h rebuy + disposition code path | **LIVE** config + runner restart |
+| TG-04 | TP/trail offline scaffold | **DONE scaffold** enum `design_shadow` — blocked on OHLCV path CF |
+
+### Isolation
+- `scripts/phase6/test_isolation_stop_exchange_disposition.py` PASS (hold false + true/72h)
+- `phase6/core/test_isolation_regime_cash_policy.py` PASS (hard exit shadow + never park_soft)
+
+### Config deltas
+- `capital_event_stop_loss_exchange_hold_cash`: **true**
+- `capital_event_stop_loss_exchange_block_rebuy_hours`: **72**
+- `regime_cash_policy.hard_exit`: enabled, shadow_only, live_apply false
+- `_get_recently_stopped_pairs` includes `stop_loss_exchange`; default lookback 72h
+
+### 2026-07-29c — Shadow TP design LIVE (mode=shadow)
+
+- Config: `config/exit_automation.json` — **few knobs**; automation-first
+- Code: `phase6/core/shadow_tp.py` · cycle + rebalance hooks
+- Doc: `docs/EXIT_AUTOMATION.md`
+- Isolation: `phase6/core/test_isolation_shadow_tp.py` PASS
+- Live TP still **null** in trading_config; promote = one-time `mode:live` + `live_attach_on_buy`
+- Hard-exit: Brad stays on operator loop for now; product end-state = knobs not per-trade OK
+- Path study already `design_shadow` (53% loss rescue)
+
+### Still open
+- TG-02 **each proposal** → Telegram + `hard_exit_controls` (operator loop doc: `docs/HARD_EXIT_OPERATOR_LOOP.md`)
+- TG-02 **automation promote** only on T1–T3 triggers (not calendar alone); `operator_approve` stays true
+- TG-04 shadow TP collecting would-fire evidence; promote when promotion_hint.ready
+- Do **not** transition thaw / Kelly lean-in
+
+
+### Non-goals
+- enforce:false thaw; transition cap raise; Kelly full/half live; lottery LINK trim without rule
+
+---
+
+## ANALYST-REGIME-TRANSITION-20260727 — DONE (drop)
+
+**Type:** test  
+**Date:** 2026-07-27  
+**Role:** Crypto-Analyst  
+**Status:** **DONE** — trial `ANALYST-REGIME-TRANSITION-20260727-TRIAL` decision=`drop`  
+**auto_pickup:** true  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** regime_transition  
+**duration_days:** 2  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-REGIME-TRANSITION-20260727.md`  
+**Strategy plan:** `PLAN-TRANSITION-001` · workstream `WS-REGIME-KNOBS`  
+**Regime focus:** transition
+
+### Analyst note (2026-07-27 offline exec)
+- **Reports:** `reports/REGIME_TRANSITION_TEST_2026-07-27.md` + `.json`
+- **n:** transition days=66, episodes=40; flip_rate=0.206
+- **Scorecard recent (→transition map):** winner `usdc_hold`; alt does **not** beat USDC
+- **Path proxy (transition BTC days):** park +0.63% / DD 0%; util0.45 +1.01% / DD **8.08%**; util0.65 +1.00% / DD **11.6%**
+- **Live ledger on transition days:** 2 sells, pnl **-$17.97** (no buys while park)
+- **Policy fingerprint:** JSON transition cap=$50 park; live status/knob_map **cap=$0** `usdc_hold` (sha256 `24d2f0b9…`)
+- **Recommendation enum:** `drop` — idle-cash cost not supported; deploy whipsaw/DD dominates. No shadow.
+- **Live config writes:** none
+- **Decided (Brad 2026-07-27):** `drop` — offline regime transition: USDC/park wins; no faster-flip
+- **Inbox:** `docs/testing/inbox/DECIDED_ANALYST-REGIME-TRANSITION-20260727-TRIAL_20260727.md`
+
+### Goal
+Transition regime: park vs limited cap sensitivity
+
+### Hypothesis
+Transition cap/park settings drive unnecessary whipsaw or idle cash
+
+### Success
+Real transition slices; prefer lower whipsaw cost
+
+### Non-goals
+- No live trading config / regime policy writes without Brad + promotion gates
+- Real data only
+
+### Queue
+Emitted by `phase6/research/analyst_test_strategy.py` → pickup via `master_test_pickup.py`.
+
+---
+
+## TREND-REPAIR Tier0+T1 draft (2026-07-24)
+
+**Status:** DONE (Tier0 applied; Tier1 draft only — no sells executed)  
+**Tier 0:** `capital_event_force_rebalance: false` in `config/trading_config_phase6.json`; runner restarted PID live.  
+**Tier 1:** `phase6/research/tier1_exit_glide.py` → `data/state/tier1_exit_glide_draft.json` (execute=false).  
+**Isolation:** `scripts/phase6/test_isolation_tier1_exit_glide.py` PASS.  
+**Awaiting:** Brad approve glide legs (or subset) before any SELL.
+
+---
+
+## TREND-REPAIR playbook + Analyst loop (2026-07-24)
+
+**Status:** DONE (platform process; no live capital change)  
+**Doc:** `docs/TREND_REPAIR_PLAYBOOK.md`  
+**Code:** `phase6/research/trend_repair.py` → `data/state/trend_repair_status.json`  
+**UI:** dashboard Account health (`equity_trend` on `/api/performance`)  
+**Hooks:** daily/weekly `optimization_brief` TREND-REPAIR lines; weekly OPT shell refreshes status  
+
+### Intent
+Reliable platform path health: measure deposit-adjusted equity trend, diagnose layer (churn / open_book / regime / edge), tiered recommendations, Analyst monitors + tests + proposes — **no auto-promote**. Evidence clocks ≥14d before Tier 2. Baseline analysis snapshot retained in playbook §7.
+
+### North star
+Better returns **and** less loss; smoothing ≠ winning.
+
+---
+
+## OPS — Hermes cron errors cleared (2026-07-24)
+
+**Status:** DONE  
+**Jobs:** twice-daily-trading-intelligence (legacy removed), Phase6 Analyst Optimization Weekly, Phase6 Daily Rebalance - Morning, Phase6 Deep Maintenance Brief
+
+### Root causes
+1. **Orchestrator profile dead:** Morning/Deep maint lived on `crypto-orchestrator` (gateway not running) — sticky errors since ~2026-07-04.
+2. **Legacy intel:** `4dcba7aa8f06` disabled with ModuleNotFound sticky error; real job is `c16b620103dc` v2.
+3. **Weekly OPT exit 3/1:** hard live_param_audit gate + `optimization_brief.format_optimization_section` NameError (`brief` undefined).
+
+### Fixes
+- Soft-fail live param gate (promotion still blocked; `--strict-live-param-audit` for hard fail)
+- Fixed `brief` init in `optimization_brief.py`
+- Hardened `cron_rebalance_live.sh` / intel cron wrappers → project `.venv`
+- **Default profile jobs:** Morning `02bea42a1926`, Evening `79def136a313`, Deep `ea73d1428e6c` (manual run ok)
+- Removed legacy `4dcba7aa8f06`; paused orchestrator Phase6 crons (backup `jobs.json.bak-20260724`)
+- Weekly OPT smoke: **EXIT 0** (`ANALYST-OPT weekly OK`)
+
+### Verify
+`hermes cron list` — those four no longer sticky-error on default gateway.
+
+---
+
+## ANALYST-STOCH-RSI-COMPARE — CLOSED / continue_observe_only
+
+**Type:** test  
+**Date:** 2026-07-21  
+**Trial ID:** `STOCH-RSI-PARALLEL-20260721`  
+**Status:** **DONE** — trial `STOCH-RSI-PARALLEL-20260721` decision=`continue_observe_only` (2026-08-04)  
+**Observe posture:** keep `rsi-15min-refresher` Stoch tags; **no** allocator / live SL change; **no** combo-fishing.  
+**30d recheck:** one-shot cron ~2026-09-03 — `phase6/research/run_stoch_30d_reeval.sh` (entry-time dig + rotation opp dig + adhoc counts; “would decisions of substance change?”).  
+**Allocator/rotation log (2026-08-04):** each rebalance now writes `rotation_shadow` + `holdings_before` + `price_snapshot` on `decision_context_log.jsonl` (log-only; live path unchanged). Offline: `phase6/research/stoch_rotation_opportunity.py`.  
+**Health cron:** `8286f8ff6773` stoch-trial-health **paused** (trial CLOSED; was FAIL noise on REVIEW_PENDING).  
+**auto_pickup:** false  
+**blocked_on:** none  
+**trial_kind:** parallel_instrumentation  
+**family:** stoch_rsi  
+**duration_days:** 14  
+**Cycle:** `docs/testing/ANALYST_TEST_CYCLE.md`  
+**Protocol:** `docs/testing/trials/STOCH-RSI-PARALLEL-20260721_PROTOCOL.md`  
+**State:** `data/state/trials/STOCH-RSI-PARALLEL-20260721.json`
+
+### Final report (2026-08-04 cron)
+- **Status:** REVIEW_PENDING (not CLOSED — needs Brad decide)
+- **Report:** `reports/STOCH_RSI_TRIAL_FINAL_2026-08-04.md` (+ `.json`)
+- **Review inbox:** `docs/testing/inbox/REVIEW_STOCH-RSI-PARALLEL-20260721.md`
+- **Rec enum:** `propose_scoped_sl_risk_experiment` (script output; note Brad 2026-08-03 close posture leans continue_observe_only/drop after child dig)
+- **Health:** OK (exit 0)
+- **Counts:** history rows 1782; obs with stoch 19079; disagreements 5968; trades 35 (stoch 29); SL exits 15 (stoch_k<30: 12)
+- Do **not** promote allocator. Decide via:
+  `python3 phase6/research/trial_cycle.py decide STOCH-RSI-PARALLEL-20260721 <enum> --note '...'`
+
+### Original intent (locked)
+- Parallel StochRSI + longer-term RSI instrumentation
+- SL risk scorer may use low Stoch %K
+- **Allocator stays plain RSI** until evidence + Brad go
+- Close with explicit recommendation enum (not infinite "monitor")
+
+### Root cause of prior stall
+Hermes cron `rsi-15min-refresher` executed **stale** `~/.hermes/scripts/refresh_rsi_prices.py` (fixed 6-pair universe, **no Stoch**, overwrote cache). Project script had Stoch but was not what cron ran. Fixed: hermes path is thin wrapper → project canonical script.
+
+### Launch evidence (2026-07-21)
+- Isolation: `python3 phase6/research/test_isolation_stoch_rsi_trial.py` → PASS
+- Refresher (via hermes path): **11/11 pairs RSI + StochRSI**, schema_version 2
+- Baseline: `reports/STOCH_RSI_TRIAL_BASELINE_2026-07-21.md` (+ JSON)
+  - Prior appendix window also shows heavy RSI↔Stoch disagreement but weak SL linkage at fills (most SL rows lacked stoch tags during desync)
+- Health: `run_stoch_rsi_trial_health.py` exit 0
+
+### Close posture (Brad 2026-08-03)
+- **No more RSI+Stoch combo fishing** (entry/exit/SL) — no winning combo found.
+- Child `ANALYST-STOCH-SL-PREDICTOR-20260803` → **CLOSED / no_utility_drop**.
+- Mid rec `propose_scoped_sl_risk_experiment` **superseded** by entry-time dig (lift inverted; no gain edge).
+- Path: run **final 2026-08-04 09:00 PT** (`50ee46a3ec21`) → Brad decide parent → free instrumentation slot.
+- Likely parent enums: `continue_observe_only` or `drop` (keep refresher tags; no allocator/SL threshold work).
+- After close: layered live gate check still `9ababe2d2091` 2026-08-04 17:00 PT (separate).
+
+### Stoch→SL predictor dig (2026-08-03)
+- Child offline: `ANALYST-STOCH-SL-PREDICTOR-20260803` → dig enum **`no_utility_drop`** (entry Stoch lift inverted; trailing only).
+- Does **not** close this parent trial; final still 2026-08-04.
+- Reports: `reports/STOCH_SL_PREDICTOR_{OFFLINE,DIG}_2026-08-03.md`
+
+### Mid report (2026-07-28)
+- **Status:** RUNNING (mid complete; continue to final 2026-08-04)
+- **Report:** `reports/STOCH_RSI_TRIAL_MID_2026-07-28.md` (+ `.json`)
+- **Rec enum:** `propose_scoped_sl_risk_experiment`
+- **Health:** OK (exit 0)
+- **Counts:** history rows 1081; obs with stoch 11368; disagreements 3462; trades 16 (stoch 16); SL exits 12 (stoch_k&lt;30: 9)
+- No Brad decide yet — final still owns close path. Do not promote allocator.
+
+### Schedule
+| Milestone | When (PT) | Cron |
+|-----------|-----------|------|
+| Daily health | 09:15 | `8286f8ff6773` stoch-trial-health (silent if OK) |
+| Mid report | 2026-07-28 09:00 | `985c41aa1818` |
+| Final report | 2026-08-04 09:00 | `50ee46a3ec21` |
+| RSI refresher | */15 | `5c1207235cf6` (wrapper fixed) |
+
+Removed legacy one-shot `RSI vs StochRSI — 2-week review` (`6f3fb1232ec5`) — superseded by mid/final.
+
+### Done when (close)
+- [x] Final report generated (`reports/STOCH_RSI_TRIAL_FINAL_2026-08-04.md`)
+- [x] Brad decision recorded on trial JSON (`continue_observe_only`, 2026-08-04)
+- [x] MASTER → DONE with enum; inbox `DECIDED_STOCH-RSI-PARALLEL-20260721_20260804.md`
+- [x] Health cron paused; 15m refresher kept; 30d reeval cron `7fc18a19a125` @ 2026-09-03 09:00 PT
+- [x] Unblock Kelly sizing test (already offline-unblocked / separately closed)
+
+### Cycle v2 (same day)
+Loop audit applied: state machine, `trial_cycle.py`, INDEX, health auto-DEGRADED/KILLED (3 fails), skill `analyst-trial-report` for mid/final, decision inbox. See `docs/testing/ANALYST_TEST_CYCLE.md` v2.
+
+### Next after CLOSED
+`ANALYST-KELLY-SIZING-TEST-20260721` — **unblocked early** (offline parallel OK, 2026-07-21); no longer waits on Stoch close.
+
+---
+
+## ANALYST-KELLY-SIZING-TEST-20260721 — REPORT_READY (awaiting Brad decide)
+
+**Type:** test  
+**Date:** 2026-07-21  
+**Role:** Crypto-Analyst  
+**Status:** **DONE / DROP** — closed 2026-07-21 (dig-further: OOS edge fail; no shadow)
+**auto_pickup:** true  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** kelly_sizing  
+**duration_days:** 3  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-KELLY-SIZING-TEST-20260721.md`  
+**Source:** tigerfl0w Kelly Criterion thread + platform applicability review (session 2026-07-21)  
+**Parallel note:** Does not touch live signal/scorer path; safe concurrent with `ANALYST-STOCH-RSI-COMPARE` instrumentation.
+
+### Analyst note (2026-07-21 offline exec)
+- **Reports:** `reports/KELLY_SIZING_TEST_2026-07-21.md` + `.json`
+- **Isolation:** PASS (`phase6/research/test_isolation_kelly_sizing.py`); module `phase6/research/kelly_sizing.py`
+- **Ledger edge (plausible closed sells):** n=70, p=0.429 (Wilson 95% 0.32–0.55), b=1.87 → f_full≈0.123, f_half≈0.062; multi-asset haircut 0.5 → f_half_eff≈0.031
+- **Recent Jul+:** n=37, p=0.19, f_full=0 (negative edge) — regime-shifted vs full sample
+- **Paths:** baseline 1% risk growth +22% / maxDD 24%; half-Kelly-capped growth +45% but maxDD **40%** (worse DD; envelopes bind full≈half)
+- **Recommendation enum:** `drop` — **no shadow** (recent negative edge + DD worsening). Full Kelly live: REJECT
+- **Live config writes:** none
+- **Decide (Brad):**
+  ```bash
+  python3 phase6/research/trial_cycle.py decide ANALYST-KELLY-SIZING-TEST-20260721-TRIAL drop --note 'offline kelly: recent edge neg; DD worse'
+  ```
+- Inbox: `docs/testing/inbox/REVIEW_ANALYST-KELLY-SIZING-TEST-20260721-TRIAL.md`
+
+### Goal
+Test **fractional Kelly as a risk-budget layer** (half/quarter + hard caps) from **real ledger edge** \(p, b\) vs current fixed `deploy_pct` / risk knobs. Research + optional shadow proposal only — **no live config write** without Brad + gates.
+
+### Why it fits
+- Live sizing = inv-vol + sentiment + `deploy_pct=0.72` + REGIME-CASH util/caps — not edge-calibrated.
+- Closest existing lever/path: deploy_pct shadow (`DEPLOY-PCT-078-LEAN-IN`, `run_deploy_pct_shadow_eval.py`).
+- Multi-asset + SL means Kelly applies to **capital at risk**, not raw notional; full Kelly is not a live default.
+
+### Tiers (see handoff)
+1. **T0** Pure `kelly_fraction` + isolation tests (article 55%/2:1 → ~32.5% full / ~16.25% half)
+2. **T1** Real trades/ledger → \(p,b,n\); insufficient-n = stop, no fakes
+3. **T1b** Offline compare baseline vs half/quarter Kelly-capped paths (growth + max DD)
+4. **T2** Only if T1 wins: shadow/OPT map to `deploy_pct` and/or risk_usd; backlog proposal shadow-only
+
+### Success criteria
+- Real data only; isolation PASS; report `reports/KELLY_SIZING_TEST_*.md` + JSON
+- Clear go/no-go for shadow; distinguish risk fraction vs notional
+- MASTER updated DONE with commands + numbers
+- Must not: live JSON mutate, full-Kelly live recommend, start before Stoch DONE
+
+### Queue
+```
+ANALYST-STOCH-RSI-COMPARE (finish) → ANALYST-KELLY-SIZING-TEST-20260721 → optional shadow / eng wiring
+```
+
+---
+
+## P6-COST-REDUCTION-RESEARCH-20260720 — DONE (research pack)
+
+**Date:** 2026-07-20  
+**Status:** DONE (research); Phase 1 execution pending Brad go  
+
+### Goal
+Explain >$50/day crypto spend from ~60d usage patterns; plan free agents + near-free sentiment.
+
+### Deliverables
+- `docs/research/COST_60D_ATTRIBUTION_2026-07-20.md`
+- `docs/research/FREE_SENTIMENT_OPTIONS_2026-07-20.md`
+- `docs/research/FREE_AGENT_ROUTING_2026-07-20.md`
+- `docs/research/COST_REDUCTION_EXECUTION_PLAN_2026-07-20.md` (v0.2 merged)
+
+### Key findings
+- X was ~48×/day until mid-Jul; now 2× — still Twitter bearer not Apify.
+- LLM: composer-fast long sessions dominate agent.log tokens (tens of M/day busy).
+- Free sentiment MVP: Bybit funding/OI + F&G + RSS; Binance geo-blocked here.
+- Agent: F0 scripts first; build-0.1 Kanban; no default --goal 25; OR daily limit.
+
+### Next
+Phase 1 on approval: Reddit 2×, ops_issue_loop no-goal default, delegation build-0.1, triage script-first.
+
+---
+
+## P6-COST-GROK-CONSOLE-20260721
+
+**xAI console:** credits usage **$98.78**, remaining **$8.62**, tokens **262.6M**, requests **12,027**. Metered credits (not free unlimited). Rough ~$0.38/MTok. Full stack ranked in `docs/research/AI_CHARGES_BY_PROVIDER_2026-07-21.md`.
+
+---
+
+## P6-COST-X-API-EVIDENCE-20260721
+
+**X API txs Jul 12–18:** 11×$25 = **$275** (~$39–42/day) during high-freq refresh — primary “>$50/day” driver with Apify.
+**Apify:** $70.66 period (kill-switched). **OR:** ~$0.75/7d. **Grok $:** still missing console.
+**Doc:** `docs/research/AI_CHARGES_BY_PROVIDER_2026-07-21.md` updated.
+
+---
+
+## P6-COST-APIFY-KILL-20260721 — DONE
+
+**Vendor evidence:** Apify period **$70.66** (Actors $70.55; scrapesmith results $58.85 / 73.5k events). Limit hit → actors disabled to 2026-07-31.
+**OpenRouter 7d:** **~$0.75** (Gemini Flash + DeepSeek) — not the fire.
+**Fix:** `SENTIMENT_REDDIT_APIFY_ENABLED=0` default; refresh_sentiment skips Apify; fetch_reddit hard no-op.
+**Doc:** `docs/research/AI_CHARGES_BY_PROVIDER_2026-07-21.md`
+**Still need:** X Developer + xAI 7d $ for full >$50/day split.
+
+---
+
+## P6-COST-PHASE2-FREE-SENTIMENT-20260721 — DONE (shadow)
+
+**Date:** 2026-07-21  
+**Status:** DONE shadow path; **not** live cutover
+
+### Deliverables
+- `fetch_fng_sentiment.py`, `fetch_funding_sentiment.py` (OKX), `fetch_rss_sentiment.py`
+- `phase6/scripts/refresh_sentiment_free.py` → `data/state/sentiment_cache_free.json`
+- `phase6/scripts/correlate_free_vs_x_sentiment.py` → correlation latest + history
+- crontab `40 8,20 * * *` `run_free_sentiment_shadow.sh`
+- `docs/FREE_SENTIMENT_SHADOW.md`
+
+### First sample
+- free non-zero 11/11; F&G Extreme Fear 25; funding 11/11 via OKX
+- RSS only 3 pairs non-zero (headline sparsity)
+- vs X: spearman_all≈0.27, sign_agreement≈0.22 → **promote_ready=false**
+- Live X path unchanged
+
+### Next (Phase 3)
+Multi-day history; consider flip funding policy if persistently anti-sign; then scorer flag for free primary.
+
+---
+
+## P6-COST-PHASE1-20260720 — DONE
+
+**Date:** 2026-07-20  
+**Status:** DONE (Brad OR daily limit still pending)
+
+### Applied
+- Reddit Apify: standalone 2h cron **disabled**; only via `refresh_sentiment` 08:50/20:50 PT
+- `ops_issue_loop`: default **no** Kanban `--goal`; `--goal` → rank≤1 only, max 12 turns
+- `delegation.model` → `grok-build-0.1` (xai-oauth)
+- code-reviewer: `base_url: ''` (was wrongly `api.x.ai` with OpenRouter provider)
+- `phase6-ops-triage-daily` → **no_agent** `ops_triage_discover.py` (`a4541bb6be69`)
+- `llm-token-daily-rollup` cron `9505b498cd6d` @ 05:05 → `data/state/llm_token_daily.jsonl`
+
+### Docs
+- `docs/X_SENTIMENT_COST_CONTROL.md`
+- `docs/research/COST_REDUCTION_EXECUTION_PLAN_2026-07-20.md` Phase1 checked
+- crontab backup: `/tmp/crontab.bak.phase1-cost-*`
+
+### Pending Brad
+- OpenRouter key daily spend limit
+- 7d vendor $ screenshots when ready
+
+### Next
+Phase 2 free sentiment shadow (Bybit funding + F&G + RSS)
+
+---
+
+## P6-OPS-ISSUE-LOOP-20260720 — DONE (Kanban-centered auto-assign)
+
+**Date:** 2026-07-20  
+**Status:** DONE  
+
+### Goal
+Once ops issues are identified, they enter triage → auto-assign → Kanban resolve → close without waiting for manual board clear.
+
+### Delivered
+- `scripts/phase6/ops_issue_loop.py` — sync / route / ensure-kanban / reconcile / run
+- `scripts/phase6/run_ops_issue_loop.sh` + Hermes cron `ops-issue-loop` 07:15/13:15/19:15
+- Docs: `docs/OPS_ISSUE_LOOP.md`; `docs/OPS_TRIAGE_TASK_WORKFLOW.md` lifecycle updated
+- Skill `phase6-ops-triage` links issue loop
+- Live proof: #21 → registry `P6-OPS-20260720-001` → Kanban **`t_7ea41b94`** (crypto-engineer, ready, idempotency `ops-issue-21`)
+
+### Verify
+```bash
+python3 scripts/phase6/ops_issue_loop.py status
+hermes kanban --board crypto-bot-project list | rg 't_7ea41b94|#21'
+hermes cron list | rg ops-issue-loop
+```
+
+---
+
 # MASTER TASK TRACKING — Crypto Trading Bot (Phase 6 + Platform)
 
-**2026-07-08** — **Five-move loop ops** (user: proceed on loop enhancements).
+**2026-07-16** — **SCALING-1000-PHASE-A-01** (brand / domain / identity / logo / support@ decision pack):
+- Artifacts: `docs/marketing/brand/BRAND_DECISION_PACK.md`, `BRAND_KIT.md`, `SUPPORT_AND_GHL_IDENTITY.md`, `PREPUBLISH_BRAND_CHECKLIST.md`, `docs/marketing/brand/assets/*` (SVG mark/wordmark/mono/favicon/social + PNG mark exports).
+- Recommendation: lock **ARCH Automation** + primary domain **arch-automation.com** (DNS/RDAP research: likely free; re-check at registrar) + **support@arch-automation.com** + GHL Location **ARCH Automation — Pilot**.
+- Anti-bleed: separate from Brad personal Phase 6; no purchase/live ads yet.
+- Docs updated: MKT plan header + Phase A / open Q #1 / brand asset row; MASTER kanban row; consultancy mirror of decision pack.
+- Host task already using placeholder `api.arch-automation.com` — aligned with recommended brand domain.
+- **Blocked on Brad sign-off (D1 name + D2 domain)** before purchase, GHL rename, and copy final lock.
+
+**2026-07-14** — **P6-OPS-REBALANCE-OUTAGE-QUALITY** (user: complete PID/cron patch + full-population quality after outages).
+**2026-07-16** — **SCALING-1000-PHASE-A-04** (legal counsel / ToS / privacy / risk disclosures / claims & screenshot policy one-pager):
+- **Legal/Regulatory Analysis:** `docs/marketing/LEGAL_ANALYSIS.md` — broker-dealer, CTA/CPO, money transmitter, state licensing analysis for US-focused product. Conclusion: Low risk given software-only framing, no custody, flat subscription fees, no advisory language. **This is not legal advice — engage counsel before public paid checkout.**
+- **Terms of Service:** `docs/marketing/TERMS_OF_SERVICE.md` — full ToS covering software subscription, OAuth scope, non-custodial structure, no investment advice, billing, risk acknowledgement, disclaimers, liability limits.
+- **Privacy Policy:** `docs/marketing/PRIVACY_POLICY.md` — data collection, OAuth token handling (encrypted at rest, never in GHL), CCPA/CPRA rights, GDPR provisions, no sale of personal data.
+- **Risk Disclosures:** `docs/marketing/RISK_DISCLOSURES.md` — financial, technical, operational, regulatory risks with always-on disclaimer block.
+- **Claims & Screenshot Policy:** `docs/marketing/CLAIMS_SCREENSHOT_POLICY.md` — Brad-approved zero-tolerance policy. Approved language list, red flags (forbidden claims), screenshot rules (no personal P&L), deposit-adjusted honesty, approval flow, violation severity table.
+- **Pre-Publish Claim Checklist:** `docs/marketing/PRE_PUBLISH_CHECKLIST.md` — 8-section checklist (A-H) covering performance claims, business model, regulatory compliance, technical accuracy, screenshots, channel-specific, sources, final quality. With approval sign-off.
+- **Compliant Copy Pack:** `docs/marketing/copy/COMPLIANT_COPY_PACK.md` — W1 (welcome), W2 (connect reminder 24h/72h), W3 (go-live), W5 (dunning), landing page, checkout copy. All compliance-checked per policy.
+- **Legal Docs Index:** `docs/marketing/LEGAL_DOCS_INDEX.md` — master index of all 7 documents with counsel engagement checklist.
+- All docs in `docs/marketing/` with status "Draft — Subject to Legal Review." **Do not publish or present to users before counsel approval.**
+- Recommended counsel engagement: ~7 weeks total (1wk engagement, 2wk initial review, 2wk ToS/Privacy review, 1wk marketing copy, 1wk final sign-off).
+- **Blocked on:** Brad engagement of qualified crypto/fintech counsel + written approval of Claims & Screenshot Policy (Section 9 approval checkbox).
+
+**2026-07-16** — **SCALING-1000-PHASE-A-02** (dedicated host + public HTTPS + domain + basic monitoring prep): 
+- Provider: Hetzner Cloud rec (CPX series, ~€6-20/mo + generous traffic). 
+- Artifacts created: provisioning/scripts/hetzner-provision.sh (base OS, docker, firewall ufw, deploy user, SSH harden, unattended), config/Caddyfile (auto-SSL for api.arch-automation.com), config/health_gateway.py (Flask stub: /health JSON + POST /ghl/webhook test receive 200 stub), config/docker-compose.host.yml + Dockerfile.gateway, scripts/test-webhook.sh, docs/PROVISIONING_GUIDE.md (full steps, costs, DNS, test, security, troubleshooting).
+- Docs updated: GHL_INTEGRATION.md (prereq #2 marked prep complete with links), VPS_MIGRATION_PLAYBOOK.md (Hetzner focus + link), this MASTER.
+- Local verification: syntax OK, endpoint logic sound (stub always 200 for test).
+- Domain/brand: placeholder api.arch-automation.com (see parallel PHASE-A-01 brand task); not purchased/pointed yet.
+- Monitoring: /health for UptimeRobot free tier or basic; system via Hetzner console + docker logs. Target >99%.
+- SSH/secrets: keys only, .env placeholder, non-root user.
+- Cost + team access: detailed in guide. Hetzner console + SSH.
+- Do not: point prod GHL webhooks; keep research posture. Success: public HTTPS reachable, test webhook receives OK (logs), health 200.
+- Next (post this): Acquire VPS creds/account, run scripts manually, set DNS A record, verify curl from external, add real uptime monitor, update docs with live details (IP, domain, access notes). Then GHL manual + T0.
+
+- **PID/cron:** `phase6/core/runner_pid.py` (dual pidfiles + pgrep); `cron_rebalance.py` force-flag when runner live; restored `--rebalance-only`; `scripts/phase6/sync_runner_pid.sh`; start script writes `logs/` + `data/state/` pidfiles.
+- **Stale-data gate:** `signal_freshness_enforced` now wired via `phase6/core/rebalance_quality_gate.py` + `cycle_coordinator` pre-rebalance gate (connectivity probe + basket coverage). Deferred slots persisted as `rebalance_slots_deferred` in `phase6_runner_state.json`; slot not marked complete on outage / hard-fail skips.
+- **SL/fill:** `_reattach_sl_for_rebalance_buys` after ARCH-4 `execute_rebalance_plan`; cycle fill recon unchanged.
+- **Tests:** `test_isolation_rebalance_quality_gate.py`, `test_isolation_cron_rebalance_pid.py`, `test_isolation_should_rebalance_slots.py`, `test_isolation_pre_rebalance_refresh.py` — **PASS** (2026-07-14).
+- **15:41 force rebalance note:** Ran after connectivity restored with `ensure_basket_signals_ready(force_refresh=True)`; new code prevents future slot burn on `Network is unreachable` / incomplete basket when enforced.
+- **Status:** **DONE** (requires runner restart to load new `phase6_runner.py` / `cycle_coordinator.py` in long-lived PID).
+
+**2026-07-11** — **ANALYST-OPT-LEAN-IN-WR-GUARD** (user: lean into active book; keep ~66% exit WR).
+- **Pack:** `phase6/research/scenarios/r3_lean_in_exposure_wr_guard.json` — sweep rebalance cap ($100–$280), stride (7–21d), rotation vs rebalance; recent 90d slice.
+- **Handoff:** `handoffs/analyst/Handoff_ANALYST-20260711_Lean_In_WR_Guard.md`
+- **Run:** `run_scenario_leaderboard.py --pack … --compare-production --refresh-param-audit`; brief must cite live **19/29 exit WR** guard (≥60%) + `run_winner_regime_stress` if winner.
+- **Status:** **DONE** — `OPT-20260712-004849` (2026-07-12). Winner sim=`lean_rebalance_14d_cap220` (Sharpe −1.71, −2.4% return, **3 trades**, 8% exposure) — not a real “lean-in”; aggressive rotation/cap scenarios −19% to −29%. **Live since go-live +66%** ($1660). **No shadow promotion** — sim/live gap; WR guard live **19/29 (66%)** on dash window. Re-run with `OPENBLAS_CORETYPE=GENERIC ./run_backtest.sh phase6/research/run_scenario_leaderboard.py …`
+- **Deploy_pct shadow:** **ACTIVE** `DEPLOY-PCT-078-LEAN-IN` (0.72→0.78 in-memory overlay); replaced `REGIME-ADAPTIVE-SCORECARD` (was USDC-park in flat). Eval: `data/state/deploy_pct_shadow_eval_latest.json`; activate: `python3 phase6/research/activate_deploy_pct_shadow.py --replace`. Runner restarted **PID 2419250** — log shows `deploy_pct=0.78`. **48h review:** Hermes cron `deploy-pct-shadow-48h-review` (`95f7528f077a`) **2026-07-13 18:05 PT** → Telegram + this chat; reminder `data/state/deploy_pct_shadow_review_reminder.txt`.
+
+**2026-07-11** — **P6-DASH-STALE-PRICE-PNL** (user: ARB showed ~−15% while SL open; root cause stale `price_history` quotes).
+- **Root cause:** `phase6_runner._update_price_history_and_calculate_rsi` skipped **all** `get_price` calls when canonical `rsi_cache.json` marked pairs fresh (RSI decoupling leaked into price path). ARB last quote stuck ~$0.0766 (2026-07-08) while Coinbase ~$0.0952 → false deep loss + “why didn’t SL trip?” confusion.
+- **Fix:** Always refresh universe quotes each runner cycle; RSI cache only skips RSI recompute. Dashboard cache write live-refreshes quotes stale >15m. `price_freshness.py` + per-position `price_as_of` / `price_stale`; hide PnL % when stale (⚠ on UI). `refresh_dashboard_live_state.py` + `scripts/phase6/refresh_price_history.py` persist quotes.
+- **Tests:** `scripts/phase6/test_isolation_price_quote_freshness.py` **OK**.
+- **Status:** **DONE**
+
+**2026-07-11** — **P6-OPS-CAPITAL-COOLDOWN-PERSIST** (ops triage → [#10](https://github.com/brad-sl/operations/issues/10); registry `P6-OPS-20260711-001`).
+- **Symptom:** After `manual_liquidation_to_cash` (OP-USD sold, 72h rebuy block @ 00:04 UTC), `arch4_rebalance` bought OP-USD again @ 04:01 and 16:00 UTC — withdrawal-prep intent likely undone.
+- **Hypothesis:** `manual_sell_cooldown` / `manual_cash_hold` not surviving in `data/state/phase6_runner_state.json` (file currently lacks both keys).
+- **Scope:** Persist capital-control fields across `_save_state`; ensure ARCH-4 path applies `filter_trade_plan_manual_cooldown` + `effective_allocator_cash_usd`.
+- **Fix (2026-07-11):** Manual disposition runs **before** external-flow deposit classification (suppresses false deposit on liquidation); hydrate/persist `manual_sell_cooldown` + cash hold on cycle start and `_save_state`; tests `test_isolation_runner_manual_sell.py`, `test_isolation_capital_disposition_cooldown.py`.
+- **Status:** **DONE**
+
+**2026-07-11** — **P6-OPS-ARB-SL-ATTACH** (ops triage → [#11](https://github.com/brad-sl/operations/issues/11); registry `P6-OPS-20260711-002`).
+- **Symptom:** ARB-USD BUY @ 2026-07-11T04:01:20 (`b43f32eb-…`) logged `sl_attached: false`; OP-USD in same batch had `sl_attached: true`.
+- **Scope:** Trace ARCH-4 rebalance + `suspend_reattach_context` / SL coordinator for pair-level attach failures; fix or explicit skip reason + retry.
+- **Fix (2026-07-11):** `StopLossCoordinator.attach_stop_loss()` for platform path; `trading/executor.py` uses verified fill + real `order_id` (not `"platform"` placeholder); test `test_isolation_sl_coordinator_attach.py`.
+- **Status:** **DONE**
+
+**2026-07-11** — **P6-OPS-TRIAGE-WORKFLOW** (user: continual improvement — visibility + resolution beyond Telegram).
+- **Doc:** `docs/OPS_TRIAGE_TASK_WORKFLOW.md` — registry `data/state/ops_task_registry.jsonl`, GitHub Issues, MASTER linkage, lifecycle.
+- **Tool:** `scripts/phase6/ops_triage_tasks.py` (`list`, `promote`, `close`).
+- **Skill:** `phase6-ops-triage` updated with Promote step.
+- **Status:** **DONE** (process); open findings tracked as P6-OPS-* above.
+
+**2026-07-11** — **P6-RESEARCH-AI-HEDGE-FUND** (user: friend-suggested methodology review of [virattt/ai-hedge-fund](https://github.com/virattt/ai-hedge-fund)).
+- **Doc:** `docs/research/AI_HEDGE_FUND_COMPARATIVE_ANALYSIS.md` — org-chart mapping (analysts → portfolio → risk → ledger → lab), views-vs-orders alignment, steal/ignore lists.
+- **Disposition:** **Methodology borrow only — no integration.** Do not run upstream CLI/web against Coinbase; do not replace Phase 6 scorers with LLM persona voting.
+- **Actionable borrows (deferred):** governance one-liner (LLM proposes / code disposes), promotion checklist for scorer changes, optional `Signal`-shaped interface sketch — all evidence-gated like RSI/Stoch and PM tilt.
+- **Status:** **DONE** (research doc only).
+
+**2026-07-09** — **P6-ANALYST-OPT-LIVE-GATE** (user proceed: wire param confidence into scenario runner).
+- **`live_param_audit_gate.py`:** `fail_count==0`, `confidence_score>=0.85`, `verified_fills>=1`.
+- **`run_scenario_leaderboard.py`:** blocks OPT (exit 3) unless gate passes; embeds `live_param_audit` on leaderboard JSON.
+- **`promotion_gates.py`:** same gate blocks shadow proposal ingest.
+- **`run_analyst_opt_weekly.py`:** `--refresh-param-audit` each weekly run.
+- Tests: `test_isolation_live_param_audit_gate.py`, updated `test_isolation_promotion_gates.py`.
+- **Live run `OPT-20260709-180928`** (`r2_defensive_sharpe_gate`): winner **`bear_window_rotation_14d`** sharpe **1.643** / max_dd **5.39%**; param gate **1.0**; promotion gates **PASS**; proposal **`ANALYST-20260709-001`** ingested (shadow only).
+
+**2026-07-09** — **P6-REGIME-ADAPTIVE + USDC HURDLE** (user: best regime per period; beat 3.5% USDC).
+- Refreshed `regime_knob_map.json` from scorecard with per-regime `usdc_benchmark`.
+- **`usdc_benchmark.py`** + `config/risk_free_benchmark.json` (3.5% APY).
+- Fixed **`config_overlay`** regime knob apply on every cycle; USDC standdown → cap **0**.
+- **`activate_regime_adaptive_from_scorecard.py`** — shadow **REGIME-ADAPTIVE-SCORECARD** **ACTIVE** (transition fallback; cap 0 until winner beats USDC).
+- Weekly chain: scorecard → `apply_regime_knob_map_from_scorecard.py`.
+- Test: `test_isolation_regime_adaptive_usdc.py`.
+
+**2026-07-09** — **P6-LIVE-USDC-PARK** (user: live park + per-trader toggle + transition process).
+- **Docs:** `docs/LIVE_USDC_PARK.md` (operator guide: off→on, on→off, park→redeploy runbook).
+- **Config:** `config/trader_accounts.json` → `live_usdc_park.enabled` per `portfolio_uuid` (default **off**).
+- **Code:** `usdc_park_executor.py`, `usdc_park_transitions.py`, `rebalance_coordinator` hook; redeploy unwind then normal ARCH-4 same cycle.
+- **CLI:** `scripts/manage_trader_account.py` (`show`, `usdc-park on|off`, `park-status`).
+- **State:** `data/state/usdc_park/*_transitions.json`, `*_latest.json`.
+- **Test:** `test_isolation_usdc_park_live.py` PASS.
+
+**2026-07-09** — **P6-DECISION-CTX** (user proceed: rebalance → param audit linkage).
+- **Shipped:** `decision_context.py` + `record_rebalance_decision()` on **ARCH-4** and **legacy deploy_capital** paths in `rebalance_coordinator.py`.
+- **Log:** `data/state/decision_context_log.jsonl` with `actions_taken` (pair/action/usd) every rebalance.
+- **Backfill:** `scripts/phase6/backfill_decision_context_from_trades.py` for historical rotation clusters.
+- **Live:** backfill **11** decision rows; param audit **confidence_score 1.0**, **0 warn / 0 fail** on 87 verified fills.
+
+**2026-07-09** — **P6-PARAM-AUDIT** (user: parameter confidence before optimize; 1000-trader log design).
+- **Account scope:** `portfolio_uuid` = partition; reconciler assumes API FILLED pull = **whole Trading Bot account**.
+- **Scalable logs:** `data/state/trading_log/{account_id}/verified_fills_{YYYY-MM}.jsonl` + `order_id_index.json` (1 row/order_id); legacy `phase6_trades.jsonl` kept for dashboard.
+- **Shipped:** `trading_log_store.py`, `param_audit.py`, `docs/P6_PARAM_AUDIT_AND_TRADING_LOG.md`, CLI `scripts/phase6/run_param_audit.py`, isolation `test_isolation_param_audit.py`.
+- **Rules:** SL vs `sl_min`/`sl_max` + registry; rotation decision window; basket membership; verified buys.
+- **Live run:** account `3176ac3f-…`, **87** verified fills, **0 fail**, **34 warn** (rotation decision_context gaps), **confidence_score 0.719**.
+- **Optional:** `PHASE6_PARAM_AUDIT_EACH_CYCLE=1` runs audit post-reconcile.
+
+**2026-07-09** — **P6-TRADING-BOT-PARITY** (user: confidence buys/sells match parameters before optimize).
+- **Shipped:** `reconcile_trading_bot_ledger()` — Trading Bot filter `ORDER_DATA_SOURCE_TRADING_PROXY`; ingest **stop + MARKET sells** + **verified BUYs** by `order_id`; cycle hook uses `--full` path; CLI `--full`; `scripts/phase6/verify_trading_bot_ledger.py`, `coinbase_bot_ledger_report.py`.
+- **Backfill (live, 120d):** API **105** FILLED (53 BUY / 52 SELL) → JSONL **107** unique `order_id`s, **missing_in_jsonl: 0** (`verify_trading_bot_ledger.py` **PASS**). Added **34** `rotation_exchange` + **53** `rebalance_buy` (+ prior **18** `stop_loss_exchange`).
+- **Re-run:** `.venv/bin/python scripts/phase6/reconcile_exchange_fills.py --full --backfill-days 120` (idempotent). **Verify:** `scripts/phase6/verify_trading_bot_ledger.py`.
+- **Note:** Legacy runner rows without `order_id` remain in JSONL; optimization/attribution should prefer `fill_verified` + `coinbase_trading_bot` rows.
+
+**2026-07-09** — **P6-FILL-RECON** (user: capture Coinbase FILLED stop SELLs into ledger).
+- **Shipped:** `exchange_fill_reconciler.py`, `protective_orders_registry.py`, `list_filled_orders()` on `exchange_client`, SL attach registers `sl_order_id`, post-cycle ingest in `cycle_coordinator`, CLI `scripts/phase6/reconcile_exchange_fills.py`.
+- **Backfill (live):** 120d scan → 52 FILLED SELLs, **18 stop-limit** ingested into `trades/phase6_trades.jsonl` (`reason=stop_loss_exchange`, `fill_verified=true`); raw audit `trades/phase6_exchange_fills.jsonl`; cursor `data/state/fill_reconcile_cursor.json`.
+- **Recent SL (matches Coinbase Stop/Filled filter):** e.g. SOL-USD 2026-07-08 + 2026-07-07; sum SL `pnl` ≈ **-$59.27** (entry from `ledger_last_buy` / `inferred_from_stop` where no registry).
+- **Dashboard:** trade list shows `SL` badge for reconciled exits.
+- **Re-run:** `.venv/bin/python scripts/phase6/reconcile_exchange_fills.py --backfill-days 14` (idempotent by `order_id`).
+
+**2026-07-08** — **ENG-S3 settlement/fill hardening** (user: fix double poll + ledger timing).
+- **Single settlement owner:** removed ~30s `get_order_fill_details` loop in `order_executor`; `stop_loss_manager.attach_stop_loss` + `poll_for_settlement(order_id=)` only (`SETTLEMENT_POLL_OWNER` in `sl_preflight.py`).
+- **No market anchor on buys:** executor no longer substitutes `get_price()` for missing fill; SL refuses market fallback on `fresh_buy=True` without verified fill (`fetch_verified_order_fill`).
+- **Ledger after SL:** buy path re-queries verified fill post-attach; `log_execution_result` carries `fill_verified` / `sl_attached`.
+- **Nested poll removed:** `exchange_client.place_stop_limit_sell` no longer calls `poll_for_settlement` (ENG-S3-02c).
+- Tests: `test_isolation_order_executor_p0.py`, `test_isolation_sl_preflight.py` PASS.
+
+**2026-07-24** — **Hermes cron error cleanup** (dashboard: intel / OPT weekly / morning rebalance / deep maint).
+- **Root cause:** Phase6 jobs lived on **crypto-orchestrator** profile whose gateway is **not running** (stale errors since ~2026-07-04). Legacy `twice-daily-trading-intelligence` (`4dcba7aa8f06`) disabled with sticky error. Weekly OPT hard-exited 3 on live_param_audit gate (`fail_count>0`).
+- **Fixes:** soft-fail live param gate in `run_scenario_leaderboard.py` (promotion still blocked; add `--strict-live-param-audit` for hard fail); harden `cron_rebalance_live.sh` + `generate_trading_intelligence_report_cron.sh` (venv + project root); force-flag path verified with live runner.
+- **Default profile jobs (active gateway):** Morning `02bea42a1926` 09:05, Evening `79def136a313` 21:05, Deep maint `ea73d1428e6c` 03:00 — manual run **ok**. Intel primary remains `c16b620103dc` v2. Removed legacy `4dcba7aa8f06`.
+- **Orchestrator:** paused migrated Phase6 crons + cleared sticky last_status error (backup `jobs.json.bak-20260724`).
+- **Verify:** `hermes cron list`; `phase6/scripts/cron_rebalance_live.sh` → force flag; deep/intel cron wrappers exit 0.
+
+**2026-07-08** — **ENG-S7-01 intel proposal dedup** + **S3 Kimi re-review REVIEWED** (post P0).
+- Intel: `collect_known_proposal_titles` / deployed themes suppress duplicate daily IDs (004–006 / 013–015 class); `test_isolation_intel_proposal_dedup.py` PASS.
+- S3 rerun: `data/state/code_review/out/S3_rerun_20260708.log` → REVIEWED (shadow SL gated, ledger wired, isolation tests cited).
+
+**2026-07-08** — **Five-move loop ops**
 - **Crons fixed:** shadow drift wrapper `~/.hermes/scripts/phase6/research/` + `chmod +x` project script; git-daily `pipefail`+grep exit + health non-fatal RC.
 - **Intel dedupe:** Linux crontab intelligence lines removed; primary = Hermes `twice-daily-trading-intelligence-v2` (`c16b620103dc`).
-- **Ops triage:** skill `phase6-ops-triage` + cron `phase6-ops-triage-daily` (`a4541bb6be69`) 06:00 PT → `data/state/ops_triage.md`.
+- **Ops triage:** skill `phase6-ops-triage` + cron `phase6-ops-triage-daily` (`a4541bb6be69`) 06:00 PT → `data/state/ops_triage.md`; promote medium/high via `scripts/phase6/ops_triage_tasks.py` + `data/state/ops_task_registry.jsonl` + GitHub Issues; workflow `docs/OPS_TRIAGE_TASK_WORKFLOW.md`.
 - **Verification lane:** `trading-bot-operations` + `references/analyst-deploy-evaluator-lane.md` (mandatory evaluator `delegate_task` before deploy claims).
+
+**2026-07-08** — **Code-reviewer integration fixes** (Kimi experiment → user proceed).
+- Wired `sanitize_reattach_order_id` + fill-tied poll abort + pre-attach hold cancel in `stop_loss_manager.py`.
+- Pre-rebal: refresher exit codes; 5s timeout on live sentiment fallback.
+- `sl_preflight` increment buffer; leaderboard pack/scenario date_range warn.
+- Handoff: `docs/handoffs/CODE_REVIEW_ANALYST_INTEGRATION_20260708.md`; isolation tests PASS (+ manager sanitize test).
+
+**2026-07-08** — **Kimi full-platform code review** (systematic slices S1–S8).
+- Plan: `docs/research/KIMI_PLATFORM_CODE_REVIEW_PLAN.md`; packets `data/state/code_review/slices/`.
+- Run: `scripts/hermes/run_platform_code_review_all.sh` → outputs `data/state/code_review/out/S*.md`, rollup `PLATFORM_REVIEW_ROLLUP.md`.
+- Status: execution **complete** (2026-07-08 ~09:57 PT); rollup `data/state/code_review/PLATFORM_REVIEW_ROLLUP.md`.
+- Triage: `docs/handoffs/KIMI_PLATFORM_REVIEW_20260708.md` — **S3 BLOCKED** (shadow SL, double poll, ledger); P0 items ENG-S3-01..04, ENG-S4-01..02 **implemented + tests PASS** (2026-07-08).
 
 **2026-07-08** — **Analyst proposals 004/005/006 deployed** (user: proceed with 1, 2, and 3).
 - **004:** `r2_defensive_sharpe_gate.json` (6 ARCH-4 scenarios incl. bear-window `date_range`); weekly OPT default pack switched; per-scenario window in `run_scenario_leaderboard.py`.
@@ -221,6 +2635,9 @@ Divergence between systems means inconsistent trade decisions. Signals and oppor
 
 ## How to Use This File Going Forward
 - When starting a sub-task: Add a row or subsection with ID, success criteria, verification method (explicitly "run isolation wrapper X and paste output").
+- **Tests / experiments (auto loop):** add a `## TASK-ID` section with machine fields so pickup can launch without chat:
+  - `**Type:** test` · `**auto_pickup:** true` · `**Status:** QUEUED` · `**blocked_on:** \`ID\`|none` · `**trial_kind:** offline_analysis|parallel_instrumentation` · `**family:** ...` · `**Handoff:** path`
+  - Scanner: `phase6/research/master_test_pickup.py` · crons `master-test-pickup-scan` / `master-test-pickup` · cycle `docs/testing/ANALYST_TEST_CYCLE.md`
 - On completion: Date-stamp, link evidence (test file + output, PR or commit if any, before/after metrics), update status.
 - For delegation: Create a tight handoff doc in `handoffs/phase6/` that references the ARCH-N task here, then update this with the handoff link + status.
 - After "proceed", the agent will chain phases, run isolation tests, update this file, and only surface when a phase completes or a blocker requires decision.
@@ -7287,7 +9704,26 @@ Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 002; superseded
 **Goal:** 1,000 traders; **GoHighLevel** = onboarding, subscriptions, comms, CRM; **Coinbase OAuth** = per-trader exchange auth; Phase 6 engine = backend workers.
 
 **Canonical plan:** `docs/epics/SCALING-1000_EPIC.md`  
-**Kickoff handoff:** `handoffs/scaling/Handoff_SCALING-1000_EPIC_Kickoff.md`
+**Kickoff handoff:** `handoffs/scaling/Handoff_SCALING-1000_EPIC_Kickoff.md`  
+**GHL ramp-up / Hermes delegation note:** `docs/integrations/GHL_INTEGRATION.md` (sub-account + dedicated host **before** dev waves; set `delegation.provider` when starting GHL implementation)
+
+### Dashboard (2026-07-08) — **P6-DASH-COMP complete**
+
+| ID | Task | Owner | Handoff |
+|----|------|-------|---------|
+| P6-DASH-COMP | Dashboard composition — empty report fields | grok-4.5 | `handoffs/phase6/Handoff_DASHBOARD_COMPOSITION_RELIABILITY.md` |
+
+**Outcome:** `/api/metrics` blocked on `v_dashboard_metrics` + `Promise.all` stalled render (header `$0.00`). Live cache-first metrics; `enrich_live_state` sets totals; frontend `allSettled` + metrics timeout. Verified: metrics ~0.001s; `total_usd` ~682; `test_dashboard_composition_api.py` PASS. `systemctl --user restart crypto-dashboard.service` applied.
+
+| UI field | API | Source |
+|----------|-----|--------|
+| Total portfolio | `/api/balances` → `total_usd`, `total_balance` | `data/state/phase6_live_state.json` (+ `enrich_live_state` splits) |
+| Position table | `/api/positions` → `cash_positions`, `trading_positions` | cache-first live state |
+| PnL / win ratio | `/api/performance` | `live_state.performance_metrics` + TradeLedger |
+| Observability KPIs | `/api/metrics` → `metrics.*` | cache-first live state (live); `v_dashboard_metrics` paper-only best-effort |
+| Sentiment / RSI | `/api/sentiment`, `/api/rsi` | scorer + `rsi_cache.json` |
+| Trades / rebalances | `/api/trades`, `/api/rebalances` | TradeLedger + rebalance_history |
+| Recovery | `/api/recovery` | `recovery_state.json` |
 
 ### Child workstreams (not started)
 
@@ -7303,7 +9739,7 @@ Status: **Closed — duplicate** (2026-07-06). Briefing rerun of 002; superseded
 | SCALING-1000-T1-01..04 | T1 | Staggered scheduler, shared intel, SL remediation, status API |
 | SCALING-1000-T2-* / T3-* | T2–T3 | Fleet scale, reconciliation, load/chaos |
 
-**Next action:** `SCALING-1000-T0-01` (schema ERD — no production runner changes).
+**Next action:** Prereqs parallel (brand t_cff262a8, host t_ce0b31f9, GHL manual t_136c2da8, legal t_95eb43a2, copy t_5e21287a, paid-acquisition research if needed) + T0-01 schema (t_617c4635) + T0-02/03 etc per unified roadmap. Client SEO/SEM/ads workstreams are out of scope for this repo (see PROJECT_BOUNDARY + DOC_BOUNDARY audit). Lock brand/host/legal first. See PLAN-PACK completion section.
 
 
 **ANALYST-20260706-005** — Add pre-flight settlement poll + product-specific tick handling to SL layer
@@ -7485,3 +9921,660 @@ Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refr
 Priority: Medium | Effort: Low-Medium | Category: Data / Runner
 Source: Daily Intelligence Briefing 2026-07-08 14:20 UTC
 
+
+**ANALYST-20260708-013** — Tighten scenario pack toward positive Sharpe on ARCH-4 holdout
+Status: Proposed — Awaiting Review/Acceptance
+Description: Current gates block promotion when winner Sharpe < 0. Add scenarios with defensive rotation, longer rebalance_freq, and bear-window validation. Document in scenario pack YAML.
+Benefits: Only shadow trials with non-losing risk-adjusted profiles reach proposals.
+Risks + Mitigations: May reduce nominal return in bull-only sims (mitigation: regime map handles bull separately).
+Priority: Medium | Effort: Medium | Category: ANALYST-OPT / Gates
+Source: Daily Intelligence Briefing 2026-07-08 16:00 UTC
+
+
+**ANALYST-20260708-014** — Add pre-flight settlement poll + product-specific tick handling to SL layer
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.
+Benefits: Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).
+Risks + Mitigations: Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.
+Priority: High | Effort: Medium | Category: SL / Platform
+Source: Daily Intelligence Briefing 2026-07-08 16:00 UTC
+
+
+**ANALYST-20260708-015** — Strengthen pre-rebalance data refresh + fallback for partial coverage
+Status: Proposed — Awaiting Review/Acceptance
+Description: Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.
+Benefits: Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.
+Risks + Mitigations: Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).
+Priority: Medium | Effort: Low-Medium | Category: Data / Runner
+Source: Daily Intelligence Briefing 2026-07-08 16:00 UTC
+
+
+**ANALYST-20260709-001** — Shadow trial: scenario 'bear_window_rotation_14d' from r2_defensive_sharpe_gate
+Status: Proposed (ANALYST-OPT R3 shadow trial) — Awaiting Review
+Source run: OPT-20260709-180928 | scenario: bear_window_rotation_14d
+Description: Optimization run OPT-20260709-180928 (engine arch4). Apply knob set via shadow overlay; compare monitor PnL vs backtest. Winner metrics: sharpe=1.643, return_pct=1.92, max_dd=5.39.
+Gates: passed | warnings: ['Path B sentiment/RSI proxy vs live cache — see BACKTEST_LIVE_GAP_MATRIX.md']
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260715** (opened 2026-07-15T14:30:01.771568)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260715`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+---
+
+## P6-DASH-KPI-TRUTH-20260716 — Dashboard KPI truth cleanup (DONE)
+
+**Status:** DONE (2026-07-16) — implement + verify complete
+
+### Verification (curl after restart)
+- `/api/performance`: `d30: null` (UI N/A), deposit_adjusted 1D/7D numeric, Exit WR wins/total
+- `/api/metrics`: utilization ~0.85 (holdings/total), sl_success_rate **1.0** (not fake 0%), source `fast_observability + live holdings/SL`
+- Isolation: `PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_kpi_truth.py` PASS
+- FAQ: `docs/Trading_Bot_FAQ.md` (7D vs 3% SL)
+- Kanban: complete t_4bce608d, t_08a89c44, t_78c220ad  
+**Priority:** High  
+**Opened:** 2026-07-16 (dashboard review vs live API)
+
+### Problem
+Dashboard tiles can mislead operators:
+1. **30D 0.00%** when balance history < 30d (null should be N/A, not zero return)
+2. **Util** can disagree with cash vs holdings (screenshot Util 98% with ~$1.7k cash / ~$2.58k NAV)
+3. **SL OK 0%** from empty/broken `sl_success_rate` while stops may exist on exchange / est SL on positions
+4. Ops labels historically confused (Health/Active/Capital vs Churn/Rebal/Replay)
+5. **Exit WR** definition correct but easy to over-read
+6. Operators may think **7D ~−15% violates 3% SL** — portfolio return ≠ per-position stop
+
+### Kanban (crypto-bot-project)
+| ID | Title | Assignee | Role |
+|----|-------|----------|------|
+| `t_78c220ad` | P6-DASH-KPI-TRUTH parent | crypto-orchestrator | epic |
+| `t_4bce608d` | P6-DASH-KPI-01 implement | crypto-engineer | implement |
+| `t_08a89c44` | P6-DASH-KPI-02 reviewer | crypto-orchestrator | review (parent: 01) |
+
+### Handoff
+`handoffs/Handoff_P6_DASH_KPI_TRUTH_20260716.md`
+
+### Success criteria
+See handoff Must Do checklist. Isolation tests + dashboard restart + curl evidence required.
+
+### Related
+- P6-OPS rebalance `sl_attached: false` (existing tickets)
+- `phase6-capital-and-dashboard-kpis` skill
+
+
+### 2026-07-17 Implement (t_4bce608d crypto-engineer)
+- compute_period_performance now returns None (not 0.0) for windows without prior snapshot in account_balances.
+- /api/performance passes nulls; JS renders "N/A" for missing periods (1D/7D/30D).
+- 30D tooltip updated.
+- Util primary: holdings_value / total_usd computed in fast_observability + _metrics (ARCH-4 secondary).
+- SL OK: now fraction of open trading_positions with sl_stop_price_est or sl_attached (real attach rate from positions, DB 0 only as fallback if no pos data and >0).
+- SL OK tooltip updated + "not portfolio max loss".
+- Exit WR subline: wins/total for ledger_nonzero_pnl (0/29 observed).
+- Ops labels already Util/Accept/SL OK/Churn/Rebal/Recov/Replay + correct DOM binds.
+- Added isolation test: scripts/phase6/test_isolation_kpi_truth.py (period N/A, util formula, SL from pos).
+- 1D/7D/30D tooltips + FAQ note in Trading_Bot_FAQ.md explaining 7D wallet vs per-pos 3% SL.
+- No risk params / live changes.
+- Evidence: restart + curls below.
+
+### Evidence (post implement, t_4bce608d run)
+```bash
+bash scripts/phase6/restart_dashboard_live.sh
+curl -s http://127.0.0.1:8502/api/performance | jq '{d30, today, d7, win_ratio, win_ratio_exits}'
+curl -s http://127.0.0.1:8502/api/metrics | jq '.metrics | {utilization, sl_success_rate, churn, rebalance_count}'
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_kpi_truth.py
+```
+
+**Curl + test output from this run (2026-07-17):**
+/api/performance:
+{
+  "today": -2.47,
+  "d7": -15.8,
+  "d30": null,
+  "win_ratio": 0.0,
+  "win_ratio_exits": { "wins": 0, "total": 29, "basis": "ledger_nonzero_pnl" }
+}
+/api/metrics (key):
+{
+  "utilization": 0.8473,
+  "sl_success_rate": 1.0,
+  "churn": 2.2,
+  "rebalance_count": 22,
+  "proposal_acceptance": 0.0008
+}
+Isolation tests: ALL KPI TRUTH ISOLATION TESTS PASSED
+- d30: None (N/A in UI, never 0.00%)
+- util: holdings/total primary match (0.8473)
+- SL: 1.0 from positions after recompute enrich (raw state now consistent)
+- Exit WR sub: 0/29 realizing exits always shown
+
+**Additional in this completion run:**
+- Patched fast_observability_metrics to recompute positions -> sl_stop_price_est populated for raw live_state (SL OK now consistent 1.0 not 0 in fast path)
+- Patched Exit WR subline in phase6_dashboard.html JS to *always* render wins/total (or 0/0) never blank
+- Full restart 8502 + curls + tests executed
+- FAQ blurb + tooltips already present; no live risk changes; permanent edits in repo
+
+See kanban t_4bce608d for artifacts. Reviewer: re-run above cmds.
+
+**Status:** IMPLEMENTED (await reviewer t_08a89c44)
+
+### Reviewer sign-off (t_08a89c44 crypto-orchestrator 2026-07-17)
+Re-ran restart + curls + isolation after P6-DASH-KPI-01 patches:
+
+**Curls (post restart 8502):**
+/api/performance:
+{
+  "today": -2.34,
+  "d7": -15.23,
+  "d30": null,
+  "win_ratio_exits": {"wins": 0, "total": 29, "basis": "ledger_nonzero_pnl"},
+  "source": "portfolio_snapshots_db + positions (period_snapshots_db_adjusted)"
+}
+/api/metrics:
+{"utilization": 0.8475, "sl_success_rate": 1.0, "churn": 2.2, "rebalance_count": 22, "replay_match_rate": 1.0, ...}
+
+**Positions cross-check (live):**
+- Holdings total ~$2181, cash ~$393, total ~$2574 → util 0.8473-0.8475 (matches)
+- All 5 open trading positions have sl_stop_price_est (SL OK 1.0 real, not fake)
+
+**Isolation tests:**
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_kpi_truth.py
+→ ALL KPI TRUTH ISOLATION TESTS PASSED
+- d30: None (N/A never 0.00%)
+- util: holdings/total primary (exact match)
+- SL OK: computed from positions protective stops (real 1.0 on live)
+- live_state run: util/sl_ok consistent
+
+**Confirmed:**
+- 30D N/A (insufficient history, correct)
+- Util = holdings / total (not arch target)
+- SL OK from pos (not 0 from empty metric)
+- Ops labels: Util, Accept, SL OK, Churn, Rebal, Recov, Replay (correct in HTML)
+- Exit WR: always shows wins/total sub (0/29)
+- FAQ + tooltips: "Deposit-adjusted wallet return; 3% SL is per-position from entry, not a portfolio DD cap." (in phase6_dashboard.html and docs/Trading_Bot_FAQ.md)
+- Handoff: handoffs/Handoff_P6_DASH_KPI_TRUTH_20260716.md present
+- No live trading / risk param changes
+
+**Update triage:** marked KPI truth done.
+
+Sign-off: all criteria from handoff + task body met. Reviewer verified. Epic complete.
+
+**Status:** REVIEWER SIGN-OFF COMPLETE (t_08a89c44) — all green.
+
+---
+
+## SCALING-1000-PLAN-PACK-20260716 — Marketing + Implementation plans (COMPLETE)
+
+**Status:** COMPLETE — plan-authoring wave done (plans only; REV-01 approved)  
+**Date:** 2026-07-16  
+**Epic:** `docs/epics/SCALING-1000_EPIC.md`  
+**Handoff:** `handoffs/scaling/Handoff_SCALING_1000_PLAN_PACK_20260716.md`  
+**GHL API docs:** https://github.com/GoHighLevel/highlevel-api-docs · https://marketplace.gohighlevel.com/docs
+
+### Goal
+Full **marketing/GTM plan** + full **technical implementation plan** (incl. GHL API V2 surface map) + **unified roadmap**, before executing T0 engine/GHL waves.
+
+### Kanban (`crypto-bot-project`)
+
+| Card | ID | Assignee | Status |
+|------|-----|----------|--------|
+| MKT-01 Full GTM plan | `t_b2362536` | marketing-strategist | **DONE** (2026-07-16) |
+| IMPL-01 Impl plan + API map | `t_7e74d464` | crypto-engineer | **DONE** (2026-07-16) |
+| SYNTH-01 Unified roadmap | `t_cb94942c` | crypto-orchestrator | **DONE** (2026-07-16, this run) |
+| REV-01 Sign-off | `t_5e0243c7` | crypto-orchestrator | **DONE** (2026-07-16, this run) — APPROVED with tracked gaps; see REV01_SIGNOFF.md |
+| PLAN parent | `t_426636a8` | crypto-orchestrator | **DONE** (2026-07-16) — plans approved + handoff; next wave cards created (see below) |
+| PHASE-A-01 Brand decision | `t_cff262a8` | marketing-strategist | **PACK READY — awaiting Brad sign-off** (2026-07-16): `docs/marketing/brand/BRAND_DECISION_PACK.md` + kit; rec ARCH Automation + arch-automation.com + support@; no domain purchase yet |
+| PHASE-A-02 Dedicated host + HTTPS | `t_ce0b31f9` | crypto-engineer | todo |
+| PHASE-A-03 GHL pilot Location + Private Int + SaaS + Custom Obj (manual) | `t_136c2da8` | marketing-strategist | **SPEC PACK DONE** (2026-07-17) — field dict + runbook + CSVs in `docs/integrations/ghl_t0/`; live Location/token/sample records **pending Brad/Ops UI** (no GHL creds on agent host) |
+| PHASE-A-04 Legal / ToS / claims policy | `t_95eb43a2` | legal-department | todo |
+| PHASE-A-06 Copy + unlisted funnel skeleton | `t_5e21287a` | marketing-strategist | **AGENT PACK DONE 2026-07-30** — `docs/marketing/copy/*` v2; Brad skim + GHL paste + counsel before public |
+| T0-01 Postgres schema/migrations | `t_617c4635` | crypto-engineer | todo |
+| T0-02 AccountContext + flag + dual path | `t_0dc2e735` | crypto-engineer | todo |
+| T0-03 Coinbase OAuth adapter (sandbox spike) | `t_b2fffe06` | crypto-engineer | todo |
+| T0-04 Job queue/scheduler stub | `t_4734a17e` | crypto-engineer | todo |
+| T0-05 Isolation tests + GHL-T0 verification | `t_30b2945f` | crypto-engineer | todo |
+
+**Mirror (historical):** external board card t_a2bd98e2 (MKT-01) — pre-boundary; primary artifact relocated to archive per DOC-BOUNDARY audit.
+
+### MKT-01 complete
+
+- **Artifact (archived):** `docs/archive/cross_project_removed/SCALING_1000_MARKETING_PLAN.md`
+- **Historical mirror (pre-boundary):** external reports copy of SCALING marketing plan (not active in this repo; see archive path under docs/archive/cross_project_removed/)
+- **Sections (historical):** positioning, ICP/tiers, funnel, channels (product discovery / paid acquisition research), offer/pricing narrative, asset list, metrics, 90-day pilot GTM, risks + open questions for Brad
+
+### Deliverables (expected)
+
+1. `docs/marketing/SCALING_1000_MARKETING_PLAN.md` — **DONE**
+2. `docs/integrations/SCALING_1000_IMPLEMENTATION_PLAN.md` — **DONE** (IMPL-01 t_7e74d464)
+3. `docs/integrations/GHL_API_V2_SURFACE_MAP.md` — **DONE** (IMPL-01 t_7e74d464)
+4. `docs/epics/SCALING_1000_UNIFIED_ROADMAP.md` — **DONE** (SYNTH-01 t_cb94942c)
+5. `docs/epics/SCALING_1000_REV01_SIGNOFF.md` — **DONE** (REV-01 t_5e0243c7) — Reviewer sign-off vs epic non-goals + HighLevel GHL API V2 surfaces (APPROVED).
+
+**Artifact locations (canonical project):**
+- Unified: `/home/brad/projects/crypto-trading-bot/docs/epics/SCALING_1000_UNIFIED_ROADMAP.md`
+- Review sign-off: `/home/brad/projects/crypto-trading-bot/docs/epics/SCALING_1000_REV01_SIGNOFF.md`
+- (Workspace scratch mirror for this task: `/home/brad/.hermes/kanban/boards/crypto-bot-project/workspaces/t_cb94942c/docs/epics/SCALING_1000_UNIFIED_ROADMAP.md`)
+- Historical marketing mirror (from MKT, pre-boundary): external reports path only; crypto canonical archive is docs/archive/cross_project_removed/SCALING_1000_MARKETING_PLAN.md
+
+### SYNTH-01 Complete (this run)
+- **Deliverable:** `docs/epics/SCALING_1000_UNIFIED_ROADMAP.md`
+- **Contents:** Executive summary; critical path GTM (90-day pilot Phases A/B/C) vs T0–T3 impl mapping table with dependencies/exits; consolidated RACI (Mkt/Eng/Ops/Brad); consolidated open questions (20 items, owners/phase); risks cross-cut; recommended next executable Kanban wave (prereqs + T0-01..05 + GHL-T0 + Mkt packs: brand, policy, copy, GHL-T0 funnel skeleton, host (client SEM historical only, scrubbed per boundary)); success gates; doc control.
+- **MASTER update:** Kanban table + deliverables marked DONE; links added.
+- **Handoff ready for:** REV-01 (t_5e0243c7) sign-off vs epic + real API surfaces. Then T0 wave cards.
+- **Key recs:** Lock brand + host + GHL Location + pricing/caps + legal timeline in Phase A before heavy T0-01. Dedicated host prereq before T1 webhooks. Feature flags + isolation for Brad live. No live ads or prod merges pre-gates.
+
+### Boundary
+- GHL = commercial/CRM/comms; engine = trading/OAuth vault.
+- No OAuth tokens in GHL; no fake marketing P&L.
+- This pack is **plans only** — next executable wave after REV: T0-01 (schema) + GHL-T0 (manual) + Mkt foundation packs + host prep. See unified roadmap §5 for wave details.
+
+
+
+**Status for pack:** COMPLETE (2026-07-16). REV-01 sign-off APPROVED. All deliverables (MKT, IMPL+map, UNIFIED, REV) exist and reviewed. Handoff + MASTER finalized. Next executable wave cards created (see Kanban table + created_cards in task).
+
+### PLAN-PACK Completion (t_426636a8, this task)
+
+- **Date:** 2026-07-16
+- **Handoff:** `handoffs/scaling/Handoff_SCALING_1000_PLAN_PACK_20260716.md` (original spec)
+- **Artifacts (canonical):**
+  - Marketing: `docs/marketing/SCALING_1000_MARKETING_PLAN.md`
+  - Impl: `docs/integrations/SCALING_1000_IMPLEMENTATION_PLAN.md`
+  - GHL map: `docs/integrations/GHL_API_V2_SURFACE_MAP.md`
+  - Unified roadmap: `docs/epics/SCALING_1000_UNIFIED_ROADMAP.md`
+  - REV sign-off: `docs/epics/SCALING_1000_REV01_SIGNOFF.md`
+- **Summary:** Planning pack complete and approved. 20 gaps/prereqs tracked (brand, host, legal, pricing, GHL setup, encryption, etc.). Plans-only discipline honored (no multi-tenant runner changes). Critical path sequenced in unified. Ready for Phase A prereqs parallel + T0 engine spikes.
+- **Kanban cards created (Phase A + T0 wave per unified §5):**
+  - t_cff262a8 PHASE-A-01 Brand (marketing-strategist)
+  - t_ce0b31f9 PHASE-A-02 Host (crypto-engineer)
+  - t_136c2da8 PHASE-A-03 GHL pilot manual setup (marketing-strategist)
+  - t_95eb43a2 PHASE-A-04 Legal/policy (legal-department)
+  - t_5e21287a PHASE-A-06 Copy/funnel (ad-copywriter)
+  - t_617c4635 T0-01 schema (crypto-engineer)
+  - t_0dc2e735 T0-02 context/flag (crypto-engineer)
+  - t_b2fffe06 T0-03 OAuth spike (crypto-engineer)
+  - t_4734a17e T0-04 queue (crypto-engineer)
+  - t_30b2945f T0-05 isolation + GHL-T0 (crypto-engineer)
+- **Next actions:** Execute prereqs first (lock brand/host/legal/GHL Location/pricing before T0-01 heavy or copy final). Use feature flags + isolation. Dedicated host before T1. T0 exit before T1 commercial. Update MASTER/kanban on each sub complete. After T0+Phase A: T1 waves.
+- **References:** See REV01_SIGNOFF.md for full 20 items + recs; unified roadmap §5 for wave details; epic for north star.
+
+*PLAN-PACK closed. Move to executable T0/Phase A.*
+
+### PHASE-A-03 GHL-T0 pack (2026-07-17) — agent/Mkt portion
+
+- **Kanban:** `t_136c2da8`
+- **Done:** Field dict, manual runbook, sample CSVs, secrets template, Mkt pack summary under `docs/integrations/ghl_t0/` + `docs/marketing/ghl_t0/`.
+- **schemaKey:** `custom_objects.tradingaccount`
+- **Pilot SaaS drafts:** Starter $39 / Pro $99 / Elite $249 (Brad A before public).
+- **Pending human:** Live Location + Private Integration token (secure note only) + create objects/products/sample records per runbook. No GHL creds on agent host.
+- **Handoff:** `handoffs/scaling/Handoff_GHL_T0_PHASE_A_03_20260717.md`
+- **Docs updated:** `GHL_INTEGRATION.md` prereq #1 → Spec ready.
+
+---
+
+## P6-OPS-#12 + #14 close loop (2026-07-17) — DONE
+
+**Status:** DONE  
+**Kanban:** `t_775ef483` (#12), `t_cc38c6b2` (#14)  
+**Registry:** P6-OPS-20260712-001, P6-OPS-20260713-001 → closed  
+**GitHub:** [#12](https://github.com/brad-sl/operations/issues/12), [#14](https://github.com/brad-sl/operations/issues/14) **CLOSED**
+
+### #12 Analyst OPT weekly path
+- **Bug:** Cron looked under `~/.hermes/scripts/...`; file missing → last_status error 2026-07-12.
+- **Fix:** .sh wrapper updated with absolute `ROOT="/home/brad/projects/crypto-trading-bot"`, `cd "$ROOT"`, `export PYTHONPATH="$ROOT"`, `OPENBLAS_CORETYPE=GENERIC`; synced to `~/.hermes/scripts/phase6/research/run_analyst_opt_weekly.sh` (matches project).
+- **Smoke:** `timeout ... /.../run_analyst_opt_weekly.sh` → "ANALYST-OPT weekly OK", full run (leaderboard, ingest, dedup, assessment, regime scorecard/knob), `SMOKE_SH_EXIT=0`.
+- **Cron resolve verify:** `hermes -p default cron run e039d96c4732` ; now shows:
+  `Last run: 2026-07-17T08:52:46...  error: Script exited with code 3`
+  stderr has gate block "live_param_audit: run_param_audit.py exited 2" — **no "Script not found"**.
+- **Isolation criteria met:** smoke exit 0 + hermes cron last_status **not** path-error.
+- **Evidence files:** hermes cron list output, smoke log, `~/.hermes/scripts/phase6/research/run_analyst_opt_weekly.sh`, jobs.json, ops registry, this MASTER.
+- **Note:** Weekly exits non-0 on param gate (fail_count=2, conf ok) — expected behavior, unrelated to path fix.
+
+### #14 LINK rebalance `sl_attached: false`
+- **Bug:** Rebalance BUY `record_ledger=False` never finalized ledger; SL truth not applied.
+- **Fix:** `order_executor.execute_rebalance_plan` enriches + records after BUY; `_record_to_ledger` passes `stop_loss_manager`.
+- **Verify:** `phase6/core/test_isolation_ledger_sl_truth.py` PASS.
+- **Historical:** 2026-07-13 LINK row annotated + OPS_CORRECTION append (original false retained for audit).
+
+## REGIME-CASH — 2026-07-17
+
+**Status:** ACTIVE — foundation RC-01/RC-02 **DONE**; continuous OPT slices pending.
+
+| Item | Status |
+|------|--------|
+| Epic doc | `docs/epics/REGIME_CASH_EPIC.md` |
+| Plan | `docs/plans/2026-07-17-regime-cash.md` |
+| Policy params | `config/regime_cash_policy.json` |
+| Core | `phase6/core/regime_cash_policy.py` |
+| Isolation | PASS `test_isolation_regime_cash_policy.py` |
+| Live wire | `rebalance_coordinator` after cooldown |
+| Live regime (snapshot) | **flat** → **usdc_park** / no new buys |
+| Status JSON | `data/state/regime_cash_status.json` |
+| Handoff | `handoffs/Handoff_REGIME_CASH_20260717.md` |
+| Remaining | RC-03 dashboard, RC-04 sweep, RC-05 detector freshness, RC-06 continuous OPT |
+| Ops | **Restart runner** to load filter before next rebalance |
+
+
+**CASH-20260717-001** — Cash policy suggestion: test_bull_12pct (excess 4.8%)
+Status: Proposed (RC-06 cash policy) — Review & apply changes to config/regime_cash_policy.json if approved
+Source sweep: 2026-07-17T12:00:00Z | excess=4.8% DD=7.2%
+Changes: {'detector.bull_return_pct': 12.0}
+
+
+**CASH-20260717-002** — Cash policy suggestion: detector grid (score 4.9493)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-07-17T18:56:19.181944+00:00 | score=4.9493
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+## REGIME-CASH-RC-ALL-20260717 — COMPLETE
+
+**Date:** 2026-07-17
+**Status:** DONE (RC-01..RC-06)
+
+### Delivered
+- RC-01/02: `phase6/core/regime_cash_policy.py` + rebalance wire + isolation PASS
+- RC-03: Dashboard Ops **Regime** tile + `/api/metrics.regime_cash` + daily brief REGIME-CASH line
+- RC-04: `phase6/research/run_regime_cash_param_sweep.py` → `data/state/regime_cash_param_sweep_latest.json`
+- RC-05: `regime_detector` live BTC merge + policy thresholds; isolation PASS; window ends **today** when cache present
+- RC-06: `run_regime_cash_continuous.py` + hook in weekly OPT shell; learnings jsonl; **no auto-promote**
+
+### Live (verify)
+- regime: **flat** · strategy_mode: **usdc_park** · allow_new_buys: **false**
+- btc_return_pct ~-0.4% (OHLCV + live price merge)
+
+### Kanban
+- Epic `t_f12a9721` + RC-01..RC-06 cards completed
+- Handoff: `handoffs/Handoff_REGIME_CASH_20260717.md`
+- Epic doc: `docs/epics/REGIME_CASH_EPIC.md`
+
+### Ops
+- Restart **runner** so rebalance filter loads; dashboard restarted for Regime tile.
+- Emergency open: `config/regime_cash_policy.json` → `"enforce": false`
+
+## DOC-BOUNDARY-01-20260717 — COMPLETE
+
+**Date:** 2026-07-17  
+**Status:** COMPLETE  
+**Priority:** High  
+
+### Problem
+Crossover with Online Marketing SEO/SEM/Ads streams has been scrubbed from active crypto docs. Confirmed separate projects (see DOC_BOUNDARY_AUDIT_20260717.md + PROJECT_BOUNDARY.md).
+
+### Task
+1. Inventory + scrub/relocate all such references from `docs/` and active `handoffs/`.
+2. Deliver `docs/DOC_BOUNDARY_AUDIT_20260717.md` + `docs/PROJECT_BOUNDARY.md`.
+3. Verify with `rg` (see handoff).
+
+### Artifacts
+- Handoff: `handoffs/Handoff_DOC_BOUNDARY_SCRUB_20260717.md`
+- Kanban implement: see board DOC-BOUNDARY-01
+- Kanban review: DOC-BOUNDARY-01-REV
+
+### Out of scope
+
+**COMPLETION NOTE (2026-07-17, t_7d99434c):** Full inventory and scrubs applied per DOC_BOUNDARY_AUDIT_20260717.md. PROJECT_BOUNDARY.md in place. Heavy marketing plan references updated to archive. No active client SEO/SEM/Ads consultancy instructions remain in crypto docs. Additional this run: scrubbed residual client phrasing in handoff/epic; generalized cross-team ref in skill; full rg clean (52 lines).. rg verification completed this run (52 lines clean; see audit + workspace rg_verify_output.txt). Historical context retained here.
+Runtime trading code; Phase 6 config; deleting useful GTM text without relocating to archive first.
+
+### Split + residual verify (2026-07-17)
+
+| Card | ID | Status |
+|------|-----|--------|
+| Fat implement (timeout) | t_7d99434c | archived |
+| Fat review | t_983bcc18 | archived |
+| A Inventory | t_59f64ffd | done |
+| B Residual scrub | t_0db5b069 | done |
+| C rg verify + MASTER | t_d74ae134 | done |
+| D Orchestrator review | t_10dd9941 | done |
+
+**Scoped rg (active docs only):** CLEAN  
+Exclude: `docs/archive/**`, `PROJECT_BOUNDARY.md`, `DOC_BOUNDARY_AUDIT*`, `handoffs/Handoff_DOC_BOUNDARY*`  
+Pattern: forbidden consultancy/client-SEO markers (see handoff / PROJECT_BOUNDARY out-of-scope list)
+
+**User verify:** open PROJECT_BOUNDARY + AUDIT; re-run scoped rg if desired.
+
+
+### REGIME-CASH-FLAT-B-20260718 — DONE
+- Flat option B cautious deploy: policy+knob_map deploy, cap $75, RSI≤55 sent≥0.25; enforce true; runner cap clamp; ops model docs/REGIME_GATES_AND_ANALYST_LOOP.md; isolation PASS; runner restarted.
+
+### REGIME-CASH-VALIDATE-20260718 — DONE
+- Analyst validation vs scorecard pack `regime_quad_defensive` flat window 2026-01-01→2026-03-31 (winner usdc_hold).
+- Live flat-B: deploy/cap$75/gates — verdict **tension** (operator thaw vs model park).
+- Artifacts: `run_regime_cash_validation.py`, `regime_cash_validation_latest.json`, `regime_cash_validation_history.jsonl`.
+- Knob apply preserves `operator_override.protect`; weekly shell: continuous → validation → OPT.
+
+### P6-DASH-PNL-STALE-20260719 — DONE
+- Symptom: Positions PnL showed `—` + ⚠ for all pairs (`price_stale`/`pnl_unreliable`).
+- Cause: RSI cache short-circuit skipped spot `add_price`; price_history timestamps froze; naive last_updated mis-aged as UTC.
+- Fix: always refresh spot in `_update_price_history_and_calculate_rsi`; UTC stamps + price_as_of; naive TS=PT; resolve ignores baked stale.
+- Verify: `/api/positions` all 7 pairs stale=False with real pnl%/$ (2026-07-19); user confirmed dashboard values restored. CLOSED.
+
+### P6-OPS-BOARD-CLEAR-20260719 — DONE
+- **#18 / P6-OPS-20260718-001** deferred slot AttributeError: methods on runner; slots 18|21 + 19|09 OK — GH closed.
+- **#19 / P6-OPS-20260718-002** ETH SL: exchange has 1 stop (~1812.95) — GH closed (ledger sl_attached gap only).
+- **#20 / P6-OPS-20260719-001** validation TypeError null/str sorted: fixed + smoke exit 0 — GH closed.
+- Registry all three `done`. Board open list should be empty.
+
+**CASH-20260724-001** — Cash policy suggestion: detector grid (score 4.9726)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-07-25T03:17:08.337419+00:00 | score=4.9726
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+
+**CASH-20260724-002** — Cash policy suggestion: detector grid (score 4.9726)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-07-25T03:17:28.284903+00:00 | score=4.9726
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+
+**CASH-20260726-001** — Cash policy suggestion: detector grid (score 4.9726)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-07-26T11:01:01.902690+00:00 | score=4.9726
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+
+**CASH-20260802-001** — Cash policy suggestion: detector grid (score 5.1548)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-08-02T11:00:16.456868+00:00 | score=5.1548
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+
+**CASH-20260809-001** — Cash policy suggestion: detector grid (score 5.1548)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-08-09T11:01:08.483849+00:00 | score=5.1548
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260813** (opened 2026-08-13T00:30:51.863716)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260813`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260814** (opened 2026-08-14T00:00:22.617269)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260814`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+## KANBAN-UNSTICK-20260815 — TODO/Ready/Blocked recovery (Scotty)
+
+**Trigger:** User asked to move TODO / Ready / Blocked cards again.  
+**Board before:** blocked=6, ready=1 (unassigned), todo=3, running=0.  
+**Board after:** blocked=0, ready=0, todo=0, done=124.
+
+### Root causes
+1. **OPT-EX pack (t_cb2061a7, t_9b3ab866, t_138d3c6b, t_df4e818c, t_27d27077):** workers crashed ~60s with `Unknown skill(s): offline-strategy-honesty, phase6-*` on crypto-analyst/crypto-engineer profiles (skills live under default `~/.hermes/skills/` but were not resolvable in those profile worker invocations). Class C → executed read-only reports in default session.
+2. **DOSE-TPL-01 (t_7c165e91):** content-editor flash protocol_violation/crash after D1 already wrote APPROVED `daily_dose_edited.json`. Class A/B → complete.
+3. **DOSE-TPL-02 (t_a54c1eae):** parent-gated; `daily_dose_publish_ready.txt` already on disk → complete after parent.
+4. **MAIL-GMAIL-BATCH-B (t_ef68e0f0):** stuck **ready + unassigned** after IMAP_WAIT; Batch B waiter already finished **48 881** archives 2026-08-14T00:37Z → complete.
+
+### Disposition
+
+| id | title | disposition |
+|----|-------|-------------|
+| t_7c165e91 | DOSE-TPL-01 | complete — APPROVED artifact |
+| t_a54c1eae | DOSE-TPL-02 | complete — publish_ready disk ship, TG off |
+| t_cb2061a7 | OPT-EX-01 exits | complete — call **watch** · `reports/OPT_EX_01_EXITS_2026-08-13.md` |
+| t_9b3ab866 | OPT-EX-02 wounds | complete — call **watch** · 3d SL=0 · `reports/OPT_EX_02_WOUNDS_2026-08-13.md` |
+| t_138d3c6b | OPT-EX-03 alloc | complete — call **watch** · flag false · `reports/OPT_EX_03_ALLOC_2026-08-13.md` |
+| t_df4e818c | OPT-EX-04 hold | complete — call **watch** · `reports/OPT_EX_04_HOLD_2026-08-13.md` |
+| t_27d27077 | OPT-EX-05 dose | complete — call **watch** · v4 held · `reports/OPT_EX_05_DOSE_2026-08-13.md` |
+| t_8835b8fd | OPT-EX-SYNTH | complete — **idle-with-reason**, 0 pursue · `reports/OPT_EX_SYNTH_SCORECARD_2026-08-13.md` |
+| t_dc24f357 | OPT-EX-REV | complete — **ACCEPT** · `reports/OPT_EX_REV_2026-08-13.md` |
+| t_ef68e0f0 | MAIL Batch B | complete — 48881 moved; no Trash |
+
+### Examine-pack product outcome
+All five lanes **watch**. No live TP, mid-cycle enable, USDC on, or stoch reopen. `mid_cycle_allocator_enabled` still **false**.
+
+### Follow-up (process, not product)
+- When attaching skills on Kanban create for crypto-* profiles, verify `hermes -p <profile>` can resolve skill names, **or** put skill guidance in the card body and leave `skills: []` (body-text skills pattern). Unknown skill → instant worker death → blocked after 2 crashes.
+- Avoid **ready + assignee null** (dispatcher never claims).
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260815** (opened 2026-08-15T00:00:13.466583)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260815`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260816** (opened 2026-08-16T00:00:27.602916)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260816`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+**CASH-20260816-001** — Cash policy suggestion: detector grid (score 5.1548)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-08-16T11:00:23.564317+00:00 | score=5.1548
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260817** (opened 2026-08-17T00:02:21.589082)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260817`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260818** (opened 2026-08-18T00:01:00.922585)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260818`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260819** (opened 2026-08-19T00:00:49.390409)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260819`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

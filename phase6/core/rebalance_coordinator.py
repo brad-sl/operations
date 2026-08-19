@@ -4,10 +4,13 @@ P4-05b: Daily rebalance orchestration (CR-03 window + ARCH-4 + legacy fallback).
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
+try:
+    from .context import AccountContext
+except Exception:
+    AccountContext = None
 
 from phase6.core.allocation_engine import compute_inverse_vol_allocations, rebalance_plan
-from phase6.core.allocator import create_allocator
 from phase6.core.evaluation import evaluate_universe
 from phase6.core.sentiment_scorer import load_sentiment_scores
 from phase6.scripts.deploy_capital import deploy_capital
@@ -22,12 +25,62 @@ logger = logging.getLogger(__name__)
 class RebalanceCoordinator:
     """Owns daily rebbalance body; runner keeps thin delegate + shared finalize helpers."""
 
-    def perform_daily(self, runner: "Phase6Runner") -> None:
+    def perform_daily(self, runner: "Phase6Runner", account_context: Optional["AccountContext"] = None) -> None:
                 logger.info("=== Daily Rebalance ===")
 
                 from phase6.core.strategic_brief_loader import log_brief_for_rebalance
 
                 runner._last_strategic_brief = log_brief_for_rebalance()
+
+                from phase6.core.usdc_park_transitions import plan_usdc_park_for_daily_rebalance
+
+                park_plan = plan_usdc_park_for_daily_rebalance(runner)
+                if park_plan.unwind_summary and not park_plan.unwind_summary.get("skipped"):
+                    from phase6.core.decision_context import record_rebalance_decision
+
+                    record_rebalance_decision(
+                        runner,
+                        path="usdc_park_redeploy_unwind",
+                        actions_taken=[park_plan.unwind_summary.get("sell") or {}],
+                        proposals=None,
+                        plan=None,
+                        executed_count=1 if park_plan.unwind_summary.get("ok") else 0,
+                        skipped=[],
+                        extra={
+                            **park_plan.unwind_summary,
+                            "transition": park_plan.transition_note,
+                        },
+                    )
+
+                if park_plan.run_park and park_plan.park_summary is not None:
+                    from phase6.core.decision_context import record_rebalance_decision
+
+                    record_rebalance_decision(
+                        runner,
+                        path="usdc_park",
+                        actions_taken=park_plan.park_summary.get("sells") or [],
+                        proposals=None,
+                        plan=None,
+                        executed_count=sum(
+                            1 for s in (park_plan.park_summary.get("sells") or []) if s.get("success")
+                        ),
+                        skipped=[],
+                        extra={
+                            **park_plan.park_summary,
+                            "transition": park_plan.transition_note,
+                            "operational_phase": park_plan.operational_phase,
+                        },
+                    )
+                    runner._finalize_daily_rebalance(
+                        executed=sum(
+                            1 for s in (park_plan.park_summary.get("sells") or []) if s.get("success")
+                        ),
+                        skipped=[],
+                        pairs_before=0,
+                        pairs_after=0,
+                        capital_deployed_usd=float(park_plan.park_summary.get("convert_usd") or 0),
+                    )
+                    return
 
                 # Fresh cycle: do not carry BUY order_ids from prior runs into CR-03 re-attach
                 runner._recent_buy_order_ids = {}
@@ -37,8 +90,9 @@ class RebalanceCoordinator:
                 # Production hardening: enforce withdrawal reserve before any allocation
                 try:
                     # Fable-5 / P6-143/145 G4: use config-driven reserve + pass projected targets
-                    wr = runner.config_dict.get("withdrawal_reserve", {})
-                    min_reserve = float(wr.get("min_reserve_usd", 200.0))
+                    from phase6.core.runtime_knobs import min_reserve_usd as _min_reserve_usd
+
+                    min_reserve = _min_reserve_usd(getattr(runner, "config_dict", None))
                     usd_balance = runner.exchange.get_account_balance("USD") or 0.0
                     raw_enriched = getattr(runner, "portfolio", None) and runner.portfolio.get_enriched_positions() or {}
                     # Normalize: some paths return flat {pair: data}, others return {"positions": ..., "value_usd": ..., "verified": ...}
@@ -83,7 +137,23 @@ class RebalanceCoordinator:
                     logger.info("[CR-03] Entered suspend_reattach_context - performing rebalance body")
 
                     # CR-03.3: Execute rebalance inside protected context
-                    cash = runner.exchange.get_account_balance("USD")
+                    from phase6.core.runner_capital_events import (
+                        effective_allocator_cash_usd,
+                        filter_trade_plan_manual_cooldown,
+                        filter_trade_plan_near_open_stop,
+                        get_deployment_cooldown_pairs,
+                    )
+
+                    cash = float(runner.exchange.get_account_balance("USD") or 0)
+                    alloc_cash = effective_allocator_cash_usd(runner)
+                    manual_hold = float(getattr(runner, "_manual_liquidation_cash_hold_usd", 0.0) or 0.0)
+                    if manual_hold > 0:
+                        logger.info(
+                            "[MANUAL-SELL] allocator cash reduced by hold $%.2f (raw cash $%.2f -> deploy $%.2f)",
+                            manual_hold,
+                            cash,
+                            alloc_cash,
+                        )
 
                     # ARCH-4: Use new unified Allocator when flag is set (paper trade / new production path)
                     if runner._use_primary_allocator_path():
@@ -110,13 +180,33 @@ class RebalanceCoordinator:
                                 norm_allocs[k] = float(v) if v else 0.0
 
                         total_cap = cash + sum(norm_allocs.values())
-                        allocator = create_allocator("rotation", min_move_usd=50.0, min_score_delta=0.05, stop_loss_pct=0.12)
+                        from phase6.core.runtime_knobs import create_allocator_from_config
+
+                        allocator = create_allocator_from_config(
+                            "rotation", getattr(runner, "config_dict", None)
+                        )
                         plan = allocator.allocate(
                             proposals=proposals,
                             current_allocs=norm_allocs,
-                            cash_usd=cash,
+                            cash_usd=alloc_cash,
                             total_capital=total_cap
                         )
+                        plan = filter_trade_plan_manual_cooldown(runner, plan)
+                        # Soft gate: no light_tilt/adds into bags sitting on their stop
+                        plan = filter_trade_plan_near_open_stop(runner, plan)
+
+                        # REGIME-CASH: regime → cash park / entry gates (RSI+sentiment+lockout)
+                        try:
+                            from phase6.core.regime_cash_policy import apply_to_runner_plan
+
+                            plan = apply_to_runner_plan(
+                                runner,
+                                plan,
+                                sentiment_scores=sentiment_scores,
+                                rsi_values=getattr(runner, "rsi_values", {}) or {},
+                            )
+                        except Exception as e:
+                            logger.warning("[REGIME-CASH] filter skipped: %s", e)
 
                         # Respect trade buffer: do not churn on pairs traded in the recent window.
                         # Prevents immediate rotation of newly entered positions on the daily rebalance.
@@ -137,6 +227,17 @@ class RebalanceCoordinator:
 
                         runner._last_plan = plan  # for dashboard and logs
                         executed, skipped = runner._execute_trade_plan(plan)
+                        from phase6.core.decision_context import record_rebalance_decision
+
+                        record_rebalance_decision(
+                            runner,
+                            path="arch4_rotation",
+                            actions_taken=plan.actions,
+                            proposals=proposals,
+                            plan=plan,
+                            executed_count=executed,
+                            skipped=skipped,
+                        )
                         logger.info(
                             f"[ARCH-4] Rebalance complete via new stack. Strategy={plan.strategy_used}, "
                             f"actions={len(plan.actions)}, exposure={plan.expected_exposure:.1%}"
@@ -166,12 +267,14 @@ class RebalanceCoordinator:
                     # See MASTER_TASK_TRACKING.md → "Future Backtest Item: Rebalance Cap Scope"
 
                     # Ensure deployable_cash is defined (rebalance might skip daily reserve check if already handled)
-                    reserve_cfg = {"min_reserve_usd": 250.0}
-                    min_reserve = reserve_cfg.get("min_reserve_usd", 250.0)
-                    usd_balance = runner.exchange.get_account_balance("USD")
-                    deployable_cash = max(0.0, usd_balance - min_reserve)
+                    from phase6.core.runtime_knobs import min_reserve_usd as _min_reserve_usd
 
-                    rebalance_cap = runner.config_dict.get("global_settings", {}).get("rebalance_cap_usd", 200.0)
+                    min_reserve = _min_reserve_usd(getattr(runner, "config_dict", None))
+                    deployable_cash = max(0.0, alloc_cash)
+
+                    from phase6.core.runtime_knobs import rebalance_cap_usd as _rebalance_cap_usd
+
+                    rebalance_cap = _rebalance_cap_usd(getattr(runner, "config_dict", None))
                     # Normalize positions (P6-001 fix)
                     # After boundary fix in get_enriched_positions, keys are now consistent -USD pairs
                     # and we must use "value_usd" (never "amount").
@@ -194,10 +297,27 @@ class RebalanceCoordinator:
                     total_cash = cash + sum(norm_positions.values())
 
                     # Apply deployment rules (pass normalized floats)
-                    cooldown_pairs = runner._get_recently_stopped_pairs(hours=24)
+                    # Use config block hours (default 72) — do not hardcode 24
+                    cooldown_pairs = get_deployment_cooldown_pairs(runner)
                     if cooldown_pairs:
-                        logger.info(f"[RECOVERY] 24h cooldown active on pairs: {cooldown_pairs}")
+                        try:
+                            from phase6.core.runner_capital_events import _runner_capital_settings
+
+                            _bh = int(
+                                float(
+                                    _runner_capital_settings(runner).get(
+                                        "stop_loss_exchange_block_rebuy_hours", 72
+                                    )
+                                )
+                            )
+                        except Exception:
+                            _bh = 72
+                        logger.info(
+                            f"[RECOVERY] {_bh}h cooldown active on pairs: {cooldown_pairs}"
+                        )
                     runner._write_recovery_state(cooldown_pairs)
+                    from phase6.core.runtime_knobs import deploy_min_rsi as _deploy_min_rsi
+
                     new_allocations = deploy_capital(
                         current_allocations=norm_positions,
                         new_capital=min(rebalance_cap, deployable_cash),
@@ -205,7 +325,7 @@ class RebalanceCoordinator:
                         source="reserve",
                         candidate_pairs=runner.FIXED_UNIVERSE,
                         rsi_values=runner.rsi_values,
-                        min_rsi=30.0,
+                        min_rsi=_deploy_min_rsi(getattr(runner, "config_dict", None)),
                         cooldown_pairs=cooldown_pairs
                     )
 
@@ -255,6 +375,27 @@ class RebalanceCoordinator:
                             skipped.append({"pair": pair, "reason": str(e)})
 
                     logger.info(f"[CR-03] Rebalance body completed inside context. Executed={executed}, Skipped={len(skipped)}")
+
+                    from phase6.core.decision_context import record_rebalance_decision
+
+                    record_rebalance_decision(
+                        runner,
+                        path="legacy_deploy_capital",
+                        actions_taken=[
+                            {
+                                "pair": m.get("pair"),
+                                "action": str(m.get("action", "")).upper(),
+                                "usd": float(m.get("usd_amount", 0)),
+                                "reason": "rebalance_plan",
+                            }
+                            for m in (plan if isinstance(plan, list) else [])
+                        ],
+                        proposals=None,
+                        plan=None,
+                        executed_count=executed,
+                        skipped=skipped,
+                        extra={"target_weights": target_weights_pct if "target_weights_pct" in locals() else {}},
+                    )
 
                     # Refresh positions after trades so re-attach uses new holdings
                     runner.portfolio.refresh()

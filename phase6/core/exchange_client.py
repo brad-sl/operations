@@ -32,6 +32,30 @@ try:
 except ImportError:
     RESTClient = None
 
+
+def _holding_total(raw: Any) -> float:
+    """Normalize position size from float or {available, hold, amount} dict."""
+    if isinstance(raw, dict):
+        if raw.get("amount") is not None:
+            return float(raw["amount"])
+        return float(raw.get("available", 0) or 0) + float(raw.get("hold", 0) or 0)
+    try:
+        return float(raw or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _holding_parts(raw: Any) -> tuple[float, float, float]:
+    """Return (available, hold, total) for dashboard / SL sizing."""
+    if isinstance(raw, dict):
+        avail = float(raw.get("available", 0) or 0)
+        hold = float(raw.get("hold", 0) or 0)
+        total = float(raw.get("amount")) if raw.get("amount") is not None else avail + hold
+        return avail, hold, total
+    total = _holding_total(raw)
+    return total, 0.0, total
+
+
 class CoinbaseExchangeClient:
     """
     Unified exchange client for Phase 6.
@@ -132,7 +156,9 @@ class CoinbaseExchangeClient:
         Waits for actual fill/settlement before SL attach to avoid unfilled/INSUFFICIENT_FUND.
         - If order_id provided: polls get_order_fill_details until filled_size >0 or status FILLED (preferred for post-buy paths).
         - Fallback: polls crypto available balance until stable (for reattach etc).
-        Similar to fill polling in execute_buy. Handles timeouts gracefully (logs + proceeds with caution).
+        Authoritative caller for post-buy paths: stop_loss_manager.attach_stop_loss (see sl_preflight.SETTLEMENT_POLL_OWNER).
+        Do not call from order_executor or place_stop_limit_sell.
+        Handles timeouts gracefully (logs + proceeds with caution on balance-only paths).
         Uses get_order_fill_details or equivalent. Configurable timeout (longer for live buys).
         """
         import time
@@ -159,7 +185,7 @@ class CoinbaseExchangeClient:
                     logger.debug(f"[PRE-FLIGHT] order fill poll error for {order_id}: {e}")
                 if time.time() - start > timeout:
                     break
-                time.sleep(2.0)  # match style of execute_buy fill poll (2s intervals)
+                time.sleep(2.0)
             logger.warning(f"[PRE-FLIGHT SETTLEMENT POLL] Order {order_id} did not confirm fill within {timeout}s (filled={last_fill.get('filled_size')}, status={last_fill.get('status')}); proceeding cautiously to SL attach")
             return False  # indicate not confirmed, but caller may proceed
 
@@ -460,13 +486,118 @@ class CoinbaseExchangeClient:
             return {"average_filled_price": 0.0, "filled_size": 0.0}
 
 
+    def _order_to_dict(self, o: Any) -> Dict[str, Any]:
+        """Normalize SDK/wrapper order objects to plain dicts."""
+        if isinstance(o, dict):
+            return dict(o)
+        if hasattr(o, "to_dict"):
+            try:
+                return dict(o.to_dict())
+            except Exception:
+                pass
+        out: Dict[str, Any] = {}
+        for key in (
+            "order_id",
+            "id",
+            "product_id",
+            "side",
+            "status",
+            "order_configuration",
+            "order_type",
+            "created_time",
+            "completion_time",
+            "filled_size",
+            "average_filled_price",
+            "total_fees",
+        ):
+            if hasattr(o, key):
+                out[key] = getattr(o, key)
+        return out
+
+    def list_filled_orders(
+        self,
+        *,
+        product_id: Optional[str] = None,
+        side: Optional[str] = "SELL",
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        limit: int = 100,
+        max_pages: int = 20,
+    ) -> List[Dict[str, Any]]:
+        """Paginated FILLED orders from Coinbase (SDK primary, wrapper fallback)."""
+        if self.shadow_mode:
+            return []
+        if not self.real_client and not self.sdk_client:
+            if not self._ensure_live_client():
+                return []
+
+        product_ids = [product_id] if product_id else None
+        collected: List[Dict[str, Any]] = []
+        cursor: Optional[str] = None
+        pages = 0
+        while pages < max_pages:
+            pages += 1
+            raw_orders: List[Any] = []
+            try:
+                if self.sdk_client is not None:
+                    kwargs: Dict[str, Any] = {
+                        "order_status": ["FILLED"],
+                        "limit": limit,
+                    }
+                    if product_ids:
+                        kwargs["product_ids"] = product_ids
+                    if side:
+                        kwargs["order_side"] = side
+                    if start_date:
+                        kwargs["start_date"] = start_date
+                    if end_date:
+                        kwargs["end_date"] = end_date
+                    if cursor:
+                        kwargs["cursor"] = cursor
+                    resp = self.sdk_client.list_orders(**kwargs)
+                    if hasattr(resp, "orders") and resp.orders:
+                        raw_orders = list(resp.orders)
+                    elif isinstance(resp, dict):
+                        raw_orders = resp.get("orders", [])
+                    if hasattr(resp, "has_next") and getattr(resp, "has_next", False):
+                        cursor = getattr(resp, "cursor", None)
+                    elif isinstance(resp, dict):
+                        cursor = resp.get("cursor") if resp.get("has_next") else None
+                    else:
+                        cursor = None
+                elif self.real_client is not None:
+                    qs = "order_status=FILLED"
+                    if side:
+                        qs += f"&order_side={side}"
+                    if product_id:
+                        qs += f"&product_ids={product_id}"
+                    if cursor:
+                        qs += f"&cursor={cursor}"
+                    resp = self.real_client._request(
+                        "GET",
+                        f"/api/v3/brokerage/orders/historical/batch?{qs}",
+                    )
+                    raw_orders = resp.get("orders", []) if isinstance(resp, dict) else []
+                    cursor = resp.get("cursor") if isinstance(resp, dict) and resp.get("has_next") else None
+            except Exception as e:
+                logger.warning("list_filled_orders page %s failed: %s", pages, e)
+                break
+
+            if not raw_orders:
+                break
+            for o in raw_orders:
+                collected.append(self._order_to_dict(o))
+            if not cursor:
+                break
+        return collected
+
     def place_stop_limit_sell(
         self,
         product_id: str,
         qty: float,
         stop_price: float,
         limit_price: Optional[float] = None
-    ) -> bool:
+    ) -> Dict[str, Any]:
         """Place native stop-limit sell order using correct Coinbase schema."""
         if self.shadow_mode:
             self._order_log.append({
@@ -478,21 +609,15 @@ class CoinbaseExchangeClient:
                 "timestamp": time.time()
             })
             print(f"[SHADOW] Stop-limit SL placed for {product_id} @ ${stop_price}")
-            return True
+            return {"success": True, "order_id": "shadow_sl", "shadow": True}
 
         if not self.real_client:
             if not self._ensure_live_client():
                 print("[LIVE] Real client not available for stop-limit")
-                return False
+                return {"success": False, "error": "no_live_client"}
 
         try:
-            # ANALYST-20260629-001: Quick pre-flight settlement poll before live place (reduces INSUFFICIENT_FUND)
-            if not self.shadow_mode:
-                try:
-                    self.poll_for_settlement(product_id, timeout=1.0, max_polls=3)
-                except Exception:
-                    pass
-
+            # ENG-S3-02: settlement pre-flight is stop_loss_manager.attach_stop_loss only (no nested poll here).
             limit_p = limit_price or stop_price * 0.995
 
             meta = self.get_product_metadata(product_id)
@@ -521,8 +646,10 @@ class CoinbaseExchangeClient:
                 err = resp.get("error_response", {}).get("error", "unknown")
                 preview = resp.get("error_response", {}).get("preview_failure_reason", "")
                 logger.warning(f"[LIVE SL] Stop-limit FAILED for {product_id}: {err} {preview} | resp keys: {list(resp.keys()) if isinstance(resp, dict) else type(resp)}")
-                return False
+                return {"success": False, "error": err, "preview": preview}
             elif "success_response" in resp or resp.get("success"):
+                sr = resp.get("success_response") or {}
+                order_id = sr.get("order_id") or resp.get("order_id")
                 print(f"[LIVE] Native stop-limit SL placed for {product_id} @ ${stop_price}")
                 self._order_log.append({
                     "type": "stop_limit_sell",
@@ -533,13 +660,13 @@ class CoinbaseExchangeClient:
                     "timestamp": time.time(),
                     "response": resp
                 })
-                return True
+                return {"success": True, "order_id": order_id, "stop_price": stop_price, "limit_price": limit_p}
             else:
                 logger.warning(f"Stop-limit order may have failed (unexpected resp): {resp}")
-                return False
+                return {"success": False, "error": "unexpected_response"}
         except Exception as e:
             logger.error(f"Live stop-limit failed: {e}")
-            return False
+            return {"success": False, "error": str(e)}
 
     def get_holdings(self) -> Dict[str, float]:
         """Return current crypto holdings as {asset: amount}.
@@ -548,10 +675,15 @@ class CoinbaseExchangeClient:
         data = self.get_holdings_verified()
         if not data.get("verified", False):
             return {}
-        return data.get("positions", {})
+        positions = data.get("positions", {}) or {}
+        return {k: _holding_total(v) for k, v in positions.items()}
 
     def get_holdings_verified(self) -> Dict[str, Any]:
-        """Return {positions: {asset: amount}, verified: bool, error: Optional[str]}"""
+        """Return {positions: {asset: {available, hold, amount}}, verified, error}.
+
+        ``amount`` is available+hold (total wallet balance). Callers that need tradable
+        size for orders should use ``available`` or get_crypto_available().
+        """
         if self.shadow_mode:
             return {"positions": self._positions.copy(), "verified": True, "error": None}
 
@@ -571,7 +703,11 @@ class CoinbaseExchangeClient:
                     hold = float(acc.get("hold", {}).get("value", 0.0))
                     total = available + hold
                     if total > 0:
-                        holdings[currency] = total
+                        holdings[currency] = {
+                            "available": available,
+                            "hold": hold,
+                            "amount": total,
+                        }
             return {"positions": holdings, "verified": True, "error": None}
         except Exception as e:
             logger.error(f"Failed to fetch live holdings: {e}")
@@ -664,38 +800,60 @@ class CoinbaseExchangeClient:
         P6-151/G3 fix: NEVER return bare {} on empty or error.
         Always return {"positions": {...}, "verified": bool, "error": ..., "value_usd": {...}}
         """
-        holdings = self.get_holdings()
-        if not holdings:
+        holdings = self.get_holdings_verified()
+        if not holdings.get("verified"):
+            return {
+                "positions": {},
+                "verified": False,
+                "error": holdings.get("error"),
+                "value_usd": {},
+            }
+        raw_pos = holdings.get("positions") or {}
+        if not raw_pos:
             return {
                 "positions": {},
                 "verified": True,  # empty is valid for verified-zero Fresh Start case
                 "error": None,
-                "value_usd": {}
+                "value_usd": {},
             }
 
         enriched = {}
-        for currency, amount in holdings.items():
+        value_usd_map = {}
+        for currency, raw in raw_pos.items():
             pair = f"{currency}-USD"
+            avail, hold, amount = _holding_parts(raw)
+            if amount <= 0:
+                continue
             try:
-                price = price_snapshot.get(pair) if price_snapshot else self.get_price(pair)
-
-                if price and price > 0:
-                    value_usd = amount * price
-                    # P6-001 fix: always normalize to -USD keys using value_usd only at the data boundary
-                    # This ensures downstream (runner, deploy_capital, sentiment, rebalance_plan) see
-                    # consistent pair symbols and real USD values (never coin quantities).
-                    enriched[pair] = {
-                        "amount": amount,
-                        "current_price": price,
-                        "value_usd": value_usd,
-                        "entry_price": 0.0,
-                        "unrealized_pnl_pct": 0.0,
-                        "side": "long"
-                    }
+                price = None
+                if price_snapshot:
+                    price = price_snapshot.get(pair)
+                if not price or float(price) <= 0:
+                    price = self.get_price(pair)
+                price = float(price or 0)
+                if price <= 0:
+                    logger.warning(f"No price for {pair}; including with value_usd=0")
+                value_usd = amount * price if price > 0 else 0.0
+                enriched[pair] = {
+                    "amount": amount,
+                    "available": avail,
+                    "hold": hold,
+                    "current_price": price,
+                    "value_usd": value_usd,
+                    "entry_price": 0.0,
+                    "unrealized_pnl_pct": 0.0,
+                    "side": "long",
+                }
+                value_usd_map[pair] = value_usd
             except Exception as e:
                 logger.warning(f"Failed to enrich {currency}: {e}")
                 continue
-        return enriched
+        return {
+            "positions": enriched,
+            "verified": True,
+            "error": None,
+            "value_usd": value_usd_map,
+        }
 
     def cancel_order(self, order_id: str) -> bool:
         """Cancel a specific order by ID."""

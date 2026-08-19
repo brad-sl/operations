@@ -1,0 +1,42 @@
+# W4a — Daily digest (template)
+# Trigger: platform event daily_summary_ready (or scheduled pull of safe summary fields)
+# Channel: Email (default). SMS only if user opted into digest SMS (rare).
+# Payload from platform: process/health metrics ONLY — no personal P&L marketing framing
+# If no activity: still send short “quiet day / healthy” style if product policy says so
+
+SUBJECT: ARCH daily status — {{tier_name}}
+
+PREHEADER: Process snapshot for your automation (not investment advice).
+
+---
+
+Hi {{first_name}},
+
+Here’s your **daily process snapshot** for ARCH Automation.
+
+**Health**
+- Runner: {{runner_health}}
+- Coinbase connection: {{coinbase_status}}
+
+**Activity (as provided by platform — no performance promises)**
+{{daily_summary_body}}
+
+**Notes**
+- Figures, if any, follow deposit-adjusted honesty rules. Insufficient data shows as N/A — never as fake zeros.
+- This email is informational status, not investment advice and not a guarantee of results.
+
+Full status: {{member_status_link}}  
+Help: {{support_email}}
+
+— ARCH Automation
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.
+
+# daily_summary_body PLACEHOLDER (platform fills; marketing must not invent):
+# - Rebalances attempted / completed (counts)
+# - Orders placed (counts) if product exposes
+# - Errors / pauses (if any) with plain-language code
+# - Next scheduled window
+# FORBIDDEN: ROI %, “you made $X”, Brad P&L, backtest quotes

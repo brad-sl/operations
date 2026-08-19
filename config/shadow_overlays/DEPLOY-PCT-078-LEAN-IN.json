@@ -1,0 +1,34 @@
+{
+  "active": true,
+  "mode": "shadow",
+  "proposal_id": "DEPLOY-PCT-078-LEAN-IN",
+  "source_run_id": "ANALYST-OPT-LEAN-IN-WR-GUARD-20260712",
+  "scenario_id": "deploy_pct_lean_in",
+  "activated_at": "2026-07-12T00:55:33.835816+00:00",
+  "baseline_equity_usd": 1000.0,
+  "predicted": {
+    "note": "Path B has no deploy_pct knob; monitor uses live equity vs baseline at activation",
+    "deploy_pct_baseline": 0.72,
+    "deploy_pct_shadow": 0.78,
+    "scale_factor": 1.0833,
+    "total_return_pct": null,
+    "max_drawdown_pct": null
+  },
+  "knobs": {
+    "use_rotation": true,
+    "rebal_freq": 7,
+    "deploy_pct_shadow": 0.78
+  },
+  "live_overlay": {
+    "risk_management.deploy_pct": 0.78,
+    "global_settings.rebalance_cap_usd": 200.0
+  },
+  "gap_flags": [
+    "DEPLOY_PCT_NOT_IN_ARCH4_HARNESS",
+    "SHADOW_IN_MEMORY_ONLY",
+    "REBALANCE_CAP_PROXY_FOR_BACKTEST"
+  ],
+  "regime_policy": {
+    "enabled": false
+  }
+}

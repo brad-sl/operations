@@ -110,9 +110,21 @@ def assess_basket_coverage(basket: List[str], project_root: Path) -> Dict[str, A
     missing_from_cache = [p for p in basket if sent_map.get(p) is None and sent_map.get(p.replace("-USD", "")) is None]
     if missing_from_cache:
         try:
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
             from phase6.core.sentiment_scorer import load_sentiment_scores
 
-            loaded = load_sentiment_scores(basket) or {}
+            def _load() -> Dict[str, float]:
+                return load_sentiment_scores(basket) or {}
+
+            with ThreadPoolExecutor(max_workers=1) as pool:
+                fut = pool.submit(_load)
+                try:
+                    loaded = fut.result(timeout=5.0)
+                except FuturesTimeout:
+                    logger.warning(
+                        "[PRE-REBAL REFRESH] load_sentiment_scores timed out after 5s; using cache only"
+                    )
+                    loaded = {}
             for k, v in loaded.items():
                 if v is not None and k not in sent_map:
                     sent_map[k] = float(v)
@@ -182,14 +194,21 @@ def _run_refresh_script(project_root: Path, rel: str, timeout: float, extra_env:
     if extra_env:
         env.update(extra_env)
     try:
-        subprocess.run(
+        proc = subprocess.run(
             [_python_executable(project_root), str(script)],
             cwd=str(project_root),
             timeout=timeout,
             capture_output=True,
+            text=True,
             check=False,
             env=env,
         )
+        if proc.returncode != 0:
+            err_tail = (proc.stderr or proc.stdout or "").strip()[-500:]
+            logger.warning(
+                f"[PRE-REBAL REFRESH] {rel} exit {proc.returncode}: {err_tail or '(no output)'}"
+            )
+            return False
         return True
     except subprocess.TimeoutExpired:
         logger.warning(f"[PRE-REBAL REFRESH] timeout {rel} after {timeout}s")
@@ -272,11 +291,38 @@ def ensure_basket_signals_ready(
             runner._data_coverage = report  # type: ignore[attr-defined]
 
     elapsed = time.time() - started
+    from phase6.core.rebalance_quality_gate import assess_data_readiness
+
+    data_ready, data_reasons = assess_data_readiness(runner, report)
+    report["decision_ready"] = data_ready
+    report["decision_block_reasons"] = data_reasons
+    enforced = bool((runner.config_dict.get("global_settings", {}) or {}).get("signal_freshness_enforced"))
     if not report["complete"]:
-        logger.warning(
-            f"[PRE-REBAL REFRESH] partial coverage after {elapsed:.1f}s — proceeding with stale flags: "
-            f"{report['per_pair']}"
-        )
+        if enforced:
+            logger.warning(
+                f"[PRE-REBAL REFRESH] incomplete coverage after {elapsed:.1f}s — "
+                f"rebalance blocked while signal_freshness_enforced: {data_reasons}"
+            )
+        else:
+            logger.warning(
+                f"[PRE-REBAL REFRESH] partial coverage after {elapsed:.1f}s — proceeding with stale flags: "
+                f"{report['per_pair']}"
+            )
     else:
-        logger.info(f"[PRE-REBAL REFRESH] basket ready in {elapsed:.1f}s")
+        logger.info(f"[PRE-REBAL REFRESH] basket ready in {elapsed:.1f}s (decision_ready={data_ready})")
+    try:
+        from phase6.core.basket_signal_coverage import assess_pair_signal_coverage
+
+        sig = assess_pair_signal_coverage(basket)
+        report["signal_full_count"] = sig.get("full_count")
+        report["signal_complete"] = sig.get("complete")
+        if not sig.get("complete"):
+            logger.warning(
+                "[PRE-REBAL REFRESH] signal coverage %s/%s FULL missing=%s",
+                sig.get("full_count"),
+                sig.get("basket_size"),
+                sig.get("missing_sentiment_fetch"),
+            )
+    except Exception as e:
+        logger.debug("signal coverage assess: %s", e)
     return report

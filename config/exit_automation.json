@@ -1,0 +1,39 @@
+{
+  "schema": "exit_automation_v1",
+  "philosophy": "End-users change few knobs. Runtime automates. Operator approve is an exception mode, not the product.",
+  "end_user_knobs": [
+    "take_profit.mode (off|shadow|live)",
+    "take_profit.fixed_tp_pct",
+    "take_profit.trail.enabled + arm_pct + trail_pct",
+    "hard_exit thresholds already in regime_cash_policy (RSI/sentiment)",
+    "hard_exit.operator_approve (true=human loop; false=auto when live_apply)"
+  ],
+  "take_profit": {
+    "mode": "shadow",
+    "fixed_tp_pct": 0.06,
+    "trail": {
+      "enabled": true,
+      "arm_pct": 0.04,
+      "trail_pct": 0.02,
+      "breakeven_lock_pct": 0.005
+    },
+    "min_position_usd": 25.0,
+    "notify_on_would_fire": false,
+    "notify_dedupe_hours": 12,
+    "live_attach_on_buy": false,
+    "live_market_exit": false,
+    "note": "shadow: log would-fire only (Telegram muted 2026-08-06 — weekly review). Prefer regime_exit_policy_map for policy. live_attach_on_buy requires mode=live."
+  },
+  "promotion": {
+    "shadow_min_calendar_days": 7,
+    "shadow_min_would_fire_events": 5,
+    "require_path_study_design_shadow": true,
+    "auto_promote": false,
+    "note": "Global TP promotion is a one-time settings flip (mode shadow→live), not per-trade approvals. Prefer regime-aware path: config/regime_exit_policy_map.json + docs/REGIME_EXIT_POLICY_MAP.md (60d multi-regime gates)."
+  },
+  "regime_exit_map": {
+    "path": "config/regime_exit_policy_map.json",
+    "doc": "docs/REGIME_EXIT_POLICY_MAP.md",
+    "note": "Profit optimization by Bull/Flat/Bear. Shadow-only until collection gates + Brad OK."
+  }
+}

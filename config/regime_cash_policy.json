@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "description": "REGIME-CASH: regime definitions, cash budgets, entry/exit gates. All money-affecting knobs live here for OPT sweeps.",
+  "enabled": true,
+  "enforce": true,
+  "shadow_log_only": false,
+  "knob_map_path": "config/regime_knob_map.json",
+  "status_path": "data/state/regime_cash_status.json",
+  "hard_exit": {
+    "enabled": true,
+    "shadow_only": true,
+    "live_apply": false,
+    "operator_approve": true,
+    "notify_telegram": true,
+    "notify_dedupe_hours": 12,
+    "min_sell_usd": 25.0,
+    "max_pair_fraction": 1.0,
+    "note": "TG-02: hard prefer_exit (RSI/sentiment) → shadow + Telegram pending. Brad decides via hard_exit_controls. park_prefer_reduce NEVER auto. live_apply blocked while operator_approve=true."
+  },
+  "detector": {
+    "lookback_days": 30,
+    "bull_return_pct": 15.0,
+    "bear_return_pct": -10.0,
+    "flat_abs_pct": 8.0,
+    "use_live_price": true
+  },
+  "regimes": {
+    "bull": {
+      "label": "Bull — liberal re-entry",
+      "strategy_mode": "deploy",
+      "allow_new_buys": true,
+      "target_max_util_pct": 0.85,
+      "rebalance_cap_usd": 200.0,
+      "min_cash_reserve_pct": 0.10,
+      "entry": {
+        "min_sentiment": -0.10,
+        "min_sentiment_new_pair": 0.15,
+        "max_rsi": 70.0,
+        "require_lockout_clear": true
+      },
+      "exit": {
+        "overbought_rsi": 75.0,
+        "max_sentiment_hold": -0.35
+      }
+    },
+    "flat": {
+      "label": "Flat — cautious gated deploy (operator thaw 2026-07-18 B)",
+      "strategy_mode": "deploy",
+      "allow_new_buys": true,
+      "target_max_util_pct": 0.65,
+      "rebalance_cap_usd": 75.0,
+      "min_cash_reserve_pct": 0.35,
+      "entry": {
+        "min_sentiment": 0.25,
+        "min_sentiment_new_pair": 0.35,
+        "max_rsi": 55.0,
+        "require_lockout_clear": true
+      },
+      "exit": {
+        "overbought_rsi": 65.0,
+        "max_sentiment_hold": -0.15
+      },
+      "notes": "Not full park-off. RSI/sentiment gates enforce; small cap. Analyst OPT may propose tighter/looser knobs — promote only via gates."
+    },
+    "bear": {
+      "label": "Bear — park cash, strict entry",
+      "strategy_mode": "usdc_park",
+      "allow_new_buys": false,
+      "target_max_util_pct": 0.25,
+      "rebalance_cap_usd": 0.0,
+      "min_cash_reserve_pct": 0.70,
+      "entry": {
+        "min_sentiment": 0.40,
+        "min_sentiment_new_pair": 0.50,
+        "max_rsi": 45.0,
+        "require_lockout_clear": true
+      },
+      "exit": {
+        "overbought_rsi": 60.0,
+        "max_sentiment_hold": 0.0
+      }
+    },
+    "transition": {
+      "label": "Transition — prefer cash until regime stabilizes",
+      "strategy_mode": "usdc_park",
+      "allow_new_buys": false,
+      "target_max_util_pct": 0.45,
+      "rebalance_cap_usd": 50.0,
+      "min_cash_reserve_pct": 0.45,
+      "entry": {
+        "min_sentiment": 0.20,
+        "min_sentiment_new_pair": 0.30,
+        "max_rsi": 58.0,
+        "require_lockout_clear": true
+      },
+      "exit": {
+        "overbought_rsi": 68.0,
+        "max_sentiment_hold": -0.20
+      }
+    },
+    "unknown": {
+      "label": "Unknown — fail-safe park",
+      "strategy_mode": "usdc_park",
+      "allow_new_buys": false,
+      "target_max_util_pct": 0.30,
+      "rebalance_cap_usd": 0.0,
+      "min_cash_reserve_pct": 0.60,
+      "entry": {
+        "min_sentiment": 0.50,
+        "min_sentiment_new_pair": 0.50,
+        "max_rsi": 40.0,
+        "require_lockout_clear": true
+      },
+      "exit": {
+        "overbought_rsi": 60.0,
+        "max_sentiment_hold": 0.0
+      }
+    }
+  },
+  "optimization": {
+    "objective": "maximize_risk_adjusted_return_vs_usdc",
+    "secondary": "minimize_max_drawdown",
+    "sweep_fields": [
+      "detector.bull_return_pct",
+      "detector.bear_return_pct",
+      "detector.flat_abs_pct",
+      "regimes.bear.entry.min_sentiment",
+      "regimes.bear.entry.max_rsi",
+      "regimes.flat.entry.min_sentiment",
+      "regimes.flat.entry.max_rsi",
+      "regimes.bull.entry.max_rsi",
+      "regimes.bull.target_max_util_pct",
+      "regimes.bear.target_max_util_pct",
+      "regimes.flat.target_max_util_pct"
+    ],
+    "continuous": {
+      "scorecard_job": "phase6/research/run_regime_scorecard.py",
+      "knob_apply": "phase6/research/apply_regime_knob_map_from_scorecard.py",
+      "opt_weekly": "phase6/research/run_analyst_opt_weekly.py",
+      "note": "RC-06 COMPLETE: continuous scorecard→knob_map→cash policy suggestions (sweep)→gated to leaderboard/proposals (cash_policy_suggestions.py). Weekly OPT chain updated. Promote only via gates; manual apply to policy JSON."
+    }
+  }
+}

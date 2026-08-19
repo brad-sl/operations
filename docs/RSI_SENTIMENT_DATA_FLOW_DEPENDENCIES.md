@@ -94,7 +94,8 @@ Data Stores (authoritative where noted)
 ## Key Data Stores & Freshness
 
 - **price_history.json**: Populated live by runner during cycles (add_price from price snapshots). Has 100-200+ points for all 11 pairs (as of 2026-06-16). Authoritative for prices.
-- **rsi_cache.json**: Snapshot format with per-pair {rsi, timestamp, source, candle_count, age_minutes, fresh}. Written by refresher. Read by coverage tests, possibly dashboards.
+- **rsi_cache.json**: Snapshot format with per-pair `{rsi, stoch_k, stoch_d, timestamp, source, candle_count, age_minutes, fresh}`. Written by refresher. Read by coverage tests, SL scorer, decision context.
+- **rsi_indicator_history.jsonl** (2026-07-11+): Append-only time series — one JSON line per refresher run with RSI + StochRSI per pair. Used for RSI vs StochRSI trade/decision analysis. Written by `scripts/refresh_rsi_prices.py`; rebalance `decision_context` also stores `indicator_snapshot` + `indicator_meta`; trades get `indicators_at_trade` on `phase6_trades.jsonl`.
 - **phase6.db.rsi_values**: ts, pair, value, source. Inserted by runner (in persist_facts) and refresher. Queried by load_latest_sentiment_for_basket. (Note: pre-fix data was stale from mock.)
 - **Sentiment caches + DB**: Real X (posts/confidence/buzz), Reddit only on real results. Scorer combines with damping.
 - **Freshness contract**: Refresher every 15m for RSI; sentiment 30m. Runner computes live during cycles. Twice-daily reports at 9/21.

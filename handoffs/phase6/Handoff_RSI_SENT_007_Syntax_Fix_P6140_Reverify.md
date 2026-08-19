@@ -68,7 +68,7 @@ Fix Python syntax corruptions introduced by prior "appends"/edits (mangled docst
 **Files / Directories to Leave Untouched**:
 - Production .env with real keys (load only, never commit)
 - Live trading without sign-off
-- Other boards (marketing-consultancy)
+- Other boards (e.g. separate project boards per boundary)
 - Non-phase6 legacy unless directly required for syntax scan
 
 ## Expected Deliverables

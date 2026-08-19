@@ -53,6 +53,8 @@ fi
 nohup "$PYTHON" -m phase6.core.phase6_runner --mode live --confirm-live >> logs/phase6_runner.log 2>&1 &
 NEW_PID=$!
 echo $NEW_PID > "$PIDFILE"
+mkdir -p data/state
+echo $NEW_PID > data/state/phase6_runner.pid
 
 echo "Runner started with PID $(cat $PIDFILE)"
 echo "Logs: logs/phase6_runner.log (note: some deploys use phase6_runner_error.log)"

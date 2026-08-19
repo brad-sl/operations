@@ -26,16 +26,19 @@
     },
     "DOGE-USD": {
       "x": "DOGE",
+      "x_supplemental": ["$DOGE", "dogecoin"],
       "reddit": ["DOGE", "dogecoin"],
       "notes": "Ticker primary."
     },
     "ADA-USD": {
       "x": "ADA",
+      "x_supplemental": ["$ADA", "cardano"],
       "reddit": ["ADA", "cardano"],
       "notes": "Ticker primary."
     },
     "AVAX-USD": {
       "x": "AVAX",
+      "x_supplemental": ["$AVAX", "avalanche crypto"],
       "reddit": ["AVAX", "avalanche"],
       "notes": "Ticker primary."
     },
@@ -51,6 +54,7 @@
     },
     "ARB-USD": {
       "x": "ARB",
+      "x_supplemental": ["$ARB", "arbitrum"],
       "reddit": ["ARB", "arbitrum"],
       "notes": "Ticker preferred for low-volume pairs in relevance tests."
     },

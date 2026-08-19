@@ -1,0 +1,36 @@
+# W5a — Billing dunning (payment failed) — attempt 1
+# Trigger: GHL SaaS payment failed / past_due
+# Channel: Email + SMS
+# Product side-effect (platform): pause new trading until resolved
+# Tone: clear consequences, no shame, no FOMO returns language
+
+SUBJECT: Action needed — ARCH Automation payment failed
+
+PREHEADER: Trading is paused until billing is updated. Coinbase connection retained.
+
+---
+
+Hi {{first_name}},
+
+We couldn’t process your ARCH Automation subscription payment.
+
+**What this means**
+- Automated trading is **paused** until payment succeeds
+- Your Coinbase connection can remain in place, but the software will not place new trades while billing is unresolved
+- Update payment here: {{payment_update_link}}
+
+Once payment clears, automation can resume per your plan and connection health.
+
+**Leaving ARCH?**
+Cancel anytime: {{cancel_link}}. After cancel, revoke ARCH access in Coinbase → Settings → Connected apps so no app remains linked.
+
+Questions: {{support_email}}
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.
+
+# SMS
+ARCH: Payment failed — trading paused. Update billing: {{payment_update_link}} Help: {{support_email}}

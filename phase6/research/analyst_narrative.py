@@ -41,24 +41,48 @@ def format_honest_assessment(
     if prod_ret is None and lb.get("production_since_go_live"):
         prod_ret = (lb["production_since_go_live"].get("metrics") or {}).get("total_return_pct")
 
+    eq = ob.get("production_end_equity_usd")
+    trades = ob.get("production_trade_count")
+    as_of = (ob.get("production_refreshed_at") or "")[:16]
+    meta = ""
+    if eq is not None and trades is not None:
+        meta = f" | ${eq} equity | {trades} trades"
+    if as_of:
+        meta += f" | as of {as_of}Z"
+    if ob.get("production_deposit_adjusted"):
+        meta += " | deposit-adjusted"
+    unadj = ob.get("production_total_return_pct_unadjusted")
+    netd = ob.get("production_net_external_flows_usd")
+    if unadj is not None and prod_ret is not None and abs(float(unadj) - float(prod_ret)) > 1.0:
+        meta += f" | raw NAV Δ {float(unadj):+.1f}%"
+    if netd is not None and abs(float(netd)) >= 50:
+        meta += f" | net deposits ${float(netd):,.0f}"
+
     if prod_ret is not None:
         if prod_ret < -15:
             lines.append(
                 f"Production since go-live is down {prod_ret:.1f}% — that is the scoreboard; "
-                "scenario rankings on older OHLCV do not erase it."
+                f"scenario rankings on older OHLCV do not erase it.{meta}"
             )
         elif prod_ret < 0:
-            lines.append(f"Production since go-live: {prod_ret:.1f}% (negative, not catastrophic yet).")
+            lines.append(f"Production since go-live: {prod_ret:.1f}% (negative, not catastrophic yet).{meta}")
         else:
-            lines.append(f"Production since go-live: +{prod_ret:.1f}% — still validate against drawdown and SL quality.")
+            lines.append(
+                f"Production since go-live: +{prod_ret:.1f}% — validate drawdown & SL quality.{meta}"
+            )
 
     run_id = ob.get("run_id") or lb.get("run_id")
     winner = ob.get("winner_id")
     win_ret = ob.get("winner_return_pct")
-    if run_id and winner is not None:
+    if run_id and winner is not None and not ob.get("production_refreshed_at"):
         lines.append(
             f"Latest scenario pack `{run_id}`: top scenario `{winner}` "
             f"return_pct={win_ret} on OHLCV window (engine={lb.get('engine_mode', 'unknown')})."
+        )
+    elif run_id and winner is not None and ob.get("production_refreshed_at"):
+        lines.append(
+            f"Weekly OPT `{run_id}`: sim winner `{winner}` ({win_ret}% on pack window) — "
+            "live P&L above is refreshed daily."
         )
 
     deploy = ob.get("deployment_hint") or ""
@@ -95,9 +119,7 @@ def format_honest_assessment(
         lines.append(f"SL layer: {high_sl} pair(s) HIGH/CRITICAL risk — size and re-attach remain fragile.")
 
     cov_ratio = full_coverage_count / max(total_pairs, 1)
-    if cov_ratio >= 0.85:
-        lines.append("Signal coverage is solid for allocator inputs (RSI/Stoch + sentiment).")
-    else:
+    if cov_ratio < 0.85:
         lines.append(
             f"Coverage patchy ({full_coverage_count}/{total_pairs} FULL) — allocator may be guessing on missing pairs."
         )

@@ -9,7 +9,13 @@ When **regime detection** is accurate enough and **per-regime scenarios** are va
 | Detector | `phase6/research/regime_detector.py` (BTC 30d return → bull/bear/flat/transition) |
 | Knob map | `config/regime_knob_map.json` |
 | Overlay merge | `phase6/core/config_overlay.py` |
-| Activation | `activate_shadow_trial.py --regime-adaptive` |
+| Activation | `activate_regime_adaptive_from_scorecard.py` (scorecard map) or `activate_shadow_trial.py --regime-adaptive` |
+
+## USDC hurdle (Coinbase)
+
+- Config: `config/risk_free_benchmark.json` (`usdc_apy_pct`, default **3.5**).
+- Scorecard winners get `usdc_benchmark` in `regime_knob_map.json` (annualized window return vs APY).
+- If a regime winner **does not** beat USDC, runtime sets `rebalance_cap_usd=0` and `risk_free_preference=USDC` (stand down deploy).
 
 ## Flow
 

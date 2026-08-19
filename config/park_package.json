@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "enabled": false,
+  "profile": "off",
+  "description": "Smart Park stack (trader voice: docs/features/PARK_SMART_IDLE_CASH.md). A=calm cash/USDC, B=optional gold, C=crypto when allowed. Technical: docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md",
+  "research_usdc_apy_note": "Research class ~3.5% historically — NOT a live venue quote; never hard-code as product APY in UI",
+  "buckets": {
+    "A": {
+      "prefer_asset": "USDC",
+      "fallback_asset": "USD",
+      "use_live_usdc_park_executor": true,
+      "target_usdc_pct": 0.92,
+      "min_usd_reserve_usd": 50.0
+    },
+    "B": {
+      "asset": "PAXG-USD",
+      "micro_usd": 75.0,
+      "full_target_pct": 0.2,
+      "e1_dd_pct": -0.32,
+      "soft_no_add_dd_pct": -0.12,
+      "derisk_enabled": false,
+      "require_explicit_arm": true,
+      "require_crypto_parked_before_arm": true,
+      "allow_preserve_with_crypto_util": false
+    },
+    "C": {
+      "controlled_by": "REGIME-CASH",
+      "note": "Package never raises C caps to fund B"
+    }
+  },
+  "sequences": {
+    "enter_park": [
+      "ensure_C_no_new_risk",
+      "run_A_usdc_park_if_eligible",
+      "offer_B_only_if_profile_and_operator"
+    ],
+    "default_deploy_thaw": [
+      "shadow_or_manual_trim_B_to_A",
+      "run_A_usdc_redeploy_unwind",
+      "C_arch4_deploy"
+    ],
+    "gold_crisis_e1": [
+      "B_flat_by_e1",
+      "stay_A",
+      "no_revenge_C"
+    ]
+  },
+  "execution": {
+    "allow_coordinate_toggles": false,
+    "auto_arm_b": false,
+    "auto_trim_b_on_deploy": false,
+    "write_status_each_cycle": true
+  },
+  "status_path": "data/state/park_package_status.json",
+  "matrix_doc": "docs/research/PARK_BALLAST_DECISION_MATRIX.md",
+  "spec_doc": "docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md"
+}

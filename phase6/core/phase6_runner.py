@@ -765,8 +765,10 @@ class Phase6Runner:
         weights = get_sentiment_adjusted_weights(base_weights, sentiment_scores)
 
         deploy_pct = self.config_dict.get("risk_management", {}).get("deploy_pct", 0.72)
-        # Withdrawal reserve guard (safety for $1000 account)
-        min_reserve = self.config_dict.get("risk_management", {}).get("min_reserve_usd", 200.0)
+        # Withdrawal reserve guard — config SSOT (not $200 hardcode)
+        from phase6.core.runtime_knobs import min_reserve_usd as _min_reserve_usd
+
+        min_reserve = _min_reserve_usd(self.config_dict)
         deployable_cash = max(0, cash - min_reserve)
         if deployable_cash < cash * 0.1:
             logger.warning(f"Reserve guard active: only ${deployable_cash:.2f} deployable after ${min_reserve} reserve")

@@ -1,0 +1,31 @@
+{
+  "proposal_id": "LAYERED-REENTRY-FLATB-75",
+  "mode": "shadow",
+  "active": false,
+  "scenario_id": "layered_reentry_flat_b_75",
+  "source_run_id": "REGIME_FLAT_KNOBS_DIG_LAYERED_2026-07-30",
+  "spec": "docs/research/BULL_REENTRY_LAYERED_SPEC.md",
+  "description": "Layered re-entry sleeve at flat-B size ($75 rebalance). NOT auto-on: paper shadow first; live only after Stoch RSI trial leaves RUNNING and gates pass.",
+  "knobs": {
+    "use_rotation": false,
+    "rebalance_frequency_days": 7,
+    "_allocator": "rebalance",
+    "_layered_reentry": true
+  },
+  "live_overlay": {
+    "global_settings.rebalance_cap_usd": 75,
+    "global_settings.strategy_mode": "deploy",
+    "global_settings.allow_new_buys": true
+  },
+  "do_not_activate_until": {
+    "stoch_trial_not_running": "STOCH-RSI-PARALLEL-20260721",
+    "not_before_utc": "2026-08-04T16:00:00+00:00",
+    "live_param_audit_fail_count_max": 0,
+    "live_param_audit_confidence_min": 0.85,
+    "no_other_analyst_shadow_active": true,
+    "signal_layer_in": ["reentry_flat_b", "bull_size_up", "flat_b"],
+    "note": "Even after date, only activate when paper status says would_layer needs sleeve AND Brad/ops explicit --activate"
+  },
+  "interference_note": "Live activate while Stoch RUNNING confounds trade/SL sample. Use paper script until then.",
+  "created_at": "2026-07-30T22:15:00+00:00"
+}

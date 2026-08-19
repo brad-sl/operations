@@ -14,3 +14,10 @@ textblob>=0.17
 
 # Note: Coinbase Advanced Trade uses their SDK or direct REST + JWT.
 # Add specific if using coinbase-advanced-trade-python or similar.
+
+# Postgres + migrations (T0-01 multi-tenant registry)
+sqlalchemy[asyncio]>=2.0
+alembic>=1.13
+asyncpg>=0.29
+# cryptography already in base for JWT/encryption (used by oauth_tokens encrypt)
+

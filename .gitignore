@@ -18,7 +18,11 @@ logs/
 *.db-shm
 *.db-wal
 data/state/*.json
+data/state/*.jsonl
 data/state/*.pid
+trades/*.jsonl
+trades/*.jsonl.bak*
+sentiment_cache.json
 *.pid
 
 # Local Hermes planning scratch (not durable ops state)

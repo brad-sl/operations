@@ -35,6 +35,11 @@ class TradingConfig:
     order_type: str
     sandbox_mode: bool
     approval_required: bool
+
+    # SCALING-1000 T0-02: feature flag (default false = legacy Brad path)
+    # When true: use AccountContext injection + per-account paths
+    # Brad live ALWAYS runs with this=False until T1+ gates.
+    MULTI_TENANT_ENABLED: bool = False
     
     # Coinbase fee rates (Tier: Advanced 1 = 0.25% maker, 0.40% taker)
     # Source: https://help.coinbase.com/en/exchange/trading-and-funding/exchange-fees
@@ -85,6 +90,10 @@ class ConfigLoader:
         # position limits can be derived or extended; use per-pair or default to rebal size
         pos_limits = {p: rebal_cap for p in pairs} if pairs else {}
         sandbox = gs.get("sandbox_mode", True)
+        multi_tenant = bool(
+            gs.get("multi_tenant_enabled",
+                   gs.get("MULTI_TENANT_ENABLED", False))
+        )
         return TradingConfig(
             trading_pairs=pairs or [],
             daily_spend_usd=total_cap,
@@ -94,6 +103,7 @@ class ConfigLoader:
             order_type="market",
             sandbox_mode=sandbox,
             approval_required=gs.get("approval_required", False),
+            MULTI_TENANT_ENABLED=multi_tenant,
         )
     
     def validate(self) -> bool:

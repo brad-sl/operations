@@ -29,7 +29,7 @@
 | **Historical Data Collector**       | `historical_data_collector.py`             | OHLCV + volume ingestion                     | Medium    |
 | **Backtest Runner**                 | `ca_backtest_runner.py`, `backtest_6mo.py` | Validation & regression testing              | Medium    |
 | **OpenClaw Main Agent**             | This workspace + sessions                  | Orchestration, monitoring, alerts            | Medium    |
-| **Adspirer Integration** (optional) | Adspirer plugin                            | Paid media performance tracking (future)     | Low       |
+| **Paid acquisition integration** (optional, future) | External research tool (if used) | Paid media performance tracking (future)     | Low       |
 
 ---
 

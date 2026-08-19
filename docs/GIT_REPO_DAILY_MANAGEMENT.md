@@ -43,7 +43,25 @@ git push -u origin phase-6.1
 **What the daily git job does:**
 1. `git-health-check.sh` — branch, remote, unpushed, `hermes/` mirror status
 2. `sync-hermes-state.sh` — rsync non-secret `~/.hermes` → `hermes/`, commit, push if `origin` exists
-3. Optional tail of `hermes-state/verify_baseline.py`
+3. `git/commit-safe-code.sh` — **allowlisted** code/docs/config commit + push (see below)
+4. Optional tail of `hermes-state/verify_baseline.py`
+
+### Safe code backup (step 3)
+
+Script: `scripts/hermes/git/commit-safe-code.sh`
+
+| | |
+|--|--|
+| **Includes** | `phase6/`, `trading/`, `config/`, `docs/`, `scripts/`, `db/`, `handoffs/`, `systemd/`, `provisioning/`, `hermes-state/`, plus known root sources (e.g. `requirements.txt`, `*.service`, sentiment fetchers, `.env.example`) |
+| **Excludes** | `data/`, `logs/`, `trades/`, `backtests/data/`, `hermes/` (mirror job owns it), secrets (`.env`, `*.pem`, `*.key`), runtime caches |
+| **Gates** | Per-file size cap (default 2 MiB); staged-diff secret pattern scan; never `--force` push |
+| **Flags** | `--dry` (list only), `--no-push` (commit local only) |
+
+Manual:
+```bash
+./scripts/hermes/git/commit-safe-code.sh --dry
+./scripts/hermes/git/commit-safe-code.sh
+```
 
 **Logs:** `logs/git-daily-management.log` (gitignored; inspect on host).
 
@@ -83,10 +101,13 @@ Do **not** commit: `.env`, `*.pem`, `data/state/*.json`, logs, `__pycache__`, li
 | Git cron YAML in `~/.hermes/cron/*.yaml` but job not in `hermes cron list` | YAML drop-in does **not** auto-register — use `cronjob` tool or `hermes cron create` with `schedule` |
 | `Push failed` in sync | Add/configure `origin`; SSH or HTTPS auth |
 | Hourly `git-mirror-sync.yaml` unused | Superseded by **daily** `git-daily-management.sh` (less noise) |
-| Dirty repo forever | Expected for runtime files; daily job reports *meaningful* dirty count excluding logs/data/pyc |
+| Dirty repo forever | Runtime `data/state`, `trades/*.jsonl`, logs stay dirty by design; code paths should clear after daily safe commit |
+| Safe code commit refused (secret scan) | Inspect staged paths; remove credential material; re-run with `--dry` |
+| Huge file skipped | Raise `SAFE_CODE_MAX_BYTES` only if intentional; prefer git-lfs or exclude data dumps |
 
 ---
 
 ## Last verified
 
+- **2026-08-19:** Added `commit-safe-code.sh` to daily job (allowlisted code backup + secret/size gates).
 - **2026-07-06:** Daily Hermes cron registered; scripts and this doc added; `git-repo-management` skill created.

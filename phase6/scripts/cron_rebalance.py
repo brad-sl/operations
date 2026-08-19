@@ -7,7 +7,7 @@ Usage (from cron or directly):
   python3 phase6/scripts/cron_rebalance.py --live
 
 Behavior (P2-04 reliability):
-- If a continuous Phase6Runner is already running (detected via PID file), touch
+- If a continuous Phase6Runner is already running, touch
   data/state/force_rebalance.flag so the live runner picks it up on its next cycle.
   This avoids duplicate process launches (which trigger singleton abort + cron failure).
 - Otherwise, spawns a one-shot --rebalance-only runner (for cron-only deployments).
@@ -22,22 +22,18 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Allow `python3 phase6/scripts/cron_rebalance.py` without -m
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
+
 def _is_runner_running() -> bool:
-    """Check for existing Phase 6 runner (P2-04 reliability).
-    Matches the singleton logic in the runner.
-    """
-    pid_file = Path("data/state/phase6_runner.pid")
-    if not pid_file.exists():
-        return False
-    try:
-        pid = int(pid_file.read_text().strip())
-        if os.path.exists(f"/proc/{pid}"):
-            with open(f"/proc/{pid}/cmdline", "r") as cf:
-                if "phase6.core.phase6_runner" in cf.read():
-                    return True
-    except Exception:
-        pass
-    return False
+    """Check for existing Phase 6 runner (P2-04 reliability)."""
+    from phase6.core.runner_pid import is_runner_running
+
+    return is_runner_running()
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -46,15 +42,16 @@ def main():
     parser.add_argument("--config", default="config/trading_config_phase6.json")
     args = parser.parse_args()
 
-    project_root = Path(__file__).resolve().parent.parent.parent
+    project_root = _PROJECT_ROOT
     os.chdir(project_root)
 
     # P2-04 reliability: If a continuous runner is already active, trigger via flag
     # instead of spawning a duplicate (which hits singleton and causes cron failure).
     if _is_runner_running():
-        force_flag = Path("data/state/force_rebalance.flag")
-        force_flag.parent.mkdir(parents=True, exist_ok=True)
-        force_flag.touch()
+        from phase6.core.paths import FORCE_REBALANCE_FLAG
+
+        FORCE_REBALANCE_FLAG.parent.mkdir(parents=True, exist_ok=True)
+        FORCE_REBALANCE_FLAG.touch()
         print("[CRON] Runner already running — touched force_rebalance.flag to trigger next cycle.")
         print("[CRON] Cron check completed successfully (no new process spawned).")
         sys.exit(0)
@@ -62,7 +59,7 @@ def main():
     cmd = [
         sys.executable, "-m", "phase6.core.phase6_runner",
         "--config", args.config,
-        "--rebalance-only"
+        "--rebalance-only",
     ]
 
     if args.live:
@@ -80,6 +77,7 @@ def main():
     except subprocess.CalledProcessError as e:
         print(f"[CRON] Rebalance run failed with exit code {e.returncode}")
         sys.exit(e.returncode)
+
 
 if __name__ == "__main__":
     main()

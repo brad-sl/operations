@@ -20,7 +20,12 @@ from pathlib import Path
 # Canonical import per DATA_FLOW_AND_LOCATIONS.md + paths.py (no hardcodes)
 # Works whether run from project root, phase6/scripts/, or Hermes profile copy
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from phase6.core.paths import PROJECT_ROOT, load_project_dotenv, REDDIT_SENTIMENT_CACHE
+from phase6.core.paths import (
+    PROJECT_ROOT,
+    load_project_dotenv,
+    REDDIT_SENTIMENT_CACHE,
+    FREE_SENTIMENT_CACHE,
+)
 
 load_project_dotenv()
 
@@ -32,6 +37,7 @@ REDDIT_FETCH = PROJECT_ROOT / "fetch_reddit_sentiment.py"
 
 X_CACHE = PROJECT_ROOT / "data" / "state" / "x_sentiment_cache.json"
 REDDIT_CACHE = REDDIT_SENTIMENT_CACHE
+FREE_CACHE = FREE_SENTIMENT_CACHE
 
 
 def run_fetcher(script_path: Path, name: str) -> bool:
@@ -221,16 +227,136 @@ def persist_to_db(unified: dict, x_cache_path: Path = None, reddit_cache_path: P
         print(f"  [WARN] DB persist for sentiment skipped: {e}")
 
 
+def merge_free_into_canonical(reason: str = "x_empty") -> dict:
+    """Phase3 free fallback: write free hybrid scores into live canonical cache."""
+    from phase6.core.paths import load_trading_basket
+
+    basket = load_trading_basket()
+    now_ts = datetime.now(timezone.utc).isoformat()
+    unified = {
+        "timestamp": now_ts,
+        "schema_version": 3,
+        "sentiment": {},
+        "meta": {
+            "source": f"free_fallback ({reason})",
+            "free_cache": str(FREE_CACHE),
+            "x_cache": str(X_CACHE),
+            "basket_size": len(basket),
+            "live_primary": True,
+            "mode": "free_fallback",
+        },
+    }
+    free_data = {}
+    if FREE_CACHE.exists():
+        try:
+            free_data = json.loads(FREE_CACHE.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"  Warning: free cache unreadable: {e}")
+    block = free_data.get("sentiment") or free_data.get("data") or {}
+    for pair in basket:
+        entry = block.get(pair)
+        score = 0.0
+        src = "free_fallback"
+        conf = None
+        if isinstance(entry, dict):
+            try:
+                score = float(
+                    entry.get("sentiment_score", entry.get("score", entry.get("sentiment", 0.0)))
+                    or 0.0
+                )
+            except (TypeError, ValueError):
+                score = 0.0
+            src = f"free_fallback:{entry.get('source') or 'hybrid'}"
+            conf = entry.get("confidence")
+        unified["sentiment"][pair] = {
+            "sentiment_score": score,
+            "source": src,
+        }
+        if conf is not None:
+            unified["sentiment"][pair]["confidence"] = conf
+
+    with open(CANONICAL_CACHE, "w") as f:
+        json.dump(unified, f, indent=2)
+    nz = sum(1 for v in unified["sentiment"].values() if float(v.get("sentiment_score") or 0) != 0)
+    print(f"  FREE FALLBACK → canonical: {CANONICAL_CACHE} ({len(basket)} pairs, non-zero: {nz}) reason={reason}")
+    return unified
+
+
+def _x_posts_total() -> int:
+    if not X_CACHE.exists():
+        return 0
+    try:
+        data = json.loads(X_CACHE.read_text(encoding="utf-8"))
+        total = 0
+        for k, v in data.items():
+            if not isinstance(v, dict) or "-" not in str(k):
+                continue
+            total += int(v.get("post_count", v.get("posts", 0)) or 0)
+        return total
+    except Exception:
+        return 0
+
+
 def main():
     print(f"=== Sentiment Refresh @ {datetime.now(timezone.utc).isoformat()} ===")
 
     x_ok = run_fetcher(X_FETCH, "X/Twitter sentiment")
-    reddit_ok = run_fetcher(REDDIT_FETCH, "Reddit sentiment")
+    # Phase1/2 cost: Apify Reddit burned ~$70/mo (scrapesmith pay-per-event). Default OFF.
+    # Re-enable only with SENTIMENT_REDDIT_APIFY_ENABLED=1 after budget + free shadow gates.
+    reddit_enabled = os.environ.get("SENTIMENT_REDDIT_APIFY_ENABLED", "0").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    )
+    if reddit_enabled:
+        reddit_ok = run_fetcher(REDDIT_FETCH, "Reddit sentiment (Apify)")
+    else:
+        print("  Reddit/Apify SKIPPED (SENTIMENT_REDDIT_APIFY_ENABLED=0) — use free shadow + X only")
+        reddit_ok = False
 
-    if x_ok or reddit_ok:
+    free_fb = os.environ.get("SENTIMENT_FREE_FALLBACK", "1").strip().lower() not in (
+        "0",
+        "false",
+        "off",
+        "no",
+    )
+    x_posts = _x_posts_total() if x_ok else 0
+    need_free = free_fb and ((not x_ok and not reddit_ok) or (x_ok and x_posts == 0 and not reddit_ok))
+
+    if need_free:
+        # Ensure free cache is warm (funding/RSS/F&G); does not call X
+        print("  X empty/failed — running free hybrid + promoting to live canonical")
+        free_script = PROJECT_ROOT / "phase6" / "scripts" / "refresh_sentiment_free.py"
+        free_ok = run_fetcher(free_script, "Free hybrid sentiment") if free_script.exists() else False
+        if not free_ok and FREE_CACHE.exists():
+            print("  Free refresh failed/skipped but cache exists — using last free cache")
+            free_ok = True
+        if free_ok or FREE_CACHE.exists():
+            try:
+                reason = "x_fetch_failed" if not x_ok else "x_zero_posts"
+                unified = merge_free_into_canonical(reason=reason) or {}
+                try:
+                    persist_to_db(unified, X_CACHE, REDDIT_CACHE)
+                except Exception as pe:
+                    print(f"  persist_to_db warning: {pe}")
+            except Exception as e:
+                print(f"  Free fallback merge failed: {e}")
+        else:
+            print("  No free cache available — cannot fallback")
+    elif x_ok or reddit_ok:
         try:
             unified = merge_into_canonical() or {}
-            # P2-01: persist real to DB too (for reddit gate + dashboard consistency)
+            nz = sum(
+                1
+                for v in (unified.get("sentiment") or {}).values()
+                if float(v.get("sentiment_score") or 0) != 0
+            )
+            if nz == 0 and free_fb and FREE_CACHE.exists():
+                print("  WARNING: X/Reddit merge all-zero — promoting free fallback")
+                unified = merge_free_into_canonical(reason="post_merge_all_zero") or {}
+            elif nz == 0:
+                print("  WARNING: merged cache has 0 non-zero scores (X empty and Reddit off/empty)")
             try:
                 persist_to_db(unified, X_CACHE, REDDIT_CACHE)
             except Exception as pe:
@@ -238,7 +364,7 @@ def main():
         except Exception as e:
             print(f"  Merge failed: {e}")
     else:
-        print("  No fetchers succeeded — skipping merge")
+        print("  No fetchers succeeded — skipping merge (preserve last canonical cache)")
 
     print("=== Refresh complete ===")
 

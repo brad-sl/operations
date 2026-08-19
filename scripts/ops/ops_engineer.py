@@ -286,6 +286,37 @@ def main():
             t["target"] = name
             all_troubles.append(t)
 
+    # Signal DQ (defer streak / coverage) — deterministic, cooldown inside module
+    try:
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        from phase6.core.signal_dq_monitor import evaluate_signal_dq
+
+        dq = evaluate_signal_dq(
+            log_path=LOGS_DIR / "phase6_runner.log",
+            state_path=STATE_DIR / "signal_dq_monitor.json",
+            min_streak=3,
+            cooldown_minutes=60,
+        )
+        print(f"[OPS] SIGNAL-DQ: {dq.message}")
+        if dq.should_alert:
+            all_troubles.append(
+                {
+                    "id": "REBALANCE_DEFER_STREAK",
+                    "severity": "WARNING" if dq.level != "critical" else "HIGH",
+                    "title": "Rebalance deferred repeatedly (signal data quality)",
+                    "diagnosis": dq.message,
+                    "common_root": (
+                        "Missing RSI/sentiment or refresher failure; "
+                        "see phase6.core.signal_dq_monitor + scripts/refresh_rsi_prices.py"
+                    ),
+                    "evidence": dq.message,
+                    "target": "phase6_runner",
+                }
+            )
+    except Exception as e:
+        print(f"[OPS] SIGNAL-DQ check failed: {e}")
+
     if not all_troubles:
         print("[OPS] No active error conditions detected. Systems nominal.")
         ops_state["last_run"] = datetime.now().isoformat()

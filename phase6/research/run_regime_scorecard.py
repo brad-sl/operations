@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""Run regime windows from regime_quad_template.json → scorecard JSON."""
+"""Run regime windows from regime pack → scorecard JSON."""
 from __future__ import annotations
 
+import argparse
 import copy
 import json
 import sys
@@ -12,10 +13,20 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from phase6.research.run_scenario_leaderboard import load_pack, run_scenario, _rank_key
+from phase6.research.usdc_carry_backtest import usdc_carry_scenario_row
+from phase6.research.regime_strategy_optimizer import pick_optimal_strategy
 
 
 def main() -> int:
-    template_path = ROOT / "phase6/research/scenarios/regime_quad_template.json"
+    parser = argparse.ArgumentParser(description="Regime scorecard with USDC carry leg")
+    parser.add_argument(
+        "--pack",
+        type=Path,
+        default=ROOT / "phase6/research/scenarios/regime_quad_defensive.json",
+        help="Regime pack with regime_windows + scenarios (default: regime_quad_defensive)",
+    )
+    args = parser.parse_args()
+    template_path = args.pack
     template = load_pack(template_path)
     primary = template["primary_metric"]
     baseline_id = template["baseline_scenario_id"]
@@ -45,6 +56,8 @@ def main() -> int:
                     }
                 )
 
+        rows.append(usdc_carry_scenario_row(rw["date_range"]))
+
         rows.sort(key=lambda r: _rank_key(primary, r.get("metrics") or {}), reverse=True)
         winner = rows[0]["id"] if rows else None
         baseline = next((r for r in rows if r.get("id") == baseline_id), None)
@@ -58,6 +71,8 @@ def main() -> int:
                 else:
                     beats_baseline = float(wv) > float(bv)
 
+        optimal = pick_optimal_strategy(rows, rw["date_range"])
+
         scorecard["regimes"].append(
             {
                 "regime": rw["regime"],
@@ -67,6 +82,8 @@ def main() -> int:
                 "beats_baseline": beats_baseline,
                 "ranking": [r["id"] for r in rows],
                 "scenarios": rows,
+                "usdc_optimal": optimal,
+                "optimal_strategy_id": optimal.get("optimal_strategy_id"),
             }
         )
 
@@ -76,7 +93,13 @@ def main() -> int:
         json.dump(scorecard, f, indent=2)
     print(f"ANALYST-OPT regime scorecard OK regimes={len(scorecard['regimes'])} wrote {out}")
     for rg in scorecard["regimes"]:
-        print(f"  {rg['regime']}: winner={rg['winner_id']} beats_baseline={rg['beats_baseline']}")
+        opt = rg.get("optimal_strategy_id") or "?"
+        usdc = rg.get("usdc_optimal") or {}
+        print(
+            f"  {rg['regime']}: dd_winner={rg['winner_id']} "
+            f"optimal={opt} ann={usdc.get('optimal_annualized_return_pct')}% "
+            f"alt_beats_usdc={usdc.get('alt_beats_usdc_carry')}"
+        )
     return 0
 
 

@@ -1,13 +1,12 @@
 [Unit]
-Description=Phase 6 Crypto Dashboard (DB-first, SQL views)
+Description=Phase 6 Crypto Dashboard (DB-first, SQL views, RSI/Sentiment dual-write)
 After=network.target
 StartLimitIntervalSec=0
 
 [Service]
 Type=simple
-User=brad
 WorkingDirectory=/home/brad/projects/crypto-trading-bot
-ExecStart=/usr/bin/python3 serve_dashboard.py --mode live --port 8502
+ExecStart=/home/brad/projects/crypto-trading-bot/.venv/bin/python serve_dashboard.py --mode live --port 8502
 Restart=always
 RestartSec=5
 StandardOutput=append:/home/brad/projects/crypto-trading-bot/logs/phase6_dashboard.log

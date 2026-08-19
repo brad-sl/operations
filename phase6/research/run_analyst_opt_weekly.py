@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 ANALYST-OPT weekly job: scenario leaderboard (Path B) + production comparison + learnings dedup.
++ RC-06 continuous: scorecard → knob_map → cash policy suggestions → gated leaderboard promote.
 
 Writes data/state/analyst_scenario_leaderboard_latest.json for the daily intelligence brief.
 
@@ -28,6 +29,7 @@ def main() -> int:
         str(DEFAULT_PACK),
         "--compare-production",
         "--record-learning",
+        "--refresh-param-audit",
     ]
     print(" ".join(cmd))
     rc = subprocess.call(cmd, cwd=str(ROOT))
@@ -80,7 +82,38 @@ def main() -> int:
     if sync_repo_skill():
         print("repo skill pitfalls updated")
 
-    print("ANALYST-OPT weekly OK")
+    for step in (
+        [sys.executable, str(ROOT / "phase6/research/run_regime_scorecard.py")],
+        [sys.executable, str(ROOT / "phase6/research/apply_regime_knob_map_from_scorecard.py")],
+    ):
+        r2 = subprocess.call(step, cwd=str(ROOT))
+        if r2 != 0:
+            print(f"weekly regime chain failed: {' '.join(step)}", file=sys.stderr)
+            return r2
+
+    # RC-06: Continuous analyze → optimize: cash policy suggestions after scorecard/knob_map
+    # Chain: scorecard → knob_map → cash policy suggestions → (integrate to) leaderboard; promote only with gates.
+    print("RC-06: running regime cash param sweep for policy suggestions")
+    sweep_cmd = [
+        sys.executable,
+        str(ROOT / "phase6/research/run_regime_cash_param_sweep.py"),
+        "--quick",
+    ]
+    print(" ".join(sweep_cmd))
+    r3 = subprocess.call(sweep_cmd, cwd=str(ROOT))
+    if r3 != 0:
+        print(f"cash sweep failed rc={r3}", file=sys.stderr)
+        # continue; non-fatal for now
+
+    from phase6.research.cash_policy_suggestions import ingest_from_latest_sweep
+
+    cash_sug, cash_gates = ingest_from_latest_sweep()
+    if cash_sug:
+        print(f"RC-06 cash policy suggestion ingested: {cash_sug.get('id') if isinstance(cash_sug, dict) else cash_sug}")
+    else:
+        print(f"RC-06 cash policy suggestion skipped gates passed={cash_gates.passed} failures={cash_gates.failures}")
+
+    print("ANALYST-OPT weekly OK (incl. RC-06 cash suggestions chain)")
     return 0
 
 

@@ -3,83 +3,267 @@
   "description": "Regime -> scenario knob set (Path B winners per REGIME_SCENARIO_PROCEDURE). Swap when regime_detector signals change.",
   "regimes": {
     "bull": {
-      "scenario_id": "rebalance_7d",
-      "note": "scorecard bull winner=rebalance_7d primary_metric={'start': '2025-10-01', 'end': '2025-12-31'} return_pct=0.13 max_dd=0.84",
+      "scenario_id": "defensive_rotation_21d",
+      "note": "scorecard bull winner=defensive_rotation_21d return_pct=5.5 max_dd=0.0 ann=23.9554% usdc_hurdle=3.5% beats_usdc=True",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 200.0
+        "global_settings.rebalance_cap_usd": 100.0
       },
       "arch4_params": {
-        "use_rotation": false,
-        "rebal_freq": 7
+        "use_rotation": true,
+        "rebal_freq": 21
+      },
+      "usdc_benchmark": {
+        "beats_usdc_benchmark": true,
+        "annualized_return_pct": 23.9554,
+        "window_days": 91,
+        "window_total_return_pct": 5.5,
+        "usdc_apy_pct": 3.5,
+        "reason": "ok"
       },
       "scorecard": {
-        "winner_id": "rebalance_7d",
+        "winner_id": "defensive_rotation_21d",
+        "optimal_strategy_id": "defensive_rotation_21d",
         "beats_baseline": true,
         "date_range": {
           "start": "2025-10-01",
           "end": "2025-12-31"
+        },
+        "usdc_optimal": {
+          "optimal_strategy_id": "defensive_rotation_21d",
+          "optimal_annualized_return_pct": 23.9554,
+          "optimal_is_usdc": false,
+          "optimal_metrics": {
+            "final_equity": 1054.99,
+            "total_return_pct": 5.5,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 22.965,
+            "total_trades": 8,
+            "rebalance_count": 8,
+            "avg_pairs_held": 3.06,
+            "engine": "arch4",
+            "strategy": "rotation_catch_wave",
+            "avg_exposure_pct": 61.2,
+            "simulation_window": {
+              "start": "2025-10-01",
+              "end": "2025-12-31",
+              "bars_min": 92
+            }
+          },
+          "usdc_annualized_return_pct": 3.5001,
+          "best_alt_strategy_id": "defensive_rotation_21d",
+          "best_alt_annualized_return_pct": 23.9554,
+          "alt_beats_usdc_carry": true,
+          "comparison_metric": "annualized_return_pct"
         }
       }
     },
     "bear": {
-      "scenario_id": "rebalance_7d",
-      "note": "scorecard bear winner=rebalance_7d primary_metric={'start': '2025-08-01', 'end': '2025-09-30'} return_pct=-0.31 max_dd=0.31",
+      "scenario_id": "usdc_hold",
+      "strategy_mode": "usdc_park",
+      "note": "scorecard bear optimal=usdc_hold ann=3.5% best_alt=defensive_rebalance_14d alt_ann=0.0% (max annualized vs USDC carry)",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 120.0,
-        "risk_management.sl_max_pct": 0.04
+        "global_settings.rebalance_cap_usd": 0.0,
+        "global_settings.risk_free_preference": "USDC",
+        "global_settings.risk_free_apy_pct": 3.5
       },
       "arch4_params": {
         "use_rotation": false,
         "rebal_freq": 7
       },
+      "usdc_benchmark": {
+        "beats_usdc_benchmark": true,
+        "annualized_return_pct": 3.5,
+        "usdc_apy_pct": 3.5,
+        "reason": "optimal_strategy"
+      },
       "scorecard": {
-        "winner_id": "rebalance_7d",
+        "winner_id": "defensive_rebalance_14d",
+        "optimal_strategy_id": "usdc_hold",
         "beats_baseline": true,
         "date_range": {
           "start": "2025-08-01",
           "end": "2025-09-30"
+        },
+        "usdc_optimal": {
+          "optimal_strategy_id": "usdc_hold",
+          "optimal_annualized_return_pct": 3.5,
+          "optimal_is_usdc": true,
+          "optimal_metrics": {
+            "final_equity": 1005.67,
+            "total_return_pct": 0.5671,
+            "annualized_return_pct": 3.5,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 34.403,
+            "total_trades": 0,
+            "rebalance_count": 0,
+            "avg_pairs_held": 0.0,
+            "engine": "usdc_carry",
+            "strategy": "usdc_hold",
+            "usdc_apy_pct": 3.5,
+            "window_days": 60,
+            "avg_exposure_pct": 0.0
+          },
+          "usdc_annualized_return_pct": 3.5,
+          "best_alt_strategy_id": "defensive_rebalance_14d",
+          "best_alt_annualized_return_pct": 0.0,
+          "alt_beats_usdc_carry": false,
+          "comparison_metric": "annualized_return_pct"
         }
       }
     },
     "flat": {
-      "scenario_id": "rebalance_7d",
-      "note": "scorecard flat winner=rebalance_7d primary_metric={'start': '2026-01-01', 'end': '2026-03-31'} return_pct=-0.12 max_dd=1.09",
+      "scenario_id": "flat_cautious_deploy_b",
+      "strategy_mode": "deploy",
+      "note": "Operator thaw 2026-07-18 option B: cautious gated deploy under flat. NOT usdc_park. Cap $75. Scorecard may later re-park if USDC beats \u2014 only via promotion gates + Brad. | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected)",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 140.0
+        "global_settings.rebalance_cap_usd": 75.0,
+        "global_settings.risk_free_preference": "USDC",
+        "global_settings.risk_free_apy_pct": 3.5
       },
       "arch4_params": {
         "use_rotation": false,
         "rebal_freq": 7
       },
+      "usdc_benchmark": {
+        "beats_usdc_benchmark": true,
+        "annualized_return_pct": 3.5002,
+        "usdc_apy_pct": 3.5,
+        "reason": "optimal_strategy"
+      },
       "scorecard": {
-        "winner_id": "rebalance_7d",
+        "winner_id": "usdc_hold",
+        "optimal_strategy_id": "usdc_hold",
         "beats_baseline": true,
         "date_range": {
           "start": "2026-01-01",
           "end": "2026-03-31"
+        },
+        "usdc_optimal": {
+          "optimal_strategy_id": "usdc_hold",
+          "optimal_annualized_return_pct": 3.5002,
+          "optimal_is_usdc": true,
+          "optimal_metrics": {
+            "final_equity": 1008.42,
+            "total_return_pct": 0.8424,
+            "annualized_return_pct": 3.5002,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 34.403,
+            "total_trades": 0,
+            "rebalance_count": 0,
+            "avg_pairs_held": 0.0,
+            "engine": "usdc_carry",
+            "strategy": "usdc_hold",
+            "usdc_apy_pct": 3.5,
+            "window_days": 89,
+            "avg_exposure_pct": 0.0
+          },
+          "usdc_annualized_return_pct": 3.5002,
+          "best_alt_strategy_id": "rebalance_7d",
+          "best_alt_annualized_return_pct": -0.4912,
+          "alt_beats_usdc_carry": false,
+          "comparison_metric": "annualized_return_pct"
         }
+      },
+      "operator_override": {
+        "as_of": "2026-07-18",
+        "reason": "option_B_cautious_flat_deploy",
+        "previous_scenario_id": "usdc_hold",
+        "protect": true
+      },
+      "scorecard_research_only": {
+        "winner_id": "usdc_hold",
+        "optimal_strategy_id": "usdc_hold",
+        "beats_baseline": true,
+        "date_range": {
+          "start": "2026-01-01",
+          "end": "2026-03-31"
+        },
+        "usdc_optimal": {
+          "optimal_strategy_id": "usdc_hold",
+          "optimal_annualized_return_pct": 3.5002,
+          "optimal_is_usdc": true,
+          "optimal_metrics": {
+            "final_equity": 1008.42,
+            "total_return_pct": 0.8424,
+            "annualized_return_pct": 3.5002,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 34.403,
+            "total_trades": 0,
+            "rebalance_count": 0,
+            "avg_pairs_held": 0.0,
+            "engine": "usdc_carry",
+            "strategy": "usdc_hold",
+            "usdc_apy_pct": 3.5,
+            "window_days": 89,
+            "avg_exposure_pct": 0.0
+          },
+          "usdc_annualized_return_pct": 3.5002,
+          "best_alt_strategy_id": "rebalance_7d",
+          "best_alt_annualized_return_pct": -0.4912,
+          "alt_beats_usdc_carry": false,
+          "comparison_metric": "annualized_return_pct"
+        },
+        "scorecard_generated_at": "2026-08-16T11:00:21.739253+00:00"
       }
     },
     "transition": {
-      "scenario_id": "rebalance_7d",
-      "note": "scorecard recent winner=rebalance_7d primary_metric={'start': '2026-02-01', 'end': '2026-07-07'} return_pct=0.9 max_dd=3.41",
+      "scenario_id": "usdc_hold",
+      "strategy_mode": "usdc_park",
+      "note": "scorecard recent optimal=usdc_hold ann=3.5% best_alt=defensive_rebalance_14d alt_ann=2.7514% (max annualized vs USDC carry)",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 200.0
+        "global_settings.rebalance_cap_usd": 0.0,
+        "global_settings.risk_free_preference": "USDC",
+        "global_settings.risk_free_apy_pct": 3.5
       },
       "arch4_params": {
         "use_rotation": false,
         "rebal_freq": 7
       },
+      "usdc_benchmark": {
+        "beats_usdc_benchmark": true,
+        "annualized_return_pct": 3.5,
+        "usdc_apy_pct": 3.5,
+        "reason": "optimal_strategy"
+      },
       "scorecard": {
-        "winner_id": "rebalance_7d",
+        "winner_id": "usdc_hold",
+        "optimal_strategy_id": "usdc_hold",
         "beats_baseline": true,
         "date_range": {
           "start": "2026-02-01",
-          "end": "2026-07-07"
+          "end": "2026-07-30"
+        },
+        "usdc_optimal": {
+          "optimal_strategy_id": "usdc_hold",
+          "optimal_annualized_return_pct": 3.5,
+          "optimal_is_usdc": true,
+          "optimal_metrics": {
+            "final_equity": 1017.01,
+            "total_return_pct": 1.7014,
+            "annualized_return_pct": 3.5,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 34.403,
+            "total_trades": 0,
+            "rebalance_count": 0,
+            "avg_pairs_held": 0.0,
+            "engine": "usdc_carry",
+            "strategy": "usdc_hold",
+            "usdc_apy_pct": 3.5,
+            "window_days": 179,
+            "avg_exposure_pct": 0.0
+          },
+          "usdc_annualized_return_pct": 3.5,
+          "best_alt_strategy_id": "defensive_rebalance_14d",
+          "best_alt_annualized_return_pct": 2.7514,
+          "alt_beats_usdc_carry": false,
+          "comparison_metric": "annualized_return_pct"
         }
       }
     }
   },
-  "updated_from_scorecard_at": "2026-07-07T21:46:29.673256+00:00",
-  "scorecard_generated_at": "2026-07-07T21:46:25.210103+00:00"
+  "updated_from_scorecard_at": "2026-08-16T11:00:23.117928+00:00",
+  "scorecard_generated_at": "2026-08-16T11:00:21.739253+00:00",
+  "operator_overrides_preserved": [
+    "flat"
+  ]
 }

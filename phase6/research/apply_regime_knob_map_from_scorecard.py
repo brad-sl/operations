@@ -12,10 +12,13 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from phase6.research.scenario_knobs import ScenarioKnobs
+from phase6.core.usdc_benchmark import beats_usdc_hurdle
 
 SCORECARD = ROOT / "data/state/analyst_regime_scorecard_latest.json"
 KNOB_MAP = ROOT / "config/regime_knob_map.json"
 SCENARIO_PACKS = [
+    ROOT / "phase6/research/scenarios/r2_defensive_sharpe_gate.json",
+    ROOT / "phase6/research/scenarios/regime_quad_defensive.json",
     ROOT / "phase6/research/scenarios/r1_arch4_smoke_three.json",
     ROOT / "phase6/research/scenarios/regime_quad_template.json",
 ]
@@ -43,6 +46,40 @@ def knobs_for_scenario(scenario_id: str, idx: dict) -> ScenarioKnobs | None:
     return ScenarioKnobs.from_scenario(sc, pack)
 
 
+def entry_from_usdc_park(regime: str, rg: dict, optimal: dict) -> dict:
+    from phase6.core.usdc_benchmark import load_usdc_apy_pct, usdc_standdown_overlay
+
+    dr = rg.get("date_range") or {}
+    ann = optimal.get("optimal_annualized_return_pct") or load_usdc_apy_pct()
+    best_alt = optimal.get("best_alt_strategy_id")
+    best_alt_ann = optimal.get("best_alt_annualized_return_pct")
+    note = (
+        f"scorecard {regime} optimal=usdc_hold ann={ann}% "
+        f"best_alt={best_alt} alt_ann={best_alt_ann}% "
+        f"(max annualized vs USDC carry)"
+    )
+    return {
+        "scenario_id": "usdc_hold",
+        "strategy_mode": "usdc_park",
+        "note": note,
+        "live_overlay": usdc_standdown_overlay(),
+        "arch4_params": {"use_rotation": False, "rebal_freq": 7},
+        "usdc_benchmark": {
+            "beats_usdc_benchmark": True,
+            "annualized_return_pct": ann,
+            "usdc_apy_pct": load_usdc_apy_pct(),
+            "reason": "optimal_strategy",
+        },
+        "scorecard": {
+            "winner_id": rg.get("winner_id"),
+            "optimal_strategy_id": "usdc_hold",
+            "beats_baseline": rg.get("beats_baseline"),
+            "date_range": dr,
+            "usdc_optimal": optimal,
+        },
+    }
+
+
 def entry_from_winner(scenario_id: str, idx: dict, regime: str, rg: dict) -> dict:
     knobs = knobs_for_scenario(scenario_id, idx)
     if not knobs:
@@ -57,11 +94,16 @@ def entry_from_winner(scenario_id: str, idx: dict, regime: str, rg: dict) -> dic
     arch4 = knobs.to_arch4_params()
     winner_row = next((s for s in rg.get("scenarios") or [] if s.get("id") == scenario_id), {})
     metrics = winner_row.get("metrics") or {}
+    usdc = beats_usdc_hurdle(
+        metrics.get("total_return_pct"),
+        rg.get("date_range"),
+    )
 
     note = (
         f"scorecard {regime} winner={scenario_id} "
-        f"primary_metric={rg.get('date_range')} "
-        f"return_pct={metrics.get('total_return_pct')} max_dd={metrics.get('max_drawdown_pct')}"
+        f"return_pct={metrics.get('total_return_pct')} max_dd={metrics.get('max_drawdown_pct')} "
+        f"ann={usdc.get('annualized_return_pct')}% usdc_hurdle={usdc.get('usdc_apy_pct')}% "
+        f"beats_usdc={usdc.get('beats_usdc_benchmark')}"
     )
 
     live = {
@@ -87,10 +129,13 @@ def entry_from_winner(scenario_id: str, idx: dict, regime: str, rg: dict) -> dic
             "use_rotation": arch4["use_rotation"],
             "rebal_freq": arch4["rebal_freq"],
         },
+        "usdc_benchmark": usdc,
         "scorecard": {
             "winner_id": scenario_id,
+            "optimal_strategy_id": rg.get("optimal_strategy_id"),
             "beats_baseline": rg.get("beats_baseline"),
             "date_range": rg.get("date_range"),
+            "usdc_optimal": rg.get("usdc_optimal"),
         },
     }
 
@@ -104,22 +149,51 @@ def main() -> int:
     idx = load_scenario_index()
     knob_map = json.loads(KNOB_MAP.read_text()) if KNOB_MAP.exists() else {"schema_version": "1", "regimes": {}}
     regimes_out = deepcopy(knob_map.get("regimes") or {})
+    preserved: list[str] = []
 
     for rg in scorecard.get("regimes") or []:
         regime = rg.get("regime")
         key = REGIME_KEY.get(regime, regime)
         if key not in ("bull", "bear", "flat", "transition"):
             continue
-        winner = rg.get("winner_id")
-        if not winner or rg.get("scenarios") and rg["scenarios"][0].get("error"):
+        # Operator thaw / manual latch (e.g. flat option B) — do not clobber
+        existing = regimes_out.get(key) or {}
+        ov = existing.get("operator_override") or {}
+        if ov.get("protect", True) and ov.get("reason"):
+            # Keep live overlay + mode; attach freshest scorecard under research_only
+            refreshed = deepcopy(existing)
+            refreshed["scorecard_research_only"] = {
+                "winner_id": rg.get("winner_id"),
+                "optimal_strategy_id": rg.get("optimal_strategy_id") or rg.get("winner_id"),
+                "beats_baseline": rg.get("beats_baseline"),
+                "date_range": rg.get("date_range"),
+                "usdc_optimal": rg.get("usdc_optimal"),
+                "scorecard_generated_at": scorecard.get("generated_at"),
+            }
+            refreshed["note"] = (
+                f"{existing.get('note') or ''} | scorecard would prefer "
+                f"{rg.get('optimal_strategy_id') or rg.get('winner_id')} "
+                f"(operator_override protected)"
+            ).strip(" |")
+            regimes_out[key] = refreshed
+            preserved.append(key)
             continue
-        regimes_out[key] = entry_from_winner(winner, idx, regime, rg)
+        winner = rg.get("winner_id")
+        strategy_id = rg.get("optimal_strategy_id") or winner
+        if not strategy_id or rg.get("scenarios") and rg["scenarios"][0].get("error"):
+            continue
+        optimal = rg.get("usdc_optimal") or {}
+        if strategy_id == "usdc_hold":
+            regimes_out[key] = entry_from_usdc_park(regime, rg, optimal)
+        else:
+            regimes_out[key] = entry_from_winner(strategy_id, idx, regime, rg)
 
     knob_map["regimes"] = regimes_out
     knob_map["updated_from_scorecard_at"] = datetime.now(timezone.utc).isoformat()
     knob_map["scorecard_generated_at"] = scorecard.get("generated_at")
+    knob_map["operator_overrides_preserved"] = preserved
     KNOB_MAP.write_text(json.dumps(knob_map, indent=2))
-    print(f"regime_knob_map OK keys={list(regimes_out.keys())} wrote {KNOB_MAP}")
+    print(f"regime_knob_map OK keys={list(regimes_out.keys())} preserved={preserved} wrote {KNOB_MAP}")
     return 0
 
 

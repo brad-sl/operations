@@ -1,0 +1,3 @@
+firstName,lastName,email,phone,tags,trader_tier,subscription_status,platform_account_id,pilot_cohort,source
+Pilot,Alpha,pilot.alpha+arch@example.com,,pilot;paid;trader_tier_starter,starter,active,11111111-1111-4111-8111-111111111111,closed-2026q3,ghl_t0_sample
+Pilot,Beta,pilot.beta+arch@example.com,,pilot;paid;trader_tier_starter;coinbase_connected;runner_healthy,starter,active,22222222-2222-4222-8222-222222222222,closed-2026q3,ghl_t0_sample

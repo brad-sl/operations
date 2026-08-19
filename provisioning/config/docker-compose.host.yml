@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway  # or use python image + cmd
+    image: crypto-gateway:stub
+    container_name: ghl-gateway
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - GHL_WEBHOOK_SECRET=${GHL_WEBHOOK_SECRET:-placeholder}
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Optional: Caddy as reverse proxy for HTTPS (recommended)
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - gateway
+
+  # Placeholder for trading bot (later migrate Phase6)
+  # bot:
+  #   image: crypto-bot:latest
+  #   ...
+
+volumes:
+  caddy_data:
+  caddy_config:

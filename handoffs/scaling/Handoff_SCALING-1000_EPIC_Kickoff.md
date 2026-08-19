@@ -31,3 +31,7 @@
 ## Delegation note
 
 Implementation waves should use `agentic-architecture` + `code-isolation-testing`; GHL workflow work can be parallelized with integration gateway once webhook URL is stable.
+
+**Ramp-up (not started):** GHL sub-account/Location setup + deploy trading bot to a **dedicated host** (not local HP). See `docs/integrations/GHL_INTEGRATION.md`.
+
+**When GHL implementation waves begin:** set Hermes `delegation.provider: xai-oauth` and `delegation.model: grok-4.5` per that doc (primary stays `grok-composer-2.5-fast`).

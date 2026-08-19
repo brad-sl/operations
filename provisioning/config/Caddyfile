@@ -1,0 +1,24 @@
+# Caddyfile for ARCH Automation / Crypto Bot Gateway + Webhooks
+# Placeholder: replace arch-automation.com with actual after brand decision
+# Automatic HTTPS + Let's Encrypt via Caddy
+# Run with: caddy run --config Caddyfile or via docker
+
+api.arch-automation.com {
+    # Main gateway (Flask/FastAPI stub or prod)
+    reverse_proxy localhost:8000
+
+    # Optional: serve static or other
+    # root * /opt/crypto-bot/static
+    # file_server
+}
+
+# Health check direct (or via proxy)
+# For now, gateway handles /health
+
+# Future: staging.arch-automation.com { ... } 
+
+# Logging
+log {
+    output file /var/log/caddy/access.log
+    format json
+}

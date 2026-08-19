@@ -1,0 +1,7 @@
+{
+  "schema_version": "1",
+  "usdc_apy_pct": 3.5,
+  "source": "coinbase_usdc",
+  "note": "Minimum annualized return hurdle for deploying risk capital; below this prefer USDC idle yield.",
+  "updated_at": "2026-07-09"
+}

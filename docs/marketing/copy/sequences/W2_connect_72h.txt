@@ -1,0 +1,36 @@
+# W2b — Connect reminder 72h (final pre-drip)
+# Trigger: paid AND coinbase_status != connected AND 72h after W1 / paid_at
+# Channel: Email + SMS
+# Tone: clear, not fear-mongering; mention refund eligibility if policy applies
+# Exit if: coinbase_connected OR canceled
+
+SUBJECT: Still need to connect Coinbase — ARCH Automation
+
+PREHEADER: Subscription active; connection required for the software to run.
+
+---
+
+Hi {{first_name}},
+
+Your ARCH Automation **{{tier_name}}** subscription is still active, but we don’t see a completed Coinbase connection.
+
+The software can’t run until you finish OAuth. Most people finish in a few minutes on mobile or desktop.
+
+**Connect here:** {{connect_link}}
+
+**If something went wrong**
+- Use the link above again (safe to retry)
+- Confirm you’re signing into Coinbase Advanced (not only the consumer app flow if prompted)
+- Reply to this email or write {{support_email}} with a short description of the error screen
+
+**Not ready to connect?**
+If you haven’t connected Coinbase and decide ARCH isn’t a fit, you may be eligible for a refund under our current policy when you have not completed OAuth within 7 days of subscribe (see Terms). Contact {{support_email}} to request review — no pressure.
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only. | {{support_email}}
+
+# SMS
+ARCH: Final connect reminder — OAuth required for automation: {{connect_link}} {{support_email}}

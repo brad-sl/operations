@@ -7,12 +7,12 @@
       "SOL-USD",
       "XRP-USD",
       "DOGE-USD",
-      "ADA-USD",
+      "RAVE-USD",
       "AVAX-USD",
       "LINK-USD",
       "UNI-USD",
       "ARB-USD",
-      "OP-USD"
+      "ICP-USD"
     ],
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 150.0,
@@ -20,9 +20,28 @@
     "use_new_allocator": true,
     "rebalance_style": "permissive_deploy",
     "trade_buffer_hours": 24,
+    "capital_event_min_flow_usd": 50.0,
+    "capital_event_force_rebalance": false,
+    "capital_event_manual_sell_hold_cash": true,
+    "capital_event_manual_sell_block_rebuy_hours": 48,
+    "capital_event_stop_loss_exchange_hold_cash": true,
+    "capital_event_stop_loss_exchange_block_rebuy_hours": 72,
+    "capital_event_stop_loss_ledger_lookback_hours": 48,
+    "capital_event_manual_sell_cancel_stops": true,
     "signal_freshness_enforced": true,
     "mid_cycle_allocator_enabled": false,
-    "use_platform_executor": true
+    "use_platform_executor": true,
+    "capital_event_deposit_deploy_cap_usd": 0.0,
+    "multi_tenant_enabled": false,
+    "deploy_min_rsi": 30.0,
+    "allocator": {
+      "min_move_usd": 50.0,
+      "min_score_delta": 0.05,
+      "cooldown_hours": 6.0,
+      "dd_threshold_pct": 0.08,
+      "max_pairs": 5,
+      "deploy_min_rsi": 30.0
+    }
   },
   "risk_management": {
     "max_daily_loss_pct": 0.02,
@@ -34,7 +53,51 @@
     "adaptive_sl": true,
     "sl_base_pct": 0.03,
     "sl_min_pct": 0.015,
-    "sl_max_pct": 0.05
+    "sl_max_pct": 0.05,
+    "sl_attach_safety_ratio": 0.98,
+    "dust_sweep_after_sl": true,
+    "dust_sweep_max_usd": 50.0,
+    "dust_sweep_min_usd": 0.5,
+    "dust_sweep_max_frac_of_fill": 0.06,
+    "dust_sweep_orphan_each_cycle": true,
+    "near_stop_add_block_enabled": true,
+    "near_stop_min_gap_pct": 0.02,
+    "near_stop_max_unrealized_pct": -0.01,
+    "near_stop_require_existing_position": true,
+    "near_stop_min_position_usd": 25.0,
+    "near_stop_block_reasons": [
+      "light_tilt_cash",
+      "opportunistic_rotation_from_weak"
+    ]
+  },
+  "preserve_mode": {
+    "enabled": true,
+    "armed": true,
+    "profile": "hold",
+    "target_pct": 0.2,
+    "asset": "PAXG-USD",
+    "preserve_equity_base": "cash_plus_preserve_mtm",
+    "allow_preserve_with_crypto_util": false,
+    "min_ballast_usd": 500.0,
+    "band_pct": 0.02,
+    "attach_safety_ratio": 0.98,
+    "micro_live": true,
+    "micro_usd": 75.0,
+    "hold": {
+      "e1_dd_pct": -0.32,
+      "soft_adds_block_dd_pct": -0.12,
+      "e1_limit_slip_pct": 0.006
+    },
+    "derisk": {
+      "enabled": false
+    },
+    "venue_probe_result": "A",
+    "venue_probe_date": "2026-08-02",
+    "e1_auto_repair": true,
+    "shadow_decision_log": true,
+    "decision_matrix": "docs/research/PARK_BALLAST_DECISION_MATRIX.md",
+    "park_policy": "docs/research/PARK_REGIME_POLICY.md",
+    "note": "Park = USDC bulk + optional PAXG. micro_live=$75 for logging/E1 path; full 20% only after scale-up decision. DeRisk off. E1 auto-repair + shadow decision log on. See PARK_BALLAST_DECISION_MATRIX.md."
   },
   "phase_6_specific": {
     "expansion_rules": {
@@ -54,7 +117,9 @@
       "UNI-USD",
       "ARB-USD",
       "OP-USD",
-      "MATIC-USD"
+      "MATIC-USD",
+      "RAVE-USD",
+      "ICP-USD"
     ]
   },
   "withdrawal_reserve": {
@@ -75,5 +140,12 @@
     "strategy": "ARCH-4 new stack: evaluate_universe -> RotationStrategy allocator -> TradePlan -> _execute_trade_plan -> OrderExecutor (Coinbase place_market_buy/sell in live)",
     "mode_default": "live requires --confirm-live",
     "dashboard_feed": "full new chain: proposals + allocator decisions drive real orders when --mode=live"
+  },
+  "sentiment": {
+    "primary": "x_with_free_fallback",
+    "free_fallback_when_x_empty": true,
+    "x_min_usable_posts_total": 1,
+    "free_max_age_hours": 18,
+    "note": "Phase3 temp: when X empty/spend-cap, use free hybrid (funding+RSS+F&G). primary=x|free_hybrid|x_with_free_fallback|off"
   }
 }

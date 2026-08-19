@@ -1,7 +1,12 @@
 # Functional Specification (Draft)
 
+> **LEGACY — not SSOT (banner 2026-08-13).**  
+> Do **not** implement from this file. Cadence, Reddit-on, live TP, and runner paths here are **stale** (Jun 2026).  
+> Current: `docs/SPECS_INDEX.md`, `docs/SPECS_CODE_GAP.md`, live `config/trading_config_phase6.json` + `exit_automation.json` + `regime_cash_policy.json`.  
+> Profitability / P&L gaps: `reports/PLATFORM_PROFITABILITY_REVIEW_2026-08-13.md`.
+
 **System:** Phase 6 Crypto Trading Platform  
-**Status:** Draft — Pre-Production  
+**Status:** Draft — Pre-Production (**historical**)  
 **Last Updated:** 2026-06-06  
 **Owner:** crypto-orchestrator  
 **Purpose:** Single source of truth for the end-to-end trading system architecture, data flows, and component responsibilities.

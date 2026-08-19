@@ -53,24 +53,41 @@ def apply_regime_knobs(overlay: Dict[str, Any], config: Dict[str, Any]) -> Dict[
 
     with open(map_path) as f:
         knob_map = json.load(f)
-    entry = (knob_map.get("regimes") or {}).get(regime)
+    regimes = knob_map.get("regimes") or {}
+    entry = regimes.get(regime)
+    if not entry and regime == "unknown":
+        entry = regimes.get("transition") or regimes.get("flat")
+        regime = "transition" if regimes.get("transition") else "flat"
     if not entry:
         return overlay
 
-    prev = overlay.get("regime_policy", {}).get("current_regime")
+    overlay = deepcopy(overlay)
+    rp = overlay.setdefault("regime_policy", {})
+    prev = rp.get("current_regime")
     if prev and prev != regime:
         logger.info("[shadow] regime shift %s -> %s; swapping knobs", prev, regime)
-        overlay = deepcopy(overlay)
-        overlay.setdefault("regime_policy", {})["current_regime"] = regime
-        overlay["regime_policy"]["last_regime_change_at"] = det.get("as_of")
-        if entry.get("live_overlay"):
-            overlay["live_overlay"] = entry["live_overlay"]
-        if entry.get("arch4_params"):
-            overlay["knobs"] = {**(overlay.get("knobs") or {}), **entry["arch4_params"]}
-        overlay["scenario_id"] = entry.get("scenario_id", overlay.get("scenario_id"))
+        rp["last_regime_change_at"] = det.get("as_of")
     elif not prev:
-        overlay = deepcopy(overlay)
-        overlay.setdefault("regime_policy", {})["current_regime"] = regime
+        rp["last_regime_change_at"] = det.get("as_of")
+    rp["current_regime"] = regime
+
+    live = dict(entry.get("live_overlay") or {})
+    if entry.get("strategy_mode") == "usdc_park":
+        live["global_settings.strategy_mode"] = "usdc_park"
+    if entry.get("usdc_benchmark", {}).get("beats_usdc_benchmark") is False:
+        from phase6.core.usdc_benchmark import usdc_standdown_overlay
+
+        live = {**live, **usdc_standdown_overlay()}
+        overlay.setdefault("knobs", {})["_usdc_standdown"] = True
+    else:
+        overlay.setdefault("knobs", {})["_usdc_standdown"] = False
+
+    overlay["live_overlay"] = live
+    if entry.get("arch4_params"):
+        overlay["knobs"] = {**(overlay.get("knobs") or {}), **entry["arch4_params"]}
+    overlay["scenario_id"] = entry.get("scenario_id", overlay.get("scenario_id"))
+    overlay["regime_policy"]["detected"] = det
+    overlay["regime_policy"]["usdc_benchmark"] = entry.get("usdc_benchmark")
 
     return overlay
 
@@ -125,12 +142,12 @@ def shadow_params_from_overlay() -> Dict[str, Any]:
     if not state.get("active"):
         return {}
     knobs = state.get("knobs") or {}
+    lo = state.get("live_overlay") or {}
     return {
         "analyst_shadow": True,
         "scenario_id": state.get("scenario_id"),
         "proposal_id": state.get("proposal_id"),
-        "rebalance_cap_usd": (state.get("live_overlay") or {}).get(
-            "global_settings.rebalance_cap_usd"
-        ),
+        "rebalance_cap_usd": lo.get("global_settings.rebalance_cap_usd"),
+        "deploy_pct": lo.get("risk_management.deploy_pct"),
         "use_rotation": knobs.get("use_rotation", True),
     }

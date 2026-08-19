@@ -12,10 +12,12 @@ class StopLossManager:
     Manage stop-loss and take-profit orders for Phase 6 using native Coinbase stop-limit orders.
     """
 
-    def __init__(self, exchange_client: Any, config: dict, mode: str = "shadow"):
+    def __init__(self, exchange_client: Any, config: dict, mode: str = "shadow", account_context: "AccountContext" = None):
         self.exchange = exchange_client
         self.config = config
         self.mode = mode
+        self.account_context = account_context
+        self.account_id = getattr(account_context, "account_id", "default") if account_context else "default"
         self.shadow_mode = (mode == "shadow")
 
         # Default risk parameters (can be overridden by config)
@@ -46,7 +48,16 @@ class StopLossManager:
             return self.default_sl_pct
 
 
-    def attach_stop_loss(self, pair: str, entry_price: float, size: float, sl_pct: float = None, anchor_entry: float = None, order_id: Optional[str] = None) -> bool:
+    def attach_stop_loss(
+        self,
+        pair: str,
+        entry_price: float,
+        size: float,
+        sl_pct: float = None,
+        anchor_entry: float = None,
+        order_id: Optional[str] = None,
+        fresh_buy: bool = False,
+    ) -> bool:
         """
         Attach a native stop-loss order with retry logic.
         ANALYST-20260703-051: Pre-flight settlement poll using order fill if order_id provided (tied to recent buy), else balance.
@@ -63,12 +74,25 @@ class StopLossManager:
             pct = self.get_sl_pct(pair) if hasattr(self, "get_sl_pct") else self.default_sl_pct
 
         # Pre-flight settlement poll (ANALYST-20260705-005 / 007)
-        try:
-            from phase6.core.sl_preflight import settlement_poll_params
-            from phase6.core.sl_risk_scorer import get_sl_risk
+        from phase6.core.sl_preflight import (
+            settlement_poll_params,
+            sanitize_reattach_order_id,
+            resolve_sl_attach_size,
+            cancel_open_stops_for_pair,
+            poll_available_after_cancel,
+            fetch_verified_order_fill,
+            SETTLEMENT_POLL_OWNER,
+        )
+        from phase6.core.sl_risk_scorer import get_sl_risk
 
+        requested_size = float(size)
+        settlement_confirmed = False
+        fresh_buy_order_id = order_id if fresh_buy else None
+        try:
             risk = get_sl_risk(pair)
             risk_level = risk.get("level", "LOW")
+            if not self.shadow_mode and not fresh_buy:
+                order_id = sanitize_reattach_order_id(self.exchange, pair, order_id)
             params = settlement_poll_params(pair, order_id=order_id, risk_level=risk_level)
             skip_poll = (
                 not order_id
@@ -80,23 +104,56 @@ class StopLossManager:
                     f"[PRE-FLIGHT] Skipping settlement poll for {pair} (LOW risk, no fresh buy order_id)"
                 )
             elif not self.shadow_mode:
-                settled = self.exchange.poll_for_settlement(
-                    pair,
-                    timeout=params["timeout"],
-                    order_id=params.get("order_id"),
-                )
-                if not settled:
-                    logger.warning(
-                        f"[PRE-FLIGHT] Settlement poll failed/timeout for {pair} "
-                        f"(risk={risk_level}, mode={params['mode']}, order_id={order_id}); proceeding cautiously"
-                    )
+                if not hasattr(self.exchange, "poll_for_settlement"):
+                    logger.warning(f"[PRE-FLIGHT] exchange has no poll_for_settlement for {pair}")
                 else:
-                    logger.info(
-                        f"[PRE-FLIGHT] Settlement confirmed for {pair} before SL "
-                        f"(mode={params['mode']}, order_id={order_id or 'N/A'})"
+                    logger.debug(
+                        f"[PRE-FLIGHT] Settlement poll owner={SETTLEMENT_POLL_OWNER} pair={pair} order_id={order_id}"
                     )
+                    settled = self.exchange.poll_for_settlement(
+                        pair,
+                        timeout=params["timeout"],
+                        order_id=params.get("order_id"),
+                    )
+                    settlement_confirmed = bool(settled)
+                    if not settled:
+                        if order_id:
+                            logger.error(
+                                f"[PRE-FLIGHT] Fill-tied settlement failed for {pair} order_id={order_id}; aborting SL attach"
+                            )
+                            return False
+                        logger.warning(
+                            f"[PRE-FLIGHT] Settlement poll failed/timeout for {pair} "
+                            f"(risk={risk_level}, mode={params['mode']}); proceeding cautiously"
+                        )
+                    else:
+                        logger.info(
+                            f"[PRE-FLIGHT] Settlement confirmed for {pair} before SL "
+                            f"(mode={params['mode']}, order_id={order_id or 'N/A'})"
+                        )
+                        if order_id:
+                            verified = fetch_verified_order_fill(self.exchange, order_id)
+                            if verified.get("fill_verified"):
+                                entry_price = float(verified["average_filled_price"])
+                                requested_size = float(verified["filled_size"])
+                                anchor_entry = entry_price
+                                size = requested_size
+                            elif fresh_buy_order_id:
+                                logger.error(
+                                    f"[PRE-FLIGHT] Settlement ok but fill unverified for {pair} "
+                                    f"order_id={order_id}; refusing market-price SL anchor"
+                                )
+                                return False
         except Exception as e:
-            logger.debug(f"[PRE-FLIGHT] poll skipped or failed: {e}")
+            logger.warning(f"[PRE-FLIGHT] poll skipped or failed for {pair}: {e}")
+            if order_id and not self.shadow_mode:
+                return False
+
+        if not self.shadow_mode:
+            pre_size, pre_meta = resolve_sl_attach_size(self.exchange, pair, requested_size)
+            if pre_size <= 0 and pre_meta.get("holds_entire_balance"):
+                cancel_open_stops_for_pair(self.exchange, pair)
+                poll_available_after_cancel(self.exchange, pair, timeout=4.0)
 
         meta = self.exchange.get_product_metadata(pair)
         price_inc = float(meta.get("price_increment", 0.0001))
@@ -119,11 +176,17 @@ class StopLossManager:
         )
 
         if (not calc_base or calc_base <= 0) and not self.shadow_mode:
+            if fresh_buy_order_id and settlement_confirmed:
+                logger.error(
+                    f"[SL ANCHOR] Refusing market fallback for fresh buy {pair} "
+                    f"(order_id={fresh_buy_order_id}); verified fill required"
+                )
+                return False
             try:
                 current_px = market_px or float(self.exchange.get_price(pair) or 0.0)
                 if current_px > 0:
                     logger.warning(
-                        f"[SL FALLBACK] entry/anchor was 0 for {pair}; using current market ${current_px:.2f} for SL anchor"
+                        f"[SL FALLBACK] entry/anchor was 0 for {pair}; using current market ${current_px:.2f} for SL anchor (re-attach only)"
                     )
                     calc_base = current_px
                     anchor_reason = "market_fallback"
@@ -144,11 +207,14 @@ class StopLossManager:
             stop_price_str = self.exchange.quantize_price(pair, stop_price)
             limit_price_str = self.exchange.quantize_price(pair, limit_price)
 
-        # Ensure prices are valid vs entry
-        if stop_price >= entry_price:
-            logger.warning(f"Stop price {stop_price} >= entry {entry_price}, adjusting...")
+        # Ensure prices are valid vs calc base (ENG-S4-02: not stale raw entry_price)
+        anchor_for_stop_check = calc_base if calc_base and calc_base > 0 else entry_price
+        if stop_price >= anchor_for_stop_check:
+            logger.warning(
+                f"Stop price {stop_price} >= anchor {anchor_for_stop_check}, adjusting..."
+            )
             price_inc = float(meta.get("price_increment", "0.0001"))
-            stop_price = entry_price - price_inc
+            stop_price = anchor_for_stop_check - price_inc
             stop_price_str = self.exchange.quantize_price(pair, stop_price)
             stop_price = float(stop_price_str)
             limit_price = stop_price - price_inc
@@ -156,9 +222,6 @@ class StopLossManager:
             limit_price = float(limit_price_str)
         
         # Quantize size to tradable balance (PREVIEW_INSUFFICIENT_FUND mitigation)
-        from phase6.core.sl_preflight import resolve_sl_attach_size, cancel_open_stops_for_pair, poll_available_after_cancel
-
-        requested_size = float(size)
         size, size_meta = resolve_sl_attach_size(self.exchange, pair, requested_size)
         if size <= 0 and size_meta.get("holds_entire_balance"):
             cancel_open_stops_for_pair(self.exchange, pair)
@@ -176,6 +239,7 @@ class StopLossManager:
 
         # Live mode with retry
         max_retries = 3
+        sl_order_id: Optional[str] = None
         for attempt in range(1, max_retries + 1):
             try:
                 result = self.exchange.place_stop_limit_sell(
@@ -184,8 +248,29 @@ class StopLossManager:
                     stop_price=stop_price,
                     limit_price=limit_price
                 )
-                if result:
+                success = False
+                if isinstance(result, dict):
+                    success = bool(result.get("success"))
+                    sl_order_id = result.get("order_id")
+                else:
+                    success = bool(result)
+                if success:
                     logger.info(f"Stop-loss successfully attached for {pair}")
+                    if sl_order_id and not self.shadow_mode:
+                        try:
+                            from phase6.core.protective_orders_registry import register_protective_order
+                            register_protective_order(
+                                pair=pair,
+                                sl_order_id=str(sl_order_id),
+                                entry_price=float(calc_base or entry_price),
+                                qty=float(size),
+                                stop_price=float(stop_price),
+                                limit_price=float(limit_price),
+                                buy_order_id=fresh_buy_order_id,
+                                mode="live",
+                            )
+                        except Exception as reg_exc:
+                            logger.warning("[SL-REGISTRY] failed to register %s: %s", pair, reg_exc)
                     return True
                 else:
                     logger.warning(f"SL attempt {attempt}/{max_retries} failed for {pair}")
@@ -297,10 +382,13 @@ class StopLossManager:
         After detection (CR-03.1), cancel the orders via exchange client.
         Records which stops were suspended with their order IDs for audit trail.
 
+        Preserve Hold E1 (sleeve=preserve / PAXG while armed) is NEVER cancelled here.
+
         Returns: {pair: [order_id, ...], ...} for logging/verification.
         """
         suspended: Dict[str, List[str]] = {}
         total_suspended = 0
+        preserve_skipped = 0
 
         for pair, orders in (active_stops or {}).items():
             suspended[pair] = []
@@ -310,6 +398,32 @@ class StopLossManager:
                 if not order_id:
                     logger.warning(f"[CR-03.2] Order without ID for {pair}: {order}")
                     continue
+
+                # Sleeve safety: do not strip Preserve ballast stop
+                try:
+                    from phase6.core.preserve_hold import (
+                        should_protect_preserve_sleeve,
+                        load_state,
+                        load_preserve_config,
+                    )
+
+                    if should_protect_preserve_sleeve(
+                        pair=pair,
+                        order_id=str(order_id),
+                        state=load_state(),
+                        cfg=load_preserve_config(
+                            self.config if isinstance(self.config, dict) else {}
+                        ),
+                    ):
+                        preserve_skipped += 1
+                        logger.info(
+                            "[CR-03.2] SKIP preserve sleeve order %s pair=%s",
+                            order_id,
+                            pair,
+                        )
+                        continue
+                except Exception as pe:
+                    logger.debug("[CR-03.2] preserve skip check failed: %s", pe)
 
                 if self.shadow_mode:
                     print(f"[SHADOW][CR-03.2] Would cancel {ptype} order {order_id} for {pair}")
@@ -328,6 +442,8 @@ class StopLossManager:
                 except Exception as e:
                     logger.error(f"[CR-03.2] Exception canceling {order_id} for {pair}: {e}")
 
+        if preserve_skipped:
+            logger.info("[CR-03.2] Preserved %s Preserve-sleeve stop(s) from suspend", preserve_skipped)
         if total_suspended > 0:
             summary = {k: v for k, v in suspended.items() if v}
             logger.info(f"[CR-03.2] Suspended {total_suspended} protective orders across {len(summary)} pairs: {summary}")

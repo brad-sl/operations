@@ -50,10 +50,7 @@ def _get_ticker_lower(pair: str) -> str:
 
 
 def get_x_keyword(pair: str) -> str:
-    """
-    Return the keyword string to use for X (Twitter) searches for this pair.
-    Falls back to the upper ticker if not explicitly configured.
-    """
+    """Primary X search token for batched queries."""
     data = load_sentiment_keywords()
     pair_data = data.get("pairs", {}).get(pair, {})
 
@@ -65,6 +62,20 @@ def get_x_keyword(pair: str) -> str:
     if defaults.get("x_fallback") == "ticker_upper":
         return _get_ticker(pair)
     return _get_ticker_lower(pair)
+
+
+def get_x_supplemental_queries(pair: str) -> List[str]:
+    """Dedicated per-pair queries when batch distribute returns 0 posts (real data only)."""
+    data = load_sentiment_keywords()
+    pair_data = data.get("pairs", {}).get(pair, {})
+    extra = pair_data.get("x_supplemental")
+    if isinstance(extra, list) and extra:
+        return [str(x) for x in extra]
+    ticker = _get_ticker(pair)
+    name = (pair_data.get("reddit") or [ticker.lower()])[0]
+    if isinstance(name, list):
+        name = name[0] if name else ticker.lower()
+    return [f"${ticker}", str(name), f"{ticker} crypto"]
 
 
 def get_reddit_keywords(pair: str) -> List[str]:

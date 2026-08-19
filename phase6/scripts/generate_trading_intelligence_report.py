@@ -23,6 +23,8 @@ Run by the twice-daily cron. Real data only.
 """
 
 import json
+import re
+import hashlib
 import sys
 from datetime import datetime, date, timezone, timedelta
 from pathlib import Path
@@ -198,6 +200,51 @@ def generate_proposal_id(seq: int) -> str:
     return f"ANALYST-{_today_id_prefix()}-{seq:03d}"
 
 
+def normalize_proposal_title(title: str) -> str:
+    """Stable title key for cross-run dedup (ENG-S7-01)."""
+    return re.sub(r"\s+", " ", (title or "").strip().lower())
+
+
+def proposal_semantic_hash(title: str, category: str = "") -> str:
+    """Short hash for logging / MASTER cross-check."""
+    payload = f"{normalize_proposal_title(category)}|{normalize_proposal_title(title)}"
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:12]
+
+
+def collect_known_proposal_titles(*, include_strategic_json: bool = True) -> set:
+    """Titles already proposed or deployed — do not mint new IDs for the same idea."""
+    known = set()
+    for p in load_existing_proposals():
+        t = p.get("title")
+        if t:
+            known.add(normalize_proposal_title(t))
+    try:
+        backlog = load_proposed_backlog()
+        for p in backlog.get("proposals", []):
+            t = p.get("title")
+            if t:
+                known.add(normalize_proposal_title(t))
+    except Exception:
+        pass
+    return known
+
+
+def collect_deployed_proposal_titles() -> set:
+    """Titles with accepted/deployed lifecycle — suppress from Decision Approval section."""
+    deployed = set()
+    try:
+        backlog = load_proposed_backlog()
+        for p in backlog.get("proposals", []):
+            status = str(p.get("status") or "").lower()
+            if p.get("deployed") or p.get("accepted") or status in ("accepted", "deployed", "done"):
+                t = p.get("title")
+                if t:
+                    deployed.add(normalize_proposal_title(t))
+    except Exception:
+        pass
+    return deployed
+
+
 def load_existing_proposals():
     """Load previously generated proposals for deduplication."""
     try:
@@ -220,99 +267,183 @@ def save_proposed_backlog(data):
         json.dump(data, f, indent=2)
 
 
-def generate_strategic_proposals(sl_risks, coverage, total_pairs, poly, learnings, state, existing_ids, opt_brief=None, leaderboard=None):
+# Stable stems: if any known title contains the stem, treat as already proposed.
+# Stops re-minting the same shipped heuristics with tiny wording drift.
+_KNOWN_TITLE_STEMS = (
+    "pre-flight settlement poll",
+    "pre-rebalance data refresh",
+    "polymarket regime bias into allocator",
+    "analyst learnings + heuristics influence allocator",
+    "strategic brief' artifact before each scheduled rebalance",
+    "tighten scenario pack toward positive sharpe",
+    "run regime quad scorecard before next shadow",
+    "align ohlcv data window with production go-live",
+)
+
+
+def title_already_known(title: str, known_title_keys: set) -> bool:
+    """True if exact key or a durable stem already lives in backlog/deployed history."""
+    key = normalize_proposal_title(title)
+    if not key:
+        return True
+    if key in known_title_keys:
+        return True
+    for known in known_title_keys:
+        if key in known or known in key:
+            return True
+    for stem in _KNOWN_TITLE_STEMS:
+        if stem in key and any(stem in k for k in known_title_keys):
+            return True
+    return False
+
+
+def _offer_candidate(candidates: list, cand: dict, known_title_keys: set) -> bool:
+    """Append only genuinely new titles. Returns True if offered."""
+    title = cand.get("title") or ""
+    if title_already_known(title, known_title_keys):
+        return False
+    candidates.append(cand)
+    return True
+
+
+def generate_strategic_proposals(
+    sl_risks,
+    coverage,
+    total_pairs,
+    poly,
+    learnings,
+    state,
+    existing_ids,
+    known_title_keys=None,
+    opt_brief=None,
+    leaderboard=None,
+):
     """
     Derive strategic modification proposals.
     Assigns stable IDs.
-    Dedupes against existing_ids.
+    ENG-S7-01: never re-mint titles already in backlog/deployed (quiet skip, no spam).
     """
+    known_title_keys = set(known_title_keys or set())
     candidates = []
     try:
         from phase6.research.analyst_narrative import optimization_proposal_candidates
 
-        candidates.extend(optimization_proposal_candidates(opt_brief, leaderboard))
+        for c in optimization_proposal_candidates(opt_brief, leaderboard):
+            _offer_candidate(candidates, c, known_title_keys)
     except Exception:
         pass
 
     heuristics = learnings.get("heuristics", {})
     known_weaknesses = heuristics.get("known_weaknesses", [])
 
-    # Candidate 1: SL pre-flight
+    # Candidate 1: SL pre-flight (only if not already proposed/shipped)
     high_risk_count = sum(1 for r in sl_risks.values() if r.get("level") in ("HIGH", "CRITICAL"))
     if high_risk_count > 0 or any("preview" in str(w).lower() or "stop" in str(w).lower() for w in known_weaknesses):
-        candidates.append({
-            "title": "Add pre-flight settlement poll + product-specific tick handling to SL layer",
-            "description": "Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.",
-            "benefits": "Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).",
-            "risks": "Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.",
-            "priority": "High",
-            "effort": "Medium",
-            "category": "SL / Platform"
-        })
+        _offer_candidate(
+            candidates,
+            {
+                "title": "Add pre-flight settlement poll + product-specific tick handling to SL layer",
+                "description": "Before attaching stop-limit orders, poll for settled balance and apply per-product tick size / precision rules. Use the existing SL risk scorer to decide aggressiveness.",
+                "benefits": "Reduce PREVIEW_INSUFFICIENT_FUND and PREVIEW_INVALID_STOP_PRICE_PRECISION failures by 60-80%. Faster and more reliable re-attachment after buys. Improves SL reliability on low-priced assets (SOL, ADA, etc.).",
+                "risks": "Slight increase in rebalance latency (mitigation: 2-3s timeout + async). Risk of over-waiting on stable pairs (mitigation: skip poll for low-risk pairs). Coinbase-side rules may still apply in rare cases.",
+                "priority": "High",
+                "effort": "Medium",
+                "category": "SL / Platform",
+            },
+            known_title_keys,
+        )
 
-    # Candidate 2: Regime-aware allocation
+    # Candidate 2: Regime-aware allocation — stable title (no direction suffix; stem-deduped)
     risk_on = poly.get("risk_on_bias", 0.5)
     if risk_on > 0.65 or risk_on < 0.35:
-        direction = "risk-on tilt (favor momentum pairs)" if risk_on > 0.65 else "risk-off tilt (favor defensive / higher conviction)"
-        candidates.append({
-            "title": f"Wire Polymarket regime bias into allocator as soft constraint ({direction})",
-            "description": "Pass the current risk_on_bias from Polymarket as a multiplier or filter into RotationStrategy / rebalance_plan. Bias allocation toward or away from higher-vol names accordingly.",
-            "benefits": "Better macro alignment. Capture more upside in risk-on regimes and reduce drawdown in risk-off. Uses live external signal that is already being fetched daily.",
-            "risks": "Polymarket can be noisy or manipulated on low-liquidity markets (mitigation: smooth with 3-day average + minimum confidence threshold). Could increase churn (mitigation: combine with existing min_score_delta and cooldowns).",
-            "priority": "Medium",
-            "effort": "Medium",
-            "category": "Allocator / Skills"
-        })
+        direction = (
+            "risk-on tilt (favor momentum pairs)"
+            if risk_on > 0.65
+            else "risk-off tilt (favor defensive / higher conviction)"
+        )
+        _offer_candidate(
+            candidates,
+            {
+                "title": "Wire Polymarket regime bias into allocator as soft constraint",
+                "description": (
+                    f"Pass the current risk_on_bias from Polymarket as a multiplier or filter into "
+                    f"RotationStrategy / rebalance_plan ({direction}). Bias allocation toward or away "
+                    f"from higher-vol names accordingly."
+                ),
+                "benefits": "Better macro alignment. Capture more upside in risk-on regimes and reduce drawdown in risk-off. Uses live external signal that is already being fetched daily.",
+                "risks": "Polymarket can be noisy or manipulated on low-liquidity markets (mitigation: smooth with 3-day average + minimum confidence threshold). Could increase churn (mitigation: combine with existing min_score_delta and cooldowns).",
+                "priority": "Medium",
+                "effort": "Medium",
+                "category": "Allocator / Skills",
+            },
+            known_title_keys,
+        )
 
     # Candidate 3: Data coverage
     if coverage < total_pairs - 1:
-        candidates.append({
-            "title": "Strengthen pre-rebalance data refresh + fallback for partial coverage",
-            "description": "Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.",
-            "benefits": "Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.",
-            "risks": "Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).",
-            "priority": "Medium",
-            "effort": "Low-Medium",
-            "category": "Data / Runner"
-        })
+        _offer_candidate(
+            candidates,
+            {
+                "title": "Strengthen pre-rebalance data refresh + fallback for partial coverage",
+                "description": "Before running allocator, ensure all basket pairs have fresh RSI + sentiment. Add a short blocking refresh or use last-known with explicit 'stale' flag. Consider lightweight on-demand pull for missing pairs.",
+                "benefits": "Higher signal quality for allocator decisions. Fewer 'MISSING' or 'RSI-ONLY' states. Reduces risk of deploying on incomplete information.",
+                "risks": "Slight delay to rebalance window (mitigation: parallel refreshes + 10-15s hard cap). API rate limits (mitigation: respect existing backoff).",
+                "priority": "Medium",
+                "effort": "Low-Medium",
+                "category": "Data / Runner",
+            },
+            known_title_keys,
+        )
 
     # Candidate 4: Close the learnings loop
-    # Only propose if NOT yet deployed/gated (check new heuristic key + config flag)
     allocator_active = heuristics.get("allocator_heuristics_active") or "apply_analyst_heuristics" in str(heuristics)
-    if not allocator_active and ("paper_trade_validation" in str(heuristics) or not any("allocator" in str(h).lower() for h in heuristics.values())):
-        candidates.append({
-            "title": "Close the loop: make analyst learnings + heuristics influence allocator parameters",
-            "description": "Load key heuristics (e.g. prefer_rotation_when) and recent evolution notes at allocator start. Apply as dynamic config overrides (e.g. adjust min_score_delta or rotation bias based on recent SL failure patterns).",
-            "benefits": "System actually learns. Reduces repeated mistakes (e.g. post-buy SL timing). Turns the analyst from observer into active participant in decision quality.",
-            "risks": "Over-fitting to recent noise (mitigation: weight recent learnings lightly + require confirmation across 2-3 cycles). Complexity creep (mitigation: start with 1-2 simple rules).",
-            "priority": "High",
-            "effort": "Medium",
-            "category": "Allocator / Analyst Evolution"
-        })
+    if not allocator_active and (
+        "paper_trade_validation" in str(heuristics)
+        or not any("allocator" in str(h).lower() for h in heuristics.values())
+    ):
+        _offer_candidate(
+            candidates,
+            {
+                "title": "Close the loop: make analyst learnings + heuristics influence allocator parameters",
+                "description": "Load key heuristics (e.g. prefer_rotation_when) and recent evolution notes at allocator start. Apply as dynamic config overrides (e.g. adjust min_score_delta or rotation bias based on recent SL failure patterns).",
+                "benefits": "System actually learns. Reduces repeated mistakes (e.g. post-buy SL timing). Turns the analyst from observer into active participant in decision quality.",
+                "risks": "Over-fitting to recent noise (mitigation: weight recent learnings lightly + require confirmation across 2-3 cycles). Complexity creep (mitigation: start with 1-2 simple rules).",
+                "priority": "High",
+                "effort": "Medium",
+                "category": "Allocator / Analyst Evolution",
+            },
+            known_title_keys,
+        )
 
-    # Fallback if too few
-    if len(candidates) < 2:
-        candidates.append({
-            "title": "Add lightweight 'strategic brief' artifact before each scheduled rebalance",
-            "description": "Have the intelligence report produce a short JSON 'brief' (regime bias, high-SL-risk pairs, top proposals) that the runner can optionally load as context or constraints.",
-            "benefits": "Pre-rebalance strategic context without heavy coupling. Makes daily briefings directly actionable for the allocator.",
-            "risks": "Another artifact to maintain (mitigation: keep it tiny and optional).",
-            "priority": "Medium",
-            "effort": "Low",
-            "category": "Runner / Analyst"
-        })
+    # Fallback if too few (skip ideas already shipped or already in backlog)
+    brief_path = PROJECT_ROOT / "data/state/intel_strategic_brief.json"
+    if len(candidates) < 2 and not brief_path.exists():
+        _offer_candidate(
+            candidates,
+            {
+                "title": "Add lightweight 'strategic brief' artifact before each scheduled rebalance",
+                "description": "Have the intelligence report produce a short JSON 'brief' (regime bias, high-SL-risk pairs, top proposals) that the runner can optionally load as context or constraints.",
+                "benefits": "Pre-rebalance strategic context without heavy coupling. Makes daily briefings directly actionable for the allocator.",
+                "risks": "Another artifact to maintain (mitigation: keep it tiny and optional).",
+                "priority": "Medium",
+                "effort": "Low",
+                "category": "Runner / Analyst",
+            },
+            known_title_keys,
+        )
 
-    # Dedup candidates by title (prevent accidental repeats in one run)
+    # In-run title uniqueness (defense in depth; known titles already filtered at offer time)
     seen = set()
     unique_cands = []
     for c in candidates:
-        t = c.get("title")
-        if t not in seen:
-            seen.add(t)
-            unique_cands.append(c)
+        key = normalize_proposal_title(c.get("title"))
+        if not key or key in seen or title_already_known(c.get("title"), known_title_keys):
+            continue
+        seen.add(key)
+        unique_cands.append(c)
     candidates = unique_cands
 
-    # Assign IDs and filter duplicates
+    # Assign IDs
     proposals = []
     seq = 1
     for cand in candidates[:4]:
@@ -327,71 +458,30 @@ def generate_strategic_proposals(sl_risks, coverage, total_pairs, poly, learning
     return proposals
 
 def generate_followup_validation(learnings, backlog, sl_risks, recent_proposals):
-    """Analyst follow-up on deployed suggestions (48-hour observation rule).
-    
-    User directive (2026-06-24): Stick with 48h rule. Adequate to verify the change didn’t blow anything up.
-    Not long enough to validate effectiveness (especially in ranging/sideways markets).
-    Daily status reviews (these intelligence reports) are expected to judge and make adjustments.
-    """
-    print("\n=== Analyst Follow-up on Deployed Suggestions (48h Observation Rule) ===")
-    print("Rule: 48-hour minimum observation window after any deployment.")
-    print("Purpose: Verify nothing blew up. Daily reports will assess and drive tweaks.")
-    print("Note: 48h is deliberately short for safety checks — insufficient for full effectiveness validation in low-volatility/ranging markets.")
-    
+    """Only surface deployments still inside the 48h observation window."""
     now = datetime.now(timezone.utc)
     deployed = [p for p in backlog.get("proposals", []) if p.get("deployed") or p.get("accepted")]
-    
-    if not deployed:
-        print("No deployed/accepted suggestions found for follow-up.")
-        return
-    
-    inside_window = []
-    for p in sorted(deployed, key=lambda x: x.get("deployed", x.get("accepted", "")), reverse=True)[:5]:
-        pid = p.get("id", "?")
-        title = p.get("title", "")
+    rows = []
+
+    for p in sorted(deployed, key=lambda x: x.get("deployed", x.get("accepted", "")), reverse=True)[:8]:
         dep_str = p.get("deployed") or p.get("accepted", "")
-        
         try:
             if "T" in dep_str:
                 dep_time = datetime.fromisoformat(dep_str.replace("Z", "+00:00"))
             else:
                 dep_time = datetime.strptime(dep_str[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
-            elapsed = (now - dep_time).total_seconds() / 3600
-            elapsed_str = f"{elapsed:.1f}h"
-            within_48h = elapsed < 48
+            elapsed_h = (now - dep_time).total_seconds() / 3600
         except Exception:
-            elapsed_str = "unknown"
-            within_48h = True  # conservative
-        
-        status = "INSIDE 48h WINDOW — observe only" if within_48h else "48h window closed — eligible for review/adjustment"
-        if within_48h:
-            inside_window.append(pid)
-        
-        print(f"\n- {pid}: {title[:70]}")
-        print(f"  Deployed: {dep_str}")
-        print(f"  Elapsed: {elapsed_str} | {status}")
-        
-        # Lightweight current-state validation
-        if "heuristics" in title.lower() or "close the loop" in title.lower() or "analyst learnings" in title.lower():
-            heurs = learnings.get("heuristics", {})
-            gate = heurs.get("allocator_heuristics_active", "unknown")
-            print(f"  Current gate: apply_analyst_heuristics / {gate}")
-            high_risk = [k for k, v in sl_risks.items() if str(v.get("level", "")).upper() in ("HIGH", "CRITICAL")]
-            print(f"  High SL-risk pairs right now: {high_risk[:3]} (monitor for allocator conservatism effect)")
-            print("  Validation ask for daily review: Check runner logs for 'Learnings adjustments' in the last rebalance. Compare SL preview/attach success rate on tagged pairs vs pre-deployment baseline.")
-        
-        elif "pre-flight" in title.lower() or "settlement" in title.lower():
-            print("  Validation ask: Compare recent SL attach success vs historical failure rate in logs.")
-        
-        if within_48h:
-            print("  Action: No further related changes. Wait for 48h + next daily review.")
-    
-    if inside_window:
-        print(f"\nItems still inside 48h window: {inside_window}")
-        print("Daily status reviews should note any early signals but withhold major adjustments until window closes.")
-    
-    print("\nUser principle: '48 hour rule for observation. Adequate to verify that the change didn’t blow anything up. It’s not long enough if the market is ranging sideways to validate effectiveness. Daily status reviews will be able to judge and make adjustments.'")
-    print("Analyst will surface elapsed time and window status in every report.")
+            continue
+        if elapsed_h >= 48:
+            continue
+        rows.append((p.get("id", "?"), p.get("title", "")[:60], elapsed_h))
+
+    if not rows:
+        return
+    print("\n=== Watch list (48h post-deploy) ===")
+    for pid, title, elapsed_h in rows:
+        print(f"  {pid}: {title} — {elapsed_h:.0f}h (observe only)")
 
 
 def feed_proposals_to_master_backlog(new_proposals):
@@ -434,237 +524,128 @@ def feed_proposals_to_master_backlog(new_proposals):
         print(f"New proposals added to MASTER: {added}")
 
 
-def main():
-    print("=== Phase 6 Daily Trading Intelligence Briefing — Crypto Analyst ===")
-    print(f"Date: {date.today().isoformat()}")
-    print(f"Generated: {datetime.utcnow().isoformat()} UTC")
-    print()
-    print("Persona: Truth-seeking, direct, no fluff. Cite run_id + metrics. Production P&L before scenario hype. Occasional dry humor.")
-    print()
-
-    basket = load_basket()
-    print(f"Basket: {len(basket)} pairs → {basket}")
-    print()
-
-    latest = load_latest_sentiment_for_basket(basket=basket)
-    rsi_cache = load_rsi_cache()
-    state = load_runner_state()
-    learnings = load_learnings()
-    sg = SignalGenerator()
-
-    price_map = {}  # populated from live prices in production runs
-    sl_risks = get_all_sl_risks(basket, price_map)
-
-    # === Per-Pair Narrative Decisions (slim, emoji + decision only) ===
-    print("=== Per-Pair Narrative Decisions ===")
-    full_count = 0
-    for pair in basket:
-        rsi_val = latest.get("rsi", {}).get(pair)
-        sent_val = latest.get("sentiment", {}).get(pair, 0.0)
-        cache_entry = rsi_cache.get(pair, {})
-        rsi_src = "cache (fresh, longer-term)" if cache_entry.get("fresh") else "scorer/db"
-
-        has_rsi = rsi_val is not None and abs(rsi_val) > 0.1
-        has_stoch = cache_entry.get("stoch_k") is not None
-        has_sent = abs(sent_val) > 0.001
-
-        if (has_rsi or has_stoch) and has_sent:
-            full_count += 1
-            status = "FULL"
-        elif has_rsi or has_stoch:
-            status = "RSI+STOCH-ONLY" if has_stoch else "RSI-ONLY"
-        elif has_sent:
-            status = "SENT-ONLY"
-        else:
-            status = "MISSING"
-
-        signal = sg.generate_signal(pair, rsi_val or 50.0, sentiment=sent_val or 0.0)
-
-        slr = sl_risks.get(pair, {"level": "unknown", "risk_score": 0.0})
-        risk_level = str(slr.get("level", "unknown")).lower()
-
-        if signal.signal == "BUY":
-            if risk_level in ("low", "unknown"):
-                emoji = "📈🚀"
-                narrative = "Positive setup supports adding on rotation."
-            else:
-                emoji = "📈🔥"
-                narrative = "Bullish signal but elevated SL risk — size small or wait for better confirmation."
-        elif signal.signal == "SELL":
-            emoji = "📉"
-            narrative = "Negative setup — consider reducing or avoiding new exposure."
-        else:
-            emoji = "👉"
-            narrative = "Monitor."
-
-        stoch_str = ""
-        if cache_entry.get("stoch_k") is not None:
-            stoch_str = f" | StochK={cache_entry['stoch_k']}"
-        if emoji == "👉":
-            print(f"{pair}: {emoji} SL: {slr['level']}{stoch_str}.")
-        else:
-            print(f"{pair}: {emoji} {signal.reason}. SL: {slr['level']}{stoch_str}.")
-        print(f"    {narrative}")
-
-    print("=== Coverage ===")
-    print(f"FULL coverage pairs: {full_count} / {len(basket)} (RSI or Stoch + Sent; using 100pt longer-term window + StochRSI)")
-    print()
-
-    print("=== Runner State ===")
-    print(f"Last rebalance: {state.get('last_rebalance_date')}")
-    print(f"Strategy: rotation_catch_wave (Phase 6 allocator + platform executor)")
-    print()
-
-    print("=== Polymarket Regime Bias ===")
-    print(f"Risk-on bias: {poly.get('risk_on_bias')}")
-    print(f"Source: {poly.get('source')}")
-    if poly.get("num_markets") is not None:
-        print(f"Markets used: {poly.get('num_markets')} | Total vol: {poly.get('total_vol', 0):,.0f} | Confidence: {poly.get('confidence')}")
-    if poly.get("events"):
-        print("Sample events:", poly["events"][:2])
-    print(f"Note: {poly.get('note')}")
-    print()
-
-    # === Trade Influence Stack Model ===
-    print("=== Trade Influence Stack (conceptual + current) ===")
-    print("X sentiment: fast tactical (full ~15min, half-life ~60min, decays sharply after 2-4h). Per-pair.")
-    print("Reddit: confirmatory medium (peak influence ~30min, slower decay). Fallback only when real data.")
-    print("Polymarket: strategic regime / tilt (slower persistence, HL ~8h proposed, volume-boosted). Global filter/sizing.")
-    print()
-    # Inline (model defined in polymarket_overlay)
-    biasv = float(poly.get("risk_on_bias", 0.5))
-    confv = float(poly.get("confidence", 0.5))
-    tvolv = float(poly.get("total_vol", 0))
-    dirv = abs(biasv - 0.5) * 2 * confv
-    vboost = min(1.5, 1.0 + (tvolv / 50_000_000)) if tvolv > 0 else 1.0
-    effv = min(1.0, dirv * vboost)
-    print(f"Polymarket effective influence (fresh): {effv:.4f} (directional={dirv:.4f}, vol_boost={vboost:.3f})")
-    print("  Model: |bias-0.5|*2*conf * vol_boost (regime HL~8h). Global tilt/filter, not per-pair trigger.")
-    print()
-
-
-    # === PM Tie-Breaker Analysis (instrumentation for measurement) ===
-    print("=== PM as Tie-Breaker / Tilt ===")
+def _run_background_analyst_jobs(basket, sent_scores):
+    """PM retrospective + influence stack ledger (no routine console noise)."""
     try:
-        from phase6.core.trade_ledger import TradeLedger
-        ledger = TradeLedger(base_dir=PROJECT_ROOT)
-        recent_decisions = []
-        dec_path = PROJECT_ROOT / "data/state/decision_context_log.jsonl"
-        if dec_path.exists():
-            with open(dec_path) as fh:
-                for line in fh.readlines()[-5:]:
-                    try:
-                        d = __import__("json").loads(line)
-                        recent_decisions.append(d)
-                    except: pass
-        if recent_decisions:
-            last = recent_decisions[-1]
-            print(f"Last decision tiebreaker: {last.get('pm_used_as_tiebreaker')} | PM bias: {last.get('pm_bias')} | X_neutral: {last.get('x_neutral')} | Reddit_neutral: {last.get('reddit_neutral')}")
-            print(f"  Other factors: {last.get('other_factors')}")
-            print(f"  Regime mult applied: {last.get('regime_mult_applied')}")
-        else:
-            print("No recent decision_context logs yet (instrumentation ramping up).")
-    except Exception as e:
-        print(f"Tie-breaker log read skipped: {e}")
-
-    print("PM influence model treats this as slow regime tilt (HL~8h). Primary value as tie-breaker when X/Reddit neutral.")
-    print()
-
-
-    # === Automated Retrospective Analyzer (for daily analyst status) ===
-    print()
-    print("=== PM Tilt Retrospective Analyzer ===")
-    try:
-        # Make the dedicated script importable
         import sys
+
         sys.path.insert(0, str(PROJECT_ROOT / "phase6/scripts"))
         from analyze_pm_tilt_retrospective import run_pm_tilt_analysis
+
         analysis = run_pm_tilt_analysis(window_hours=6)
+        (PROJECT_ROOT / "data/state/pm_tilt_retrospective_analysis.json").write_text(
+            json.dumps(analysis, indent=2)
+        )
+        if analysis.get("tiebreaker_activations", 0) > 0:
+            print("\n=== PM tilt (event) ===")
+            print(f"Tie-breaker activations: {analysis['tiebreaker_activations']}")
+            for s in (analysis.get("tuning_suggestions") or [])[:1]:
+                print(f"  Suggestion: {s.get('title')}")
+    except Exception:
+        pass
 
-        print(f"Data: decisions={analysis['data_summary']['decisions_loaded']}, rebalances={analysis['data_summary']['rebalances_loaded']}, trades={analysis['data_summary']['trades_loaded']}")
-        print(f"Tie-breaker activations detected: {analysis['tiebreaker_activations']}")
-        print(f"Rebalances near tie-breakers: {analysis['rebalance_buckets']['tied_count']} | baseline: {analysis['rebalance_buckets']['baseline_count']}")
-
-        lift = analysis.get("lift_metrics", {})
-        if lift.get("lift"):
-            print(f"Lift vs baseline: {lift['lift']}")
-
-        factors = analysis.get("other_factors_correlation", {})
-        if factors.get("total_tiebreaker_activations"):
-            print(f"Other factors in activations: price_declining_rate={factors.get('price_declining_rate')}, volume_spike_rate={factors.get('volume_spike_rate')}")
-
-        # Surface top suggestions directly in the brief
-        suggestions = analysis.get("tuning_suggestions", [])[:2]
-        if suggestions:
-            print("\nAuto-generated tuning suggestions (review for proposals):")
-            for s in suggestions:
-                print(f"  - [{s.get('priority','?').upper()}] {s.get('title')}: {s.get('suggestion')[:120]}...")
-
-        # Save the full analysis for the analyst to reference
-        try:
-            (PROJECT_ROOT / "data/state/pm_tilt_retrospective_analysis.json").write_text(json.dumps(analysis, indent=2))
-        except:
-            pass
-    except Exception as e:
-        print(f"PM tilt retrospective analyzer skipped: {e}")
-
-    print()
-    print("PM influence model treats this as slow regime tilt (HL~8h). Primary value as tie-breaker when X/Reddit neutral.")
-    # === Tuning Protocol for Crypto Analyst ===
-    print("=== Tuning Protocol (PM Tilt) ===")
-    print("1. Review output from PM Tilt Retrospective Analyzer (run automatically here) + logs.")
-    print("2. Bucket by 'pm_used_as_tiebreaker=True' vs baseline.")
-    print("3. Compute lift on: rotation win rate, capital deployed when tilted, SL hit rate, overall PnL attribution.")
-    print("4. Propose variations in next brief (e.g. ANALYST-...-TUNE-PM): different neutrality thresholds, additional other_factors (volume, funding rate, etc.), effect sizes.")
-    print("5. Analyst includes 'Proposed PM Tilt Variation' in strategic proposals when data suggests improvement.")
-    print()
-    # === Log full influence stack snapshot (for 2-4wk impact analysis) ===
     try:
-        base = PROJECT_ROOT
-        sys.path.insert(0, str(base / "phase6/core"))
-        from trade_ledger import TradeLedger
-        from sentiment_scorer import load_sentiment_scores, _load_reddit_from_db, get_aged_sentiment_scores
+        import sys
+
+        from phase6.core.trade_ledger import TradeLedger
+        from phase6.core.sentiment_scorer import _load_reddit_from_db, get_aged_sentiment_scores
 
         sys.path.insert(0, str(Path.home() / ".hermes/skills"))
         from crypto_analyst.polymarket_overlay import get_polymarket_regime_bias, get_polymarket_influence
 
-        ledger = TradeLedger(base_dir=base)
-        x_sent = load_sentiment_scores()
-        reddit_sent = _load_reddit_from_db(list(x_sent.keys()) if x_sent else ["BTC-USD"])
-        aged = get_aged_sentiment_scores(half_life_minutes=60)
+        ledger = TradeLedger(base_dir=PROJECT_ROOT)
+        aged = get_aged_sentiment_scores(
+            half_life_minutes=60, raw_scores=sent_scores, universe=basket
+        )
         pm_poly = get_polymarket_regime_bias()
         inf = get_polymarket_influence(pm_poly)
-
+        reddit_sent = _load_reddit_from_db(basket)
         snapshot = {
-            "timestamp": __import__("datetime").datetime.utcnow().isoformat() + "Z",
+            "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "polymarket": pm_poly,
             "influence": inf,
-            "x_sentiment": {k: round(v,4) for k,v in (x_sent or {}).items()},
-            "reddit_sentiment": {k: round(v,4) for k,v in (reddit_sent or {}).items()},
-            "aged_sentiment": {k: round(v,4) for k,v in (aged or {}).items()}
+            "x_sentiment": {k: round(v, 4) for k, v in (sent_scores or {}).items()},
+            "reddit_sentiment": {k: round(v, 4) for k, v in (reddit_sent or {}).items()},
+            "aged_sentiment": {k: round(v, 4) for k, v in (aged or {}).items()},
         }
         ledger.log_influence_stack(snapshot)
-        print(f"[STACK] Logged influence snapshot (polymarket bias={pm_poly.get('risk_on_bias')})")
-    except Exception as e:
-        print(f"[STACK] Snapshot log skipped: {e}")
+    except Exception:
+        pass
 
 
-    # === Optimization results (scenario vs production) ===
+def main():
+    from phase6.core.sentiment_scorer import load_sentiment_scores
+    from phase6.core.basket_signal_coverage import assess_pair_signal_coverage
+
+    print("=== Phase 6 Daily Brief — Crypto Analyst ===")
+    print(f"{date.today().isoformat()} | {datetime.now(timezone.utc).strftime('%H:%M')} UTC")
+    print()
+
+    basket = load_basket()
+    sent_scores = load_sentiment_scores(universe=basket)
+    latest = load_latest_sentiment_for_basket(basket=basket, sentiment_scores=sent_scores)
+    state = load_runner_state()
+    learnings = load_learnings()
+    sg = SignalGenerator()
+    sl_risks = get_all_sl_risks(basket, {})
+
+    cov = assess_pair_signal_coverage(basket=basket, sentiment_scores=sent_scores)
+    full_count = int(cov.get("full_count", 0))
+
+    high_sl = [
+        p
+        for p in basket
+        if str(sl_risks.get(p, {}).get("level", "")).upper() in ("HIGH", "CRITICAL")
+    ]
+    print("=== Health ===")
+    print(
+        f"Signals: {full_count}/{len(basket)} FULL | "
+        f"Last rebalance: {state.get('last_rebalance_date', '?')}"
+    )
+    print(f"SL elevated: {high_sl or 'none'}")
     try:
-        from phase6.research.optimization_brief import format_optimization_section, load_leaderboard
+        from phase6.core.same_session_sl import format_brief_line, summarize as _ss_sl
+
+        _ss = _ss_sl(persist=True)
+        print(format_brief_line(_ss))
+    except Exception as _ss_err:
+        print(f"Same-session SL (<2h): n/a ({type(_ss_err).__name__})")
+    print(
+        f"Regime (Polymarket risk-on): {float(poly.get('risk_on_bias', 0.5))} | "
+        f"markets {poly.get('num_markets', '?')}"
+    )
+
+    actionable = []
+    for pair in basket:
+        rsi_val = latest.get("rsi", {}).get(pair)
+        sent_val = latest.get("sentiment", {}).get(pair, 0.0)
+        signal = sg.generate_signal(pair, rsi_val or 50.0, sentiment=sent_val or 0.0)
+        slr = sl_risks.get(pair, {"level": "unknown"})
+        risk_level = str(slr.get("level", "unknown")).upper()
+        if signal.signal in ("BUY", "SELL") or risk_level in ("HIGH", "CRITICAL"):
+            reason = (signal.reason or "")[:48]
+            actionable.append(f"{pair}: {signal.signal} — {reason} | SL {slr.get('level')}")
+    print("Actionable:")
+    if actionable:
+        for line in actionable:
+            print(f"  {line}")
+    else:
+        print("  none (monitor mode)")
+    print()
+
+    _run_background_analyst_jobs(basket, sent_scores)
+
+    lb = None
+    opt_brief = None
+    try:
+        from phase6.research.optimization_brief import build_daily_opt_brief, load_leaderboard
 
         lb = load_leaderboard()
-        if lb:
-            opt_text, opt_brief = format_optimization_section(lb)
-            print(opt_text)
-            print()
-        else:
-            lb = None
-            opt_brief = None
+        opt_text, opt_brief = build_daily_opt_brief(lb)
+        print(opt_text)
+        print()
     except Exception as e:
-        print(f"=== Optimization results ===\n(skipped: {e})\n")
-        opt_brief = None
-        lb = None
+        print(f"=== Wealth & scenarios ===\n(skipped: {e})\n")
 
     # === Honest Assessment (mandatory, data-driven) ===
     print("=== Honest Assessment ===")
@@ -687,15 +668,6 @@ def main():
             print("Coverage still patchy.")
     print()
 
-    # === Evolution Notes ===
-    print("=== Evolution Notes ===")
-    recent = learnings.get("learnings", [])[-1] if learnings.get("learnings") else {}
-    if recent:
-        print(f"Last thesis: {recent.get('thesis', 'N/A')}")
-        print(f"Outcome: {recent.get('outcome', 'N/A')}")
-        print(f"Previous evolution: {recent.get('evolution_note', 'N/A')}")
-    print()
-
     try:
         from phase6.research.analyst_narrative import build_evolution_note
 
@@ -712,12 +684,11 @@ def main():
             "evolution_note": "Run regime scorecard; shadow before live knobs.",
         }
     learnings = add_evolution_note(learnings, new_evolution)
-    print(f"New note recorded: {new_evolution['evolution_note']}")
-    print()
 
-    # === Strategic Modification Proposals ===
+    # === Prospects (new ideas only) ===
     existing_proposals = load_existing_proposals()
     existing_ids = {p.get("id") for p in existing_proposals if p.get("id")}
+    known_title_keys = collect_known_proposal_titles()
 
     proposals = generate_strategic_proposals(
         sl_risks=sl_risks,
@@ -727,32 +698,28 @@ def main():
         learnings=learnings,
         state=state,
         existing_ids=existing_ids,
+        known_title_keys=known_title_keys,
         opt_brief=opt_brief,
         leaderboard=lb,
     )
 
-    print("=== Strategic Modification Proposals ===")
+    print("=== Prospects (new proposals) ===")
     if not proposals:
-        print("No new strategic modifications proposed this cycle.")
+        print("No new strategic modifications this cycle.")
+        print(f"Next focus: {new_evolution.get('evolution_note', 'n/a')}")
     else:
         for p in proposals:
-            print(f"\n**{p['id']}** — {p['title']}")
-            print(f"Description: {p['description']}")
-            print(f"Benefits: {p['benefits']}")
-            print(f"Risks + Mitigations: {p['risks']}")
-            print(f"Priority: {p['priority']} | Effort: {p['effort']} | Category: {p['category']}")
-
+            print(f"  {p['id']}: {p['title']} [{p.get('priority', '?')}]")
     print()
 
-    # Persist (deduped)
+    # Persist (deduped, quiet)
     try:
         all_proposals = existing_proposals + [p for p in proposals if p["id"] not in existing_ids]
         PROPOSALS_JSON.parent.mkdir(parents=True, exist_ok=True)
         with open(PROPOSALS_JSON, "w") as f:
             json.dump({"proposals": all_proposals[-50:]}, f, indent=2)
-        print(f"Proposals persisted (deduped) to {PROPOSALS_JSON}")
-    except Exception as e:
-        print(f"Warning: proposals JSON: {e}")
+    except Exception:
+        pass
 
     # Feed to canonical proposed backlog (with IDs)
     try:
@@ -764,18 +731,14 @@ def main():
             p["generated"] = datetime.utcnow().isoformat()
         backlog["proposals"] = backlog.get("proposals", []) + new_for_backlog
         save_proposed_backlog(backlog)
-        if new_for_backlog:
-            print(f"Added to analyst_proposed_backlog.json: {[p['id'] for p in new_for_backlog]}")
-    except Exception as e:
-        print(f"Warning: backlog: {e}")
+    except Exception:
+        pass
 
-    # Feed to MASTER (only new IDs)
     try:
         feed_proposals_to_master_backlog(proposals)
-    except Exception as e:
-        print(f"Warning: MASTER backlog: {e}")
+    except Exception:
+        pass
 
-    # Build and persist lightweight strategic brief for the runner (implements ANALYST-20260627-016)
     try:
         BRIEF_CACHE = PROJECT_ROOT / "data/state/intel_strategic_brief.json"
         brief = {
@@ -785,55 +748,40 @@ def main():
                 "risk_on_bias": round(float(poly.get("risk_on_bias", 0.5)), 3),
                 "num_markets": int(poly.get("num_markets", 0)),
                 "total_vol": float(poly.get("total_vol", 0)),
-                "confidence": float(poly.get("confidence", 0.0))
+                "confidence": float(poly.get("confidence", 0.0)),
             },
             "coverage": {"full": int(full_count), "total": len(basket)},
-            "high_sl_risk_pairs": [p for p, r in sl_risks.items() if str(r.get("level", "")).upper() in ("HIGH", "CRITICAL")],
-            "top_proposals": [{"id": p.get("id"), "title": p.get("title"), "priority": p.get("priority")} for p in proposals[:3]],
+            "high_sl_risk_pairs": [
+                p
+                for p, r in sl_risks.items()
+                if str(r.get("level", "")).upper() in ("HIGH", "CRITICAL")
+            ],
+            "top_proposals": [
+                {"id": p.get("id"), "title": p.get("title"), "priority": p.get("priority")}
+                for p in proposals[:3]
+            ],
             "last_rebalance": state.get("last_rebalance_date"),
             "optimization": opt_brief,
-            "note": "Use as soft context for next rebalance. Regenerated on each intelligence cycle."
+            "note": "Soft context for next rebalance.",
         }
         BRIEF_CACHE.parent.mkdir(parents=True, exist_ok=True)
         json.dump(brief, open(BRIEF_CACHE, "w"), indent=2)
-        print(f"Strategic brief saved to {BRIEF_CACHE}")
-    except Exception as e:
-        print(f"Warning: brief save skipped: {e}")
+    except Exception:
+        pass
 
-    # === Decision Approval Required (bottom of briefing) ===
-    print("\n=== Decision Approval Required ===")
     if proposals:
+        print("\n=== Decisions ===")
         for i, p in enumerate(proposals, 1):
             print(f"{i}. {p['id']}: {p['title']}")
-            print(f"   Benefits: {p['benefits'][:120]}...")
-            print(f"   Risks: {p['risks'][:120]}...")
-        print()
-        print("Reply with one of:")
-        print("- proceed with 1")
-        print("- proceed with 2")
-        print("- proceed with 1 and 2")
-        print("- both")
-        print("- wait")
-        print("- clarification needed")
-        print("- none")
-        print()
-        print("Example: \"proceed with 1\" or \"proceed with both\"")
-    else:
-        print("No new proposals this cycle.")
+        print('Reply: "proceed with 1" | "wait" | "none"')
 
-    print()
-    if "SOL" in basket:
-        print("(SOL continues its tradition of making everyone look smart for 12 minutes and then changing its mind. Classic.)")
-    print()
-    # === Analyst Follow-up on Deployed Suggestions (recurring validation) ===
     try:
         backlog = load_proposed_backlog()
         generate_followup_validation(learnings, backlog, sl_risks, proposals)
-    except Exception as e:
-        print(f"[Follow-up] Skipped (non-fatal): {e}")
+    except Exception:
+        pass
 
-    print("Report complete. Real data. Evidence over narrative.")
-    print("Crypto Analyst — learning, one honest cycle at a time.")
+    print("\n— End brief —")
 
 
 if __name__ == "__main__":

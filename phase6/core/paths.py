@@ -57,6 +57,9 @@ PHASE6_DIR = PROJECT_ROOT / "phase6"
 # Key state files (primary live sources)
 PHASE6_LIVE_STATE = STATE_DIR / "phase6_live_state.json"
 PHASE6_RUNNER_STATE = STATE_DIR / "phase6_runner_state.json"
+PHASE6_RUNNER_PID_LOGS = LOGS_DIR / "phase6_runner.pid"
+PHASE6_RUNNER_PID_STATE = STATE_DIR / "phase6_runner.pid"
+FORCE_REBALANCE_FLAG = STATE_DIR / "force_rebalance.flag"
 PRICE_HISTORY = STATE_DIR / "price_history.json"
 RSI_CACHE = STATE_DIR / "rsi_cache.json"
 REBALANCE_HISTORY = STATE_DIR / "rebalance_history/default.jsonl"
@@ -68,6 +71,25 @@ OPPORTUNITY_PROPOSALS = STATE_DIR / "opportunity_proposals.jsonl"
 SENTIMENT_CACHE = STATE_DIR / "sentiment_cache.json"
 X_SENTIMENT_CACHE = STATE_DIR / "x_sentiment_cache.json"
 REDDIT_SENTIMENT_CACHE = STATE_DIR / "reddit_sentiment_cache.json"
+# Free / shadow sentiment (Phase2 cost — not live primary until gates pass)
+FNG_CACHE = STATE_DIR / "fng_cache.json"
+FUNDING_SENTIMENT_CACHE = STATE_DIR / "funding_sentiment_cache.json"
+RSS_SENTIMENT_CACHE = STATE_DIR / "rss_sentiment_cache.json"
+FREE_SENTIMENT_CACHE = STATE_DIR / "sentiment_cache_free.json"
+FREE_VS_X_CORRELATION = STATE_DIR / "free_vs_x_correlation_latest.json"
+# Daily dose news feed (human surface — not a trading signal)
+DAILY_DOSE_LATEST = STATE_DIR / "daily_dose_latest.json"
+DAILY_DOSE_HISTORY = STATE_DIR / "daily_dose_history.jsonl"
+DAILY_DOSE_TELEGRAM_PREVIEW = STATE_DIR / "daily_dose_telegram_preview.txt"
+DAILY_DOSE_EDITED = STATE_DIR / "daily_dose_edited.json"
+DAILY_DOSE_PUBLISH_READY = STATE_DIR / "daily_dose_publish_ready.txt"
+DAILY_DOSE_BRAD_TG_OK = STATE_DIR / "daily_dose_brad_telegram_ok.flag"
+# Preserve / park ballast
+PRESERVE_HOLD_STATE = STATE_DIR / "preserve_hold_state.json"
+PRESERVE_HOLD_STATUS = STATE_DIR / "preserve_hold_status.json"
+PRESERVE_E1_ALERT = STATE_DIR / "preserve_e1_alert.json"
+PARK_BALLAST_DECISION_LATEST = STATE_DIR / "park_ballast_decision_latest.json"
+PARK_BALLAST_DECISION_HISTORY = STATE_DIR / "park_ballast_decision_history.jsonl"
 
 # DB and other
 PHASE6_DB = DATA_DIR / "phase6.db"  # or logs/phase6/phase6_monitor.db per some
@@ -75,6 +97,20 @@ PHASE6_DB = DATA_DIR / "phase6.db"  # or logs/phase6/phase6_monitor.db per some
 # Config
 TRADING_CONFIG_PHASE6 = CONFIG_DIR / "trading_config_phase6.json" if (CONFIG_DIR / "trading_config_phase6.json").exists() else PROJECT_ROOT / "trading_config_phase6.json"
 ENV_FILE = PROJECT_ROOT / ".env"
+
+# Scalable trading logs (1000-trader: partition by account_id / trader_id)
+TRADING_LOG_DIR = STATE_DIR / "trading_log"
+PARAM_AUDIT_DIR = STATE_DIR / "param_audit"
+DECISION_CONTEXT_LOG = STATE_DIR / "decision_context_log.jsonl"
+RSI_INDICATOR_HISTORY = STATE_DIR / "rsi_indicator_history.jsonl"
+
+
+def sanitize_account_id(account_id: str) -> str:
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in account_id)[:128]
+
+
+def param_audit_summary_path(account_id: str) -> Path:
+    return PARAM_AUDIT_DIR / sanitize_account_id(account_id) / "latest_summary.json"
 
 # Ensure common dirs exist (idempotent)
 for d in (STATE_DIR, LOGS_DIR, DATA_DIR):

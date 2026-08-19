@@ -110,23 +110,49 @@ class TradeExecutor:
                     result["recovery_suggestion"] = {"action": "defer", "reason": str(re)}
 
         if result.get("success"):
-            # compute size , attach SL via coordinator
             price = self.client.get_price(pair) or 0.0
             if price <= 0:
-                # try from result
                 price = float(result.get("entry_price") or result.get("price") or 0.0)
             size = float(result.get("size") or result.get("qty") or (usd_amount / price if price > 0 else 0.0))
-            # attach SL
+            order_id = result.get("order_id")
+            entry_price = price
+            if order_id and self.stop_loss_coordinator and hasattr(
+                self.stop_loss_coordinator, "sl_manager"
+            ):
+                try:
+                    from phase6.core.sl_preflight import fetch_verified_order_fill
+
+                    ex = self.stop_loss_coordinator.sl_manager
+                    exchange = getattr(ex, "exchange", ex)
+                    verified = fetch_verified_order_fill(exchange, order_id)
+                    if verified.get("fill_verified"):
+                        size = float(verified.get("filled_size") or size)
+                        entry_price = float(verified.get("average_filled_price") or entry_price)
+                        result["entry_price"] = entry_price
+                except Exception as ve:
+                    self.logger.warning(f"[EXECUTOR] fill verify failed {pair}: {ve}")
+
             sl_ok = False
             if self.stop_loss_coordinator and hasattr(self.stop_loss_coordinator, "attach_stop_loss"):
                 try:
-                    sl_ok = self.stop_loss_coordinator.attach_stop_loss(pair, price, size)
+                    if order_id and hasattr(self.stop_loss_coordinator, "set_buy_order_ids"):
+                        self.stop_loss_coordinator.set_buy_order_ids({pair: order_id})
+                    sl_ok = self.stop_loss_coordinator.attach_stop_loss(
+                        pair, entry_price, size, order_id=order_id, fresh_buy=True
+                    )
                 except Exception as sle:
                     self.logger.warning(f"SL attach failed for {pair}: {sle}")
                     sl_ok = False
             elif self.stop_loss_coordinator and hasattr(self.stop_loss_coordinator, "sl_manager"):
                 try:
-                    sl_ok = self.stop_loss_coordinator.sl_manager.attach_stop_loss(pair, price, size, order_id=result.get("order_id", "platform"))
+                    sl_ok = self.stop_loss_coordinator.sl_manager.attach_stop_loss(
+                        pair,
+                        entry_price,
+                        size,
+                        anchor_entry=entry_price if entry_price > 0 else None,
+                        order_id=order_id,
+                        fresh_buy=True,
+                    )
                 except Exception:
                     sl_ok = False
             result["sl_attached"] = bool(sl_ok)

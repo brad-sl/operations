@@ -1,0 +1,43 @@
+# W3 — Go live confirmation
+# Trigger: coinbase_status = connected AND runner_health = green (or first healthy cycle)
+# Channel: Email primary; optional short SMS
+# Tags: coinbase_connected, runner_healthy; opportunity stage → Live — Healthy
+# Celebrate PROCESS completion, never returns
+
+SUBJECT: You’re live — ARCH Automation is running
+
+PREHEADER: Coinbase connected. Runner healthy. Here’s what to expect next.
+
+---
+
+Hi {{first_name}},
+
+Your Coinbase account is connected and your automation status is **healthy**.
+
+**Snapshot (process only — not performance)**
+- Status: {{runner_health}}
+- Coinbase: {{coinbase_status}}
+- Tier: {{tier_name}}
+- Configuration: {{config_summary}}
+- Deploy cap (tier label): {{deploy_cap_label}}
+- Next rebalance window: {{next_rebalance_window}}
+
+**What to expect**
+- The software will execute trades based on configured parameters and tier limits
+- You’ll receive periodic status digests (not trade-by-trade spam)
+- Review your member status anytime: {{member_status_link}}
+- You can revoke ARCH access anytime in Coinbase → Connected apps
+
+**Remember**
+This is a software tool for rules-based automation on your account. It does not guarantee profits or prevent losses. Cryptocurrency trading involves substantial risk. Check your Coinbase activity regularly.
+
+Questions? {{support_email}}
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.
+
+# SMS
+ARCH: You’re live — Coinbase connected, runner healthy. Status: {{member_status_link}} Support: {{support_email}}

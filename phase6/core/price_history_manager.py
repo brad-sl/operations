@@ -16,7 +16,7 @@ Designed for Phase 6 runner integration.
 import json
 from pathlib import Path
 from typing import Dict, List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class PriceHistoryManager:
@@ -60,7 +60,7 @@ class PriceHistoryManager:
         if len(self.history[pair]) > self.max_history:
             self.history[pair] = self.history[pair][-self.max_history:]
 
-        self.last_updated[pair] = datetime.utcnow().isoformat()
+        self.last_updated[pair] = datetime.now(timezone.utc).isoformat()
 
     def get_prices(self, pair: str, n: Optional[int] = None) -> List[float]:
         prices = self.history.get(pair, [])
@@ -71,6 +71,25 @@ class PriceHistoryManager:
     def get_latest_price(self, pair: str) -> Optional[float]:
         prices = self.history.get(pair, [])
         return prices[-1] if prices else None
+
+    def quote_timestamp(self, pair: str) -> Optional[str]:
+        return self.last_updated.get(pair)
+
+    def quote_age_seconds(self, pair: str, now: Optional[datetime] = None) -> Optional[float]:
+        from phase6.core.price_freshness import parse_iso_age_seconds
+
+        return parse_iso_age_seconds(self.last_updated.get(pair), now=now)
+
+    def is_quote_stale(
+        self,
+        pair: str,
+        *,
+        max_age_seconds: float = 900,
+        now: Optional[datetime] = None,
+    ) -> bool:
+        from phase6.core.price_freshness import is_quote_stale
+
+        return is_quote_stale(self.last_updated.get(pair), max_age_seconds=max_age_seconds, now=now)
 
     def has_enough_data(self, pair: str, min_points: int = 15) -> bool:
         return len(self.history.get(pair, [])) >= min_points

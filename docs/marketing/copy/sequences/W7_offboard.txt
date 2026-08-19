@@ -1,0 +1,50 @@
+# W7 — Offboarding / cancel complete
+# Trigger: subscription canceled OR offboard workflow complete
+# Channel: Email (primary). Optional SMS acknowledgment.
+# Platform: stop jobs; request disconnect; final ledger/statement if product emits
+# Goal: clean revoke + no orphan expectations
+
+SUBJECT: ARCH Automation canceled — disconnect Coinbase access
+
+PREHEADER: Subscription ended. Please revoke app access on Coinbase. Optional short exit note.
+
+---
+
+Hi {{first_name}},
+
+Your ARCH Automation subscription is canceled. We’re sorry to see you go — and we appreciate you trying the product.
+
+**Important: revoke access on Coinbase**
+Even after cancel, you should remove the app connection:
+1. Open Coinbase → Settings → Connected apps (or Security / API connections as labeled)
+2. Find ARCH Automation
+3. Revoke / disconnect
+
+This ensures no residual authorization remains.
+
+**What we stop**
+- New automated trades from ARCH
+- Lifecycle digests for an active plan
+- Billing for the subscription (final invoice rules per Terms)
+
+**Final statement / records**
+{{final_statement_blurb}}
+If you need a copy of invoices, reply to {{support_email}}.
+
+**Optional 60-second exit note** (helps us improve process, not performance claims):
+{{exit_survey_link}}
+
+Questions after cancel: {{support_email}}
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.
+
+# SMS (optional)
+ARCH: Subscription canceled. Please revoke ARCH in Coinbase → Connected apps. {{support_email}}
+
+# final_statement_blurb PLACEHOLDER:
+# If platform emits a period summary without ROI marketing: include link.
+# Else: "Billing history remains available in your customer portal."

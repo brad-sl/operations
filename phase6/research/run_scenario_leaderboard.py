@@ -59,6 +59,15 @@ def load_pack(path: Path) -> dict:
 def run_scenario(pack: dict, scenario: dict) -> dict:
     knobs = ScenarioKnobs.from_scenario(scenario, pack)
     dr = scenario.get("date_range") or pack["date_range"]
+    pack_dr = pack.get("date_range") or {}
+    if scenario.get("date_range") and pack_dr.get("start") and pack_dr.get("end"):
+        ps, pe = _parse_date(pack_dr["start"]), _parse_date(pack_dr["end"])
+        ss, se = _parse_date(dr["start"]), _parse_date(dr["end"])
+        if ss < ps or se > pe:
+            print(
+                f"[WARN] scenario {scenario.get('id')} date_range {dr} extends outside pack {pack_dr}",
+                file=sys.stderr,
+            )
     w_start, w_end = _parse_date(dr["start"]), _parse_date(dr["end"])
 
     if knobs.engine == "arch4":
@@ -153,7 +162,45 @@ def main() -> int:
         action="store_true",
         help="Attach live production metrics (overlap + since go-live) and vs_production deltas",
     )
+    parser.add_argument(
+        "--skip-live-param-audit-gate",
+        action="store_true",
+        help="Bypass P6 param confidence gate (dev/smoke only)",
+    )
+    parser.add_argument(
+        "--strict-live-param-audit",
+        action="store_true",
+        help="Hard-fail (exit 3) when live param gate fails; default is soft-fail so weekly OPT still produces leaderboard",
+    )
+    parser.add_argument(
+        "--refresh-param-audit",
+        action="store_true",
+        help="Re-run P6 param audit before scenario pack",
+    )
     args = parser.parse_args()
+
+    from phase6.research.live_param_audit_gate import (
+        attach_live_param_audit_to_leaderboard,
+        require_live_param_confidence_for_opt,
+    )
+
+    if not args.skip_live_param_audit_gate:
+        ok, live = require_live_param_confidence_for_opt(refresh=args.refresh_param_audit)
+        if not ok:
+            print(
+                "ANALYST-OPT: live param confidence gate failed "
+                "(scenarios continue; promotion remains blocked unless gate passes)",
+                file=sys.stderr,
+            )
+            for f in live.failures:
+                print(f"  - {f}", file=sys.stderr)
+            if args.strict_live_param_audit:
+                print("ANALYST-OPT blocked: --strict-live-param-audit", file=sys.stderr)
+                return 3
+    else:
+        from phase6.research.live_param_audit_gate import evaluate_live_param_confidence
+
+        live = evaluate_live_param_confidence()
 
     pack_path = Path(args.pack)
     if not pack_path.is_absolute():
@@ -197,6 +244,8 @@ def main() -> int:
         leaderboard["production"] = production
         leaderboard["production_since_go_live"] = since_go_live
         leaderboard["vs_production"] = vs_production
+
+    leaderboard = attach_live_param_audit_to_leaderboard(leaderboard, live)
 
     state_dir = ROOT / "data/state"
     state_dir.mkdir(parents=True, exist_ok=True)

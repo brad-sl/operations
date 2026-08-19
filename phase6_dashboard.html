@@ -10,6 +10,25 @@
         .section-card { transition: all 0.2s ease; }
         .metric-value { font-variant-numeric: tabular-nums; }
         .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .metric-label-wrap { position: relative; display: inline-flex; align-items: center; gap: 0.25rem; max-width: 100%; }
+        .metric-help-btn {
+            color: #64748b; background: transparent; border: none; padding: 0; line-height: 1;
+            cursor: pointer; flex-shrink: 0;
+        }
+        .metric-help-btn:hover, .metric-help-btn:focus-visible { color: #94a3b8; outline: none; }
+        .metric-tip {
+            display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 60;
+            width: 13.5rem; max-width: min(16rem, 90vw); padding: 0.5rem 0.65rem;
+            font-size: 0.68rem; line-height: 1.4; font-weight: 400; text-align: left;
+            color: #cbd5e1; background: #1e293b; border: 1px solid #475569; border-radius: 0.5rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.45); pointer-events: none;
+        }
+        @media (hover: hover) and (pointer: fine) {
+            .metric-label-wrap:hover .metric-tip { display: block; }
+        }
+        .metric-label-wrap.is-open .metric-tip { display: block; pointer-events: auto; }
+        .metric-label-wrap.justify-center .metric-tip { left: 50%; transform: translateX(-50%); }
+        .metric-sub { font-size: 0.65rem; color: #64748b; margin-top: 0.15rem; line-height: 1.2; }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
@@ -26,68 +45,182 @@
                 </div>
             </div>
             <div class="text-right">
-                <div class="text-xs text-slate-400">Total Portfolio Value</div>
+                <div class="text-xs text-slate-400 metric-label-wrap">
+                    <span>Portfolio</span>
+                    <button type="button" class="metric-help-btn" aria-label="About portfolio value"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Cash plus all holdings at latest prices from the live runner state (ground truth for the header).</div>
+                </div>
                 <div id="total-balance" class="text-4xl font-semibold tabular-nums">$0.00</div>
                 <div id="balance-source" class="mt-1 text-xs px-3 py-1 bg-slate-800 text-emerald-400 rounded-2xl font-medium inline-block"></div>
                 <div id="last-source-note" class="text-[10px] text-slate-500 mt-0.5"></div>
             </div>
         </div>
 
-        <!-- KPI Row -->
+        <!-- KPI Row: 1D / 7D / 14D / 30D / Exit WR — 14D is a primary trend-repair gate -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
-                <div class="text-slate-400 text-sm">Today</div>
+                <div class="metric-label-wrap text-slate-400 text-xs">
+                    <span>1D %</span>
+                    <button type="button" class="metric-help-btn" aria-label="About 1 day return"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Whole-account % change vs ~24h ago. Deposit-adjusted (external cash in/out removed). Includes unrealized moves on open positions—not closed-trade PnL alone. Deposit-adjusted wallet return; 3% SL is per-position from entry, not a portfolio DD cap.</div>
+                </div>
                 <div id="pnl-today" class="text-2xl font-semibold mt-1 metric-value">--</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
-                <div class="text-slate-400 text-sm">24 Hours</div>
-                <div id="pnl-24h" class="text-2xl font-semibold mt-1 metric-value">--</div>
-            </div>
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
-                <div class="text-slate-400 text-sm">7 Days</div>
+                <div class="metric-label-wrap text-slate-400 text-xs">
+                    <span>7D %</span>
+                    <button type="button" class="metric-help-btn" aria-label="About 7 day return"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Rolling 7-day portfolio return, deposit-adjusted. Early noise window — can look green while the longer path is still repairing. Not the main stabilize gate.</div>
+                </div>
                 <div id="pnl-7d" class="text-2xl font-semibold mt-1 metric-value">--</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
-                <div class="text-slate-400 text-sm">30 Days</div>
+                <div class="metric-label-wrap text-slate-400 text-xs">
+                    <span>14D %</span>
+                    <button type="button" class="metric-help-btn" aria-label="About 14 day return"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Rolling 14-day deposit-adjusted wallet return. Primary trend-repair gate: claim “stabilizing” only after ~14d of better path — not after one green week. Slow bleed here is common before regime transitions; 7D alone can fool you into quitting right before a turn.</div>
+                </div>
+                <div id="pnl-14d" class="text-2xl font-semibold mt-1 metric-value">--</div>
+            </div>
+            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
+                <div class="metric-label-wrap text-slate-400 text-xs">
+                    <span>30D %</span>
+                    <button type="button" class="metric-help-btn" aria-label="About 30 day return"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Rolling 30-day portfolio return, deposit-adjusted. Longer context / legacy drawdown. Requires enough snapshot history; shows N/A if the window cannot be computed.</div>
+                </div>
                 <div id="pnl-30d" class="text-2xl font-semibold mt-1 metric-value">--</div>
             </div>
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 section-card">
-                <div class="text-slate-400 text-sm">Win Ratio</div>
+                <div class="metric-label-wrap text-slate-400 text-xs">
+                    <span>Exit WR</span>
+                    <button type="button" class="metric-help-btn" aria-label="About exit win rate"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Share of recent realizing exits (non-zero PnL in last 100 ledger rows) that won. Count-based—many small wins can read high even when portfolio % is negative. Not the same as 7D/14D %.</div>
+                </div>
                 <div id="win-ratio" class="text-2xl font-semibold mt-1 metric-value">--</div>
+                <div id="win-ratio-sub" class="metric-sub"></div>
             </div>
         </div>
 
-        <!-- Observability Metrics (P1: proposals accepted, utilization, SL success rate, churn) -->
+        <!-- Account health equity trend (deposit-adjusted) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-3xl p-5 mb-8 section-card">
+            <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                <div>
+                    <h2 class="font-semibold flex items-center gap-2 text-sm uppercase tracking-widest text-slate-400">
+                        <i class="fa-solid fa-chart-line"></i>
+                        <span>Account health</span>
+                        <span class="metric-label-wrap normal-case tracking-normal font-normal">
+                            <button type="button" class="metric-help-btn" aria-label="About equity trend"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                            <div class="metric-tip" role="tooltip">Deposit-adjusted equity index (starts at 100). External deposits/withdrawals are stripped so the path reflects trading + MTM only. Dashed line = linear trend. <b>Window %</b> uses the same deposit-adjusted formula as the 30D tile (point-to-point over this chart span). <b>Recent ~7d</b> matches the 7D tile method over the last week of the path. Shape of the blue line shows the journey; tiles and Window % are the score.</div>
+                        </span>
+                    </h2>
+                    <div id="equity-health-label" class="text-lg font-semibold mt-1 text-slate-200">--</div>
+                    <div id="equity-health-blurb" class="text-xs text-slate-400 mt-0.5 max-w-xl">Loading equity path…</div>
+                </div>
+                <div class="text-right text-xs text-slate-400 space-y-0.5">
+                    <div>Window (=30D method) <span id="equity-window-ret" class="tabular-nums text-slate-200">--</span></div>
+                    <div>Recent ~7d (=7D method) <span id="equity-recent-ret" class="tabular-nums text-slate-200">--</span></div>
+                    <div>Trend <span id="equity-slope" class="tabular-nums text-slate-200">--</span>/day</div>
+                </div>
+            </div>
+            <div class="relative w-full h-40 md:h-48">
+                <svg id="equity-trend-svg" viewBox="0 0 640 180" class="w-full h-full" preserveAspectRatio="none" role="img" aria-label="Deposit-adjusted equity trend">
+                    <line x1="40" y1="20" x2="40" y2="150" stroke="#334155" stroke-width="1"/>
+                    <line x1="40" y1="150" x2="620" y2="150" stroke="#334155" stroke-width="1"/>
+                    <line id="equity-baseline" x1="40" y1="85" x2="620" y2="85" stroke="#475569" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
+                    <polyline id="equity-path" fill="none" stroke="#38bdf8" stroke-width="2" points=""/>
+                    <line id="equity-trend-line" x1="40" y1="85" x2="620" y2="85" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.9"/>
+                </svg>
+                <div class="absolute left-0 top-0 text-[10px] text-slate-500 pl-1" id="equity-y-max"></div>
+                <div class="absolute left-0 bottom-6 text-[10px] text-slate-500 pl-1" id="equity-y-min"></div>
+                <div class="absolute right-2 bottom-1 text-[10px] text-slate-500" id="equity-x-end"></div>
+                <div class="absolute left-10 bottom-1 text-[10px] text-slate-500" id="equity-x-start"></div>
+            </div>
+            <p class="text-[10px] text-slate-500 mt-2">Blue = deposit-adjusted equity index · Amber dashed = linear trend · Gray dashed = start (100)</p>
+        </div>
+
         <div class="mt-4 mb-8">
-            <h2 class="font-semibold mb-3 flex items-center gap-2 text-sm uppercase tracking-widest text-slate-400"><i class="fa-solid fa-chart-bar"></i> Observability (P1)</h2>
+            <h2 class="font-semibold mb-3 flex items-center gap-2 text-sm uppercase tracking-widest text-slate-400">
+                <i class="fa-solid fa-chart-bar"></i>
+                <span>Ops KPIs</span>
+                <span class="metric-label-wrap normal-case tracking-normal font-normal">
+                    <button type="button" class="metric-help-btn" aria-label="About ops KPIs"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Allocator and execution health from DB/runner: exposure, proposals, stop-loss attach, rebalance churn—not the same as portfolio return %.</div>
+                </span>
+            </h2>
             <div class="grid grid-cols-2 md:grid-cols-7 gap-2">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">Utilization</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Util</span>
+                        <button type="button" class="metric-help-btn" aria-label="Utilization"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Share of portfolio NAV in non-cash holdings (holdings ÷ total). Not ARCH-4 target exposure and not “capital 100% invested.”</div>
+                    </div>
                     <div id="obs-utilization" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">Proposal Accept</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Accept</span>
+                        <button type="button" class="metric-help-btn" aria-label="Proposal acceptance"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Fraction of scorer proposals that became executable trades in recent cycles.</div>
+                    </div>
                     <div id="obs-acceptance" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">SL Success Rate</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>SL OK</span>
+                        <button type="button" class="metric-help-btn" aria-label="SL success"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Fraction of open trading positions with exchange protective stop (or verified ledger attach). Not portfolio max loss / DD cap.</div>
+                    </div>
                     <div id="obs-sl-rate" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">Churn (trades/pos)</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Churn</span>
+                        <button type="button" class="metric-help-btn" aria-label="Churn"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Rebalance rotations per active position—higher means more turnover.</div>
+                    </div>
                     <div id="obs-churn" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">Rebalances</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Rebal</span>
+                        <button type="button" class="metric-help-btn" aria-label="Rebalances"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Count of executed rebalances logged in history.</div>
+                    </div>
                     <div id="obs-rebalances" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">Recovery Attempts</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Recov</span>
+                        <button type="button" class="metric-help-btn" aria-label="Recovery"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Recovery-mode attempts after drawdown or execution stress events.</div>
+                    </div>
                     <div id="obs-recovery" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center">
-                    <div class="text-[10px] text-slate-400">Replay Match</div>
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Replay</span>
+                        <button type="button" class="metric-help-btn" aria-label="Replay match"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">How often replay/sim parity matches live decisions when measured.</div>
+                    </div>
                     <div id="obs-replay" class="text-xl font-semibold tabular-nums mt-0.5">--</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center md:col-span-2">
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Regime</span>
+                        <button type="button" class="metric-help-btn" aria-label="REGIME-CASH"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Active market regime (BTC window) and cash stance. PARK = no new buys; deploy only when regime + RSI + sentiment + lockout allow. From regime_cash_policy.</div>
+                    </div>
+                    <div id="obs-regime" class="text-lg font-semibold tabular-nums mt-0.5">--</div>
+                    <div id="obs-regime-sub" class="metric-sub"></div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card text-center md:col-span-2">
+                    <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
+                        <span>Preserve</span>
+                        <button type="button" class="metric-help-btn" aria-label="Preserve Hold"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Park policy: mostly USDC/USD cash; optional PAXG gold sleeve. OFF = sleeve off. STANDBY = enabled, not armed. MICRO = small live sleeve for logs (~$75). ARMED = full Hold target. E1 is a deep Coinbase stop (~−32% from arm), not a 3% crypto SL — gold can still drop hard. See docs/research/PARK_REGIME_POLICY.md.</div>
+                    </div>
+                    <div id="obs-preserve" class="text-lg font-semibold tabular-nums mt-0.5">--</div>
+                    <div id="obs-preserve-sub" class="metric-sub"></div>
                 </div>
             </div>
         </div>
@@ -97,7 +230,13 @@
             <!-- Active Positions -->
             <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="font-semibold flex items-center gap-2"><i class="fa-solid fa-wallet"></i> Active Positions</h2>
+                    <h2 class="font-semibold flex items-center gap-2">
+                        <i class="fa-solid fa-wallet"></i> Positions
+                        <span class="metric-label-wrap font-normal">
+                            <button type="button" class="metric-help-btn" aria-label="About positions"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                            <div class="metric-tip" role="tooltip">Holdings as of the timestamp in the header. Unrealized P&amp;L is % and $ vs <strong>average cost for your current size</strong> (ledger + verified exchange fills), recomputed every poll — not Coinbase’s portfolio screen 1:1, but aligned within that refresh. <strong>Stop-loss</strong> uses the verified buy fill (~3% below entry), not a bad dashboard entry; a scary −24% display did <em>not</em> mean SL ignored a 24% loss.</div>
+                        </span>
+                    </h2>
                     <span id="position-count" class="text-xs px-3 py-1 bg-slate-800 rounded-2xl">0 pairs</span>
                 </div>
                 <div id="positions-table" class="overflow-auto min-h-[120px]"></div>
@@ -105,38 +244,64 @@
 
             <!-- Activity Indicators -->
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
-                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-chart-line"></i> Recent Buy Activity</h2>
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i> Recent Buys
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Recent buys"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Pairs from the latest ledger BUYs surfaced in live state (not full trade history).</div>
+                    </span>
+                </h2>
                 <div id="activity-indicators" class="space-y-4 text-sm"></div>
             </div>
             
-            <!-- Sentiment -->
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
-                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-globe"></i> Sentiment</h2>
-                <div id="sentiment-grid" class="grid grid-cols-2 gap-3 text-sm"></div>
-            </div>
-            <!-- RSI (15m Refresher) - per pair with text notation matching twice-daily status style -->
-            <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
-                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-tachometer-alt"></i> RSI (15m)</h2>
-                <div id="rsi-grid" class="grid grid-cols-2 gap-3 text-sm"></div>
+            <!-- Signals: RSI + Sentiment (unified) -->
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-crosshairs"></i> Signals
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Signals"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Active trading basket only (global_settings.pairs — what runner/rebalancer can cycle into). RSI + sentiment + BUY/HOLD/SELL (same formula as daily brief). ·held = open size. ·blocked = post-SL/manual rebuy cooldown — no auto-BUY until it expires (even if Status says BUY). Shadow contenders not listed. Not an auto-order.</div>
+                    </span>
+                    <span id="signals-mode-badge" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-normal"></span>
+                </h2>
+                <div id="signals-table" class="overflow-auto text-sm"></div>
             </div>
 
 
             <!-- Recent Rebalances -->
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
-                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-sync"></i> Recent Rebalances</h2>
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-sync"></i> Rebalances
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Rebalances"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Last executed ARCH-4 rebalances only (skipped/no-trade cycles hidden).</div>
+                    </span>
+                </h2>
                 <div id="rebalances-list" class="space-y-3 text-sm min-h-[80px]"></div>
             </div>
 
             <!-- Recent Trades -->
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
-                <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-exchange-alt"></i> Recent Trades</h2>
+                <h2 class="font-semibold mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-exchange-alt"></i> Trades
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Trades"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Recent ledger rows (buys and sells). Realized PnL appears on closes; used for Exit WR when non-zero.</div>
+                    </span>
+                </h2>
                 <div id="trades-list" class="space-y-3 text-sm min-h-[80px]"></div>
             </div>
         </div>
     
         <!-- Recovery Status -->
         <div class="mt-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
-            <h2 class="font-semibold mb-4 flex items-center gap-2"><i class="fa-solid fa-shield-halved"></i> Recovery Status</h2>
+            <h2 class="font-semibold mb-4 flex items-center gap-2">
+                <i class="fa-solid fa-shield-halved"></i> Recovery
+                <span class="metric-label-wrap font-normal">
+                    <button type="button" class="metric-help-btn" aria-label="Recovery"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                    <div class="metric-tip" role="tooltip">Drawdown / execution recovery mode, pair cooldowns, and last recovery timestamp.</div>
+                </span>
+            </h2>
             <div id="recovery-status" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <div class="bg-slate-800/50 p-3 rounded-lg"><strong>Mode:</strong> <span id="recovery-mode" class="block mt-1">--</span></div>
                 <div class="bg-slate-800/50 p-3 rounded-lg"><strong>Cooldown Pairs:</strong> <span id="cooldown-pairs" class="block mt-1">--</span></div>
@@ -145,9 +310,30 @@
         </div>
 
     <script>
-        async function fetchData(endpoint) {
+        function initMetricHelp() {
+            document.querySelectorAll('.metric-help-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wrap = btn.closest('.metric-label-wrap');
+                    if (!wrap) return;
+                    const wasOpen = wrap.classList.contains('is-open');
+                    document.querySelectorAll('.metric-label-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+                    if (!wasOpen) wrap.classList.add('is-open');
+                });
+            });
+            document.addEventListener('click', () => {
+                document.querySelectorAll('.metric-label-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+            });
+        }
+        initMetricHelp();
+
+        async function fetchData(endpoint, timeoutMs = 8000) {
             try {
-                const res = await fetch(endpoint);
+                const ctrl = new AbortController();
+                const t = setTimeout(() => ctrl.abort(), timeoutMs);
+                const res = await fetch(endpoint, { signal: ctrl.signal });
+                clearTimeout(t);
                 if (!res.ok) throw new Error('Network error');
                 return await res.json();
             } catch (e) {
@@ -156,27 +342,129 @@
             }
         }
 
+        function settledValue(settled) {
+            return settled && settled.status === 'fulfilled' ? settled.value : null;
+        }
+
+        function renderEquityTrend(eq) {
+            const labelEl = document.getElementById('equity-health-label');
+            const blurbEl = document.getElementById('equity-health-blurb');
+            const winEl = document.getElementById('equity-window-ret');
+            const recEl = document.getElementById('equity-recent-ret');
+            const slopeEl = document.getElementById('equity-slope');
+            const pathEl = document.getElementById('equity-path');
+            const trendEl = document.getElementById('equity-trend-line');
+            const baseEl = document.getElementById('equity-baseline');
+            if (!pathEl) return;
+
+            if (!eq || !eq.points || eq.points.length < 2 || eq.status !== 'ok') {
+                if (labelEl) labelEl.textContent = 'N/A';
+                if (blurbEl) blurbEl.textContent = (eq && eq.status) ? ('Equity path unavailable (' + eq.status + ').') : 'Equity path unavailable.';
+                pathEl.setAttribute('points', '');
+                return;
+            }
+
+            const pts = eq.points;
+            const idxs = pts.map(p => p.index);
+            let ymin = Math.min(...idxs, 100);
+            let ymax = Math.max(...idxs, 100);
+            if (ymax - ymin < 1) { ymin -= 1; ymax += 1; }
+            const pad = (ymax - ymin) * 0.08;
+            ymin -= pad; ymax += pad;
+
+            const x0 = 40, x1 = 620, yTop = 20, yBot = 150;
+            const xMax = Math.max(...pts.map(p => p.day), 1e-6);
+            const xOf = (d) => x0 + (d / xMax) * (x1 - x0);
+            const yOf = (v) => yBot - ((v - ymin) / (ymax - ymin)) * (yBot - yTop);
+
+            const poly = pts.map(p => xOf(p.day).toFixed(1) + ',' + yOf(p.index).toFixed(1)).join(' ');
+            pathEl.setAttribute('points', poly);
+
+            // baseline at index 100
+            if (baseEl) {
+                const yb = yOf(100);
+                baseEl.setAttribute('y1', yb);
+                baseEl.setAttribute('y2', yb);
+            }
+
+            const tr = eq.trend || {};
+            if (trendEl && tr.start_index != null && tr.end_index != null) {
+                trendEl.setAttribute('x1', xOf(pts[0].day));
+                trendEl.setAttribute('y1', yOf(tr.start_index));
+                trendEl.setAttribute('x2', xOf(pts[pts.length - 1].day));
+                trendEl.setAttribute('y2', yOf(tr.end_index));
+                const up = tr.end_index >= tr.start_index;
+                trendEl.setAttribute('stroke', up ? '#34d399' : '#fbbf24');
+            }
+
+            const health = eq.health || {};
+            const state = health.state || '';
+            const color =
+                state === 'recovering' || state === 'stabilizing_up' ? 'text-emerald-400' :
+                state === 'declining' || state === 'soft_down' ? 'text-red-400' :
+                'text-amber-300';
+            if (labelEl) {
+                labelEl.textContent = health.label || '--';
+                labelEl.className = 'text-lg font-semibold mt-1 ' + color;
+            }
+            if (blurbEl) blurbEl.textContent = health.blurb || '';
+
+            const fmtPct = (v) => (v == null || typeof v !== 'number') ? 'N/A' : ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+            if (winEl) {
+                winEl.textContent = fmtPct(eq.window_return_pct);
+                winEl.className = 'tabular-nums ' + ((eq.window_return_pct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400');
+            }
+            if (recEl) {
+                recEl.textContent = fmtPct(eq.recent_return_pct);
+                recEl.className = 'tabular-nums ' + ((eq.recent_return_pct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400');
+            }
+            if (slopeEl) {
+                const s = (tr.slope_pct_per_day != null) ? tr.slope_pct_per_day : (health.slope_pct_per_day);
+                slopeEl.textContent = (s == null) ? 'N/A' : ((s >= 0 ? '+' : '') + Number(s).toFixed(3) + ' idx');
+            }
+
+            const yMaxEl = document.getElementById('equity-y-max');
+            const yMinEl = document.getElementById('equity-y-min');
+            const xStart = document.getElementById('equity-x-start');
+            const xEnd = document.getElementById('equity-x-end');
+            if (yMaxEl) yMaxEl.textContent = ymax.toFixed(1);
+            if (yMinEl) yMinEl.textContent = ymin.toFixed(1);
+            const t0 = (pts[0].t || '').slice(0, 10);
+            const t1 = (pts[pts.length - 1].t || '').slice(0, 10);
+            if (xStart) xStart.textContent = t0;
+            if (xEnd) xEnd.textContent = t1 + ' · ' + (eq.days || 30) + 'd';
+        }
+
         async function updateDashboard() {
-            const posData = await fetchData('/api/positions');
-            const perfData = await fetchData('/api/performance');
-            const tradesData = await fetchData('/api/trades');
-            const sentimentData = await fetchData('/api/sentiment');
-            const rsiData = await fetchData('/api/rsi');
-            const rebalData = await fetchData('/api/rebalances');
-            const metricsData = await fetchData('/api/metrics');
-            const briefData = await fetchData('/api/brief');
+            const endpoints = [
+                fetchData('/api/balances'),
+                fetchData('/api/positions'),
+                fetchData('/api/performance'),
+                fetchData('/api/trades'),
+                fetchData('/api/pair-signals'),
+                fetchData('/api/rebalances'),
+                fetchData('/api/metrics', 1500),
+                fetchData('/api/brief'),
+            ];
+            const settled = await Promise.allSettled(endpoints);
+            const balData = settledValue(settled[0]);
+            const posData = settledValue(settled[1]);
+            const perfData = settledValue(settled[2]);
+            const tradesData = settledValue(settled[3]);
+            const signalsData = settledValue(settled[4]);
+            const rebalData = settledValue(settled[5]);
+            const metricsData = settledValue(settled[6]);
+            const briefData = settledValue(settled[7]);
             // Update recovery with current position count
             if (typeof updateRecoveryStatus === 'function') updateRecoveryStatus(posData);
 
-            // Header/Balance - PURE CONSUMER from view-backed API (pre-enriched total/source/positions from v_phase6_dashboard + v_enriched_positions)
-            // All values (total, source, last_updated, positions) pre-computed in DB views; JS only fetches + renders
-            const balData = await fetchData('/api/balances');
+            // Header/Balance - runner live_state.json (ground truth); DB views are fallback only
             const totalEl = document.getElementById('total-balance');
             const sourceEl = document.getElementById('balance-source');
             const lastNoteEl = document.getElementById('last-source-note');
             
             const mainData = balData || posData || {};
-            const total = mainData.total_usd || 0;  // always provided by view-backed serve
+            const total = mainData.total_usd ?? mainData.total_balance ?? 0;
             
             if (sourceEl) sourceEl.textContent = mainData.source || 'Live (DB view)';
             if (lastNoteEl) {
@@ -197,6 +485,18 @@
                 }
                 totalEl.textContent = '$' + parseFloat(total).toFixed(2);
             }
+
+            const modeText = document.getElementById('mode-text');
+            const modeBadge = document.getElementById('mode-badge');
+            if (modeText && modeBadge && balData) {
+                if (balData.mode === 'live') {
+                    modeText.textContent = 'LIVE';
+                    modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-red-900 text-red-400 font-medium flex items-center gap-1.5';
+                } else {
+                    modeText.textContent = 'PAPER';
+                    modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5';
+                }
+            }
             
             // Positions data - PURE CONSUMER: pre-split cash/trading from server (no client filter/calc)
             const container = document.getElementById('positions-table');
@@ -211,8 +511,8 @@
 
             if (countEl) countEl.textContent = `${tradingPositions.length} pairs`;
 
-            // P1 Observability metrics (pure from /api/metrics -> v_dashboard_metrics)
-            if (metricsData && metricsData.status === "ok" && metricsData.metrics) {
+            // P1 Observability metrics (cache-first /api/metrics; degraded still renders partial KPIs)
+            if (metricsData && metricsData.metrics) {
                 const m = metricsData.metrics;
                 const utilEl = document.getElementById("obs-utilization");
                 const accEl = document.getElementById("obs-acceptance");
@@ -228,6 +528,46 @@
                 const repEl = document.getElementById("obs-replay");
                 if (recEl) recEl.textContent = (m.recovery_attempts != null ? m.recovery_attempts : "--");
                 if (repEl) repEl.textContent = (m.replay_match_rate != null ? (parseFloat(m.replay_match_rate)*100).toFixed(0) + "%" : "--");
+                const regEl = document.getElementById("obs-regime");
+                const regSub = document.getElementById("obs-regime-sub");
+                const rc = metricsData.regime_cash || {};
+                if (regEl) {
+                    const mode = (rc.strategy_mode === 'usdc_park' || rc.allow_new_buys === false) ? 'PARK' : 'DEPLOY';
+                    regEl.textContent = (rc.regime || '--') + ' · ' + mode;
+                    regEl.className = 'text-lg font-semibold tabular-nums mt-0.5 ' +
+                        (mode === 'PARK' ? 'text-amber-300' : 'text-emerald-400');
+                }
+                if (regSub) {
+                    const btc = rc.btc_return_pct != null ? ('BTC ' + Number(rc.btc_return_pct).toFixed(1) + '%') : '';
+                    const buys = rc.allow_new_buys === false ? 'no new buys' : 'buys gated';
+                    const cap = rc.rebalance_cap_usd != null ? ('cap $' + Number(rc.rebalance_cap_usd).toFixed(0)) : '';
+                    regSub.textContent = [btc, buys, cap].filter(Boolean).join(' · ');
+                }
+                const prEl = document.getElementById("obs-preserve");
+                const prSub = document.getElementById("obs-preserve-sub");
+                const pm = metricsData.preserve_mode || {};
+                if (prEl) {
+                    const b = pm.badge || (pm.state_armed ? 'ARMED' : (pm.config_enabled ? 'STANDBY' : 'OFF'));
+                    prEl.textContent = 'Preserve · ' + b;
+                    let col = 'text-slate-400';
+                    if (b === 'NAKED' || (b && b.indexOf('NAKED') === 0)) col = 'text-rose-400';
+                    else if (b === 'MICRO' || (b && b.indexOf('MICRO') === 0)) col = 'text-cyan-300';
+                    else if (b === 'ARMED' || (b && b.indexOf('ARMED') === 0)) col = 'text-sky-300';
+                    else if (b === 'STANDBY') col = 'text-amber-200';
+                    else if (b === 'OFF') col = 'text-slate-500';
+                    prEl.className = 'text-lg font-semibold tabular-nums mt-0.5 ' + col;
+                }
+                if (prSub) {
+                    const bits = [];
+                    if (pm.detail) bits.push(pm.detail);
+                    if (pm.preserve_usd != null) bits.push('$' + Number(pm.preserve_usd).toFixed(0) + ' gold');
+                    if (pm.e1_open === true) bits.push('E1 open');
+                    else if (pm.e1_open === false || pm.e1_naked) bits.push('E1 missing');
+                    if (pm.e1_stop_price != null) bits.push('E1 $' + Number(pm.e1_stop_price).toFixed(0));
+                    if (pm.mtm_dd_from_arm != null) bits.push((Number(pm.mtm_dd_from_arm) * 100).toFixed(1) + '% vs arm');
+                    if (pm.adds_blocked) bits.push('no-add');
+                    prSub.textContent = bits.filter(Boolean).join(' · ') || 'not risk-free ballast';
+                }
             }
 
             if (!tradingPositions.length && !cashPositions.length) {
@@ -237,40 +577,100 @@
                     <th class="text-left py-2 font-normal">Asset</th>
                     <th class="text-right py-2 font-normal">Size</th>
                     <th class="text-right py-2 font-normal">Value</th>
-                    <th class="text-right py-2 font-normal">PnL</th></tr></thead><tbody>`;
+                    <th class="text-right py-2 font-normal" title="Unrealized vs bot cost basis (ledger avg cost for current size; may differ slightly from Coinbase).">PnL</th></tr></thead><tbody>`;
 
                 // Cash rows first
                 cashPositions.forEach(pos => {
+                    const cur = (pos.pair || '').toUpperCase();
+                    const label = (cur === 'USD' || cur === 'USDC') ? (cur + ' · cash') : cur;
                     html += `<tr class="border-b border-slate-800 last:border-0 bg-slate-900/40">
-                        <td class="py-2.5 font-medium text-amber-300">${pos.pair}</td>
+                        <td class="py-2.5 font-medium text-amber-300">${label}</td>
                         <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums text-slate-500">—</td>
                     </tr>`;
                 });
 
+                const DUST_HIDE_USD = (posData?.dust_hide_threshold_usd != null) ? posData.dust_hide_threshold_usd : 5;
+                const dustHidden = posData?.dust_positions_hidden || [];
                 // Trading positions
                 tradingPositions.forEach(pos => {
-                    const pnlVal = parseFloat(pos.unrealized_pnl_pct || 0);
+                    const stale = pos.price_stale || pos.pnl_unreliable;
+                    const pnlVal = stale ? null : parseFloat(pos.unrealized_pnl_pct || 0);
+                    const pnlUsd = stale ? NaN : parseFloat(pos.unrealized_pnl_usd);
+                    const pnlUsdStr = Number.isFinite(pnlUsd)
+                        ? (pnlUsd >= 0 ? '+' : '') + '$' + pnlUsd.toFixed(2)
+                        : '';
+                    const entry = parseFloat(pos.entry_price || 0);
+                    const basis = pos.entry_basis || '';
+                    const slStop = parseFloat(pos.sl_stop_price_est);
+                    let tip = entry > 0
+                        ? `Avg cost $${entry.toFixed(4)} (${basis || 'ledger'}). Unrealized vs this cost at last quote.`
+                        : 'Cost basis unknown';
+                    if (pos.price_as_of) {
+                        tip += ` Quote as of ${pos.price_as_of}.`;
+                    }
+                    if (stale) {
+                        tip += ' Price quote is stale (>15m); PnL hidden until runner refreshes.';
+                    }
+                    if (entry > 0 && Number.isFinite(slStop)) {
+                        tip += ` Native SL ~3% is near $${slStop.toFixed(2)} (from verified buy fill), not from a misleading dashboard %.`;
+                    }
+                    const avail = parseFloat(pos.available ?? pos.amount ?? 0);
+                    const hold = parseFloat(pos.hold ?? 0);
+                    const amt = parseFloat(pos.amount ?? avail);
+                    const sizeHtml = hold > 0.0001
+                        ? `${amt.toFixed(5)} <span class="text-slate-500 text-xs">(${hold.toFixed(5)} in E1/orders)</span>`
+                        : amt.toFixed(5);
+                    // Never hide preserve sleeve as dust
+                    const isPreserve = (pos.sleeve === 'preserve') || String(pos.pair || '').toUpperCase().startsWith('PAXG');
+                    if (!isPreserve && parseFloat(pos.value_usd || 0) < DUST_HIDE_USD && avail < 0.0001) return;
+                    if (!isPreserve && parseFloat(pos.value_usd || 0) < DUST_HIDE_USD) return;
+                    const name = isPreserve
+                        ? `${pos.pair || 'PAXG-USD'} <span class="text-cyan-400 text-xs">preserve</span>`
+                        : (pos.pair || 'N/A');
                     html += `<tr class="border-b border-slate-800 last:border-0">
-                        <td class="py-2.5 font-medium">${pos.pair || 'N/A'}</td>
-                        <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(4)}</td>
+                        <td class="py-2.5 font-medium">${name}${stale ? ' <span class="text-amber-400 text-xs" title="Stale price quote">⚠</span>' : ''}</td>
+                        <td class="py-2.5 text-right tabular-nums">${sizeHtml}</td>
                         <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
-                        <td class="py-2.5 text-right tabular-nums ${pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400'}">${(pnlVal * 100).toFixed(2)}%</td>
+                        <td class="py-2.5 text-right tabular-nums ${stale ? 'text-amber-300' : (pnlVal >= 0 ? 'text-emerald-400' : 'text-red-400')}" title="${tip}">
+                            <div>${stale ? '—' : (pnlVal * 100).toFixed(2) + '%'}</div>
+                            ${pnlUsdStr ? `<div class="text-xs opacity-80">${pnlUsdStr}</div>` : ''}
+                        </td>
                     </tr>`;
                 });
 
                 html += `</tbody></table>`;
+                if (dustHidden.length) {
+                    html += `<p class="text-xs text-slate-500 mt-2">${dustHidden.length} dust position(s) under $${DUST_HIDE_USD} hidden from table (still on exchange).</p>`;
+                }
+                const asOf = posData?.data_as_of || posData?.last_updated || '';
+                if (asOf) {
+                    html += `<p class="text-xs text-slate-500 mt-2">PnL accurate for this view: prices/qty as of runner refresh; cost basis merged on each poll.</p>`;
+                }
                 container.innerHTML = html;
             }
 
             // PnL
             if (perfData) {
                 if (document.getElementById('win-ratio')) document.getElementById('win-ratio').textContent = ((perfData.win_ratio || 0) * 100).toFixed(0) + '%';
-                if (document.getElementById('pnl-today')) document.getElementById('pnl-today').textContent = (perfData.today || 0).toFixed(2) + '%';
-                if (document.getElementById('pnl-24h')) document.getElementById('pnl-24h').textContent = (perfData.h24 || 0).toFixed(2) + '%';
-                if (document.getElementById('pnl-7d')) document.getElementById('pnl-7d').textContent = (perfData.d7 || 0).toFixed(2) + '%';
-                if (document.getElementById('pnl-30d')) document.getElementById('pnl-30d').textContent = (perfData.d30 || 0).toFixed(2) + '%';
+                const wrSub = document.getElementById('win-ratio-sub');
+                if (wrSub) {
+                    const ex = perfData.win_ratio_exits || {};
+                    if (ex.total != null) {
+                        const wins = (ex.wins != null ? ex.wins : 0);
+                        wrSub.textContent = wins + '/' + ex.total + ' realizing exits';
+                    } else if (ex.basis === 'open_book_unrealized') {
+                        wrSub.textContent = 'open-book unrealized';
+                    } else {
+                        wrSub.textContent = '0/0 realizing exits';
+                    }
+                }
+                if (document.getElementById('pnl-today')) document.getElementById('pnl-today').textContent = (perfData.today != null && typeof perfData.today === 'number' ? perfData.today.toFixed(2) + '%' : 'N/A');
+                if (document.getElementById('pnl-7d')) document.getElementById('pnl-7d').textContent = (perfData.d7 != null && typeof perfData.d7 === 'number' ? perfData.d7.toFixed(2) + '%' : 'N/A');
+                if (document.getElementById('pnl-14d')) document.getElementById('pnl-14d').textContent = (perfData.d14 != null && typeof perfData.d14 === 'number' ? perfData.d14.toFixed(2) + '%' : 'N/A');
+                if (document.getElementById('pnl-30d')) document.getElementById('pnl-30d').textContent = (perfData.d30 != null && typeof perfData.d30 === 'number' ? perfData.d30.toFixed(2) + '%' : 'N/A');
+                renderEquityTrend(perfData.equity_trend);
             }
 
             // Recent Buy Activity (from bought_indicators in live_state, populated from recent ledger BUYs)
@@ -284,60 +684,105 @@
                 }
             }
 
-            // Sentiment - PURE CONSUMER: server provides label/color (pre-computed), no client filter/ifs/calc
-            const sentContainer = document.getElementById('sentiment-grid');
-            if (sentContainer && sentimentData && sentimentData.status === 'ok') {
-                let pairs = Object.keys(sentimentData.data || {});
-                pairs = pairs.slice(0, 6);
-
-                if (pairs.length === 0) {
-                    sentContainer.innerHTML = '<div class="text-slate-500 text-sm">No sentiment data available</div>';
-                } else {
-                    sentContainer.innerHTML = pairs.map(p => {
-                        const entry = sentimentData.data[p] || {};
-                        const val = (entry.sentiment !== undefined ? entry.sentiment : (typeof entry === 'number' ? entry : 0));
-                        const label = entry.label || 'Neutral';
-                        const color = entry.color ? ('text-' + entry.color) : 'text-slate-400';
-                        return `
-                        <div class="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded-lg text-xs">
-                            <span>${p}</span>
-                            <span class="${color}">${label} (${Number(val).toFixed(2)})</span>
-                        </div>`;
-                    }).join('');
-                }
-            } else if (sentContainer) {
-                sentContainer.innerHTML = '<div class="text-slate-500 text-sm">No sentiment data available</div>';
+            // Signals — active trading basket only (API scopes to global_settings.pairs).
+            // held first, then BUY/HOLD/SELL, then confidence — no A→Z cache dump, no shadow contenders.
+            const heldPairs = new Set(
+                (posData?.trading_positions || posData?.positions || [])
+                    .filter(p => p && p.pair && p.pair !== 'USD' && p.pair !== 'USDC')
+                    .map(p => p.pair)
+            );
+            const sigContainer = document.getElementById('signals-table');
+            const sigBadge = document.getElementById('signals-mode-badge');
+            if (sigBadge && signalsData) {
+                const n = (signalsData.basket || signalsData.rows || []).length;
+                const mode = signalsData.sentiment_mode || '';
+                const blockedN = (signalsData.buy_blocked_pairs || []).length
+                    || (signalsData.rows || []).filter(r => r && r.buy_blocked).length;
+                const bits = [];
+                if (n) bits.push('basket ' + n);
+                if (blockedN) bits.push('blocked ' + blockedN);
+                if (mode) bits.push('sent: ' + mode);
+                sigBadge.textContent = bits.join(' · ');
             }
-            // RSI (15m) - PURE CONSUMER: server pre-labels, no client if/calc
-            const rsiContainer = document.getElementById('rsi-grid');
-            if (rsiContainer && rsiData && rsiData.status === 'ok') {
-                let pairs = Object.keys(rsiData.data || {});
-                pairs = pairs.slice(0, 6);
-                if (pairs.length === 0) {
-                    rsiContainer.innerHTML = '<div class="text-slate-500 text-sm">No RSI data available</div>';
-                } else {
-                    rsiContainer.innerHTML = pairs.map(p => {
-                        const entry = rsiData.data[p] || {};
-                        const val = (entry.rsi !== undefined ? entry.rsi : (typeof entry === 'number' ? entry : 50.0));
-                        const label = entry.label || 'Neutral';
-                        const colorClass = entry.color ? ('text-' + entry.color) : 'text-slate-400';
-                        const note = entry.source ? ` (${entry.source})` : '';
-                        return `
-                        <div class="flex justify-between items-center bg-slate-800/50 px-3 py-2 rounded-lg text-xs">
-                            <span>${p}</span>
-                            <span class="${colorClass}">RSI=${Number(val).toFixed(2)} (${label})${note}</span>
-                        </div>`;
-                    }).join('');
-                }
-            } else if (rsiContainer) {
-                rsiContainer.innerHTML = '<div class="text-slate-500 text-sm">No RSI data available</div>';
+            if (sigContainer && signalsData && signalsData.status === 'ok' && (signalsData.rows || []).length) {
+                const basketSet = new Set(
+                    (signalsData.basket && signalsData.basket.length)
+                        ? signalsData.basket
+                        : (signalsData.rows || []).map(r => r.pair)
+                );
+                let rows = (signalsData.rows || []).filter(r => r && r.pair && basketSet.has(r.pair));
+                rows.sort((a, b) => {
+                    const ha = heldPairs.has(a.pair) ? 0 : 1;
+                    const hb = heldPairs.has(b.pair) ? 0 : 1;
+                    if (ha !== hb) return ha - hb;
+                    // BUY first, then HOLD, then SELL
+                    const rank = { BUY: 0, HOLD: 1, SELL: 2 };
+                    const ra = rank[a.status] ?? 3;
+                    const rb = rank[b.status] ?? 3;
+                    if (ra !== rb) return ra - rb;
+                    // Within status: higher |confidence| first (not alphabetical)
+                    const ca = Math.abs(Number(a.confidence ?? a.weighted ?? 0));
+                    const cb = Math.abs(Number(b.confidence ?? b.weighted ?? 0));
+                    if (cb !== ca) return cb - ca;
+                    return String(a.pair).localeCompare(String(b.pair));
+                });
+                // Full active basket — do not truncate to A-list head
+                const body = rows.map(r => {
+                    const flags = [];
+                    if (heldPairs.has(r.pair)) {
+                        flags.push('<span class="text-slate-500">·held</span>');
+                    }
+                    if (r.buy_blocked) {
+                        const hrs = (r.block_hours_remaining != null)
+                            ? ` ~${Number(r.block_hours_remaining).toFixed(1)}h left`
+                            : '';
+                        const exp = r.block_expires_at
+                            ? ` until ${String(r.block_expires_at).replace('T', ' ').slice(0, 16)} UTC`
+                            : '';
+                        const why = r.block_reason || 'rebuy_cooldown';
+                        flags.push(`<span class="text-amber-400" title="Auto-BUY blocked (${why})${exp}${hrs}. Signal may still show BUY.">·blocked</span>`);
+                    }
+                    const flagHtml = flags.length ? (' ' + flags.join(' ')) : '';
+                    const rsiC = r.rsi_color ? ('text-' + r.rsi_color) : 'text-slate-400';
+                    const sC = r.sentiment_color ? ('text-' + r.sentiment_color) : 'text-slate-400';
+                    const stC = r.status_color ? ('text-' + r.status_color) : 'text-slate-300';
+                    const stW = (r.status === 'BUY' || r.status === 'SELL') ? 'font-semibold' : 'font-medium';
+                    let tip = (r.reason || '') + (r.confidence != null ? ` · conf ${r.confidence}` : '');
+                    if (r.buy_blocked) {
+                        tip += ` · BLOCKED auto-BUY (${r.block_reason || 'cooldown'}`
+                            + (r.block_hours_remaining != null ? `, ${Number(r.block_hours_remaining).toFixed(1)}h left` : '')
+                            + ')';
+                    }
+                    return `<tr class="border-b border-slate-800/80 last:border-0">
+                        <td class="py-2 pr-2 font-medium whitespace-nowrap">${r.pair}${flagHtml}</td>
+                        <td class="py-2 px-2 text-right tabular-nums ${rsiC}" title="${r.rsi_label || ''}">${Number(r.rsi).toFixed(1)}</td>
+                        <td class="py-2 px-2 text-right tabular-nums ${sC}" title="${r.sentiment_label || ''}">${Number(r.sentiment).toFixed(2)}</td>
+                        <td class="py-2 pl-2 text-right ${stC} ${stW}" title="${tip}">${r.status || 'HOLD'}</td>
+                    </tr>`;
+                }).join('');
+                sigContainer.innerHTML = `<table class="w-full text-xs">
+                    <thead><tr class="text-slate-500 text-left border-b border-slate-800">
+                        <th class="py-1.5 font-medium">Pair</th>
+                        <th class="py-1.5 px-2 font-medium text-right">RSI</th>
+                        <th class="py-1.5 px-2 font-medium text-right">Sent.</th>
+                        <th class="py-1.5 pl-2 font-medium text-right">Status</th>
+                    </tr></thead>
+                    <tbody>${body}</tbody>
+                </table>`;
+            } else if (sigContainer) {
+                sigContainer.innerHTML = '<div class="text-slate-500 text-sm">No signal data available</div>';
             }
 
 
-            // Trades - show pair, side, qty, short date + time
+            // Trades - newest first (pair, side, qty, short date + time)
             const tradesContainer = document.getElementById('trades-list');
             if (tradesContainer && tradesData && tradesData.trades && tradesData.trades.length) {
-                tradesContainer.innerHTML = (tradesData.trades || []).slice(0, 5).map(t => {
+                const sortedTrades = (tradesData.trades || []).slice().sort((a, b) => {
+                    const ta = Date.parse(a.timestamp || a.ts || '') || 0;
+                    const tb = Date.parse(b.timestamp || b.ts || '') || 0;
+                    return tb - ta; // descending: most recent first
+                });
+                tradesContainer.innerHTML = sortedTrades.slice(0, 5).map(t => {
                     let timeStr = '';
                     if (t.timestamp) {
                         try {
@@ -350,10 +795,24 @@
                     const qty = t.qty ? parseFloat(t.qty).toFixed(4) : '';
                     const side = (t.side || '').toUpperCase();
                     const sideClass = side === 'BUY' ? 'text-emerald-400' : 'text-red-400';
+                    const reason = (t.reason || t.exit_reason || '')
+                        .replace('stop_loss_exchange', 'SL')
+                        .replace('rotation_exchange', 'ROT')
+                        .replace('rebalance_buy', 'rebal')
+                        .replace('preserve_arm_micro', 'preserve')
+                        .replace('preserve_arm', 'preserve')
+                        .replace('preserve_disarm', 'disarm')
+                        .replace('dust_sweep_after_sl', 'dust')
+                        .replace('dust_sweep_orphan', 'dust') || '';
+                    const reasonClass = (reason === 'preserve' || reason === 'disarm')
+                        ? 'text-cyan-400/90'
+                        : 'text-amber-400/90';
+                    const reasonBadge = reason ? `<span class="text-[10px] ${reasonClass}">${reason}</span>` : '';
                     return `
-                    <div class="flex justify-between items-center text-xs bg-slate-800/30 p-2 rounded">
+                    <div class="flex justify-between items-center text-xs bg-slate-800/30 p-2 rounded gap-2">
                         <span class="font-medium">${t.pair || '??'}</span>
                         <span class="${sideClass}">${side}</span>
+                        ${reasonBadge}
                         <span class="text-slate-400 tabular-nums">${qty}</span>
                         <span class="text-slate-500">${timeStr}</span>
                     </div>`;
@@ -430,7 +889,18 @@
                 const lastEl = document.getElementById('last-recovery');
                 if (modeEl) modeEl.textContent = data.mode || 'normal';
                 if (coolEl) coolEl.textContent = (data.cooldown_pairs || []).join(', ') || 'None';
-                if (lastEl) lastEl.textContent = data.last_update ? data.last_update.slice(11,16) : '-';
+                if (lastEl) {
+                    if (data.last_update) {
+                        try {
+                            const d = new Date(data.last_update);
+                            lastEl.textContent = d.toLocaleString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                        } catch (e) {
+                            lastEl.textContent = String(data.last_update).slice(0, 19);
+                        }
+                    } else {
+                        lastEl.textContent = '-';
+                    }
+                }
             } catch(e) {
                 // silent pure consumer
             }

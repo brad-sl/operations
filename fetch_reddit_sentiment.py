@@ -316,7 +316,21 @@ def main():
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s: %(message)s'
     )
-    
+
+    # Hard kill-switch after Apify ~$70/mo burn (2026-07). Default OFF.
+    if os.environ.get("SENTIMENT_REDDIT_APIFY_ENABLED", "0").strip().lower() not in (
+        "1",
+        "true",
+        "yes",
+        "on",
+    ):
+        logger.warning(
+            "Apify Reddit DISABLED (SENTIMENT_REDDIT_APIFY_ENABLED!=1). "
+            "No actor runs. Free shadow + X only."
+        )
+        print(json.dumps({"skipped": True, "reason": "SENTIMENT_REDDIT_APIFY_ENABLED=0"}, indent=2))
+        return
+
     logger.info("🚀 Starting Reddit sentiment fetch (Apify)...")
     
     fetcher = RedditSentimentFetcher()

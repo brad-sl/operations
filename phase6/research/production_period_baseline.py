@@ -7,6 +7,7 @@ same calendar overlap (not the full pack window if production started later).
 from __future__ import annotations
 
 import json
+import sqlite3
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
@@ -14,6 +15,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from phase6.core.paths import PROJECT_ROOT, PHASE6_LIVE_STATE, REBALANCE_HISTORY, TRADING_CONFIG_PHASE6
 
 TRADES_JSONL = PROJECT_ROOT / "trades" / "phase6_trades.jsonl"
+PHASE6_DB = PROJECT_ROOT / "data" / "phase6.db"
+CAPITAL_EVENTS_JSONL = PROJECT_ROOT / "data/state/capital_events_runner.jsonl"
 
 IGNORE_SIGNAL_SOURCES = {"smoke_test", "test"}
 IGNORE_PAIRS = {"TEST-USD"}
@@ -128,6 +131,90 @@ def configured_initial_capital() -> float:
     return 1000.0
 
 
+def _sum_runner_external_flows_since(start: date) -> float:
+    """Sum deposit/withdrawal flow_usd from runner capital events (fallback if DB sparse)."""
+    if not CAPITAL_EVENTS_JSONL.exists():
+        return 0.0
+    net = 0.0
+    for line in CAPITAL_EVENTS_JSONL.read_text().splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            ev = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        ts = _parse_ts(str(ev.get("ts", "")))
+        if not ts or ts.date() < start:
+            continue
+        et = str(ev.get("event_type", "")).lower()
+        if et in ("deposit", "withdrawal"):
+            net += float(ev.get("flow_usd") or ev.get("amount_usd") or 0)
+    return round(net, 2)
+
+
+def _deposit_adjusted_go_live_return(
+    prod_start: date,
+    end_equity: float,
+) -> Dict[str, Any]:
+    """
+    Return % from go-live NAV through today, excluding external cash deposits/withdrawals.
+    """
+    from phase6.core.dashboard_serve_helpers import _nearest_ts, _total_usd_at_ts
+    from phase6.core.portfolio_external_flows import (
+        adjusted_period_return_pct,
+        net_external_flow_between,
+    )
+
+    start_total = configured_initial_capital()
+    start_ts: Optional[str] = None
+    net_flow = 0.0
+    end_ts: Optional[str] = None
+
+    if PHASE6_DB.exists() and end_equity > 0:
+        try:
+            conn = sqlite3.connect(f"file:{PHASE6_DB}?mode=ro", uri=True, timeout=3.0)
+            row = conn.execute("SELECT MIN(ts) FROM account_balances").fetchone()
+            min_ts = row[0] if row else None
+            if min_ts:
+                st = _total_usd_at_ts(conn, min_ts)
+                if st > 0:
+                    start_ts = min_ts
+                    start_total = st
+            if start_ts is None:
+                cutoff = datetime(prod_start.year, prod_start.month, prod_start.day, tzinfo=timezone.utc)
+                start_ts = _nearest_ts(conn, cutoff)
+                if start_ts:
+                    st = _total_usd_at_ts(conn, start_ts)
+                    if st > 0:
+                        start_total = st
+            row = conn.execute("SELECT MAX(ts) FROM account_balances").fetchone()
+            end_ts = row[0] if row and row[0] else None
+            if start_ts and end_ts:
+                net_flow = net_external_flow_between(conn, start_ts, end_ts, _total_usd_at_ts)
+            conn.close()
+        except Exception:
+            pass
+
+    unadjusted = (
+        round((end_equity - start_total) / start_total * 100.0, 2)
+        if start_total > 0 and end_equity > 0
+        else None
+    )
+    adjusted = (
+        adjusted_period_return_pct(end_equity, start_total, net_flow)
+        if start_total > 0 and end_equity > 0
+        else None
+    )
+    return {
+        "start_equity_usd": round(start_total, 2),
+        "net_external_flows_usd": round(net_flow, 2),
+        "total_return_pct_unadjusted": unadjusted,
+        "total_return_pct": adjusted,
+        "deposit_adjusted": True,
+    }
+
+
 def compute_production_metrics(
     pack_start: str,
     pack_end: str,
@@ -188,7 +275,20 @@ def compute_production_metrics(
             pass
 
     return_pct: Optional[float] = None
-    if end_equity and end_equity > 0 and initial > 0 and o_end >= date.today():
+    deposit_meta: Dict[str, Any] = {}
+    if end_equity and end_equity > 0 and o_end >= date.today():
+        deposit_meta = _deposit_adjusted_go_live_return(o_start, end_equity)
+        return_pct = deposit_meta.get("total_return_pct")
+        result["notes"].append(
+            "return_pct is deposit-adjusted: (end − start − net external flows) / start; "
+            "start NAV from DB snapshot at go-live when available."
+        )
+        if deposit_meta.get("total_return_pct_unadjusted") is not None:
+            result["notes"].append(
+                f"Unadjusted NAV change since start: {deposit_meta['total_return_pct_unadjusted']}% "
+                f"(inflates when you add cash)."
+            )
+    elif end_equity and end_equity > 0 and initial > 0 and o_end >= date.today():
         return_pct = round((end_equity - initial) / initial * 100.0, 2)
         result["notes"].append(
             "return_pct uses configured initial capital vs current total_usd (mark-to-market); "
@@ -211,6 +311,7 @@ def compute_production_metrics(
         "end_equity_usd": round(end_equity, 2) if end_equity else None,
         "sharpe_ratio": None,
         "max_drawdown_pct": None,
+        **deposit_meta,
     }
     return result
 

@@ -55,7 +55,10 @@ journalctl --user -u crypto-dashboard.service -f
 
 ## Dashboard URL
 
+**Canonical Phase 6 dashboard:** http://localhost:8502 (live mode, `serve_dashboard.py`)
+
+Do **not** use port 8501 unless you have disabled the legacy system unit `crypto-dashboard.service` (OpenClaw Phase4d copy under `~/.openclaw/workspace/operations/crypto-bot`).
+
 Once running:
-- **Local:** http://localhost:8501
-- **Network:** http://192.168.0.91:8501
-- **API:** http://192.168.0.91:8501/api/trades (JSON)
+- **Local:** http://localhost:8502
+- **API balances:** http://localhost:8502/api/balances

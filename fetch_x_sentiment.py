@@ -59,6 +59,14 @@ def load_bearer_token():
         return None
     return token if token else None
 
+class XAPIError(RuntimeError):
+    """Hard X API failure (auth, spend cap, rate limit, transport). Do not clobber cache with zeros."""
+
+    def __init__(self, status_code: Optional[int], message: str):
+        self.status_code = status_code
+        super().__init__(message)
+
+
 def fetch_x_posts_for_sentiment_analysis(
     bearer_token: str,
     keywords: List[str],
@@ -83,8 +91,11 @@ def fetch_x_posts_for_sentiment_analysis(
     try:
         resp = requests.get(url, headers=headers, params=params, timeout=15)
         if resp.status_code != 200:
-            print(f"⚠️ X API {resp.status_code}")
-            return []
+            # 403 spend-cap / 429 rate-limit / 401 auth: empty list was treated as
+            # "no posts" and wrote Neutral(0.00) over last-good scores. Fail hard.
+            body = (resp.text or "")[:300]
+            print(f"⚠️ X API {resp.status_code}: {body}")
+            raise XAPIError(resp.status_code, f"X API HTTP {resp.status_code}: {body}")
         data = resp.json()
         tweets = data.get("data", [])
         includes = data.get("includes", {})
@@ -96,16 +107,20 @@ def fetch_x_posts_for_sentiment_analysis(
                 "public_metrics": t.get("public_metrics", {})
             })
         return processed
+    except XAPIError:
+        raise
     except Exception as e:
         print(f"⚠️ X API error: {e}")
-        return []
+        raise XAPIError(None, f"X API transport/error: {e}") from e
 
 def distribute_posts_to_pairs(posts: List[Dict], keywords: Dict[str, str]) -> Dict[str, List[Dict]]:
     pair_posts = {pair: [] for pair in keywords}
     for post in posts:
-        text = post.get("text", "").lower()
+        text = post.get("text", "")
+        tl = text.lower()
         for pair, kw in keywords.items():
-            if kw.lower() in text:
+            k = kw.lower().lstrip("$")
+            if f"${k}" in tl or f" {k} " in f" {tl} " or tl.startswith(f"{k} "):
                 pair_posts[pair].append(post)
     return pair_posts
 
@@ -186,7 +201,7 @@ def main():
             pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD", "MATIC-USD"]
 
     # The defined method: pull from central loader
-    from phase6.core.sentiment_keywords import get_x_keyword
+    from phase6.core.sentiment_keywords import get_x_keyword, get_x_supplemental_queries
     kw_dict = {p: get_x_keyword(p) for p in pairs}
 
     # Retain KEYWORD_MAP for any local code that still references it
@@ -194,12 +209,8 @@ def main():
 
     bearer = load_bearer_token()
     if not bearer:
-        print("❌ No X_API_BEARER")
-        ts = datetime.utcnow().isoformat()
-        cache = {p: {"sentiment": 0.0, "timestamp": ts, "post_count": 0, "confidence": 0.0} for p in pairs}
-        CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        json.dump(cache, open(CACHE_FILE, "w"), indent=2)
-        return
+        print("❌ No X_API_BEARER — leaving existing X cache untouched")
+        raise SystemExit(2)
 
     # === STALENESS GUARD + SMARTER BATCHING (cost control & sustainability) ===
     STALE_THRESHOLD_MINUTES = 25
@@ -230,48 +241,80 @@ def main():
         stale_pairs = pairs[:]
 
     if not stale_pairs:
-        print(f"✅ X sentiment cache fresh for all {len(pairs)} pairs (<{STALE_THRESHOLD_MINUTES} min old). Skipping expensive API calls (cost guard).")
-        return
+        print(f"✅ X sentiment cache fresh for all {len(pairs)} pairs (<{STALE_THRESHOLD_MINUTES} min old).")
+        existing_cache = {}
+        if CACHE_FILE.exists():
+            try:
+                existing_cache = json.load(open(CACHE_FILE))
+            except Exception:
+                existing_cache = {}
+        zero_post = [
+            p
+            for p in pairs
+            if int((existing_cache.get(p) or {}).get("post_count", 0) or 0) == 0
+        ]
+        if not zero_post:
+            print("   No zero-post pairs; skipping API (cost guard).")
+            return
+        print(f"   Supplemental fetch for {len(zero_post)} zero-post pairs: {zero_post}")
+        stale_pairs = zero_post
 
     print(f"🔍 Fetching X for dynamic basket of {len(pairs)} pairs (stale needing refresh: {len(stale_pairs)})...")
 
     stale_kw = {p: kw_dict[p] for p in stale_pairs}
 
-    # Smarter batching: larger batches to minimize number of /search/recent calls
-    if len(stale_pairs) > 4:
-        target_batches = max(1, min(3, (len(stale_pairs) + 5) // 6))
-        batch_size = max(5, (len(stale_pairs) + target_batches - 1) // target_batches)
-        batch_size = min(batch_size, 8)
-        print(f"   Smarter batched mode (batch_size={batch_size}, target ~{target_batches} calls)")
-        pair_posts = fetch_batched(stale_pairs, stale_kw, bearer, batch_size=batch_size, max_res=30)
-    else:
-        posts = fetch_x_posts_for_sentiment_analysis(bearer, list(stale_kw.values()), max_results=30)
-        pair_posts = distribute_posts_to_pairs(posts, stale_kw)
+    try:
+        # Smarter batching: larger batches to minimize number of /search/recent calls
+        if len(stale_pairs) > 4:
+            target_batches = max(1, min(3, (len(stale_pairs) + 5) // 6))
+            batch_size = max(5, (len(stale_pairs) + target_batches - 1) // target_batches)
+            batch_size = min(batch_size, 8)
+            print(f"   Smarter batched mode (batch_size={batch_size}, target ~{target_batches} calls)")
+            pair_posts = fetch_batched(stale_pairs, stale_kw, bearer, batch_size=batch_size, max_res=30)
+        else:
+            posts = fetch_x_posts_for_sentiment_analysis(bearer, list(stale_kw.values()), max_results=30)
+            pair_posts = distribute_posts_to_pairs(posts, stale_kw)
 
+        details: Dict[str, Dict[str, Any]] = {}
+        for p in stale_pairs:
+            res = calculate_sentiment(pair_posts.get(p, []))
+            details[p] = res
+            print(f"  {p}: {res['sentiment']:+.4f} (posts={res['post_count']}, conf={res['confidence']})")
 
-    if len(pairs) > 5:
-        print("   Batched mode enabled (better post counts per pair for significance)")
-        pair_posts = fetch_batched(pairs, kw_dict, bearer, batch_size=6)
-    else:
-        posts = fetch_x_posts_for_sentiment_analysis(bearer, list(kw_dict.values()))
-        pair_posts = distribute_posts_to_pairs(posts, kw_dict)
-
-    details = {}
-    for p in pairs:
-        res = calculate_sentiment(pair_posts.get(p, []))
-        details[p] = res
-        print(f"  {p}: {res['sentiment']:+.4f} (posts={res['post_count']}, conf={res['confidence']})")
+        # Per-pair supplemental when batch missed (low-volume tickers)
+        for p in list(stale_pairs):
+            if details.get(p, {}).get("post_count", 0) > 0:
+                continue
+            print(f"  ↳ supplemental X search for {p}")
+            sup_kw = get_x_supplemental_queries(p)
+            posts = fetch_x_posts_for_sentiment_analysis(bearer, sup_kw, max_results=25)
+            sup_dist = distribute_posts_to_pairs(posts, {p: get_x_keyword(p)})
+            res = calculate_sentiment(sup_dist.get(p, []))
+            details[p] = res
+            print(f"    {p}: {res['sentiment']:+.4f} (posts={res['post_count']}, conf={res['confidence']})")
+    except XAPIError as e:
+        # Leave last-good cache untouched; non-zero exit so refresh_sentiment skips merge-from-X zeros.
+        print(f"❌ X API hard failure — cache NOT overwritten: {e}")
+        raise SystemExit(2) from e
 
     ts = datetime.utcnow().isoformat()
-    cache = {}
+    cache: Dict[str, Any] = {}
+    if CACHE_FILE.exists():
+        try:
+            cache = json.load(open(CACHE_FILE))
+        except Exception:
+            cache = {}
     for p in pairs:
-        d = details[p]
-        cache[p] = {
-            "sentiment": d["sentiment"],
-            "timestamp": ts,
-            "post_count": d["post_count"],
-            "confidence": d["confidence"]
-        }
+        if p in details:
+            d = details[p]
+            cache[p] = {
+                "sentiment": d["sentiment"],
+                "timestamp": ts,
+                "post_count": d["post_count"],
+                "confidence": d["confidence"],
+            }
+        elif p not in cache:
+            cache[p] = {"sentiment": 0.0, "timestamp": ts, "post_count": 0, "confidence": 0.0}
     CACHE_FILE.parent.mkdir(parents=True, exist_ok=True)
     with open(CACHE_FILE, "w") as f:
         json.dump(cache, f, indent=2)

@@ -9,6 +9,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from phase6.research.live_param_audit_gate import evaluate_live_param_confidence
+
 
 MAX_DD_SLACK_PP = 5.0
 MIN_PRIMARY_DELTA_SHARPE = 0.0  # must strictly beat baseline on primary when sharpe
@@ -38,7 +40,6 @@ def _metric(row: dict, key: str) -> Optional[float]:
     except (TypeError, ValueError):
         return None
 
-
 def evaluate_promotion_gates(leaderboard: Dict[str, Any]) -> GateResult:
     """
     Gates for ingesting an optimization winner as a shadow-trial proposal.
@@ -59,6 +60,12 @@ def evaluate_promotion_gates(leaderboard: Dict[str, Any]) -> GateResult:
     baseline = _row_by_id(scenarios, baseline_id)
     result.winner_id = winner_id
     result.baseline_id = baseline_id
+
+    live = evaluate_live_param_confidence(leaderboard.get("live_param_audit"))
+    if not live.passed:
+        result.failures.extend(live.failures)
+    elif live.warnings:
+        result.warnings.extend(live.warnings)
 
     if engine_mode != "arch4":
         result.failures.append(f"engine_mode={engine_mode} (Path B arch4 required for promotion proposals)")

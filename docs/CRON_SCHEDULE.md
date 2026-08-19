@@ -1,7 +1,11 @@
 # Phase 6 Cron Schedule
 
-**Last Updated:** 2026-06-28  
-**Purpose:** Clean, maintainable, dependency-aware scheduling for the crypto-orchestrator after migration from continuous runner.
+> **LEGACY cadence (2026-06-28).** Live SSOT: **`docs/HERMES_CRON_SSOT.md`**.  
+> Linux user crontab is **empty of jobs** (2026-08-13). Sentiment is **08:40 free / 08:50 X** (not :04/:34).  
+> Do not re-add jobs to `crontab -e`.
+
+**Last Updated:** 2026-06-28 (banner 2026-08-13)  
+**Purpose:** Historical schedule notes after migration from continuous runner.
 
 ## Philosophy
 - Decompose responsibilities (no more monolithic 30-minute loop).

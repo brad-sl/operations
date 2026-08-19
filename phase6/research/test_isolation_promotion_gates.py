@@ -39,6 +39,12 @@ def test_positive_sharpe_passes_gates() -> None:
         "baseline_scenario_id": "baseline_7d",
         "ranking": ["rebalance_7d", "baseline_7d"],
         "production": {"coverage": "none"},
+        "live_param_audit": {
+            "fail_count": 0,
+            "confidence_score": 0.95,
+            "verified_fills": 50,
+            "ok": True,
+        },
         "scenarios": [
             {"id": "rebalance_7d", "metrics": {"sharpe_ratio": 0.5, "max_drawdown_pct": 5.0}},
             {"id": "baseline_7d", "metrics": {"sharpe_ratio": 0.2, "max_drawdown_pct": 12.0}},

@@ -1,0 +1,82 @@
+{
+  "global_settings": {
+    "total_capital": 1000,
+    "pairs": [
+      "BTC-USD",
+      "ETH-USD",
+      "SOL-USD",
+      "XRP-USD",
+      "DOGE-USD",
+      "ADA-USD",
+      "AVAX-USD",
+      "LINK-USD",
+      "UNI-USD",
+      "ARB-USD",
+      "OP-USD"
+    ],
+    "cycle_interval_seconds": 1800,
+    "rebalance_cap_usd": 150.0,
+    "max_deployable_usd": 1000,
+    "use_new_allocator": true,
+    "rebalance_style": "permissive_deploy",
+    "trade_buffer_hours": 24,
+    "signal_freshness_enforced": true,
+    "mid_cycle_allocator_enabled": false,
+    "use_platform_executor": true,
+    "capital_event_min_flow_usd": 50.0,
+    "capital_event_force_rebalance": true,
+    "capital_event_deposit_deploy_cap_usd": 0.0
+  },
+  "risk_management": {
+    "max_daily_loss_pct": 0.02,
+    "var_threshold": 0.015,
+    "stop_loss_pct": 0.03,
+    "take_profit_pct": null,
+    "min_reserve_usd": 50.0,
+    "deploy_pct": 0.72,
+    "adaptive_sl": true,
+    "sl_base_pct": 0.03,
+    "sl_min_pct": 0.015,
+    "sl_max_pct": 0.05
+  },
+  "phase_6_specific": {
+    "expansion_rules": {
+      "max_pairs": 12,
+      "correlation_threshold": 0.3,
+      "reserve_min_pct": 0.2
+    },
+    "opportunity_pool": [
+      "BTC-USD",
+      "ETH-USD",
+      "SOL-USD",
+      "XRP-USD",
+      "DOGE-USD",
+      "ADA-USD",
+      "AVAX-USD",
+      "LINK-USD",
+      "UNI-USD",
+      "ARB-USD",
+      "OP-USD",
+      "MATIC-USD"
+    ]
+  },
+  "withdrawal_reserve": {
+    "min_reserve_usd": 50.0,
+    "max_deployable_usd": 800.0,
+    "alert_pct": 1.1,
+    "reserve_breach_action": "flag_and_adjust"
+  },
+  "scheduler": {
+    "daily_rebalance_times": [
+      "09:00",
+      "21:00"
+    ]
+  },
+  "_live_deployment": {
+    "enabled": true,
+    "paper_test_passed": "2026-06-15",
+    "strategy": "ARCH-4 new stack: evaluate_universe -> RotationStrategy allocator -> TradePlan -> _execute_trade_plan -> OrderExecutor (Coinbase place_market_buy/sell in live)",
+    "mode_default": "live requires --confirm-live",
+    "dashboard_feed": "full new chain: proposals + allocator decisions drive real orders when --mode=live"
+  }
+}

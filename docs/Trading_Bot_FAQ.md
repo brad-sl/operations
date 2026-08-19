@@ -1,43 +1,13 @@
-# Trading Bot FAQ
+# FAQ index — audience split
 
-This document captures operational knowledge, gotchas, and recommended patterns for the Phase 6 trading system.
+| Audience | File | Who |
+|----------|------|-----|
+| **Internal** | [`faq/Internal_Trading_Platform_FAQ.md`](faq/Internal_Trading_Platform_FAQ.md) | Trading platform staff, ops, engineers |
+| **External** | [`faq/External_Client_FAQ.md`](faq/External_Client_FAQ.md) | Onboarded trading clients / product surface |
 
-## Stop-Loss Orders
+**Rule:** External = product literacy and expectations only. No pipeline guts, vendor names, cron tables, API bills, or “how the sausage is made.”  
+Internal = full operational truth for people who run the platform.
 
-### Can you have multiple stop-loss orders on the same trading pair?
+Legacy path: this file used to hold mixed content; canonical homes are the two files above.
 
-**Yes**, Coinbase Advanced Trade allows multiple stop orders on the same pair.
-
-However, this is generally discouraged for the following reasons:
-
-- Stops are independent — if one triggers, others remain active.
-- It can lead to overlapping or conflicting risk management.
-- The exchange may reject additional stop orders with "INSUFFICIENT_FUND" if it cannot validate sufficient balance for all open protective orders.
-- Tracking and auditing risk becomes significantly harder.
-
-### Recommended Pattern: "One Active Stop Per Position"
-
-For rebalancing systems, the cleanest and most reliable approach is:
-
-**Maintain exactly one active stop-loss order per open position.**
-
-**Rebalance Flow:**
-1. **Detect** any existing protective orders for the pairs being rebalanced.
-2. **Suspend** (cancel) existing stops before executing trades.
-3. Perform the buy/sell rebalance.
-4. **Re-attach a single updated stop** on the *new total position size*.
-
-This pattern:
-- Avoids duplicate/redundant stops
-- Prevents insufficient funds errors during re-attach
-- Keeps risk management simple and auditable
-- Works well with the CR-03 atomic suspend → rebalance → reattach coordinator
-
-**Future enhancements** (not currently implemented):
-- Laddered stops at multiple risk levels
-- Trailing stops
-- Reduce-only stops when adding to existing positions
-
----
-
-*Last updated: 2026-06-05*
+*Last updated: 2026-08-16 — Internal/External split; liquidation redeploy FAQ*

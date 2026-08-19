@@ -215,9 +215,16 @@ def main():
         print("ALL PAIRS HAVE FULL REAL COVERAGE. Test PASS.")
         sys.exit(0)
     else:
-        print(f"COVERAGE STATUS: {full_coverage_count}/{len(basket)} pairs have BOTH; {len(basket) - full_coverage_count} partial (see details). Real data only.")
-        # Non-zero exit only if we want strict; here we always succeed the test as audit
-        sys.exit(0)
+        from phase6.core.basket_signal_coverage import assess_pair_signal_coverage
+
+        canon = assess_pair_signal_coverage(basket=basket)
+        print(f"Legacy audit: {full_coverage_count}/{len(basket)} strict non-trivial sent.")
+        print(f"Canonical coverage: {canon['full_count']}/{canon['basket_size']} FULL (RSI+observed sentiment).")
+        if canon.get("complete"):
+            print("Canonical PASS: 11/11.")
+            sys.exit(0)
+        print(f"COVERAGE STATUS: canonical {canon['full_count']}/{len(basket)} — missing {canon.get('missing_sentiment_fetch')}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

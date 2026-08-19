@@ -1,0 +1,31 @@
+# W5b — Billing dunning — attempt 2 (e.g. +3 days still past_due)
+# Trigger: still past_due after W5a
+# Channel: Email + SMS
+# Exit if: payment recovered OR canceled
+
+SUBJECT: Still paused — update payment for ARCH Automation
+
+PREHEADER: Second notice: trading remains paused until billing is current.
+
+---
+
+Hi {{first_name}},
+
+This is a second notice that your ARCH Automation payment is still unresolved. Automated trading remains **paused**.
+
+Update payment: {{payment_update_link}}
+
+If we cannot collect, your subscription may cancel per our billing terms and platform access will end. After any cancel, revoke the app at Coinbase → Connected apps.
+
+Prefer to stop? {{cancel_link}} — no hard feelings.
+
+Support: {{support_email}}
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.
+
+# SMS
+ARCH: 2nd notice — payment still failed; trading paused. {{payment_update_link}}

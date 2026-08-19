@@ -4,6 +4,8 @@
 # Runs:
 #   1) Repo health check (branch, remote, dirty/unpushed, hermes mirror age)
 #   2) Hermes state mirror sync (non-secret ~/.hermes → hermes/ + commit; push if origin)
+#   3) Safe allowlisted code/docs commit + push (no data/state, logs, trades, secrets)
+#   4) Optional hermes-state baseline verifier (non-fatal)
 #
 # Intended: Hermes cron no_agent daily. Silent when healthy; stderr on hard failures.
 #
@@ -74,13 +76,27 @@ else
   SYNC_RC=1
 fi
 
-# --- 3) Baseline verifier (non-fatal) ---
+# --- 3) Safe allowlisted code backup ---
+CODE_ARGS=()
+if [[ "$DRY" == true ]]; then CODE_ARGS+=(--dry); fi
+if [[ -x "${PROJECT_ROOT}/scripts/hermes/git/commit-safe-code.sh" ]]; then
+  bash "${PROJECT_ROOT}/scripts/hermes/git/commit-safe-code.sh" "${CODE_ARGS[@]}" || CODE_RC=$?
+  CODE_RC=${CODE_RC:-0}
+else
+  echo "ERROR: commit-safe-code.sh missing"
+  CODE_RC=1
+fi
+
+# --- 4) Baseline verifier (non-fatal) ---
 if [[ -f "${PROJECT_ROOT}/hermes-state/verify_baseline.py" ]]; then
   python3 "${PROJECT_ROOT}/hermes-state/verify_baseline.py" 2>&1 | tail -5 || true
 fi
 
 RC=0
 if [[ "${SYNC_RC:-0}" -ne 0 ]]; then
+  RC=1
+fi
+if [[ "${CODE_RC:-0}" -ne 0 ]]; then
   RC=1
 fi
 if [[ "${HEALTH_RC:-0}" -ne 0 ]]; then

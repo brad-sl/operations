@@ -40,4 +40,6 @@ Data Pull (price/RSI/sentiment) → Scorer (multi-factor) → Ranker + Proposal 
 See loops doc for full details.
 
 ## Future Work (added 2026-06-13)
-- POOL-CYCLING-001: Separate Pool Cycling script (see MASTER_TASK_TRACKING.md for details). Not implemented today per user direction.
+- POOL-CYCLING-001: Separate Pool Cycling script — **SHADOW implemented 2026-08-08**
+  (`phase6/core/pool_cycling.py`, `scripts/phase6/run_pool_cycling_shadow.py`).
+  Live `global_settings.pairs` apply remains OFF. See MASTER `POOL-CYCLING-001`.

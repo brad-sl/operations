@@ -53,7 +53,27 @@ def evaluate_drift() -> Dict[str, Any]:
     if baseline <= 0:
         baseline = current
 
-    live_return_pct = (current / baseline - 1.0) * 100.0 if baseline > 0 else 0.0
+    net_flow = 0.0
+    try:
+        activated = state.get("activated_at", "")
+        if activated:
+            t0 = datetime.fromisoformat(activated.replace("Z", "+00:00"))
+            if t0.tzinfo is None:
+                t0 = t0.replace(tzinfo=timezone.utc)
+            from phase6.research.production_period_baseline import _sum_runner_external_flows_since
+
+            net_flow = _sum_runner_external_flows_since(t0.date())
+    except Exception:
+        net_flow = 0.0
+
+    from phase6.core.portfolio_external_flows import adjusted_period_return_pct
+
+    live_return_pct = (
+        adjusted_period_return_pct(current, baseline, net_flow)
+        if baseline > 0
+        else 0.0
+    )
+    live_return_pct_unadjusted = (current / baseline - 1.0) * 100.0 if baseline > 0 else 0.0
     pred = state.get("predicted") or {}
     pred_return = float(pred.get("total_return_pct") or 0)
     pred_dd = float(pred.get("max_drawdown_pct") or 0)
@@ -81,6 +101,8 @@ def evaluate_drift() -> Dict[str, Any]:
         "baseline_equity_usd": baseline,
         "current_equity_usd": round(current, 2),
         "live_return_pct": round(live_return_pct, 3),
+        "live_return_pct_unadjusted": round(live_return_pct_unadjusted, 3),
+        "net_external_flows_since_activation_usd": round(net_flow, 2),
         "predicted_return_pct": pred_return,
         "live_drawdown_pct": round(live_dd_pct, 3),
         "predicted_max_drawdown_pct": pred_dd,

@@ -1,0 +1,42 @@
+{
+  "schema": "shadow_overlay_ready_v1",
+  "status": "ready_inactive",
+  "proposal_id": "BULL-DEFENSIVE-ROTATION-21D",
+  "scenario_id": "defensive_rotation_21d",
+  "source": "reentry_knob_stress_2026-07-30 + knob_map bull winner",
+  "do_not_activate_until": {
+    "regime": "bull",
+    "btc_30d_return_pct_min": 15.0,
+    "live_param_audit_fail_count_max": 0,
+    "live_param_audit_confidence_min": 0.85,
+    "note": "Activate only via scripts/phase6/activate_bull_defensive_rotation_shadow.py after gates. Never while transition/park."
+  },
+  "predicted": {
+    "path_b_window": "bull 2025-10-01..2025-12-31",
+    "total_return_pct": 5.5,
+    "max_drawdown_pct": 0.0,
+    "sharpe_ratio": 22.965,
+    "note": "Path B only; not live P&L. Loses on flat/live_overlap — bull-gated on purpose."
+  },
+  "knobs": {
+    "use_rotation": true,
+    "rebal_freq": 21,
+    "initial_capital": 1000,
+    "min_move_usd": 25.0
+  },
+  "live_overlay": {
+    "global_settings.rebalance_cap_usd": 100.0,
+    "_scenario_meta.rebalance_frequency_days": 21,
+    "_scenario_meta.allocator_strategy": "rotation",
+    "_scenario_meta.note": "Live scheduler daily times != day stride; see BACKTEST_LIVE_GAP_MATRIX.md"
+  },
+  "gap_flags": [
+    "REBALANCE_CLOCK_vs_DAY_STRIDE",
+    "PATH_B_NO_RSI_SENTIMENT",
+    "BULL_ONLY_ACTIVATE"
+  ],
+  "not_this_proposal": [
+    "bear_window_rotation_14d — loses live_overlap (~-4%) and flat; do not shadow for re-entry"
+  ],
+  "prepared_at": "2026-07-30T20:50:00+00:00"
+}

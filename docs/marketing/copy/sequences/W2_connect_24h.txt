@@ -1,0 +1,34 @@
+# W2a — Connect reminder 24h
+# Trigger: paid AND coinbase_status != connected AND 24h after W1 / paid_at
+# Channel: Email + SMS (time-sensitive)
+# Exit if: tag coinbase_connected OR subscription canceled
+
+SUBJECT: Reminder: connect Coinbase to activate ARCH Automation
+
+PREHEADER: Your plan is active — automation can’t run until OAuth is complete.
+
+---
+
+Hi {{first_name}},
+
+Quick reminder: your **{{tier_name}}** subscription is active, but Coinbase isn’t connected yet.
+
+Without OAuth, ARCH Automation cannot place or manage trades on your account.
+
+**Connect now:** {{connect_link}}
+
+**What you’ll see**
+- Redirect to Coinbase to authorize ARCH Automation
+- View + trade scope only (no transfer/withdrawal)
+- Return to us for confirmation when complete
+
+Stuck? Reply to this email or contact {{support_email}} — we’ll walk you through it. If a tab closed mid-flow, use the same link again.
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only. | {{support_email}}
+
+# SMS
+ARCH: Connect Coinbase to activate automation: {{connect_link}} Help: {{support_email}}

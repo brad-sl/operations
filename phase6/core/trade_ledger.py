@@ -10,14 +10,25 @@ import json
 from datetime import datetime, date
 from pathlib import Path
 from typing import Dict, Any, Optional
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from .context import AccountContext
 
 
 class TradeLedger:
     """Handles persistent trade logging for Phase 6."""
 
-    def __init__(self, base_dir: Path = None):
+    def __init__(self, base_dir: Path = None, account_context: "AccountContext" = None):
+        self.account_context = account_context
+        self.account_id = getattr(account_context, "account_id", "default") if account_context else "default"
         self.base_dir = base_dir or Path(__file__).parent.parent.parent
-        self.trades_dir = self.base_dir / "trades"
+        # Multi-tenant: isolate trade files under trades/<account_id>/ when a
+        # non-default / non-legacy account is in context. Brad live (default or
+        # brad-primary) keeps the historic trades/ root so paths stay stable.
+        if self.account_id and self.account_id not in ("default", "brad-primary"):
+            self.trades_dir = self.base_dir / "trades" / self.account_id
+        else:
+            self.trades_dir = self.base_dir / "trades"
         self.trades_dir.mkdir(parents=True, exist_ok=True)
 
         # Main JSONL log (append-only)
@@ -44,15 +55,44 @@ class TradeLedger:
                 self.csv_path.write_text(header)
         return self.csv_path
 
-    def log_trade(self, trade: Dict[str, Any]) -> None:
+    def log_trade(self, trade: Dict[str, Any], exchange: Any = None) -> None:
         """
         Log a completed or attempted trade.
         Rich context (regime, influence_stack, x_sentiment etc.) is stored fully in JSONL for later analysis.
         CSV remains lightweight (basic fields + regime_bias column).
+
+        ENG-S3-03: when exchange + order_id present on live trades, refresh qty/entry from fill details.
         """
+        trade = dict(trade)
+        if exchange is not None and trade.get("order_id") and str(trade.get("mode", "")).lower() == "live":
+            oid = trade["order_id"]
+            if hasattr(exchange, "get_order_fill_details"):
+                try:
+                    fill = exchange.get_order_fill_details(oid) or {}
+                    fp = float(fill.get("average_filled_price") or 0)
+                    fs = float(fill.get("filled_size") or 0)
+                    if fp > 0:
+                        trade["entry_price"] = trade.get("entry_price") or fp
+                        if trade.get("side", "").upper() == "BUY":
+                            trade["entry_price"] = fp
+                    if fs > 0:
+                        trade["qty"] = fs
+                        trade["fill_verified"] = True
+                except Exception:
+                    trade["fill_verified"] = False
+
         # Add timestamp if missing
         if "timestamp" not in trade:
             trade["timestamp"] = datetime.utcnow().isoformat()
+
+        pair = trade.get("pair") or trade.get("product_id")
+        if pair and "indicators_at_trade" not in trade:
+            try:
+                from phase6.core.indicator_snapshot import indicators_for_trade_pair
+
+                trade["indicators_at_trade"] = indicators_for_trade_pair(str(pair))
+            except Exception:
+                pass
 
         # Write full record (with possible influence_stack, regime, per-signal details) to JSONL
         with open(self.jsonl_path, "a") as f:
@@ -91,6 +131,43 @@ class TradeLedger:
         with open(csv_path, "a") as f:
             f.write(line)
 
+    def log_execution_result(
+        self,
+        result: Dict[str, Any],
+        *,
+        mode: str,
+        exchange: Any = None,
+        signal_source: str = "phase6",
+        stop_loss_manager: Any = None,
+    ) -> None:
+        """Build a ledger row from an OrderExecutor / TradeExecutor result dict."""
+        if not result or not result.get("success"):
+            return
+        from phase6.core.ledger_sl_truth import enrich_buy_sl_truth
+
+        result = enrich_buy_sl_truth(result, stop_loss_manager)
+        side = str(result.get("side") or result.get("action") or "BUY").upper()
+        entry = result.get("price") or result.get("entry_price")
+        if side == "SELL" and result.get("exit_price"):
+            entry = result.get("exit_price")
+        trade_record = {
+            "pair": result.get("pair"),
+            "side": side,
+            "qty": result.get("size") or result.get("qty"),
+            "entry_price": entry,
+            "exit_price": result.get("exit_price"),
+            "pnl": result.get("pnl", 0.0),
+            "pnl_pct": result.get("pnl_pct", 0.0),
+            "order_id": result.get("order_id"),
+            "mode": mode,
+            "signal_source": signal_source,
+            "fill_verified": result.get("fill_verified"),
+            "sl_attached": result.get("sl_attached"),
+            "sl_truth_source": result.get("sl_truth_source"),
+        }
+        ex = exchange if str(mode).lower() == "live" and exchange is not None else None
+        self.log_trade(trade_record, exchange=ex)
+
     def log_decision_context(self, context: Dict[str, Any]) -> None:
         """
         Log rich decision context for measurement (tie-breaker / tilt analysis).
@@ -111,8 +188,10 @@ class TradeLedger:
         context["type"] = "decision_context"
         context["source"] = "allocator_or_runner"
 
-        # Append to the main trades JSONL (or a dedicated decisions log)
-        decisions_path = self.base_dir / "data/state/decision_context_log.jsonl"
+        # Append to dedicated decisions log (param audit / ANALYST-OPT)
+        from phase6.core.paths import DECISION_CONTEXT_LOG
+
+        decisions_path = DECISION_CONTEXT_LOG
         decisions_path.parent.mkdir(parents=True, exist_ok=True)
         with open(decisions_path, "a") as f:
             f.write(json.dumps(context) + "\n")
@@ -134,37 +213,11 @@ class TradeLedger:
 
     def log_influence_stack(self, snapshot: Dict[str, Any]) -> None:
         """Append a full influence snapshot (called from report + decisions)."""
-        with open(self.stack_log_path, "a") as f:
-            f.write(json.dumps(snapshot) + "\n")
-
-    def get_recent_trades(self, limit: int = 20) -> list:
-        """Return the most recent trades from the JSONL file."""
-        if not self.jsonl_path.exists():
-            return []
-
-        trades = []
-        with open(self.jsonl_path, "r") as f:
-            lines = f.readlines()[-limit:]
-            for line in lines:
-                try:
-                    trades.append(json.loads(line.strip()))
-                except json.JSONDecodeError:
-                    continue
-        return trades
-
-
-
-
-
-
-
-    def log_influence_stack(self, snapshot):
-        """Log full influence stack snapshot (X/Reddit/Polymarket) for 2-4 week impact analysis."""
         if "timestamp" not in snapshot:
-            from datetime import datetime
+            snapshot = dict(snapshot)
             snapshot["timestamp"] = datetime.utcnow().isoformat() + "Z"
         with open(self.stack_log_path, "a") as f:
-            f.write(__import__("json").dumps(snapshot) + "\n")
+            f.write(json.dumps(snapshot) + "\n")
 
     def get_influence_stack_log(self, limit=None):
         """Return snapshots for analysis."""
@@ -173,12 +226,47 @@ class TradeLedger:
         snaps = []
         with open(self.stack_log_path) as f:
             lines = f.readlines()
-            if limit: lines = lines[-limit:]
+            if limit:
+                lines = lines[-limit:]
             for line in lines:
                 try:
-                    snaps.append(__import__("json").loads(line.strip()))
-                except: pass
+                    snaps.append(json.loads(line.strip()))
+                except json.JSONDecodeError:
+                    pass
         return snaps
+
+    def get_recent_trades(self, limit: int = 20) -> list:
+        """
+        Return the most recent trades from the JSONL file, newest first.
+
+        Reads a tail window then sorts by timestamp descending so out-of-order
+        appends (backfills/reconcile) still surface the latest activity first.
+        """
+        if not self.jsonl_path.exists():
+            return []
+
+        # Over-read slightly so sort+limit still covers late backfills in the tail
+        read_n = max(int(limit or 20) * 5, 100) if limit else 500
+        trades = []
+        with open(self.jsonl_path, "r") as f:
+            lines = f.readlines()[-read_n:]
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    trades.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+
+        def _ts_key(t: dict) -> str:
+            return str(t.get("timestamp") or t.get("ts") or "")
+
+        trades.sort(key=_ts_key, reverse=True)
+        if limit is not None and limit > 0:
+            return trades[: int(limit)]
+        return trades
+
 
     def analyze_regime_impact(self, min_trades=10):
         """Post 2-4wk analysis: bucket by regime_bias, compute win rates, relevance proxy."""

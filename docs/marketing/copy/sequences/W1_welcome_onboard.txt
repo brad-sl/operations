@@ -1,0 +1,49 @@
+# W1 — Welcome / Onboarding (Email)
+# Trigger: subscription_status = active (SaaS payment success) OR tag "paid" added
+# Channel: Email (primary). Optional SMS only if phone present and transactional SMS enabled.
+# Delay: Immediate
+# Tags after send: paid; set connect_link_sent_at when connect email/link issued
+# Compliance: no perf claims; non-custodial; software framing; disclaimer footer
+
+SUBJECT: Welcome to ARCH Automation — connect Coinbase to go live
+
+PREHEADER: Your subscription is active. Next step: OAuth connect (funds stay on Coinbase).
+
+---
+
+Hi {{first_name}},
+
+Welcome to ARCH Automation. Your **{{tier_name}}** subscription is active — software access for rules-based portfolio automation on *your* Coinbase Advanced account.
+
+**What you bought**
+- Access to automated rebalancing and risk rules within your tier limits
+- Status digests and a member status view when live
+- Support via {{support_email}}
+
+**What you did *not* buy**
+- Not investment advice, a fund, or guaranteed returns
+- Not custody of your crypto (funds stay in your Coinbase account)
+
+**Next step (required): connect Coinbase**
+
+1. Open your secure connect link: {{connect_link}}
+2. Sign in to Coinbase and authorize ARCH via OAuth
+3. Scopes: view + trade only — we do not request transfer/withdrawal ability
+4. When connection succeeds, we’ll confirm and configure workers for your tier
+
+We never ask you to paste API keys into email, chat, or our CRM.
+
+**Risk reminder**
+Cryptocurrency trading involves substantial risk of loss. This software executes the parameters configured for your account; it does not guarantee profits or prevent losses. Only allocate capital you can afford to put at risk. Review activity regularly. You can revoke access anytime in Coinbase → Settings → Connected apps.
+
+**Need help?** Reply to this email or write {{support_email}}.
+
+— The ARCH Automation Team
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only. | Terms · Privacy · Risk Disclosures | {{support_email}}
+
+# SMS (optional, transactional — only if opted-in phone)
+# BODY (≤160 chars preferred):
+ARCH Automation: {{first_name}}, your plan is active. Connect Coinbase (OAuth): {{connect_link}} Support: {{support_email}}

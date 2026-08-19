@@ -1,0 +1,194 @@
+{
+  "meta": {
+    "product": "ARCH Automation",
+    "version": "1.0",
+    "date": "2026-07-30",
+    "kanban": "t_5e21287a",
+    "note": "Skeleton for GHL workflow builder — not an official GHL export format. Map steps manually. Do not enable against prod runner until OAuth/host ready.",
+    "copy_root": "docs/marketing/copy/sequences/"
+  },
+  "location_name": "ARCH Automation — Pilot",
+  "tags": [
+    "paid",
+    "pilot",
+    "coinbase_connected",
+    "runner_healthy",
+    "needs_attention",
+    "priority_support",
+    "trader_tier_starter",
+    "trader_tier_pro",
+    "trader_tier_elite",
+    "past_due",
+    "canceled"
+  ],
+  "pipelines": {
+    "trader_onboarding": [
+      "Invite / Waitlist",
+      "Paid — Awaiting Connect",
+      "Connecting",
+      "Live — Healthy",
+      "Needs Attention",
+      "Paused / Billing",
+      "Offboarded"
+    ],
+    "support_escalation": [
+      "New",
+      "Investigating",
+      "Waiting on trader",
+      "Resolved"
+    ]
+  },
+  "workflows": [
+    {
+      "id": "W1",
+      "name": "Onboarding — Paid Welcome",
+      "enabled_phase_a": true,
+      "trigger": {
+        "type": "saas_payment_success_or_tag",
+        "conditions": ["subscription_status=active", "tag:paid"]
+      },
+      "actions": [
+        {"type": "set_field", "field": "subscription_status", "value": "active"},
+        {"type": "add_tag", "tag": "paid"},
+        {"type": "set_pipeline_stage", "pipeline": "trader_onboarding", "stage": "Paid — Awaiting Connect"},
+        {"type": "send_email", "template_file": "sequences/W1_welcome_onboard.txt"},
+        {"type": "send_sms_optional", "template_file": "sequences/W1_welcome_onboard.txt#SMS"},
+        {"type": "set_field", "field": "connect_link_sent_at", "value": "{{now}}"}
+      ],
+      "goal_event": "email_delivered"
+    },
+    {
+      "id": "W2a",
+      "name": "Connect Reminder 24h",
+      "enabled_phase_a": true,
+      "trigger": {
+        "type": "time_delay",
+        "after": "W1",
+        "delay": "24h",
+        "unless": ["tag:coinbase_connected", "tag:canceled", "coinbase_status=connected"]
+      },
+      "actions": [
+        {"type": "send_email", "template_file": "sequences/W2_connect_24h.txt"},
+        {"type": "send_sms", "template_file": "sequences/W2_connect_24h.txt#SMS"},
+        {"type": "set_pipeline_stage", "pipeline": "trader_onboarding", "stage": "Connecting"}
+      ]
+    },
+    {
+      "id": "W2b",
+      "name": "Connect Reminder 72h",
+      "enabled_phase_a": true,
+      "trigger": {
+        "type": "time_delay",
+        "after": "W1",
+        "delay": "72h",
+        "unless": ["tag:coinbase_connected", "tag:canceled", "coinbase_status=connected"]
+      },
+      "actions": [
+        {"type": "send_email", "template_file": "sequences/W2_connect_72h.txt"},
+        {"type": "send_sms", "template_file": "sequences/W2_connect_72h.txt#SMS"}
+      ]
+    },
+    {
+      "id": "W3",
+      "name": "Go Live — Healthy",
+      "enabled_phase_a": true,
+      "trigger": {
+        "type": "field_or_tag",
+        "conditions_any": [
+          "tag:coinbase_connected AND runner_health=green",
+          "coinbase_status=connected AND runner_health=green"
+        ]
+      },
+      "actions": [
+        {"type": "add_tag", "tag": "runner_healthy"},
+        {"type": "remove_tag", "tag": "needs_attention"},
+        {"type": "set_pipeline_stage", "pipeline": "trader_onboarding", "stage": "Live — Healthy"},
+        {"type": "send_email", "template_file": "sequences/W3_go_live.txt"},
+        {"type": "send_sms_optional", "template_file": "sequences/W3_go_live.txt#SMS"},
+        {"type": "metric", "name": "connected_at", "value": "{{now}}"},
+        {"type": "metric", "name": "pay_to_connect_minutes", "value": "connected_at - paid_at"}
+      ]
+    },
+    {
+      "id": "W4",
+      "name": "Daily Digest",
+      "enabled_phase_a": false,
+      "note": "Enable when platform emits daily_summary_ready with safe fields only",
+      "trigger": {"type": "inbound_event", "event": "daily_summary_ready"},
+      "actions": [
+        {"type": "send_email", "template_file": "sequences/W4_daily_digest.txt"}
+      ]
+    },
+    {
+      "id": "W4b",
+      "name": "Weekly Digest",
+      "enabled_phase_a": false,
+      "trigger": {"type": "schedule", "cron": "0 15 * * 1", "tz": "America/Los_Angeles"},
+      "actions": [
+        {"type": "send_email", "template_file": "sequences/W4_weekly_digest.txt"}
+      ]
+    },
+    {
+      "id": "W5a",
+      "name": "Billing Dunning 1",
+      "enabled_phase_a": true,
+      "trigger": {"type": "saas_payment_failed"},
+      "actions": [
+        {"type": "add_tag", "tag": "past_due"},
+        {"type": "set_pipeline_stage", "pipeline": "trader_onboarding", "stage": "Paused / Billing"},
+        {"type": "notify_platform", "event": "billing_pause_trading"},
+        {"type": "send_email", "template_file": "sequences/W5_dunning_1.txt"},
+        {"type": "send_sms", "template_file": "sequences/W5_dunning_1.txt#SMS"}
+      ]
+    },
+    {
+      "id": "W5b",
+      "name": "Billing Dunning 2",
+      "enabled_phase_a": true,
+      "trigger": {"type": "time_delay", "after": "W5a", "delay": "72h", "if": "still past_due"},
+      "actions": [
+        {"type": "send_email", "template_file": "sequences/W5_dunning_2.txt"},
+        {"type": "send_sms", "template_file": "sequences/W5_dunning_2.txt#SMS"}
+      ]
+    },
+    {
+      "id": "W6",
+      "name": "Support — Needs Attention",
+      "enabled_phase_a": true,
+      "trigger": {
+        "type": "tag_or_field",
+        "conditions_any": ["tag:needs_attention", "runner_health=red"]
+      },
+      "actions": [
+        {"type": "set_pipeline_stage", "pipeline": "trader_onboarding", "stage": "Needs Attention"},
+        {"type": "create_opportunity", "pipeline": "support_escalation", "stage": "New"},
+        {"type": "send_email", "template_file": "sequences/W6_support_red.txt"},
+        {"type": "send_sms", "template_file": "sequences/W6_support_red.txt#SMS"},
+        {"type": "notify_ops", "channel": "internal"}
+      ]
+    },
+    {
+      "id": "W7",
+      "name": "Offboarding",
+      "enabled_phase_a": true,
+      "trigger": {"type": "subscription_canceled"},
+      "actions": [
+        {"type": "add_tag", "tag": "canceled"},
+        {"type": "remove_tag", "tag": "paid"},
+        {"type": "notify_platform", "event": "offboard_stop_jobs"},
+        {"type": "set_pipeline_stage", "pipeline": "trader_onboarding", "stage": "Offboarded"},
+        {"type": "send_email", "template_file": "sequences/W7_offboard.txt"},
+        {"type": "send_sms_optional", "template_file": "sequences/W7_offboard.txt#SMS"}
+      ]
+    }
+  ],
+  "forbidden_in_templates": [
+    "guaranteed returns",
+    "risk-free",
+    "personal P&L screenshots",
+    "API key paste requests",
+    "custody claims",
+    "investment advice framing",
+    "fabricated backtests"
+  ]
+}

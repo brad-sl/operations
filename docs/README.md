@@ -1,25 +1,41 @@
-# Crypto Bot Phase 5.1 + Phase 6
+# Crypto trading bot — documentation hub
 
-## Run Tests
-```bash
-cd operations/crypto-bot
-python test_phase6.py
-# Expected: 100% passed (3 tests: Fresh Start, Takeover 2, Ready Start)
-```
+**Project:** Phase 6 live trading platform + ARCH Automation SaaS engineering  
+**Repo:** `projects/crypto-trading-bot`
 
-## Test Integration
-```bash
-python phase5_1_multi_pair.py --dry-run --cycles 1
-# Expected logs: Phase 6 init, scenario, budget, dry-run trades with SL/TP
-```
+## Start here
 
-## Live Trading (TODO: connect real CBClient, State, OrderExec)
-```bash
-python phase5_1_multi_pair.py
-```
+| Role | Document |
+|------|----------|
+| **Specs / PRDs / doctrine / “where is X?”** | **[`docs/SPECS_INDEX.md`](SPECS_INDEX.md)** |
+| **Specs ↔ code gaps + what to deprecate** | [`SPECS_CODE_GAP.md`](SPECS_CODE_GAP.md) |
+| **In vs out of repo** | [`PROJECT_BOUNDARY.md`](PROJECT_BOUNDARY.md) |
+| **What shipped / queued (execution)** | [`MASTER_TASK_TRACKING.md`](MASTER_TASK_TRACKING.md) |
+| **Feature specs only** | [`features/README.md`](features/README.md) |
+| **Epics** | [`epics/`](epics/) |
+| **Operator FAQs** | [`faq/`](faq/) |
 
-## Files
-- `phase6.py`: Initializer logic + scenario detection
-- `test_phase6.py`: 3 passing unit tests (mocks + env patches)
-- `phase5_1_multi_pair.py`: Integrated trading loop
-- `PHASE6_INTEGRATION.md`: Spec followed exactly
+## Do not use as current SSOT
+
+- `SPEC.md`, `PHASE6.md`, `FUNCTIONAL_SPEC*.md` — historical snapshots (see SPECS_INDEX §5)  
+- `docs/archive/**` — archived on purpose  
+- `phase6/specs/*` — legacy mirrors; verify against `docs/`  
+
+## Live config (behavior truth)
+
+- `config/trading_config_phase6.json`  
+- `config/regime_cash_policy.json`  
+- `config/exit_automation.json`  
+- `config/trader_accounts.json`  
+- `config/regime_exit_policy_map.json`  
+
+## Agents
+
+1. Read `SPECS_INDEX.md` for the domain.  
+2. Open the **primary** doc from the cheat sheet (§8).  
+3. Confirm against live config + runner state before claiming behavior.  
+4. If you add a FEAT, register it in the index the same session.
+
+---
+
+*Hub rewritten 2026-08-07 (replaces stale Phase 5.1 test-only README).*

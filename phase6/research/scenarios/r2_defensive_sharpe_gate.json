@@ -7,14 +7,16 @@
   "baseline_scenario_id": "baseline_7d",
   "date_range": {
     "start": "2025-04-20",
-    "end": "2026-07-07"
+    "end": "2026-07-30"
   },
   "scenarios": [
     {
       "id": "baseline_7d",
       "label": "ARCH-4 rotation weekly (reference)",
       "engine": "arch4",
-      "arch4": { "strategy": "rotation" },
+      "arch4": {
+        "strategy": "rotation"
+      },
       "backtest": {
         "initial_capital": 1000,
         "rebalance_frequency_days": 7,
@@ -25,7 +27,9 @@
       "id": "defensive_rotation_14d",
       "label": "Defensive rotation biweekly stride",
       "engine": "arch4",
-      "arch4": { "strategy": "rotation" },
+      "arch4": {
+        "strategy": "rotation"
+      },
       "backtest": {
         "initial_capital": 1000,
         "rebalance_frequency_days": 14,
@@ -36,7 +40,9 @@
       "id": "defensive_rotation_21d",
       "label": "Defensive rotation triweekly + lower deploy cap",
       "engine": "arch4",
-      "arch4": { "strategy": "rotation" },
+      "arch4": {
+        "strategy": "rotation"
+      },
       "backtest": {
         "initial_capital": 1000,
         "rebalance_frequency_days": 21,
@@ -47,7 +53,9 @@
       "id": "defensive_rebalance_14d",
       "label": "Rebalance strategy biweekly (less churn)",
       "engine": "arch4",
-      "arch4": { "strategy": "rebalance" },
+      "arch4": {
+        "strategy": "rebalance"
+      },
       "backtest": {
         "initial_capital": 1000,
         "rebalance_frequency_days": 14,
@@ -58,8 +66,13 @@
       "id": "bear_window_rotation_14d",
       "label": "Bear-window rotation 14d (2025-10-01..2026-02-15)",
       "engine": "arch4",
-      "arch4": { "strategy": "rotation" },
-      "date_range": { "start": "2025-10-01", "end": "2026-02-15" },
+      "arch4": {
+        "strategy": "rotation"
+      },
+      "date_range": {
+        "start": "2025-10-01",
+        "end": "2026-02-15"
+      },
       "backtest": {
         "initial_capital": 1000,
         "rebalance_frequency_days": 14,
@@ -70,8 +83,13 @@
       "id": "bear_window_rebalance_21d",
       "label": "Bear-window rebalance 21d (2025-10-01..2026-02-15)",
       "engine": "arch4",
-      "arch4": { "strategy": "rebalance" },
-      "date_range": { "start": "2025-10-01", "end": "2026-02-15" },
+      "arch4": {
+        "strategy": "rebalance"
+      },
+      "date_range": {
+        "start": "2025-10-01",
+        "end": "2026-02-15"
+      },
       "backtest": {
         "initial_capital": 1000,
         "rebalance_frequency_days": 21,

@@ -15,6 +15,37 @@ MEDIUM_RISK_TIMEOUT = 3.5
 HIGH_RISK_TIMEOUT = 5.0
 ORDER_FILL_TIMEOUT = 20.0
 
+# ENG-S3-02: authoritative post-buy settlement + fill wait lives in stop_loss_manager.attach_stop_loss
+# via exchange.poll_for_settlement(order_id=...). order_executor must not run parallel fill polls.
+SETTLEMENT_POLL_OWNER = "stop_loss_manager.attach_stop_loss"
+
+
+def fetch_verified_order_fill(exchange: Any, order_id: Optional[str]) -> Dict[str, Any]:
+    """
+    Read fill price/size from the exchange after settlement poll (single source of fill truth).
+    Returns fill_verified=True only when both average_filled_price and filled_size are > 0.
+    """
+    out: Dict[str, Any] = {
+        "average_filled_price": 0.0,
+        "filled_size": 0.0,
+        "status": "",
+        "fill_verified": False,
+    }
+    if not order_id or not exchange or not hasattr(exchange, "get_order_fill_details"):
+        return out
+    try:
+        fill = exchange.get_order_fill_details(order_id) or {}
+        fp = float(fill.get("average_filled_price") or fill.get("filled_price") or 0)
+        fs = float(fill.get("filled_size") or fill.get("filled") or 0)
+        out["average_filled_price"] = fp
+        out["filled_size"] = fs
+        out["status"] = str(fill.get("status") or fill.get("order_status") or "")
+        out["fill_verified"] = fp > 0 and fs > 0
+    except Exception as exc:
+        logger.debug("[SL-PREFLIGHT] fetch_verified_order_fill failed for %s: %s", order_id, exc)
+    return out
+
+
 # Coinbase stop-down preview: stop must be below last trade (~market). Stale ledger entries
 # above market trigger PREVIEW_STOP_PRICE_ABOVE_LAST_TRADE_PRICE.
 ANCHOR_MAX_ABOVE_MARKET = 1.05
@@ -52,10 +83,11 @@ def ensure_stop_below_market(
     """If stop is still at/above market, recompute from market * (1 - pct)."""
     if not market_px or market_px <= 0:
         return stop_price, limit_price
-    if stop_price < market_px * 0.999:
-        return stop_price, limit_price
     meta = exchange.get_product_metadata(pair)
     price_inc = float(meta.get("price_increment", 0.0001))
+    buffer_px = max(price_inc, market_px * 0.0001)
+    if stop_price < market_px - buffer_px:
+        return stop_price, limit_price
     calc_base = market_px
     stop_price = calc_base * (1 - pct)
     limit_price = stop_price * 0.995

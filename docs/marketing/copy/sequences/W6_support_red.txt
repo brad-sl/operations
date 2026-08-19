@@ -1,0 +1,41 @@
+# W6 — Support / runner needs attention
+# Trigger: tag needs_attention OR runner_health = red (or yellow per policy)
+# Channel: Email + SMS (time-sensitive)
+# Pipeline: Support Escalation → New
+# Tone: ops-calm; set expectation on response time; never promise PnL recovery
+
+SUBJECT: Action may be needed — ARCH Automation status alert
+
+PREHEADER: We detected a health or connection issue on your automation.
+
+---
+
+Hi {{first_name}},
+
+ARCH Automation flagged your account for attention.
+
+**Current signals**
+- Runner health: {{runner_health}}
+- Coinbase status: {{coinbase_status}}
+- Detail (if available): {{attention_detail}}
+
+**What you can do now**
+1. Open status: {{member_status_link}}
+2. If connection error: re-run connect {{connect_link}} or re-authorize in Coinbase
+3. Confirm your Coinbase account is in good standing and API/OAuth access isn’t restricted
+4. Reply to this email if the issue continues — include the time you noticed it
+
+**Our response target (pilot)**
+We aim to acknowledge support flags within one business day during pilot hours (PT). Complex Coinbase-side issues may require action only you can take on the exchange.
+
+This alert is about **system/process health**, not investment performance.
+
+— ARCH Automation Ops  
+{{support_email}}
+
+---
+FOOTER DISCLAIMER:
+ARCH Automation provides software that can place trades on your Coinbase Advanced account after you authorize access. Cryptocurrency trading involves substantial risk of loss. Past performance is not indicative of future results. We do not provide investment advice, do not custody your assets, and do not guarantee profits. Subscription fees are for software and service access only.
+
+# SMS
+ARCH ALERT: Status needs attention ({{runner_health}}/{{coinbase_status}}). Check {{member_status_link}} or {{support_email}}

@@ -1,0 +1,49 @@
+{
+  "active": true,
+  "mode": "shadow",
+  "proposal_id": "REGIME-ADAPTIVE-SCORECARD",
+  "source_run_id": "2026-07-09T18:53:44.874290+00:00",
+  "scenario_id": "usdc_hold",
+  "activated_at": "2026-07-09T18:53:55.171548+00:00",
+  "baseline_equity_usd": null,
+  "predicted": {
+    "beats_usdc_benchmark": true,
+    "annualized_return_pct": 3.5002,
+    "usdc_apy_pct": 3.5,
+    "reason": "optimal_strategy"
+  },
+  "knobs": {
+    "use_rotation": false,
+    "rebal_freq": 7
+  },
+  "live_overlay": {
+    "global_settings.rebalance_cap_usd": 0.0,
+    "global_settings.risk_free_preference": "USDC",
+    "global_settings.risk_free_apy_pct": 3.5
+  },
+  "gap_flags": [
+    "regime_adaptive_scorecard",
+    "btc_proxy_regime"
+  ],
+  "regime_policy": {
+    "enabled": true,
+    "map_path": "config/regime_knob_map.json",
+    "current_regime": "flat",
+    "last_regime_change_at": "2026-07-09T18:53:55.171509+00:00",
+    "detected": {
+      "regime": "flat",
+      "confidence": 1.0,
+      "btc_return_pct": 0.117,
+      "window_start": "2026-06-07",
+      "window_end": "2026-07-07",
+      "lookback_days": 30,
+      "as_of": "2026-07-09T18:53:55.171509+00:00"
+    },
+    "usdc_benchmark": {
+      "beats_usdc_benchmark": true,
+      "annualized_return_pct": 3.5002,
+      "usdc_apy_pct": 3.5,
+      "reason": "optimal_strategy"
+    }
+  }
+}

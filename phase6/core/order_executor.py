@@ -24,6 +24,7 @@ class OrderExecutor:
         logger: Optional[logging.Logger] = None,
         max_retries: int = 3,
         base_delay: float = 1.0,
+        trade_ledger: Any = None,
     ):
         self.exchange = exchange
         self.stop_loss_manager = stop_loss_manager
@@ -32,6 +33,21 @@ class OrderExecutor:
         self.logger = logger or logging.getLogger("phase6.executor")
         self.max_retries = max_retries
         self.base_delay = base_delay
+        self.trade_ledger = trade_ledger
+
+    def _record_to_ledger(self, result: Dict[str, Any], signal_source: str = "order_executor") -> None:
+        if not self.trade_ledger or not result.get("success"):
+            return
+        try:
+            self.trade_ledger.log_execution_result(
+                result,
+                mode=self.mode,
+                exchange=self.exchange,
+                signal_source=signal_source,
+                stop_loss_manager=self.stop_loss_manager,
+            )
+        except Exception as e:
+            self.logger.warning(f"Ledger record failed: {e}")
 
     def _generate_client_order_id(self, prefix: str = "phase6") -> str:
         return f"{prefix}-{secrets.token_hex(16)}"
@@ -47,7 +63,7 @@ class OrderExecutor:
         return {"success": False, "error": str(last_error)}
 
 
-    def execute_buy(self, pair: str, usd_amount: float, tp_pct: float = None) -> Dict[str, Any]:
+    def execute_buy(self, pair: str, usd_amount: float, tp_pct: float = None, *, record_ledger: bool = True) -> Dict[str, Any]:
         """Execute BUY. Returns dict with 'entry_price' (from actual fill for live, sim price for shadow),
         'size' and 'qty' (alias), never uses current market price as entry for live pairs (per audit).
         """
@@ -63,10 +79,11 @@ class OrderExecutor:
                     size = round(size, 8)
             sl_result = False
             tp_result = False
+            # ENG-S3-01: shadow must not invoke live stop_loss_manager (no exchange/SL API).
             if self.stop_loss_manager:
-                sl_result = self.stop_loss_manager.attach_stop_loss(pair, entry_price, size, order_id="shadow_buy")
-                if tp_pct is not None or getattr(self.stop_loss_manager, 'default_tp_pct', 0):
-                    tp_result = self.stop_loss_manager.attach_take_profit(pair, entry_price, size, tp_pct)
+                self.logger.debug(
+                    "[SHADOW BUY] Skipping SL/TP attach (ENG-S3-01); simulated entry only"
+                )
             return {
                 "success": True,
                 "order_id": "shadow_buy",
@@ -85,50 +102,27 @@ class OrderExecutor:
 
         if result.get("success"):
             order_id = result.get("order_id")
-            # Prefer ACTUAL fill details ONLY - poll longer for settlement (fixes zero price on new buys)
-            fill = {"average_filled_price": 0.0, "filled_size": 0.0}
-            if order_id and hasattr(self.exchange, "get_order_fill_details"):
-                fill = self.exchange.get_order_fill_details(order_id) or fill
-                # Extended polling for actual fill price (common Coinbase settlement delay)
-                if fill.get("average_filled_price", 0) <= 0:
-                    self.logger.info(f"[FILL POLL] Polling for actual fill details on {pair} (up to ~30s)...")
-                    import time
-                    for _ in range(15):  # 15 * 2s = 30s max
-                        time.sleep(2)
-                        try:
-                            new_fill = self.exchange.get_order_fill_details(order_id)
-                            if new_fill and new_fill.get("average_filled_price", 0) > 0:
-                                fill = new_fill
-                                self.logger.info(f"[FILL POLL] Got real fill price for {pair}: {fill.get('average_filled_price')}")
-                                break
-                        except Exception:
-                            pass
-            entry_price = fill.get("average_filled_price") or 0.0
-            size = fill.get("filled_size") or 0.0
-            if entry_price <= 0 or size <= 0:
-                # Fallback for SL attachment only (ledger still prefers real fill)
-                current_px = 0.0
-                try:
-                    current_px = getattr(self.exchange, "get_price", lambda p: 0.0)(pair) or 0.0
-                except Exception:
-                    pass
-                if current_px > 0 and entry_price <= 0:
-                    entry_price = current_px
-                    self.logger.warning(
-                        f"[EXEC BUY] Using current market price ${entry_price} as SL anchor for {pair} (real fill price still 0 after polling)"
-                    )
-                elif size > 0 and entry_price <= 0:
-                    entry_price = usd_amount / size
-                if entry_price <= 0:
-                    self.logger.warning(
-                        f"[EXEC BUY] Live fill price unavailable or zero for {pair} (order_id={order_id}). "
-                        f"entry_price={entry_price} (settlement delay; SL may use fallback)"
-                    )
-            if size <= 0 and entry_price > 0:
+            # ENG-S3-02: no settlement/fill polling here — stop_loss_manager owns poll_for_settlement.
+            from phase6.core.sl_preflight import fetch_verified_order_fill
+
+            hint = (
+                fetch_verified_order_fill(self.exchange, order_id)
+                if order_id
+                else {"average_filled_price": 0.0, "filled_size": 0.0, "fill_verified": False}
+            )
+            entry_price = float(hint.get("average_filled_price") or 0.0)
+            size = float(hint.get("filled_size") or 0.0)
+            if size > 0 and entry_price <= 0:
+                entry_price = usd_amount / size
+            elif size <= 0 and entry_price > 0:
                 size = usd_amount / entry_price
+            if entry_price <= 0 and size <= 0:
+                self.logger.info(
+                    f"[EXEC BUY] Fill not yet visible for {pair} (order_id={order_id}); "
+                    f"delegating settlement wait to stop_loss_manager"
+                )
 
             # P0-02.5: ensure quantization via exchange metadata for the resulting base size
-            # (live buy uses quote_size at exchange, but we must quantize base for result, ledger, SL attach consistency)
             if size > 0 and hasattr(self.exchange, "quantize_size"):
                 try:
                     size = float(self.exchange.quantize_size(pair, size))
@@ -138,38 +132,59 @@ class OrderExecutor:
             sl_result = False
             tp_result = False
             if self.stop_loss_manager:
-                if getattr(self, "mode", None) == "live" and order_id:
-                    import time
-                    self.logger.info(f"[PRE-FLIGHT SETTLEMENT POLL] Explicit pre-SL poll for buy order {order_id} on {pair} (using get_order_fill_details)...")
-                    # Additional dedicated settlement confirmation poll (per ANALYST-20260703-051)
-                    if hasattr(self.exchange, "poll_for_settlement"):
-                        try:
-                            settled = self.exchange.poll_for_settlement(pair, timeout=15.0, order_id=order_id)
-                            self.logger.info(f"[PRE-FLIGHT SETTLEMENT POLL] Result for {order_id}: {settled}")
-                        except Exception as pe:
-                            self.logger.debug(f"[PRE-FLIGHT] extra poll err: {pe}")
-                    self.logger.info("[SL/TP] Post explicit poll, attaching protective orders...")
-                # Pass entry as anchor for robust SL calc + order_id for fill-tied poll inside attach
-                sl_result = self.stop_loss_manager.attach_stop_loss(pair, entry_price, size, anchor_entry=entry_price if entry_price > 0 else None, order_id=order_id if order_id else None)
-                # Attach TP only if configured (not null/disabled for "let it ride")
+                sl_result = self.stop_loss_manager.attach_stop_loss(
+                    pair,
+                    entry_price,
+                    size,
+                    anchor_entry=entry_price if entry_price > 0 else None,
+                    order_id=order_id if order_id else None,
+                    fresh_buy=True,
+                )
                 effective_tp = tp_pct
                 if effective_tp is None:
                     effective_tp = getattr(self.stop_loss_manager, 'default_tp_pct', None)
                 if effective_tp and effective_tp > 0:
                     tp_result = self.stop_loss_manager.attach_take_profit(pair, entry_price, size, effective_tp)
-                self.logger.info(f"[SL/TP] Post-buy for {pair}: entry=${entry_price:.4f} size={size:.8f} SL={sl_result} TP={tp_result}")
+                self.logger.info(
+                    f"[SL/TP] Post-buy for {pair}: entry=${entry_price:.4f} size={size:.8f} SL={sl_result} TP={tp_result}"
+                )
+
+            # ENG-S3-03: re-query fill after SL attach (settlement poll completed inside attach)
+            verified = fetch_verified_order_fill(self.exchange, order_id) if order_id else hint
+            if verified.get("fill_verified"):
+                entry_price = float(verified["average_filled_price"])
+                size = float(verified["filled_size"])
+                if size > 0 and hasattr(self.exchange, "quantize_size"):
+                    try:
+                        size = float(self.exchange.quantize_size(pair, size))
+                    except Exception:
+                        size = round(size, 8)
+            elif sl_result and order_id:
+                self.logger.warning(
+                    f"[EXEC BUY] SL attached for {pair} but fill still unverified (order_id={order_id})"
+                )
 
             result["entry_price"] = round(entry_price, 4) if entry_price > 0 else 0.0
             result["size"] = size
             result["qty"] = size
             result["sl_attached"] = sl_result
             result["tp_attached"] = tp_result
-            result["actual_fill_used"] = bool(fill.get("average_filled_price") and fill.get("average_filled_price") > 0)
+            result["actual_fill_used"] = bool(verified.get("fill_verified"))
+            result["fill_verified"] = bool(verified.get("fill_verified"))
         else:
             result["sl_attached"] = False
             result["tp_attached"] = False
 
+        result["pair"] = pair
+        result["action"] = "BUY"
+        result["side"] = "BUY"
+        if record_ledger:
+            from phase6.core.ledger_sl_truth import enrich_buy_sl_truth
+
+            enrich_buy_sl_truth(result, self.stop_loss_manager)
+            self._record_to_ledger(result, signal_source="order_executor_buy")
         return result
+
     def execute_sell(self, pair: str, usd_amount: float) -> Dict[str, Any]:
         """Execute a market sell. Accepts usd_amount (like execute_buy) and computes crypto size internally.
         P0-02.6: Critical sell path audit/fix.
@@ -213,17 +228,33 @@ class OrderExecutor:
                     pass
             exit_price = fill.get("average_filled_price") or 0.0
             filled = fill.get("filled_size") or size
-            return {
+            out = {
                 "success": True,
                 "order_id": order_id,
                 "size": round(filled, 8),
                 "qty": round(filled, 8),
                 "exit_price": round(exit_price, 4) if exit_price > 0 else None,
-                "actual_fill_used": bool(exit_price > 0)
+                "actual_fill_used": bool(exit_price > 0),
+                "pair": pair,
+                "action": "SELL",
+                "side": "SELL",
             }
+            self._record_to_ledger(out, signal_source="order_executor_sell")
+            return out
         
         # Shadow mode
-        return {"success": True, "order_id": f"shadow_sell-{__import__('secrets').token_hex(4)}", "size": round(size, 8), "qty": round(size, 8), "exit_price": price}
+        out = {
+            "success": True,
+            "order_id": f"shadow_sell-{__import__('secrets').token_hex(4)}",
+            "size": round(size, 8),
+            "qty": round(size, 8),
+            "exit_price": price,
+            "pair": pair,
+            "action": "SELL",
+            "side": "SELL",
+        }
+        self._record_to_ledger(out, signal_source="order_executor_sell")
+        return out
 
     def execute_rebalance_plan(self, plan: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
@@ -239,8 +270,14 @@ class OrderExecutor:
             usd_amount = float(move.get("usd_amount", 0))
 
             if action == "BUY":
-                result = self.execute_buy(pair, usd_amount)
-                # Note: execute_buy now handles SL attachment internally (including shadow simulation)
+                # Defer ledger until after attach_stop_loss inside execute_buy, then
+                # finalize with exchange protective-order truth (P6-OPS #14).
+                result = self.execute_buy(pair, usd_amount, record_ledger=False)
+                if result.get("success"):
+                    from phase6.core.ledger_sl_truth import enrich_buy_sl_truth
+
+                    enrich_buy_sl_truth(result, self.stop_loss_manager)
+                    self._record_to_ledger(result, signal_source="order_executor_rebalance")
             elif action == "SELL":
                 result = self.execute_sell(pair, usd_amount)
             else:

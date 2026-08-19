@@ -1,0 +1,72 @@
+{
+  "schema_version": "1",
+  "description": "Per Coinbase portfolio / Trading Bot account options. Hot-reload each runner cycle. capital_controls = policy (FEAT-TRADER-PERSONALIZED-SETTINGS W1); hold $ is runner state.",
+  "defaults": {
+    "trader_id": "default",
+    "live_usdc_park": {
+      "enabled": false,
+      "target_usdc_pct": 0.92,
+      "min_usd_reserve_usd": 50.0,
+      "usdc_product_id": "USDC-USD",
+      "min_sell_usd": 15.0,
+      "skip_if_usdc_pct_above": 0.88,
+      "redeploy_target_usdc_pct": 0.05,
+      "redeploy_unwind_usdc_pct_above": 0.35,
+      "redeploy_min_usd_for_deploy_usd": 80.0
+    },
+    "park_package": {
+      "enabled": false,
+      "profile": "off"
+    },
+    "capital_controls": {
+      "manual_sell_hold_cash": true,
+      "manual_sell_block_rebuy_hours": 48,
+      "stop_loss_exchange_hold_cash": true,
+      "stop_loss_exchange_block_rebuy_hours": 72,
+      "manual_sell_cancel_stops": true,
+      "ui_show_hold_banner": true
+    }
+  },
+  "accounts": {
+    "3176ac3f-deca-4fca-9c67-87ba91f96558": {
+      "trader_id": "default",
+      "display_name": "Primary Trading Bot account",
+      "live_usdc_park": {
+        "enabled": false,
+        "target_usdc_pct": 0.92,
+        "min_usd_reserve_usd": 50.0
+      },
+      "park_package": {
+        "enabled": false,
+        "profile": "off"
+      },
+      "capital_controls": {
+        "manual_sell_hold_cash": true,
+        "manual_sell_block_rebuy_hours": 48,
+        "stop_loss_exchange_hold_cash": true,
+        "stop_loss_exchange_block_rebuy_hours": 72,
+        "manual_sell_cancel_stops": true,
+        "ui_show_hold_banner": true
+      }
+    },
+    "default": {
+      "trader_id": "default",
+      "display_name": "Env/default account id",
+      "live_usdc_park": {
+        "enabled": false
+      },
+      "park_package": {
+        "enabled": false,
+        "profile": "off"
+      },
+      "capital_controls": {
+        "manual_sell_hold_cash": true,
+        "manual_sell_block_rebuy_hours": 48,
+        "stop_loss_exchange_hold_cash": true,
+        "stop_loss_exchange_block_rebuy_hours": 72,
+        "manual_sell_cancel_stops": true,
+        "ui_show_hold_banner": true
+      }
+    }
+  }
+}

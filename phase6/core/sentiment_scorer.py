@@ -5,40 +5,167 @@ Canonical Sentiment Scorer / Loader (single source of truth)
 All trading logic, reports, and dashboards MUST use this module
 to retrieve current sentiment scores.
 
-- Reads exclusively from the canonical cache: sentiment_cache.json (project root)
-- Written by the canonical fetcher: run_full_sentiment_v3.py
-- Simple, reliable, no duplicate logic or caches.
-- Always returns scores for the requested universe (defaults to dynamic load_trading_basket() / 11 pairs).
-- Includes timestamp for freshness checks.
-- Applies appropriate sentiment aging (exponential decay, half-life 60min default) for conservative use of stale data.
-- Real data only.
+- Primary: X cache + Reddit gate + canonical file
+- Free hybrid fallback when X empty/spend-cap
+  (config sentiment.primary=x_with_free_fallback | free_hybrid | x | off)
+- Always returns scores for the requested universe (dynamic basket)
+- Aging helper (exponential decay, half-life 60min default)
+- Real data only (no placeholder fabrication)
 
 Consumers:
 - phase6 runner, backtests, deploy logic, paper harness
 - intelligence reports
-- live dashboards (serve_live_8501)
+- live dashboards (serve_dashboard / serve_live_8501)
 - any future loops or signal generators
 """
 
 from .paths import (
-    PROJECT_ROOT, SENTIMENT_CACHE, X_SENTIMENT_CACHE, load_trading_basket
+    PROJECT_ROOT,
+    SENTIMENT_CACHE,
+    X_SENTIMENT_CACHE,
+    FREE_SENTIMENT_CACHE,
+    TRADING_CONFIG_PHASE6,
+    load_trading_basket,
 )  # per DATA_FLOW_AND_LOCATIONS.md
 
 import json
 import logging
-import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
 CANONICAL_CACHE = str(SENTIMENT_CACHE)
 X_CACHE = str(X_SENTIMENT_CACHE)
+FREE_CACHE = str(FREE_SENTIMENT_CACHE)
 
-DEFAULT_UNIVERSE = load_trading_basket()  # Dynamic from config via paths.py; falls back to 11. All basket pairs are first-class.
-# (Includes opportunity_pool candidates like MATIC when promoted)
+DEFAULT_UNIVERSE = load_trading_basket()  # Dynamic from config via paths.py; falls back to 11.
+
+
+def _load_sentiment_policy() -> Dict[str, Any]:
+    """Read sentiment.primary / free_fallback flags from trading_config_phase6.json."""
+    defaults = {
+        "primary": "x_with_free_fallback",
+        "free_fallback_when_x_empty": True,
+        "x_min_usable_posts_total": 1,
+        "free_max_age_hours": 18,
+    }
+    try:
+        cfg_path = Path(TRADING_CONFIG_PHASE6)
+        if not cfg_path.exists():
+            return defaults
+        raw = json.loads(cfg_path.read_text(encoding="utf-8"))
+        block = raw.get("sentiment") or {}
+        out = dict(defaults)
+        out.update({k: block[k] for k in defaults if k in block})
+        env_p = os.environ.get("SENTIMENT_PRIMARY", "").strip()
+        if env_p:
+            out["primary"] = env_p
+        env_fb = os.environ.get("SENTIMENT_FREE_FALLBACK", "").strip().lower()
+        if env_fb in ("0", "false", "off", "no"):
+            out["free_fallback_when_x_empty"] = False
+        elif env_fb in ("1", "true", "on", "yes"):
+            out["free_fallback_when_x_empty"] = True
+        return out
+    except Exception as e:
+        logger.debug(f"sentiment policy load failed: {e}")
+        return defaults
+
+
+def _cache_age_hours(ts: Optional[str]) -> Optional[float]:
+    if not ts:
+        return None
+    try:
+        last = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if last.tzinfo is None:
+            last = last.replace(tzinfo=timezone.utc)
+        return (datetime.now(timezone.utc) - last).total_seconds() / 3600.0
+    except Exception:
+        return None
+
+
+def load_free_sentiment_scores(
+    universe: Optional[List[str]] = None,
+    cache_path: str = FREE_CACHE,
+    max_age_hours: float = 18.0,
+) -> Tuple[Dict[str, float], Dict[str, Any]]:
+    """Load free hybrid cache (funding + RSS + F&G). Returns (scores, meta)."""
+    if universe is None:
+        universe = DEFAULT_UNIVERSE
+    scores: Dict[str, float] = {pair: 0.0 for pair in universe}
+    meta: Dict[str, Any] = {"available": False, "timestamp": None, "sources": []}
+    if not os.path.exists(cache_path):
+        return scores, meta
+    try:
+        with open(cache_path, "r") as f:
+            data = json.load(f)
+        ts = data.get("timestamp")
+        age_h = _cache_age_hours(ts)
+        if age_h is not None and age_h > max_age_hours:
+            logger.warning(f"Free sentiment cache stale age_h={age_h:.1f} > {max_age_hours}")
+            meta.update({"available": False, "timestamp": ts, "stale": True, "age_hours": age_h})
+            return scores, meta
+        block = data.get("sentiment") or data.get("data") or {}
+        for pair in universe:
+            entry = block.get(pair)
+            if entry is None:
+                continue
+            if isinstance(entry, dict):
+                val = entry.get("sentiment_score", entry.get("score", entry.get("sentiment", 0.0)))
+            else:
+                val = entry
+            try:
+                scores[pair] = float(val or 0.0)
+            except (TypeError, ValueError):
+                scores[pair] = 0.0
+        m = data.get("meta") or {}
+        meta = {
+            "available": True,
+            "timestamp": ts,
+            "age_hours": age_h,
+            "sources": m.get("sources_used") or [],
+            "mode": m.get("mode"),
+            "fng_value": m.get("fng_value"),
+            "non_zero": sum(1 for v in scores.values() if abs(v) > 1e-9),
+        }
+        return scores, meta
+    except Exception as e:
+        logger.error(f"Failed to load free sentiment cache: {e}")
+        return scores, meta
+
+
+def x_signal_usable(
+    universe: Optional[List[str]] = None,
+    cache_path: str = X_CACHE,
+    min_posts_total: int = 1,
+) -> Dict[str, Any]:
+    """Whether X cache has enough real posts to prefer over free fallback."""
+    if universe is None:
+        universe = DEFAULT_UNIVERSE
+    total_posts = 0
+    nz = 0
+    if os.path.exists(cache_path):
+        try:
+            with open(cache_path, "r") as f:
+                data = json.load(f)
+            for pair in universe:
+                entry = data.get(pair) or {}
+                if not isinstance(entry, dict):
+                    continue
+                posts = int(entry.get("post_count", entry.get("posts", 0)) or 0)
+                total_posts += max(0, posts)
+                try:
+                    s = float(entry.get("sentiment", entry.get("score", 0.0)) or 0.0)
+                except (TypeError, ValueError):
+                    s = 0.0
+                if abs(s) > 1e-9 and posts > 0:
+                    nz += 1
+        except Exception:
+            pass
+    usable = total_posts >= int(min_posts_total)
+    return {"usable": usable, "total_posts": total_posts, "non_zero_with_posts": nz}
 
 
 def load_x_sentiment_scores(
@@ -50,12 +177,7 @@ def load_x_sentiment_scores(
     """
     Load real X/Twitter sentiment from its dedicated cache.
 
-    Preferred source. Real fetched data only.
-
-    New richer format support (post_count, confidence, buzz_factor):
-    - Low post count (< min_posts) or very low confidence is heavily damped toward 0
-      (addresses statistical significance concern).
-    - Buzz/volume is already baked into the stored "sentiment" value by the fetcher.
+    Preferred source when posts exist. Low post count / confidence is damped.
     """
     if universe is None:
         universe = DEFAULT_UNIVERSE
@@ -80,9 +202,7 @@ def load_x_sentiment_scores(
 
                     val = float(raw_sent)
 
-                    # Statistical significance gate + low-confidence damping
                     if post_count < min_posts or confidence < min_confidence:
-                        # Damp weak signals (prevents noisy low-volume pairs from moving the needle much)
                         damping = max(0.1, min(1.0, confidence * (post_count / max(min_posts, 1))))
                         val = val * damping
 
@@ -117,7 +237,8 @@ def load_x_sentiment_details(
                     "sentiment": float(data[pair].get("sentiment", 0.0)),
                     "post_count": int(data[pair].get("post_count", 0)),
                     "buzz_factor": float(data[pair].get("buzz_factor", 1.0)),
-                    "confidence": float(data[pair].get("confidence", 0.0))
+                    "confidence": float(data[pair].get("confidence", 0.0)),
+                    "timestamp": data[pair].get("timestamp"),
                 }
         return details
     except Exception:
@@ -125,11 +246,9 @@ def load_x_sentiment_details(
 
 
 def _load_reddit_from_db(universe: List[str]) -> Dict[str, float]:
-    """Query DB for latest Reddit/Apify sentiment per pair (shared cache for any trader).
+    """Query DB for latest Reddit/Apify sentiment per pair (shared cache).
 
-    Only return value if the Apify return result was NOT empty (posts > 0 or real fetch occurred).
-    If empty result (no posts or below threshold), return 0.0 meaning "no Reddit signal" (do not treat as neutral).
-    This allows using Reddit when it provides value (backtest ROI benefit) but dropping when empty.
+    Only return value if posts > 0. Empty Apify results are not treated as Neutral signal.
     """
     scores: Dict[str, float] = {pair: 0.0 for pair in universe}
     db_path = str(PROJECT_ROOT / "data/phase6.db")
@@ -137,19 +256,20 @@ def _load_reddit_from_db(universe: List[str]) -> Dict[str, float]:
         conn = __import__("sqlite3").connect(db_path)
         cur = conn.cursor()
         for pair in universe:
-            cur.execute("""
-                SELECT score, posts, source FROM sentiment_scores 
-                WHERE pair = ? 
+            cur.execute(
+                """
+                SELECT score, posts, source FROM sentiment_scores
+                WHERE pair = ?
                 ORDER BY ts DESC LIMIT 1
-            """, (pair,))
+                """,
+                (pair,),
+            )
             row = cur.fetchone()
             if row:
                 score, posts, source = row
-                # Only use if real result returned (posts > 0 or source indicates actual fetch)
                 if posts is not None and posts > 0:
                     scores[pair] = float(score) if score is not None else 0.0
-                elif source and "apify" in str(source).lower() or "reddit" in str(source).lower():
-                    # Had a fetch but low/empty posts — treat as no signal (per clarification)
+                elif source and ("apify" in str(source).lower() or "reddit" in str(source).lower()):
                     scores[pair] = 0.0
                 else:
                     scores[pair] = float(score) if score is not None else 0.0
@@ -166,64 +286,164 @@ def load_sentiment_scores(
     """
     Load sentiment for a (dynamic) trading basket.
 
-    - Pulls the list of pairs from the caller's basket (trader-specific).
-    - X is primary (real data).
-    - Reddit/Apify: ONLY used if the return result had real data (posts > 0 in DB).
-      If Apify result was empty (no/low posts), drop it — do not inject 0.0 as "Neutral".
-      When Reddit returns values, it IS used (improved backtest ROI).
-    - Values are in DB (rsi_values, sentiment_scores) so any trader with similar basket
-      can query the cached pair-level data without re-fetching.
-    - Fixes key mismatch in file cache as secondary fallback.
+    Policy (config sentiment.primary / free_fallback_when_x_empty):
+    - x: X primary, Reddit fill, canonical file fill; free only if free_fallback_when_x_empty
+    - free_hybrid: free cache primary (funding+RSS+F&G)
+    - x_with_free_fallback (default): X when usable posts; else free hybrid
+    - off: zeros
     """
+    detail = load_sentiment_scores_detailed(universe=universe, cache_path=cache_path)
+    return {p: float(v.get("sentiment", 0.0)) for p, v in detail["scores"].items()}
+
+
+def load_sentiment_scores_detailed(
+    universe: Optional[List[str]] = None,
+    cache_path: str = CANONICAL_CACHE,
+) -> Dict[str, Any]:
+    """Rich loader: per-pair sentiment + source + overall mode (for dashboard/runner)."""
     if universe is None:
         universe = DEFAULT_UNIVERSE
 
-    # 1. X as primary real signal
-    scores = load_x_sentiment_scores(universe)
+    policy = _load_sentiment_policy()
+    primary = str(policy.get("primary") or "x_with_free_fallback").strip().lower()
+    free_fb = bool(policy.get("free_fallback_when_x_empty", True))
+    min_posts = int(policy.get("x_min_usable_posts_total", 1) or 1)
+    free_max_age = float(policy.get("free_max_age_hours", 18) or 18)
 
-    # 2. Reddit only when it actually returned data (from shared DB cache)
-    reddit_scores = _load_reddit_from_db(universe)
-    for pair in universe:
-        if scores.get(pair, 0.0) == 0.0 and reddit_scores.get(pair, 0.0) != 0.0:
-            # No X, but Reddit had real non-empty result -> use it
-            scores[pair] = reddit_scores[pair]
-        # If Reddit was empty result, we leave as 0.0 (no false neutral)
+    out_scores: Dict[str, Dict[str, Any]] = {
+        p: {"sentiment": 0.0, "source": "none"} for p in universe
+    }
+    mode = "none"
+    free_meta: Dict[str, Any] = {}
+    x_info = x_signal_usable(universe, min_posts_total=min_posts)
 
-    # 3. Fallback to file canonical for any remaining (transition / key fix)
-    pairs_still_zero = [p for p in universe if scores.get(p, 0.0) == 0.0]
-    if pairs_still_zero and os.path.exists(cache_path):
-        try:
-            with open(cache_path, "r") as f:
-                data = json.load(f)
-            schema_ver = data.get("schema_version", 0)
+    if primary == "off":
+        return {
+            "scores": out_scores,
+            "mode": "off",
+            "policy": policy,
+            "free_meta": free_meta,
+            "x_usable": x_info,
+            "non_zero": 0,
+        }
+
+    def _set_all(m: Dict[str, float], src: str) -> None:
+        for pair in universe:
+            out_scores[pair] = {"sentiment": float(m.get(pair, 0.0) or 0.0), "source": src}
+
+    use_free_primary = primary in ("free_hybrid", "free", "free_shadow")
+
+    if use_free_primary:
+        free_scores, free_meta = load_free_sentiment_scores(universe, max_age_hours=free_max_age)
+        if free_meta.get("available") and free_meta.get("non_zero", 0) > 0:
+            _set_all(free_scores, "free_hybrid")
+            mode = "free_hybrid"
+        else:
+            mode = "free_hybrid_empty"
+    else:
+        # X primary path
+        x_scores = load_x_sentiment_scores(universe)
+        if x_info.get("usable"):
+            _set_all(x_scores, "x")
+            mode = "x"
+        else:
+            mode = "x_empty"
+
+        # Reddit fill zeros only
+        reddit_scores = _load_reddit_from_db(universe)
+        for pair in universe:
+            if abs(out_scores[pair]["sentiment"]) <= 1e-9 and abs(reddit_scores.get(pair, 0.0)) > 1e-9:
+                out_scores[pair] = {"sentiment": float(reddit_scores[pair]), "source": "reddit"}
+
+        # Canonical file fill
+        pairs_still_zero = [p for p in universe if abs(out_scores[p]["sentiment"]) <= 1e-9]
+        if pairs_still_zero and os.path.exists(cache_path):
             try:
-                schema_ver = int(schema_ver)
-            except:
-                schema_ver = 0
-            if schema_ver >= 3:
-                block = data.get("sentiment") or data.get("data", {})
+                with open(cache_path, "r") as f:
+                    data = json.load(f)
+                schema_ver = data.get("schema_version", 0)
+                try:
+                    schema_ver = int(schema_ver)
+                except Exception:
+                    schema_ver = 0
+                block = data.get("sentiment") or data.get("data", {}) if schema_ver >= 3 else data
+                meta_src = (data.get("meta") or {}).get("source") or ""
                 for pair in pairs_still_zero:
-                    if pair in block:
-                        entry = block[pair]
+                    if pair not in block:
+                        continue
+                    entry = block[pair]
+                    if isinstance(entry, dict):
                         val = entry.get(
                             "sentiment_score",
                             entry.get("score", entry.get("sentiment", 0.0)),
-                        ) if isinstance(entry, dict) else entry
-                        # Conservative: only take if looks like real (not blindly 0 from empty)
-                        if val != 0.0:
-                            scores[pair] = float(val)
-        except Exception:
-            pass
+                        )
+                        src = entry.get("source") or (
+                            "canonical_free" if "free" in str(meta_src) else "canonical"
+                        )
+                    else:
+                        val = entry
+                        src = "canonical"
+                    try:
+                        fv = float(val or 0.0)
+                    except (TypeError, ValueError):
+                        fv = 0.0
+                    if abs(fv) > 1e-9:
+                        out_scores[pair] = {"sentiment": fv, "source": src}
+            except Exception:
+                pass
 
-    # P2-01: Data quality logging
-    non_zero = sum(1 for v in scores.values() if v != 0.0)
-    logger.info(f"Sentiment loaded for dynamic basket ({len(universe)} pairs). X primary; Reddit only on real results. Non-zero scores: {non_zero}.")
-    return scores
+        # Free hybrid fallback when X unusable / still all zero
+        use_free_fallback = free_fb and primary in (
+            "x_with_free_fallback",
+            "x+free",
+            "x_free_fallback",
+            "x",
+        )
+        need_free = use_free_fallback and (
+            not x_info.get("usable")
+            or sum(1 for p in universe if abs(out_scores[p]["sentiment"]) > 1e-9) == 0
+        )
+        if need_free:
+            free_scores, free_meta = load_free_sentiment_scores(universe, max_age_hours=free_max_age)
+            if free_meta.get("available") and free_meta.get("non_zero", 0) > 0:
+                if not x_info.get("usable"):
+                    _set_all(free_scores, "free_fallback")
+                    mode = "free_fallback"
+                else:
+                    filled = 0
+                    for pair in universe:
+                        fv = float(free_scores.get(pair, 0.0) or 0.0)
+                        if abs(out_scores[pair]["sentiment"]) <= 1e-9 and abs(fv) > 1e-9:
+                            out_scores[pair] = {"sentiment": fv, "source": "free_fallback"}
+                            filled += 1
+                    if filled:
+                        mode = "free_fallback_partial"
+                logger.warning(
+                    f"Using FREE sentiment fallback (X usable={x_info.get('usable')} "
+                    f"posts={x_info.get('total_posts')} mode={mode})"
+                )
+
+    non_zero = sum(1 for v in out_scores.values() if abs(v["sentiment"]) > 1e-9)
+    logger.info(
+        f"Sentiment loaded for dynamic basket ({len(universe)} pairs). mode={mode} "
+        f"non_zero={non_zero} x_posts={x_info.get('total_posts')}"
+    )
+    return {
+        "scores": out_scores,
+        "mode": mode,
+        "policy": policy,
+        "free_meta": free_meta,
+        "x_usable": x_info,
+        "non_zero": non_zero,
+    }
 
 
-def load_latest_sentiment_for_basket(basket: List[str]) -> Dict[str, float]:
-    """Convenience for runner/rebalancer: query cached RSI + Sentiment for a trader's basket from DB (shared)."""
-    # RSI from DB
+def load_latest_sentiment_for_basket(
+    basket: List[str],
+    *,
+    sentiment_scores: Optional[Dict[str, float]] = None,
+) -> Dict[str, float]:
+    """Convenience for runner/rebalancer: RSI from DB + sentiment via canonical loader."""
     rsi = {}
     db_path = str(PROJECT_ROOT / "data/phase6.db")
     try:
@@ -237,12 +457,27 @@ def load_latest_sentiment_for_basket(basket: List[str]) -> Dict[str, float]:
         conn.close()
     except Exception:
         pass
-    sent = load_sentiment_scores(universe=basket)
+    sent = sentiment_scores if sentiment_scores is not None else load_sentiment_scores(universe=basket)
     return {"sentiment": sent, "rsi": rsi}
 
 
 def get_sentiment_timestamp(cache_path: str = CANONICAL_CACHE) -> Optional[str]:
-    """Return the timestamp of the last successful sentiment update, or None."""
+    """Return the timestamp of the active sentiment source (X/canonical or free fallback)."""
+    policy = _load_sentiment_policy()
+    primary = str(policy.get("primary") or "").lower()
+    x_info = x_signal_usable(min_posts_total=int(policy.get("x_min_usable_posts_total", 1) or 1))
+    use_free = primary in ("free_hybrid", "free", "free_shadow") or (
+        bool(policy.get("free_fallback_when_x_empty", True)) and not x_info.get("usable")
+    )
+    if use_free and os.path.exists(FREE_CACHE):
+        try:
+            with open(FREE_CACHE) as f:
+                data = json.load(f)
+            ts = data.get("timestamp")
+            if ts:
+                return ts
+        except Exception:
+            pass
     if not os.path.exists(cache_path):
         return None
     try:
@@ -270,17 +505,17 @@ def get_sentiment_freshness_minutes(cache_path: str = CANONICAL_CACHE) -> Option
 def get_aged_sentiment_scores(
     universe: Optional[List[str]] = None,
     half_life_minutes: float = 60.0,
-    cache_path: str = CANONICAL_CACHE
+    cache_path: str = CANONICAL_CACHE,
+    *,
+    raw_scores: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
     """
     Load scores and apply exponential aging/decay based on data age.
 
-    Appropriate for conservative trading decisions: stale sentiment has reduced impact.
     decay = 2 ** (-age_minutes / half_life_minutes)
-    Default half-life 60 minutes (matches historical grid-validated configs).
-    Returns aged scores (can be negative or near-zero for very stale positive/negative).
+    Default half-life 60 minutes.
     """
-    raw = load_sentiment_scores(universe, cache_path)
+    raw = raw_scores if raw_scores is not None else load_sentiment_scores(universe, cache_path)
     age = get_sentiment_freshness_minutes(cache_path) or 0.0
 
     if age <= 0:
@@ -301,11 +536,7 @@ def get_sentiment_adjusted_weights(
     sentiment_scores: Dict[str, float],
     sentiment_weight: float = 0.2
 ) -> Dict[str, float]:
-    """
-    Simple, reliable adjustment: positive sentiment increases weight, negative decreases.
-    Keeps weights summing to 1.0 with a small floor.
-    Recommend passing aged scores for production safety.
-    """
+    """Positive sentiment increases weight, negative decreases. Sums to 1.0 with floor."""
     if not base_weights:
         return {}
 
@@ -313,7 +544,9 @@ def get_sentiment_adjusted_weights(
     total = 0.0
     for pair, base_w in base_weights.items():
         sent = sentiment_scores.get(pair, 0.0)
-        adj = base_w * (1.0 + sentiment_weight * sent)
+        if isinstance(sent, dict):
+            sent = float(sent.get("sentiment", sent.get("combined", 0.0)) or 0.0)
+        adj = base_w * (1.0 + sentiment_weight * float(sent))
         adjusted[pair] = max(0.01, adj)
         total += adjusted[pair]
 
@@ -342,9 +575,11 @@ def format_sentiment_label(score: float) -> str:
 def format_sentiment_for_report(scores: Dict[str, float]) -> str:
     parts = []
     for pair, score in scores.items():
-        label = format_sentiment_label(score)
+        if isinstance(score, dict):
+            score = float(score.get("sentiment", score.get("combined", 0.0)) or 0.0)
+        label = format_sentiment_label(float(score))
         short = pair.replace("-USD", "")
-        parts.append(f"{short}: {score:+.2f} ({label})")
+        parts.append(f"{short}: {float(score):+.2f} ({label})")
     return " | ".join(parts)
 
 
@@ -371,8 +606,13 @@ def format_rsi_for_report(rsi_values: Dict[str, float]) -> str:
 
 
 if __name__ == "__main__":
+    d = load_sentiment_scores_detailed()
+    print("mode:", d["mode"], "non_zero:", d["non_zero"], "x_usable:", d["x_usable"])
     print("Raw scores:")
     print(load_sentiment_scores())
+    print("\nDetailed (sample):")
+    for p, e in list(d["scores"].items())[:6]:
+        print(f"  {p}: {e}")
     print("\nAged scores (half-life 60min):")
     print(get_aged_sentiment_scores())
     print("\nFreshness (minutes ago):", get_sentiment_freshness_minutes())

@@ -190,6 +190,31 @@ class StopLossCoordinator:
 
         return results
 
+    def attach_stop_loss(
+        self,
+        pair: str,
+        entry_price: float,
+        size: float,
+        *,
+        order_id: Optional[str] = None,
+        fresh_buy: bool = True,
+    ) -> bool:
+        """Post-buy SL attach for platform TradeExecutor (parity with OrderExecutor path)."""
+        oid = order_id or self._buy_order_ids.get(pair)
+        try:
+            return bool(
+                self.sl_manager.attach_stop_loss(
+                    pair,
+                    entry_price,
+                    size,
+                    anchor_entry=entry_price if entry_price > 0 else None,
+                    order_id=oid,
+                    fresh_buy=fresh_buy,
+                )
+            )
+        except Exception as e:
+            logger.warning("[SL-COORD] attach_stop_loss failed %s: %s", pair, e)
+            return False
 
     @contextmanager
     def suspend_reattach_context(self, pairs: List[str], new_positions: Dict[str, Any]):
@@ -210,6 +235,20 @@ class StopLossCoordinator:
             result = self.reattach_protective_orders(new_positions)
             attached = [p for p, r in result.items() if r.get("status") == "attached"]
             logger.info(f"[CR-03] Re-attached stops for {len(attached)} pairs: {attached}")
+            # ENG-S4-01: end-to-end CR-03 verification on success path
+            try:
+                basket = list(new_positions.keys())
+                recon = self.sl_manager.verify_reconciliation(
+                    basket=basket,
+                    suspended=suspend_summary,
+                )
+                logger.info(
+                    "[CR-03.5] verify_reconciliation success=%s details=%s",
+                    recon.get("success"),
+                    recon.get("details"),
+                )
+            except Exception as verr:
+                logger.warning("[CR-03.5] verify_reconciliation failed: %s", verr)
         except Exception as exc:
             logger.error(f"[CR-03] Exception during protected window: {exc}", exc_info=True)
             if self.require_atomic:

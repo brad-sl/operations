@@ -312,6 +312,7 @@ Document OpenAPI + shared secret rotation in `docs/integrations/GHL_CONTRACT.md`
 
 | Doc | When |
 |-----|------|
+| `docs/integrations/GHL_INTEGRATION.md` | **Now** — ramp-up prerequisites + Hermes `delegation.provider` note before GHL dev waves |
 | `docs/integrations/GHL_CONTRACT.md` | T1 start |
 | `docs/integrations/COINBASE_OAUTH.md` | T0-03 |
 | `handoffs/scaling/Handoff_SCALING-1000_T0.md` | T0 kickoff |

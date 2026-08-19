@@ -225,10 +225,34 @@ def main():
     if count == 0:
         msg = "🚨 CRITICAL: Phase 6 Runner is NOT running!"
         print(msg)
-        send_telegram(msg)
         pid_issues = check_pid_files()
         if pid_issues:
             print("[MONITOR] PID issues:", "; ".join(pid_issues))
+        # Auto-restart canonical launcher (singleton-safe)
+        start_sh = os.path.join(os.getcwd(), "scripts/phase6/start_phase6_runner.sh")
+        project_root = os.getcwd()
+        if not os.path.isfile(start_sh):
+            project_root = "/home/brad/projects/crypto-trading-bot"
+            start_sh = os.path.join(project_root, "scripts/phase6/start_phase6_runner.sh")
+        if os.path.isfile(start_sh):
+            try:
+                proc = subprocess.run(
+                    ["bash", start_sh],
+                    cwd=project_root,
+                    capture_output=True,
+                    text=True,
+                    timeout=120,
+                )
+                out = (proc.stdout or "") + (proc.stderr or "")
+                print("[MONITOR] Auto-restart attempt:", out.strip()[:500])
+                time.sleep(3)
+                if get_runner_pids():
+                    send_telegram("✅ Phase 6 Runner auto-restarted by monitor.")
+                    print("[MONITOR] Auto-restart succeeded")
+                    return
+            except Exception as e:
+                print(f"[MONITOR] Auto-restart failed: {e}")
+        send_telegram(msg)
         return
     elif count > 1:
         keep, killed = remediate_duplicate_runners(pids)
@@ -266,6 +290,36 @@ def main():
         msg = f"⚠️ WARNING: Rebalance window missed for configured daily time ({times_str} + 1h grace; last_rebalance stale)"
         print(msg)
         send_telegram(msg)
+
+    # Signal data-quality: defer streak + basket coverage (once per fingerprint / cooldown)
+    try:
+        root = os.getcwd()
+        if not os.path.isdir(os.path.join(root, "phase6")):
+            root = "/home/brad/projects/crypto-trading-bot"
+        if root not in sys.path:
+            sys.path.insert(0, root)
+        from phase6.core.signal_dq_monitor import evaluate_signal_dq, format_coverage_kpi
+
+        dq = evaluate_signal_dq(
+            log_path=os.path.join(root, "logs/phase6_runner.log"),
+            state_path=os.path.join(root, "data/state/signal_dq_monitor.json"),
+            min_streak=3,
+            cooldown_minutes=60,
+        )
+        print(f"[MONITOR] {dq.message}")
+        if dq.coverage:
+            print(f"[MONITOR] {format_coverage_kpi(dq.coverage)}")
+        if dq.should_alert:
+            send_telegram(dq.message)
+            print(f"[MONITOR] SIGNAL-DQ alert sent level={dq.level}")
+        # Soft warn on incomplete coverage even without defer streak (no Telegram spam)
+        elif dq.coverage and not dq.coverage.complete:
+            print(
+                f"[MONITOR] coverage incomplete missing_rsi={dq.coverage.missing_rsi} "
+                f"missing_sent={dq.coverage.missing_sent}"
+            )
+    except Exception as e:
+        print(f"[MONITOR] signal DQ check failed: {e}")
 
     print(f"[MONITOR] Health check passed (runners={count})")
 

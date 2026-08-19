@@ -1,6 +1,6 @@
 # Crypto Trading Bot VPS Migration Playbook
 
-## Infrastructure Strategy
+## Infrastructure Strategy (Updated PHASE-A-02: Hetzner primary rec - full scripts+guide in provisioning/ and PROVISIONING_GUIDE.md)
 ### DigitalOcean Droplet Specification
 - **Tier**: Basic $24/mo
 - **Specs**: 

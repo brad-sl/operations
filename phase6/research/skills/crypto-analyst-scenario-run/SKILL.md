@@ -34,6 +34,8 @@ Persona: see `docs/research/CRYPTO_ANALYST_PERSONALITY.md` in the crypto-trading
 | Gap matrix | `docs/research/BACKTEST_LIVE_GAP_MATRIX.md` |
 
 ## Pitfalls
+- Path B arch4 + production comparison; promotion requires gap matrix gates + shadow. <!-- pitfall: path-b-arch4-production-comparison-promotion-req -->
+
 
 - OHLCV pack dates may not overlap live go-live — headline production return separately.
 - Path B uses proxy sentiment/RSI in harness — flag gaps before live promotion.

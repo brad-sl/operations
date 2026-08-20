@@ -48,6 +48,10 @@ class RegimeCashSnapshot:
     enforce: bool = True
     enabled: bool = True
     as_of: str = ""
+    # Boundary layer (observability + shadow). Does not change live park until promote.
+    regime_layer: str = ""
+    layer_label: str = ""
+    shadow_stance: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -102,9 +106,14 @@ def resolve_regime_cash(
             bull_return_pct=float(det_cfg.get("bull_return_pct", 15.0)),
             bear_return_pct=float(det_cfg.get("bear_return_pct", -10.0)),
             flat_abs_pct=float(det_cfg.get("flat_abs_pct", 8.0)),
+            soft_up_width_pct=float(det_cfg.get("soft_up_width_pct", 2.0)),
+            pre_bull_width_pct=float(det_cfg.get("pre_bull_width_pct", 1.0)),
             use_live_price=bool(det_cfg.get("use_live_price", True)),
         )
     regime = str(detection.get("regime") or "unknown")
+    regime_layer = str(detection.get("regime_layer") or regime or "unknown")
+    layer_label = str(detection.get("layer_label") or "")
+    shadow_stance = str(detection.get("shadow_stance") or "")
     regimes = pol.get("regimes") or {}
     entry = deepcopy(regimes.get(regime) or regimes.get("unknown") or {})
     entry = _merge_knob_map(regime, pol, entry)
@@ -126,6 +135,9 @@ def resolve_regime_cash(
         enforce=bool(pol.get("enforce", False)),
         enabled=bool(pol.get("enabled", False)),
         as_of=datetime.now(timezone.utc).isoformat(),
+        regime_layer=regime_layer,
+        layer_label=layer_label,
+        shadow_stance=shadow_stance,
     )
 
 

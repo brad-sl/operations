@@ -56,6 +56,7 @@ def test_detect_regime_accepts_thresholds():
     assert d["regime"] in ("bull", "bear", "flat", "transition", "unknown")
     assert "thresholds" in d
     assert d["thresholds"]["flat_abs_pct"] == 50.0
+    assert "regime_layer" in d
 
 
 if __name__ == "__main__":

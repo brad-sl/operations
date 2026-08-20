@@ -208,7 +208,7 @@
                     <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
                         <span>Regime</span>
                         <button type="button" class="metric-help-btn" aria-label="REGIME-CASH"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
-                        <div class="metric-tip" role="tooltip">Active market regime (BTC window) and cash stance. PARK = no new buys; deploy only when regime + RSI + sentiment + lockout allow. From regime_cash_policy.</div>
+                        <div class="metric-tip" role="tooltip">Active market regime (BTC window), boundary layer (soft_up/climb/pre_bull), and live cash stance. PARK = no new buys live. Layer is observability + shadow cream gates — not a live thaw until promote.</div>
                     </div>
                     <div id="obs-regime" class="text-lg font-semibold tabular-nums mt-0.5">--</div>
                     <div id="obs-regime-sub" class="metric-sub"></div>
@@ -569,7 +569,11 @@
                 const rc = metricsData.regime_cash || {};
                 if (regEl) {
                     const mode = (rc.strategy_mode === 'usdc_park' || rc.allow_new_buys === false) ? 'PARK' : 'DEPLOY';
-                    regEl.textContent = (rc.regime || '--') + ' · ' + mode;
+                    const layer = rc.regime_layer || rc.regime || '--';
+                    // Show layer when it refines transition (soft_up/climb/pre_bull/soft_down)
+                    const coarse = rc.regime || '--';
+                    const head = (layer && layer !== coarse) ? (coarse + '·' + layer) : layer;
+                    regEl.textContent = head + ' · ' + mode;
                     regEl.className = 'text-lg font-semibold tabular-nums mt-0.5 ' +
                         (mode === 'PARK' ? 'text-amber-300' : 'text-emerald-400');
                 }
@@ -577,7 +581,8 @@
                     const btc = rc.btc_return_pct != null ? ('BTC ' + Number(rc.btc_return_pct).toFixed(1) + '%') : '';
                     const buys = rc.allow_new_buys === false ? 'no new buys' : 'buys gated';
                     const cap = rc.rebalance_cap_usd != null ? ('cap $' + Number(rc.rebalance_cap_usd).toFixed(0)) : '';
-                    regSub.textContent = [btc, buys, cap].filter(Boolean).join(' · ');
+                    const shadow = rc.shadow_stance ? ('shadow ' + rc.shadow_stance) : '';
+                    regSub.textContent = [btc, buys, cap, shadow].filter(Boolean).join(' · ');
                 }
                 const prEl = document.getElementById("obs-preserve");
                 const prSub = document.getElementById("obs-preserve-sub");

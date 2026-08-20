@@ -22,7 +22,10 @@
     "bull_return_pct": 15.0,
     "bear_return_pct": -10.0,
     "flat_abs_pct": 8.0,
-    "use_live_price": true
+    "soft_up_width_pct": 2.0,
+    "pre_bull_width_pct": 1.0,
+    "use_live_price": true,
+    "note": "Layer widths refine transition into soft_up/climb/pre_bull for dashboard+shadow only. Live park/deploy still uses coarse regime + knob_map until promote."
   },
   "regimes": {
     "bull": {

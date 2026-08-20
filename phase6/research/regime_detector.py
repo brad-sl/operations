@@ -19,9 +19,103 @@ BULL_RETURN_PCT = 15.0
 BEAR_RETURN_PCT = -10.0
 FLAT_ABS_PCT = 8.0
 LOOKBACK_DAYS = 30
+# Boundary layers inside residual "transition" (observability + shadow only until promote)
+SOFT_UP_WIDTH_PCT = 2.0   # flat .. flat+soft → soft_up
+PRE_BULL_WIDTH_PCT = 1.0  # bull-pre .. bull → pre_bull; middle residual → climb
 
 # Treat OHLCV as stale if last bar is older than this many calendar days
 STALE_DAYS = 2
+
+
+def classify_regime_layer(
+    ret_pct: float,
+    *,
+    bull_return_pct: float = BULL_RETURN_PCT,
+    bear_return_pct: float = BEAR_RETURN_PCT,
+    flat_abs_pct: float = FLAT_ABS_PCT,
+    soft_up_width_pct: float = SOFT_UP_WIDTH_PCT,
+    pre_bull_width_pct: float = PRE_BULL_WIDTH_PCT,
+) -> Dict[str, Any]:
+    """Split coarse regime into boundary layers (no live capital effect by itself).
+
+    Coarse regime stays bull|bear|flat|transition|unknown for policy keys.
+    Layers refine transition (and name primary regimes) for dashboard + shadow.
+
+    Upside residual (flat, bull): soft_up → climb → pre_bull
+    Downside residual (bear, -flat): soft_down
+    """
+    bull = float(bull_return_pct)
+    bear = float(bear_return_pct)
+    flat = abs(float(flat_abs_pct))
+    soft_w = max(0.0, float(soft_up_width_pct))
+    pre_w = max(0.0, float(pre_bull_width_pct))
+    r = float(ret_pct)
+
+    if r >= bull:
+        layer, coarse = "bull", "bull"
+    elif r <= bear:
+        layer, coarse = "bear", "bear"
+    elif abs(r) <= flat:
+        layer, coarse = "flat", "flat"
+    elif r < 0:
+        # bear < r < -flat
+        layer, coarse = "soft_down", "transition"
+    else:
+        # r > flat
+        soft_hi = flat + soft_w
+        pre_lo = bull - pre_w
+        if r <= soft_hi + 1e-12:
+            layer = "soft_up"
+        elif r >= pre_lo - 1e-12:
+            layer = "pre_bull"
+        elif r < bull:
+            layer = "climb"
+        else:
+            layer = "transition_core"
+        coarse = "transition"
+
+    labels = {
+        "bull": "Bull — full deploy posture",
+        "bear": "Bear — park",
+        "flat": "Flat — range / gated micro",
+        "soft_down": "Soft-down — thin residual near bear (park)",
+        "soft_up": "Soft-up — just above flat (shadow: Flat-B-like)",
+        "climb": "Climb — up but not bull (shadow: micro sleeve)",
+        "pre_bull": "Pre-bull — last step into bull (shadow: step-up micro)",
+        "transition_core": "Transition-core — residual park",
+        "unknown": "Unknown",
+    }
+    # Shadow stance suggestion only — live policy unchanged until promote
+    shadow_stance = {
+        "bull": "deploy",
+        "bear": "park",
+        "flat": "flat_b",
+        "soft_down": "park",
+        "soft_up": "flat_b_tight",
+        "climb": "micro_climb",
+        "pre_bull": "micro_pre_bull",
+        "transition_core": "park",
+        "unknown": "park",
+    }.get(layer, "park")
+
+    return {
+        "regime_layer": layer,
+        "regime": coarse,
+        "layer_label": labels.get(layer, layer),
+        "shadow_stance": shadow_stance,
+        "btc_return_pct": round(r, 3),
+        "layer_thresholds": {
+            "bull_return_pct": bull,
+            "bear_return_pct": bear,
+            "flat_abs_pct": flat,
+            "soft_up_width_pct": soft_w,
+            "pre_bull_width_pct": pre_w,
+            "soft_up_hi": round(flat + soft_w, 4),
+            "climb_lo": round(flat + soft_w, 4),
+            "climb_hi": round(bull - pre_w, 4),
+            "pre_bull_lo": round(bull - pre_w, 4),
+        },
+    }
 
 
 def _load_btc_closes() -> List[Tuple[date, float]]:
@@ -149,10 +243,15 @@ def detect_regime(
     bull_return_pct: float = BULL_RETURN_PCT,
     bear_return_pct: float = BEAR_RETURN_PCT,
     flat_abs_pct: float = FLAT_ABS_PCT,
+    soft_up_width_pct: float = SOFT_UP_WIDTH_PCT,
+    pre_bull_width_pct: float = PRE_BULL_WIDTH_PCT,
     use_live_price: bool = True,
 ) -> Dict[str, Any]:
     """
     Classify regime over the last `lookback_days` ending at `as_of` (default: latest bar).
+
+    Also emits regime_layer (soft_up/climb/pre_bull/…) for boundary observability.
+    Coarse `regime` key stays the policy lookup key (bull|bear|flat|transition|unknown).
     """
     closes = _load_btc_closes()
     live_meta: Dict[str, Any] = {}
@@ -162,6 +261,9 @@ def detect_regime(
     if len(closes) < 5:
         return {
             "regime": "unknown",
+            "regime_layer": "unknown",
+            "layer_label": "Unknown",
+            "shadow_stance": "park",
             "confidence": 0.0,
             "reason": "insufficient BTC OHLCV",
             "as_of": datetime.now(timezone.utc).isoformat(),
@@ -178,14 +280,15 @@ def detect_regime(
     p1 = window[-1][1]
     ret_pct = (p1 / p0 - 1.0) * 100.0 if p0 > 0 else 0.0
 
-    if ret_pct >= bull_return_pct:
-        regime = "bull"
-    elif ret_pct <= bear_return_pct:
-        regime = "bear"
-    elif abs(ret_pct) <= flat_abs_pct:
-        regime = "flat"
-    else:
-        regime = "transition"
+    layer_info = classify_regime_layer(
+        ret_pct,
+        bull_return_pct=bull_return_pct,
+        bear_return_pct=bear_return_pct,
+        flat_abs_pct=flat_abs_pct,
+        soft_up_width_pct=soft_up_width_pct,
+        pre_bull_width_pct=pre_bull_width_pct,
+    )
+    regime = str(layer_info["regime"])
 
     # Confidence: bar count + recency of last bar
     bar_conf = min(1.0, len(window) / max(lookback_days, 1))
@@ -195,6 +298,9 @@ def detect_regime(
 
     return {
         "regime": regime,
+        "regime_layer": layer_info["regime_layer"],
+        "layer_label": layer_info["layer_label"],
+        "shadow_stance": layer_info["shadow_stance"],
         "confidence": confidence,
         "btc_return_pct": round(ret_pct, 3),
         "window_start": window[0][0].isoformat(),
@@ -204,7 +310,10 @@ def detect_regime(
             "bull_return_pct": bull_return_pct,
             "bear_return_pct": bear_return_pct,
             "flat_abs_pct": flat_abs_pct,
+            "soft_up_width_pct": soft_up_width_pct,
+            "pre_bull_width_pct": pre_bull_width_pct,
         },
+        "layer_thresholds": layer_info.get("layer_thresholds"),
         "live_merge": live_meta,
         "as_of": datetime.now(timezone.utc).isoformat(),
     }

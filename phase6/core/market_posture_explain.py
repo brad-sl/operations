@@ -1,7 +1,10 @@
-"""Market heat vs risk posture + Why idle (trader-facing explain).
+"""Market heat vs risk posture + Why cash (trader-facing explain).
 
 Participation is optional; explanation is mandatory at scale.
 No live orders / no bag writes — read-only overlays for dashboard + research.
+
+Message copy for dashboard / IM / email is composed by
+``phase6.core.trader_message_compose`` (fixed templates, **no AI** in the live path).
 """
 from __future__ import annotations
 
@@ -423,7 +426,7 @@ def build_why_idle(
         total = cash = hold_v = 0.0
         util = None
 
-    return {
+    out = {
         "as_of": _now_iso(),
         "headline": headline,
         "participation_optional": True,
@@ -468,7 +471,15 @@ def build_why_idle(
             "We try to stay diversified with a short coin list, buy only when entries look solid, "
             "and always show you why cash is winning when it is."
         ),
-        }
+    }
+    # Channel payloads: pure templates (dashboard / telegram / email / push) — no AI
+    try:
+        from phase6.core.trader_message_compose import compose_why_cash_channels
+
+        out["messages"] = compose_why_cash_channels(out)
+    except Exception as e:
+        out["messages"] = {"error": str(e), "no_ai": True, "engine": "unavailable"}
+    return out
 
 
 def build_market_posture_payload(*, force_heat: bool = False) -> Dict[str, Any]:

@@ -24,6 +24,9 @@ sentiment_cache.json
 sentiment_cron.log
 *.pid
 
+# Backtest OHLCV caches / large local datasets (regenerable; never backup via git)
+backtests/data/
+
 # Local Hermes planning scratch (not durable ops state)
 .hermes/
 

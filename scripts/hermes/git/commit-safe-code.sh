@@ -328,4 +328,6 @@ else
 fi
 
 echo "=== Safe code commit complete ==="
-git status -sb | head -5
+# Avoid `... | head` under `set -o pipefail` (SIGPIPE → exit 141 → false cron error).
+mapfile -t _sb < <(git status -sb 2>/dev/null || true)
+printf '%s\n' "${_sb[@]:0:5}"

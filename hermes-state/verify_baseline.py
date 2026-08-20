@@ -78,14 +78,16 @@ def check_hardware():
 
 def check_git():
     print("\n=== Verifying git state ===")
-    live_status, _, _ = run_cmd("git status --short | head -5")
+    live_branch, _, _ = run_cmd("git branch --show-current")
     live_log, _, _ = run_cmd("git log --oneline -1")
-    
-    if "GIT_HERMES_OPERATIONALIZATION_PLAN.md" in live_log or "phase-6.1" in live_log:
-        print("LIVE: Recent commit includes plan (Phase 1 artifact)")
-    if "hermes-state" not in live_status:  # after commit it should be clean or noted
-        print("LIVE: hermes-state changes tracked in git (post-commit expected)")
-    return "phase-6.1" in live_log
+    remote_url, _, remote_rc = run_cmd("git remote get-url origin")
+    print(f"LIVE: branch={live_branch.strip() or '?'} tip={live_log}")
+    if remote_rc == 0 and remote_url:
+        print(f"LIVE: origin={remote_url}")
+    else:
+        print("MISSING: origin remote")
+    # Canonical branch + remote is the durable signal (commit messages vary).
+    return live_branch.strip() == "phase-6.1" and remote_rc == 0
 
 def check_processes():
     print("\n=== Verifying active processes (trading + Hermes) ===")

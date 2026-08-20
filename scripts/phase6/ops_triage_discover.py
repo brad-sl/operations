@@ -135,22 +135,30 @@ def main() -> int:
     except Exception:
         pass
 
-    # Hermes cron errors (last status)
+    # Hermes cron errors (last *run* status only).
+    # last_status ok + Telegram delivery timeout ≠ fail (sticky "delivery error" text).
     cron_out = _run(["hermes", "cron", "list"], timeout=45)
     for block in re.split(r"\n\s*\n", cron_out):
-        if "error" in block.lower() and "Name:" in block:
-            name_m = re.search(r"Name:\s+(\S.+)", block)
-            name = name_m.group(1).strip() if name_m else "unknown"
-            if "paused" in block.lower() or "enabled=False" in block:
-                continue
-            findings.append(
-                {
-                    "priority": "medium",
-                    "status": "open",
-                    "finding": f"Hermes cron recent error: {name}",
-                    "evidence": "hermes cron list",
-                }
-            )
+        if "Name:" not in block:
+            continue
+        if "paused" in block.lower() or "enabled=False" in block:
+            continue
+        # hermes CLI: "Last run:  <ts>  ok" or "Last run:  <ts>  error: ..."
+        status_m = re.search(
+            r"Last run:\s+\S+\s+(ok|error)\b", block, flags=re.IGNORECASE
+        )
+        if not status_m or status_m.group(1).lower() != "error":
+            continue
+        name_m = re.search(r"Name:\s+(\S.+)", block)
+        name = name_m.group(1).strip() if name_m else "unknown"
+        findings.append(
+            {
+                "priority": "medium",
+                "status": "open",
+                "finding": f"Hermes cron recent error: {name}",
+                "evidence": "hermes cron list",
+            }
+        )
 
     # Cap 3
     pri_rank = {"high": 0, "medium": 1, "low": 2}

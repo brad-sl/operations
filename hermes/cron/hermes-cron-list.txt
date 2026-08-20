@@ -18,13 +18,13 @@
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-08-20T04:45:00-07:00
+    Next run:  2026-08-20T08:00:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-20T04:30:28.400627-07:00  ok
-    Execution: completed  21d498dfc2e440ca869b1705bc916b71
+    Last run:  2026-08-20T07:45:41.783869-07:00  ok
+    Execution: completed  2cf26a73472544cc8381561e684c4e12
 
   92d0bbe12216 [active]
     Name:      daily-git-hermes-management
@@ -35,8 +35,130 @@
     Script:    git-daily-management.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-19T04:30:58.897491-07:00  ok
-    Execution: running  16146d86f99a480f90821736ae484949
+    Last run:  2026-08-20T04:30:39.449712-07:00  error: Script exited with code 1
+stdout:
+========== Git daily management @ 2026-08-20T04:30:28-07:00 ==========
+Project: /home/brad/projects/crypto-trading-bot
+=== Hermes Git Health Check @ 2026-08-20T04:30:28-07:00 ===
+Repo path: /home/brad/projects/crypto-trading-bot
+Branch: phase-6.1
+Last commit: e00eedae chore(git): untrack live state/trades; expand .env.example checklist
+Remote: https://github.com/brad-sl/operations.git
+Unpushed commits vs upstream: 0
+--- hermes/ mirror ---
+Hermes state mirror (sanitized, non-secret only). Last sync: 2026-08-19_043053
+--- hermes-state/ baseline (Phase 1) ---
+hermes-state present (10 entries)
+Dirty tracked/untracked (excl logs/data/pyc): 141
+Git health: OK
+Branch: phase-6.1 | dirty (excl noise): 141 | untracked: 129
+=== Hermes State Sync (Phase 2) @ 2026-08-20_043031 ===
+Live source: /home/brad/.hermes
+Git mirror : /home/brad/projects/crypto-trading-bot/hermes
+--- Syncing profiles (crypto-* + code-reviewer) ---
+sending incremental file list
+
+sent 64 bytes  received 19 bytes  166.00 bytes/sec
+total size is 693  speedup is 8.35
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 513  speedup is 6.58
+sending incremental file list
+
+sent 64 bytes  received 19 bytes  166.00 bytes/sec
+total size is 286  speedup is 3.45
+sending incremental file list
+
+sent 58 bytes  received 19 bytes  154.00 bytes/sec
+total size is 513  speedup is 6.66
+sending incremental file list
+
+sent 63 bytes  received 19 bytes  164.00 bytes/sec
+total size is 2,497  speedup is 30.45
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 1,599  speedup is 20.50
+sending incremental file list
+
+sent 64 bytes  received 19 bytes  166.00 bytes/sec
+total size is 333  speedup is 4.01
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 513  speedup is 6.58
+sending incremental file list
+
+sent 63 bytes  received 19 bytes  164.00 bytes/sec
+total size is 679  speedup is 8.28
+sending incremental file list
+
+sent 59 bytes  received 19 bytes  156.00 bytes/sec
+total size is 513  speedup is 6.58
+--- Syncing cron definitions ---
+sending incremental file list
+
+sent 135 bytes  received 19 bytes  308.00 bytes/sec
+total size is 1,566  speedup is 10.17
+--- Syncing relevant skills (names only + key SKILL.md excerpts) ---
+--- Syncing hardware snapshot + plans + PHASE_GOALS ---
+sending incremental file list
+
+sent 418 bytes  received 12 bytes  860.00 bytes/sec
+total size is 32,462  speedup is 75.49
+--- Sanitized config excerpt ---
+--- Git add & commit ---
+[phase-6.1 7df1f6b0] hermes: sync state mirror 2026-08-20_043031
+ 3 files changed, 80 insertions(+), 80 deletions(-)
+Committed.
+--- Pushing ---
+To https://github.com/brad-sl/operations.git
+   e00eedae..7df1f6b0  phase-6.1 -> phase-6.1
+=== Sync complete ===
+=== Safe code commit @ 2026-08-20_043035 ===
+Project: /home/brad/projects/crypto-trading-bot
+Branch: phase-6.1
+Max file size: 2097152 bytes
+# selected=1 skipped=178
+# skip  122  not-allowlisted
+# skip   16  ext:.1
+# skip   14  deny-prefix:backtests/data/
+# skip   11  ext:.svg
+# skip    4  ext:.png
+# skip    3  deny-prefix:logs/
+# skip    2  deny-name
+# skip    2  deny-re
+# skip    1  ext:.bak_promote_20260808_223445
+# skip    1  ext:.bak_promote_20260810_233746
+# skip    1  ext:.template
+# skip    1  ext:.legacy_20260813
+Candidates: 1
+--- sample candidates (first 40) ---
+docs/MASTER_TASK_TRACKING.md
+--- secret scan (staged) ---
+Secret scan: clean
+Staged files: 1
+[phase-6.1 ce21dc5a] chore(git): safe code backup 2026-08-20_043035
+ 1 file changed, 20 insertions(+)
+Committed: ce21dc5a chore(git): safe code backup 2026-08-20_043035
+--- Pushing to origin ---
+To https://github.com/brad-sl/operations.git
+   7df1f6b0..ce21dc5a  HEAD -> phase-6.1
+Push OK.
+=== Safe code commit complete ===
+## phase-6.1...origin/phase-6.1
+ M backtests/data/backtest_historical_ohlcv_arb_2025-04-20_to_2026-04-20.json
+ M backtests/data/backtest_historical_ohlcv_avax_2025-04-20_to_2026-04-20.json
+ M backtests/data/backtest_historical_ohlcv_btc_2025-04-20_to_2026-04-20.json
+ M backtests/data/backtest_historical_ohlcv_doge_2025-04-20_to_2026-04-20.json
+hardware: PASS
+git: FAIL/MISMATCH
+processes: PASS
+
+VERIFICATION ISSUES: Review diffs above. Re-export if needed.
+========== Daily git management finished (rc=1) ==========
+    Execution: failed  16146d86f99a480f90821736ae484949
 
   e039d96c4732 [active]
     Name:      Phase6 Analyst Optimization Weekly
@@ -53,13 +175,13 @@
     Name:      Phase6 Shadow Drift Monitor
     Schedule:  0 5 * * *
     Repeat:    ∞
-    Next run:  2026-08-20T05:00:00-07:00
+    Next run:  2026-08-21T05:00:00-07:00
     Deliver:   local
     Script:    phase6/research/run_shadow_drift_check.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-19T05:00:58.003726-07:00  ok
-    Execution: completed  2e395e63ba524995b32d366a753733c4
+    Last run:  2026-08-20T05:00:40.936282-07:00  ok
+    Execution: completed  bbc727ecf45140379665f3a6e3b3192e
 
   c16b620103dc [active]
     Name:      twice-daily-trading-intelligence-v2
@@ -77,61 +199,61 @@
     Name:      phase6-ops-triage-daily
     Schedule:  0 6 * * *
     Repeat:    ∞
-    Next run:  2026-08-20T06:00:00-07:00
+    Next run:  2026-08-21T06:00:00-07:00
     Deliver:   telegram
     Script:    phase6/run_ops_triage_discover.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-19T06:00:12.293008-07:00  ok
-    Execution: completed  21c8557842f74fac825e1e1093c3017d
+    Last run:  2026-08-20T06:01:04.157378-07:00  ok
+    Execution: completed  f796e6af39f348d39c6fcdf00c4e87ec
 
   1dfedf1dd8c9 [active]
     Name:      dashboard-live-state-5m
     Schedule:  */5 * * * *
     Repeat:    ∞
-    Next run:  2026-08-20T04:35:00-07:00
+    Next run:  2026-08-20T07:50:00-07:00
     Deliver:   local
     Script:    refresh_dashboard_live_state.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-20T04:25:25.219176-07:00  ok
-    Execution: claimed  46f1586b0d664df58b1a8e5f59b98729
+    Last run:  2026-08-20T07:45:44.509268-07:00  ok
+    Execution: completed  7b10f8ebef464b8fbe5aceb3f4ac020a
 
   8909f6a921ae [active]
     Name:      ops-issue-loop
     Schedule:  15 7,13,19 * * *
     Repeat:    ∞
-    Next run:  2026-08-20T07:15:00-07:00
+    Next run:  2026-08-20T13:15:00-07:00
     Deliver:   local
     Script:    phase6/run_ops_issue_loop.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-19T19:15:51.946323-07:00  ok
-    Execution: completed  109d245aa7454df2854333e7a0c595bf
+    Last run:  2026-08-20T07:15:21.003605-07:00  ok
+    Execution: completed  873b12876d134ad8b3f8a537b9cbf947
 
   9505b498cd6d [active]
     Name:      llm-token-daily-rollup
     Schedule:  5 5 * * *
     Repeat:    ∞
-    Next run:  2026-08-20T05:05:00-07:00
+    Next run:  2026-08-21T05:05:00-07:00
     Deliver:   local
     Script:    ops/llm_token_daily_rollup.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-19T05:05:57.928177-07:00  ok
-    Execution: completed  1e471c18c5f042e8a7bc2190fa78571a
+    Last run:  2026-08-20T05:05:42.292808-07:00  ok
+    Execution: completed  3f49ee8232b74fa89c4c2854560c6452
 
   5446999f1dcb [active]
     Name:      master-test-pickup-scan
     Schedule:  20 */6 * * *
     Repeat:    ∞
-    Next run:  2026-08-20T06:20:00-07:00
+    Next run:  2026-08-20T12:20:00-07:00
     Deliver:   telegram
     Script:    run_master_test_pickup_scan.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-20T00:20:06.654864-07:00  ok
-    Execution: completed  9bfefc1564f64a0896590d6af2c7eb6f
+    Last run:  2026-08-20T06:20:11.277908-07:00  ok
+    Execution: completed  ecce4cfac6124ddca7b61d08c261a21c
 
   9262ae4b1f3c [active]
     Name:      master-test-pickup
@@ -305,34 +427,34 @@
     Name:      phase6-runner-monitor-15m
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-08-20T04:45:00-07:00
+    Next run:  2026-08-20T08:00:00-07:00
     Deliver:   local
     Script:    phase6/run_monitor_phase6_runner.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-20T04:15:25.955421-07:00  ok
-    Execution: claimed  c11d849f52a44204a68fc5db6fbaa042
+    Last run:  2026-08-20T07:45:46.324473-07:00  ok
+    Execution: completed  55e7b40e4b0f4f98b654c38c587e1b91
 
   3c83e4d2232c [active]
     Name:      ops-engineer-30m
     Schedule:  */30 * * * *
     Repeat:    ∞
-    Next run:  2026-08-20T05:00:00-07:00
+    Next run:  2026-08-20T08:00:00-07:00
     Deliver:   local
     Script:    phase6/run_ops_engineer.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-08-20T04:00:22.069617-07:00  ok
-    Execution: claimed  22eb6f0921c7468bbbdc245959aa8953
+    Last run:  2026-08-20T07:30:21.453886-07:00  ok
+    Execution: completed  fb6e395765e64715978aca57e5d98ff7
 
   387e688fc854 [active]
     Name:      kanban-backup-frequent-15m
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-08-20T04:45:00-07:00
+    Next run:  2026-08-20T08:00:00-07:00
     Deliver:   local
     Script:    run_backup_kanban_frequent.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-08-20T04:30:26.120192-07:00  ok
-    Execution: completed  5192c6d68fce4b0c8b607767e56f9344
+    Last run:  2026-08-20T07:45:17.531916-07:00  ok
+    Execution: completed  9ecfef06e05f4ffe8c625b39fa871981
 

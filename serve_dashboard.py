@@ -23,6 +23,7 @@ from phase6.core.performance_api import (
     flush_performance_cache,
     perf_compute_lock,
     performance_cache,
+    schedule_performance_recompute,
 )
 from phase6.core.rebalance_logger import get_recent_rebalances
 from phase6.core.dashboard_serve_helpers import (
@@ -1097,52 +1098,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 if trading and closed_win:
                     win_ratio_exits = {"basis": "open_book_unrealized", "total": len(trading)}
 
-            if cached_payload and isinstance(cached_payload, dict):
-                out = dict(cached_payload)
+            def _overlay_fresh_wr(base: dict, cache_tag: str) -> dict:
+                out = dict(base)
                 out["win_ratio"] = round(float(win_ratio), 3)
                 out["win_ratio_exits"] = win_ratio_exits
                 out["total_trades"] = len(trades) or perf.get("total_trades", 0)
                 out["last_updated"] = datetime.now(timezone.utc).isoformat()
-                out["cache"] = "hit"
-                self.send_json(out)
-                return
+                out["cache"] = cache_tag
+                return out
 
-            # Single-flight cold compute: concurrent UI polls must not N× stampede SQLite.
-            # Sequential periods-then-equity with tight timeouts (parallel dual-read thrash).
-            acquired = perf_compute_lock.acquire(blocking=False)
-            if not acquired:
-                # Another thread computing — serve explicit short timeout, never fake 0 tiles.
-                self.send_json({
-                    "status": "ok",
-                    "win_ratio": round(float(win_ratio), 3),
-                    "win_ratio_exits": win_ratio_exits,
-                    "total_trades": len(trades) or perf.get("total_trades", 0),
-                    "today": None,
-                    "h24": None,
-                    "d7": None,
-                    "d14": None,
-                    "d30": None,
-                    "external_flows_usd": {},
-                    "deposit_adjusted": False,
-                    "equity_trend": {"status": "timeout", "points": []},
-                    "source": "portfolio_snapshots_db + positions (inflight)",
-                    "last_updated": datetime.now(timezone.utc).isoformat(),
-                    "cache": "inflight",
-                })
-                return
-            try:
-                # Re-check cache after acquiring (winner may have just filled it).
-                cached_payload = performance_cache.get(cache_key)
-                if cached_payload and isinstance(cached_payload, dict):
-                    out = dict(cached_payload)
-                    out["win_ratio"] = round(float(win_ratio), 3)
-                    out["win_ratio_exits"] = win_ratio_exits
-                    out["total_trades"] = len(trades) or perf.get("total_trades", 0)
-                    out["last_updated"] = datetime.now(timezone.utc).isoformat()
-                    out["cache"] = "hit"
-                    self.send_json(out)
-                    return
+            def _payload_populated(p: dict) -> bool:
+                if any(p.get(k) is not None for k in ("today", "h24", "d7", "d14", "d30")):
+                    return True
+                eq = p.get("equity_trend") or {}
+                return eq.get("status") == "ok" and len(eq.get("points") or []) >= 2
 
+            def _compute_and_store():
                 try:
                     periods = compute_period_performance(total, DB_PATH, timeout=3.5)
                 except Exception:
@@ -1183,12 +1154,63 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "last_updated": datetime.now(timezone.utc).isoformat(),
                     "cache": "miss",
                 }
-                populated = any(
-                    periods.get(k) is not None for k in ("today", "h24", "d7", "d14", "d30")
-                )
-                # Always cache: populated → 60s; empty/timeout → 15s anti-stampede (not forever N/A).
-                performance_cache.set(cache_key, payload, ttl=60.0 if populated else 15.0)
-                self.send_json(payload)
+                populated = _payload_populated(payload)
+                if populated:
+                    performance_cache.set(cache_key, payload, ttl=60.0)
+                else:
+                    # Don't clobber last_good with empties; briefly re-arm stale if present.
+                    stale = performance_cache.get_last_good(cache_key)
+                    if stale and _payload_populated(stale):
+                        performance_cache.set(cache_key, stale, ttl=15.0)
+                    else:
+                        performance_cache.set(cache_key, payload, ttl=8.0)
+                return payload
+
+            if cached_payload and isinstance(cached_payload, dict):
+                # Prefer fresh populated cache; if TTL left only empty timeout junk,
+                # fall through to last-good below when present.
+                if _payload_populated(cached_payload) or not performance_cache.get_last_good(cache_key):
+                    self.send_json(_overlay_fresh_wr(cached_payload, "hit"))
+                    return
+
+            # Stale-while-revalidate: if we already have numbers, return them immediately
+            # and refresh in a background thread (never block the UI poll on DB).
+            stale = performance_cache.get_last_good(cache_key)
+            if stale and isinstance(stale, dict) and _payload_populated(stale):
+                schedule_performance_recompute(_compute_and_store)
+                out = _overlay_fresh_wr(stale, "stale")
+                out["source"] = (stale.get("source") or "portfolio_snapshots_db") + " (stale-while-revalidate)"
+                self.send_json(out)
+                return
+
+            # First paint / no last_good: single-flight blocking compute.
+            acquired = perf_compute_lock.acquire(blocking=False)
+            if not acquired:
+                self.send_json({
+                    "status": "ok",
+                    "win_ratio": round(float(win_ratio), 3),
+                    "win_ratio_exits": win_ratio_exits,
+                    "total_trades": len(trades) or perf.get("total_trades", 0),
+                    "today": None,
+                    "h24": None,
+                    "d7": None,
+                    "d14": None,
+                    "d30": None,
+                    "external_flows_usd": {},
+                    "deposit_adjusted": False,
+                    "equity_trend": {"status": "timeout", "points": []},
+                    "source": "portfolio_snapshots_db + positions (inflight)",
+                    "last_updated": datetime.now(timezone.utc).isoformat(),
+                    "cache": "inflight",
+                })
+                return
+            try:
+                cached_payload = performance_cache.get(cache_key)
+                if cached_payload and isinstance(cached_payload, dict) and _payload_populated(cached_payload):
+                    self.send_json(_overlay_fresh_wr(cached_payload, "hit"))
+                    return
+                payload = _compute_and_store()
+                self.send_json(_overlay_fresh_wr(payload, payload.get("cache") or "miss"))
             finally:
                 perf_compute_lock.release()
         elif path == '/api/performance/flush':

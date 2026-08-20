@@ -328,6 +328,19 @@
         }
         initMetricHelp();
 
+        // Stale-while-revalidate: keep last good payloads so a slow/null poll never
+        // blanks the UI to N/A for seconds/minutes (esp. /api/performance).
+        const lastGood = {
+            balances: null,
+            positions: null,
+            performance: null,
+            trades: null,
+            signals: null,
+            rebalances: null,
+            metrics: null,
+            brief: null,
+        };
+
         async function fetchData(endpoint, timeoutMs = 8000) {
             try {
                 const ctrl = new AbortController();
@@ -346,7 +359,23 @@
             return settled && settled.status === 'fulfilled' ? settled.value : null;
         }
 
-        function renderEquityTrend(eq) {
+        function perfHasNumbers(p) {
+            if (!p || typeof p !== 'object') return false;
+            if (['today', 'h24', 'd7', 'd14', 'd30'].some(k => typeof p[k] === 'number')) return true;
+            const eq = p.equity_trend || {};
+            return eq.status === 'ok' && Array.isArray(eq.points) && eq.points.length >= 2;
+        }
+
+        function pickPayload(key, fresh, isGood) {
+            if (fresh != null && (typeof isGood !== 'function' || isGood(fresh))) {
+                lastGood[key] = fresh;
+                return fresh;
+            }
+            // Hold last good on null / timeout / empty inflight — do not flash N/A.
+            return lastGood[key] || fresh;
+        }
+
+        function renderEquityTrend(eq, { forceNa = false } = {}) {
             const labelEl = document.getElementById('equity-health-label');
             const blurbEl = document.getElementById('equity-health-blurb');
             const winEl = document.getElementById('equity-window-ret');
@@ -358,6 +387,8 @@
             if (!pathEl) return;
 
             if (!eq || !eq.points || eq.points.length < 2 || eq.status !== 'ok') {
+                // Keep prior chart/labels unless first paint or explicit clear.
+                if (!forceNa && pathEl.getAttribute('points')) return;
                 if (labelEl) labelEl.textContent = 'N/A';
                 if (blurbEl) blurbEl.textContent = (eq && eq.status) ? ('Equity path unavailable (' + eq.status + ').') : 'Equity path unavailable.';
                 pathEl.setAttribute('points', '');
@@ -439,7 +470,8 @@
             const endpoints = [
                 fetchData('/api/balances'),
                 fetchData('/api/positions'),
-                fetchData('/api/performance'),
+                // Performance DB path can exceed 8s under load; give it room, still hold last-good on fail.
+                fetchData('/api/performance', 15000),
                 fetchData('/api/trades'),
                 fetchData('/api/pair-signals'),
                 fetchData('/api/rebalances'),
@@ -447,14 +479,16 @@
                 fetchData('/api/brief'),
             ];
             const settled = await Promise.allSettled(endpoints);
-            const balData = settledValue(settled[0]);
-            const posData = settledValue(settled[1]);
-            const perfData = settledValue(settled[2]);
-            const tradesData = settledValue(settled[3]);
-            const signalsData = settledValue(settled[4]);
-            const rebalData = settledValue(settled[5]);
-            const metricsData = settledValue(settled[6]);
-            const briefData = settledValue(settled[7]);
+            const balData = pickPayload('balances', settledValue(settled[0]));
+            const posData = pickPayload('positions', settledValue(settled[1]), (p) =>
+                !!(p && ((p.trading_positions && p.trading_positions.length) || (p.cash_positions && p.cash_positions.length) || (p.positions && p.positions.length) || p.total_usd != null))
+            );
+            const perfData = pickPayload('performance', settledValue(settled[2]), perfHasNumbers);
+            const tradesData = pickPayload('trades', settledValue(settled[3]), (p) => !!(p && Array.isArray(p.trades)));
+            const signalsData = pickPayload('signals', settledValue(settled[4]), (p) => !!(p && p.status === 'ok' && (p.rows || []).length));
+            const rebalData = pickPayload('rebalances', settledValue(settled[5]), (p) => !!(p && Array.isArray(p.rebalances)));
+            const metricsData = pickPayload('metrics', settledValue(settled[6]), (p) => !!(p && p.metrics));
+            const briefData = pickPayload('brief', settledValue(settled[7]));
             // Update recovery with current position count
             if (typeof updateRecoveryStatus === 'function') updateRecoveryStatus(posData);
 
@@ -509,7 +543,9 @@
                 tradingPositions = posData.positions || [];
             }
 
-            if (countEl) countEl.textContent = `${tradingPositions.length} pairs`;
+            if (countEl && (tradingPositions.length || cashPositions.length)) {
+                countEl.textContent = `${tradingPositions.length} pairs`;
+            }
 
             // P1 Observability metrics (cache-first /api/metrics; degraded still renders partial KPIs)
             if (metricsData && metricsData.metrics) {
@@ -570,8 +606,11 @@
                 }
             }
 
+            // Don't wipe a good table when this poll failed / returned empty.
             if (!tradingPositions.length && !cashPositions.length) {
-                container.innerHTML = `<div class="text-slate-500 text-sm py-4">No active positions or cash</div>`;
+                if (!container || !container.querySelector('table')) {
+                    if (container) container.innerHTML = `<div class="text-slate-500 text-sm py-4">No active positions or cash</div>`;
+                }
             } else {
                 let html = `<table class="w-full text-sm"><thead><tr class="text-slate-400 border-b border-slate-800">
                     <th class="text-left py-2 font-normal">Asset</th>
@@ -651,26 +690,43 @@
                 container.innerHTML = html;
             }
 
-            // PnL
+            // PnL — only overwrite a tile when this payload has a real number.
+            // Inflight/timeout all-null responses must not flash N/A over last good.
             if (perfData) {
-                if (document.getElementById('win-ratio')) document.getElementById('win-ratio').textContent = ((perfData.win_ratio || 0) * 100).toFixed(0) + '%';
+                if (typeof perfData.win_ratio === 'number' && document.getElementById('win-ratio')) {
+                    document.getElementById('win-ratio').textContent = (perfData.win_ratio * 100).toFixed(0) + '%';
+                }
                 const wrSub = document.getElementById('win-ratio-sub');
-                if (wrSub) {
+                if (wrSub && perfData.win_ratio_exits) {
                     const ex = perfData.win_ratio_exits || {};
                     if (ex.total != null) {
                         const wins = (ex.wins != null ? ex.wins : 0);
                         wrSub.textContent = wins + '/' + ex.total + ' realizing exits';
                     } else if (ex.basis === 'open_book_unrealized') {
                         wrSub.textContent = 'open-book unrealized';
-                    } else {
-                        wrSub.textContent = '0/0 realizing exits';
                     }
                 }
-                if (document.getElementById('pnl-today')) document.getElementById('pnl-today').textContent = (perfData.today != null && typeof perfData.today === 'number' ? perfData.today.toFixed(2) + '%' : 'N/A');
-                if (document.getElementById('pnl-7d')) document.getElementById('pnl-7d').textContent = (perfData.d7 != null && typeof perfData.d7 === 'number' ? perfData.d7.toFixed(2) + '%' : 'N/A');
-                if (document.getElementById('pnl-14d')) document.getElementById('pnl-14d').textContent = (perfData.d14 != null && typeof perfData.d14 === 'number' ? perfData.d14.toFixed(2) + '%' : 'N/A');
-                if (document.getElementById('pnl-30d')) document.getElementById('pnl-30d').textContent = (perfData.d30 != null && typeof perfData.d30 === 'number' ? perfData.d30.toFixed(2) + '%' : 'N/A');
-                renderEquityTrend(perfData.equity_trend);
+                const setPct = (id, v) => {
+                    const el = document.getElementById(id);
+                    if (!el || typeof v !== 'number') return;
+                    el.textContent = ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+                    el.classList.toggle('text-emerald-400', v >= 0);
+                    el.classList.toggle('text-red-400', v < 0);
+                };
+                setPct('pnl-today', perfData.today);
+                setPct('pnl-7d', perfData.d7);
+                setPct('pnl-14d', perfData.d14);
+                setPct('pnl-30d', perfData.d30);
+                // First paint only: if we still have no numbers, show N/A once.
+                if (!perfHasNumbers(perfData) && !lastGood.performance) {
+                    ['pnl-today', 'pnl-7d', 'pnl-14d', 'pnl-30d'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el && (!el.textContent || el.textContent === '--' || el.textContent === '')) el.textContent = 'N/A';
+                    });
+                    renderEquityTrend(perfData.equity_trend, { forceNa: true });
+                } else {
+                    renderEquityTrend(perfData.equity_trend);
+                }
             }
 
             // Recent Buy Activity (from bought_indicators in live_state, populated from recent ledger BUYs)
@@ -769,7 +825,7 @@
                     </tr></thead>
                     <tbody>${body}</tbody>
                 </table>`;
-            } else if (sigContainer) {
+            } else if (sigContainer && !sigContainer.querySelector('table')) {
                 sigContainer.innerHTML = '<div class="text-slate-500 text-sm">No signal data available</div>';
             }
 
@@ -817,7 +873,7 @@
                         <span class="text-slate-500">${timeStr}</span>
                     </div>`;
                 }).join('');
-            } else if (tradesContainer) {
+            } else if (tradesContainer && !tradesContainer.children.length) {
                 tradesContainer.innerHTML = '<div class="text-slate-500 text-xs">No trades recorded yet</div>';
             }
 
@@ -845,12 +901,14 @@
                             <span class="text-slate-400">${pairs} pairs ${cap}</span>
                         </div>`;
                     }).join('');
-                } else {
+                } else if (!rebalContainer.children.length) {
                     rebalContainer.innerHTML = '<div class="text-slate-500 text-xs">No executed rebalances</div>';
                 }
             }
         }
         // Initial load - pure consumer bootstrap (uses same fetchData as updates)
+        let dashPollTimer = null;
+        let dashInFlight = false;
         async function initDashboard() {
             try {
                 const balances = await fetchData('/api/balances');
@@ -871,9 +929,14 @@
                 console.error('Init failed', e);
             }
             
-            // Then start the regular polling (updateDashboard is the main pure renderer)
-            setInterval(updateDashboard, 5000);
-            updateDashboard();
+            // Poll every 5s but never stack concurrent updateDashboard runs (was amplifying inflight N/A).
+            const tick = async () => {
+                if (dashInFlight) return;
+                dashInFlight = true;
+                try { await updateDashboard(); } finally { dashInFlight = false; }
+            };
+            dashPollTimer = setInterval(tick, 5000);
+            tick();
         }
         
         initDashboard();

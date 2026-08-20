@@ -15,7 +15,7 @@ This map is the **profit-side playbook by market weather**:
 |---------------|----------------------------|-----|
 | **Bull** | Watch for ~**+6%** take-profit + trail; RSI hard-exit only if very hot (≥75) | Offline study: TP beat ride-to-stop |
 | **Flat** | Watch for ~**+5%** take-profit + trail; RSI ≥65 watch | Offline study: TP beat ride-to-stop |
-| **Bear** | **No** TP / trail / RSI exit shadows | Offline + prior: early exits hurt; ride/SL |
+| **Bear** | **No** full TP / trail / RSI exit shadows on the map. **Plus:** partial **ladder scale-out** shadow (`bear_profit_take`) when green vs entry | Offline: early *full* TP hurt; ladder is separate hypothesis |
 | **Transition / unknown** | Conservative (mostly ride/SL; light RSI watch in transition) | No solid offline cell |
 
 **Nothing here sells.** Evidence is written to disk for **weekly review** — Telegram pings for this map are **off** (`notify_on_would_fire: false`).

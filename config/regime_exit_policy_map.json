@@ -33,12 +33,16 @@
       "confidence": "design_from_offline_n34"
     },
     "bear": {
-      "label": "Bear — ride/SL prior; early TP hurt offline",
+      "label": "Bear — ride/SL prior for full TP; partial ladder is separate feature",
       "source_study_call": "prefer_sl_ride",
       "fixed_tp": { "enabled": false, "pct": null },
       "trail": { "enabled": false, "arm_pct": 0.04, "trail_pct": 0.02, "breakeven_lock_pct": 0.005 },
       "rsi_hard_exit": { "enabled": false, "overbought": null, "note": "Do not shadow-force RSI exits in bear until overturned" },
-      "confidence": "design_from_offline_n21_plus_prior_ride_it_out"
+      "confidence": "design_from_offline_n21_plus_prior_ride_it_out",
+      "bear_profit_take": {
+        "path": "config/bear_profit_take.json",
+        "note": "Partial ladder scale-out shadow only — not full TP; see FEAT-BEAR-PROFIT-TAKE"
+      }
     },
     "transition": {
       "label": "Transition — conservative; no offline cell; default ride/SL + optional high RSI watch",

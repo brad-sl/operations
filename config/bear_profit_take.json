@@ -1,0 +1,49 @@
+{
+  "schema": "bear_profit_take_v1",
+  "philosophy": "No shorting. Rules-based partial scale-out into strength in bear; proceeds to stables; no FOMO rebuy. Shadow until Brad OK. Not the same as one-shot full TP (offline prior: early full TP hurt).",
+  "mode": "shadow",
+  "live_apply": false,
+  "enabled": true,
+  "active_regimes": ["bear"],
+  "min_position_usd": 25.0,
+  "ladder": {
+    "enabled": true,
+    "tranches": [
+      {"level": 1, "r_pct": 0.03, "sell_frac": 0.25, "label": "first_slice"},
+      {"level": 2, "r_pct": 0.05, "sell_frac": 0.25, "label": "second_slice"},
+      {"level": 3, "r_pct": 0.08, "sell_frac": 0.25, "label": "third_slice"}
+    ],
+    "leave_moon_bag_frac": 0.25,
+    "note": "sell_frac is fraction of position notionals at would-fire; moon bag never laddered"
+  },
+  "limit_tp_levels": {
+    "enabled": true,
+    "note": "Same r_pct levels as ladder — shadow 'limit would rest' markers for future exchange attach"
+  },
+  "relief_rally": {
+    "enabled": false,
+    "note": "Phase 3 — trough-to-bounce detector not in P1"
+  },
+  "proceeds_destination": "stables",
+  "proceeds_note": "After live promote: route trim USD to cash/USDC park; optional yield is separate venue risk",
+  "rebuy_block_hours_after_tp": 72,
+  "rebuy_block_note": "Shadow records intent; live wire uses capital_controls cooldown",
+  "exclude": ["loans", "perps", "options", "shorting"],
+  "notify_on_would_fire": false,
+  "notify_dedupe_hours": 24,
+  "episode_gap_minutes": 30,
+  "promotion": {
+    "auto_promote": false,
+    "require_brad_ok": true,
+    "shadow_min_bear_calendar_days": 30,
+    "min_ladder_episodes": 10,
+    "require_path_cf": true,
+    "path_cf_script": "phase6/research/run_bear_ladder_path_cf.py",
+    "note": "P2 script may not exist yet — gate stays closed"
+  },
+  "related": {
+    "regime_exit_map_bear": "fixed_tp disabled — this feature is partial ladder only",
+    "spec": "docs/features/BEAR_PROFIT_TAKE_NO_SHORT_SPEC.md",
+    "epic": "docs/epics/BEAR_PROFIT_TAKE_EPIC.md"
+  }
+}

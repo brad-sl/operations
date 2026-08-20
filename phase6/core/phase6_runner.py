@@ -559,6 +559,14 @@ class Phase6Runner:
                     apply_regime_exit_shadow_from_runner(self)
                 except Exception as _rex_e:
                     logger.debug("regime_exit_shadow cycle: %s", _rex_e)
+                try:
+                    from phase6.core.bear_profit_take_shadow import (
+                        apply_bear_profit_take_from_runner,
+                    )
+
+                    apply_bear_profit_take_from_runner(self)
+                except Exception as _bpt_e:
+                    logger.debug("bear_profit_take_shadow cycle: %s", _bpt_e)
                 time.sleep(60)
             except KeyboardInterrupt:
                 logger.info("Shutdown requested")

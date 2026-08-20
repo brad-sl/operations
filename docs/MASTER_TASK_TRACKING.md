@@ -1,3 +1,31 @@
+## P6-BEAR-PROFIT-TAKE-SHADOW-20260820 — ACTIVE (P1 shadow)
+
+**Type:** feature / exit (not Type:test auto_pickup)  
+**Status:** ACTIVE — Phase 1 shadow shipped (2026-08-20)  
+**auto_pickup:** false  
+**Priority:** P1 platform prep (bear readiness)  
+**Live money:** **NO** — `mode=shadow`, `live_apply` forced false  
+**Epic:** `docs/epics/BEAR_PROFIT_TAKE_EPIC.md`  
+**Spec:** `docs/features/BEAR_PROFIT_TAKE_NO_SHORT_SPEC.md`
+
+### Plain English
+When a real **down market** hits, take **partial** profit on temporary green (ladder), park proceeds in stables, don't FOMO-rebuy, **don't short**. Collect shadow evidence before any live sell. Separate from full fixed-TP (offline still says full early TP hurt in bear).
+
+### P1 shipped
+- Config: `config/bear_profit_take.json`
+- Engine: `phase6/core/bear_profit_take_shadow.py` (+ runner hook)
+- ISO: `phase6/core/test_isolation_bear_profit_take_shadow.py` **PASS**
+- CLI: `phase6/research/run_bear_profit_take_shadow.py`
+- Messages: `compose_bear_tp_channels` (no AI)
+- State: `data/state/bear_profit_take_shadow_status.json`
+
+### Next (not started)
+- P2 path CF ladder vs ride-SL on bear legs  
+- P3 relief-bounce detector  
+- P4 Brad OK → live partial + 72h rebuy block  
+
+---
+
 ## P6-RESEARCH-SQUEEZE-REGIME-BREAKOUT-20260819 — OPEN
 
 **Type:** research + paper (not Type:test auto_pickup)  

@@ -177,6 +177,95 @@ def compose_from_why_idle(why: Mapping[str, Any]) -> Dict[str, Any]:
     return compose_why_cash_channels(why)
 
 
+def compose_bear_tp_channels(result: Mapping[str, Any]) -> Dict[str, Any]:
+    """Bear profit-take shadow → dashboard / IM / email (no AI).
+
+    Expected keys from bear_profit_take_shadow.run_bear_profit_take_cycle:
+      plain_english, regime, status, new_episodes, n_new_episodes,
+      proceeds_destination, rebuy_block_hours, orders_placed
+    """
+    pe = str(result.get("plain_english") or "").strip()
+    reg = str(result.get("regime") or "unknown")
+    status = str(result.get("status") or "")
+    n_new = int(result.get("n_new_episodes") or 0)
+    dest = str(result.get("proceeds_destination") or "cash")
+    block_h = int(result.get("rebuy_block_hours") or 72)
+
+    if status == "idle_wrong_regime":
+        headline = (
+            "Profit ladder is on standby — it only arms in a clear down-market regime."
+        )
+    elif status == "off":
+        headline = "Bear profit-take playbook is turned off."
+    elif n_new > 0:
+        headline = (
+            "Down-market playbook (shadow only): we'd take some profit on strength. "
+            "No real sell placed."
+        )
+    else:
+        headline = (
+            "Down-market watch is on. No new partial take-profit levels hit this check."
+        )
+
+    if pe:
+        headline = pe if len(pe) < 220 else headline
+
+    reasons: List[Dict[str, Any]] = []
+    for ep in list(result.get("new_episodes") or [])[:6]:
+        if ep.get("kind") and ep.get("kind") != "ladder_scale_out":
+            continue
+        pair = _pair_short(str(ep.get("pair") or ""))
+        try:
+            r = float(ep.get("r") or 0) * 100.0
+            frac = float(ep.get("sell_frac") or 0) * 100.0
+            usd = float(ep.get("would_exit_usd") or 0)
+        except (TypeError, ValueError):
+            r, frac, usd = 0.0, 0.0, 0.0
+        reasons.append(
+            {
+                "code": "ladder_scale_out",
+                "title": f"Would trim {pair}",
+                "detail": (
+                    f"Up about {r:.1f}% from your entry — rules say sell ~{frac:.0f}% "
+                    f"(about ${usd:.0f}), keep a leftover bag, park proceeds in {dest}, "
+                    f"and don't rush back in for ~{block_h}h."
+                ),
+                "severity": "primary",
+            }
+        )
+
+    if not reasons:
+        reasons.append(
+            {
+                "code": "bear_standby" if status == "idle_wrong_regime" else "bear_watch",
+                "title": "No new trim this cycle",
+                "detail": (
+                    f"Regime={reg}. Ladder arms only in a down market; "
+                    "partial sells are rule-based, not a short."
+                ),
+                "severity": "secondary",
+            }
+        )
+
+    faq = (
+        "In a long down market we prefer taking some profit on temporary green days "
+        "instead of hoping for a perfect top — and we don't short."
+    )
+    facts = {
+        "headline": headline,
+        "reasons": reasons,
+        "heat": {},
+        "posture": {"park": True},
+        "cream": {},
+        "book": {},
+        "scale_faq": faq,
+    }
+    out = compose_why_cash_channels(facts)
+    out["feature"] = "bear_profit_take"
+    out["orders_placed"] = bool(result.get("orders_placed"))
+    return out
+
+
 def assert_no_ai_imports() -> None:
     """Lightweight self-check for isolation tests (not a full security sandbox)."""
     import sys

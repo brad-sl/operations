@@ -1,7 +1,8 @@
 # Regime boundary layers — flat→bull gap design
 
 **Date:** 2026-08-20  
-**Status:** research / product design — **no live policy write**  
+**Status:** Option **1 shipped** (labels + shadow) — **no live park thaw**  
+**Live money:** unchanged (`transition` → `usdc_park` cap $0 until Brad promote)  
 **Trigger:** Operator: huge flat→bull residual park band is counterproductive while path trends up; OK with **narrow** true-transition; want **layers** + cash deploy only where win probability is defensible.
 
 ---

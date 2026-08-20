@@ -756,6 +756,18 @@ def _metrics_from_live_state(reason: str = "", message: str = "", db_metrics: di
                 pass
     except Exception as e:
         payload["preserve_mode"] = {"badge": "OFF", "error": str(e), "detail": "status unavailable"}
+    # Market heat vs posture + Why idle (scale FAQ — explanation mandatory)
+    try:
+        from phase6.core.market_posture_explain import build_market_posture_payload
+
+        posture = build_market_posture_payload(force_heat=False)
+        payload["market_heat"] = posture.get("market_heat")
+        payload["why_idle"] = posture.get("why_idle")
+        payload["cream_summary"] = posture.get("cream_summary")
+    except Exception as e:
+        payload["market_heat"] = {"hot": None, "error": str(e)}
+        payload["why_idle"] = {"headline": "posture unavailable", "reasons": [], "error": str(e)}
+        payload["cream_summary"] = {}
     return payload
 
 

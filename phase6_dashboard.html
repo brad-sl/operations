@@ -223,6 +223,27 @@
                     <div id="obs-preserve-sub" class="metric-sub"></div>
                 </div>
             </div>
+            <!-- Heat vs posture + Why idle (scale: explanation mandatory) -->
+            <div class="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card lg:col-span-1">
+                    <div class="metric-label-wrap text-[10px] text-slate-400 w-full">
+                        <span>24h heat vs posture</span>
+                        <button type="button" class="metric-help-btn" aria-label="Heat vs posture"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Board heat = Coinbase ~24h %. Risk posture = 30d BTC layer + PARK/DEPLOY. Green day does not force full invest. Cream = shadow would-buy under strict gates.</div>
+                    </div>
+                    <div id="obs-heat" class="text-base font-semibold mt-1">--</div>
+                    <div id="obs-heat-sub" class="metric-sub text-left text-[11px] text-slate-400 mt-1 leading-snug"></div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card lg:col-span-2">
+                    <div class="metric-label-wrap text-[10px] text-slate-400 w-full">
+                        <span>Why idle?</span>
+                        <button type="button" class="metric-help-btn" aria-label="Why idle"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Trader-facing reasons cash can win: stance park, cream empty, name not in bag, cooldown, cash hold. Participation optional; explanation mandatory at scale.</div>
+                    </div>
+                    <div id="obs-why-idle-head" class="text-sm font-medium text-slate-200 mt-1">--</div>
+                    <ul id="obs-why-idle-list" class="mt-2 text-[11px] text-slate-400 space-y-1 list-none pl-0"></ul>
+                </div>
+            </div>
         </div>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -608,6 +629,53 @@
                     if (pm.mtm_dd_from_arm != null) bits.push((Number(pm.mtm_dd_from_arm) * 100).toFixed(1) + '% vs arm');
                     if (pm.adds_blocked) bits.push('no-add');
                     prSub.textContent = bits.filter(Boolean).join(' · ') || 'not risk-free ballast';
+                }
+                // 24h heat vs posture + Why idle (textContent only — no HTML injection)
+                const heatEl = document.getElementById('obs-heat');
+                const heatSub = document.getElementById('obs-heat-sub');
+                const mh = metricsData.market_heat || {};
+                const cream = metricsData.cream_summary || (metricsData.why_idle || {}).cream || {};
+                const rc2 = metricsData.regime_cash || {};
+                if (heatEl) {
+                    const hot = mh.hot === true;
+                    const btcH = mh.btc_change_24h_pct != null ? (Number(mh.btc_change_24h_pct) >= 0 ? '+' : '') + Number(mh.btc_change_24h_pct).toFixed(1) + '%' : '—';
+                    const mode2 = (rc2.strategy_mode === 'usdc_park' || rc2.allow_new_buys === false) ? 'PARK' : 'DEPLOY';
+                    const layer2 = rc2.regime_layer || rc2.regime || '—';
+                    heatEl.textContent = (hot ? 'HOT' : 'calm') + ' · ' + mode2;
+                    heatEl.className = 'text-base font-semibold mt-1 ' + (hot && mode2 === 'PARK' ? 'text-amber-300' : (hot ? 'text-emerald-400' : 'text-slate-300'));
+                    if (heatSub) {
+                        const med = mh.median_change_24h_pct != null ? ('med ' + Number(mh.median_change_24h_pct).toFixed(1) + '%') : '';
+                        const creamN = cream.shadow_would_buy_count != null ? ('cream ' + cream.shadow_would_buy_count) : '';
+                        const layerBit = layer2 !== '—' ? ('layer ' + layer2) : '';
+                        heatSub.textContent = ['BTC 24h ' + btcH, layerBit, mode2, creamN, med].filter(Boolean).join(' · ');
+                    }
+                }
+                const whyHead = document.getElementById('obs-why-idle-head');
+                const whyList = document.getElementById('obs-why-idle-list');
+                const why = metricsData.why_idle || {};
+                if (whyHead) whyHead.textContent = why.headline || '—';
+                if (whyList) {
+                    while (whyList.firstChild) whyList.removeChild(whyList.firstChild);
+                    const reasons = why.reasons || [];
+                    if (!reasons.length) {
+                        const li0 = document.createElement('li');
+                        li0.className = 'text-slate-500';
+                        li0.textContent = 'No idle reasons loaded';
+                        whyList.appendChild(li0);
+                    } else {
+                        reasons.slice(0, 6).forEach(function (r) {
+                            const li = document.createElement('li');
+                            li.className = r.severity === 'primary' ? 'text-amber-200/90' : (r.severity === 'watch' ? 'text-cyan-200/80' : 'text-slate-400');
+                            const title = document.createElement('span');
+                            title.className = 'text-slate-200 font-medium';
+                            title.textContent = r.title || r.code || '';
+                            li.appendChild(title);
+                            if (r.detail) {
+                                li.appendChild(document.createTextNode(' — ' + String(r.detail)));
+                            }
+                            whyList.appendChild(li);
+                        });
+                    }
                 }
             }
 

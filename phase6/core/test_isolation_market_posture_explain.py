@@ -41,8 +41,10 @@ def test_why_idle_park_hot():
     assert "cream_empty" in codes
     assert "not_in_bag" in codes  # HYPE outside bag
     assert why["heat"]["hot"] is True
-    assert "hot" in why["headline"].lower() or "PARK" in why["headline"]
-    print("  why_idle park+hot OK")
+    assert "cash" in why["headline"].lower()
+    assert "PARK" not in why["headline"]
+    assert "usdc_park" not in (why["reasons"][0].get("detail") or "")
+    print("  why_idle park+hot OK (plain English)")
 
 
 def test_why_idle_deploy_empty_entry():
@@ -64,7 +66,8 @@ def test_why_idle_deploy_empty_entry():
     codes = {r["code"] for r in why["reasons"]}
     assert "stance_deploy" in codes
     assert "entry_gates" in codes
-    print("  why_idle deploy empty OK")
+    assert "RSI" not in why["headline"]
+    print("  why_idle deploy empty OK (plain English)")
 
 
 if __name__ == "__main__":

@@ -246,16 +246,16 @@ def build_why_idle(
         blocked = list((shadow.get("buy_blocked_pairs") or []))
 
     reasons: List[Dict[str, Any]] = []
-    # 1) Stance
+    # 1) Stance — plain English for hands-off traders
+    btc_30d_s = f"{float(btc_30d):+.1f}%" if btc_30d is not None else "n/a"
     if park:
         reasons.append(
             {
                 "code": "stance_park",
-                "title": "Risk posture is PARK",
+                "title": "We're holding cash on purpose",
                 "detail": (
-                    f"Coarse {coarse} · layer {layer} · mode {mode or 'usdc_park'} · "
-                    f"cap ${float(cap or 0):.0f} · allow_new_buys={allow}. "
-                    f"BTC ~30d {btc_30d}% — not a missing market feed."
+                    f"Bitcoin's last month is only about {btc_30d_s} — not a clear enough "
+                    "uptrend for new buys. Sitting in cash is the plan today, not a glitch."
                 ),
                 "severity": "primary",
             }
@@ -264,8 +264,12 @@ def build_why_idle(
         reasons.append(
             {
                 "code": "stance_deploy",
-                "title": "Risk posture allows gated buys",
-                "detail": f"Layer {layer} · mode {mode} · cap ${float(cap or 0):.0f}. Entry gates still apply.",
+                "title": "New buys are allowed (with limits)",
+                "detail": (
+                    f"Market look is open enough to add a little risk"
+                    + (f" (up to about ${float(cap):.0f} this cycle)" if cap is not None else "")
+                    + ". We still only buy when a coin looks like a good entry."
+                ),
                 "severity": "info",
             }
         )
@@ -275,20 +279,24 @@ def build_why_idle(
         reasons.append(
             {
                 "code": "cream_empty",
-                "title": "Cream gates: no pair would buy",
+                "title": "Nothing looks like a good buy right now",
                 "detail": (
-                    f"Shadow stance `{shadow_stance}` would-buy count **0** "
-                    "(strict RSI/sentiment/util). Green board ≠ quality entry."
+                    "Even our picky checklist found zero coins worth buying — prices already "
+                    "ran hard or the crowd mood isn't there. A green day alone isn't enough."
                 ),
                 "severity": "primary",
             }
         )
     elif cream_n > 0 and park:
+        pretty = ", ".join(p.replace("-USD", "") for p in cream_pairs[:6]) or "a few names"
         reasons.append(
             {
                 "code": "cream_blocked_by_park",
-                "title": f"Cream sees {cream_n} pair(s) — live PARK blocks",
-                "detail": f"Would-buy under shadow: {', '.join(cream_pairs)}. Live still park until promote.",
+                "title": f"A few coins look interesting ({pretty})",
+                "detail": (
+                    "Our checklist would consider them, but the account is still in "
+                    "cash-first mode — we won't chase until that mode opens up."
+                ),
                 "severity": "watch",
             }
         )
@@ -296,8 +304,11 @@ def build_why_idle(
         reasons.append(
             {
                 "code": "entry_gates",
-                "title": "Deploy on but entry gates empty",
-                "detail": "No basket pair cleared RSI/sentiment/lockout for new buys this cycle.",
+                "title": "Ready to buy — but no coin cleared the bar",
+                "detail": (
+                    "Buying is allowed, yet nothing in your list met the entry rules "
+                    "(not too extended, decent sentiment). Waiting beats FOMO."
+                ),
                 "severity": "primary",
             }
         )
@@ -323,15 +334,16 @@ def build_why_idle(
 
     if movers_out:
         top = ", ".join(
-            f"{m['pair']} {float(m['change_24h_pct']):+.1f}%" for m in movers_out[:5]
+            f"{str(m['pair']).replace('-USD', '')} {float(m['change_24h_pct']):+.0f}%"
+            for m in movers_out[:5]
         )
         reasons.append(
             {
                 "code": "not_in_bag",
-                "title": "Some hot names are outside tradable bag",
+                "title": "Some of today's rockets aren't on your list",
                 "detail": (
-                    f"{top}. Bag policy / discovery owns membership — not silent. "
-                    "Best-bag tests run separately; this is coverage optics only."
+                    f"{top}. We only trade a short, curated set — not every meme that pumps. "
+                    "That list is reviewed over time so you stay diversified without chasing every ticker."
                 ),
                 "severity": "secondary",
                 "pairs": [m.get("pair") for m in movers_out],
@@ -340,11 +352,17 @@ def build_why_idle(
 
     # 4) Cooldown
     if blocked:
+        pretty_b = ", ".join(p.replace("-USD", "") for p in blocked[:8])
+        if len(blocked) > 8:
+            pretty_b += "…"
         reasons.append(
             {
                 "code": "cooldown",
-                "title": f"Pair cooldown blocks {len(blocked)}",
-                "detail": ", ".join(blocked[:8]) + ("…" if len(blocked) > 8 else ""),
+                "title": "A short pause after recent sells",
+                "detail": (
+                    f"We're not rebuying {pretty_b} right away — a cooling-off period "
+                    "so one bad stretch doesn't turn into whiplash."
+                ),
                 "severity": "secondary",
                 "pairs": blocked,
             }
@@ -355,32 +373,46 @@ def build_why_idle(
         reasons.append(
             {
                 "code": "cash_hold",
-                "title": f"Sticky cash hold ${hold_usd:.0f}",
-                "detail": "Deployable powder reduced until operator Release — independent of park.",
+                "title": f"About ${hold_usd:.0f} is reserved as cash",
+                "detail": (
+                    "You (or a safety setting) parked that money on the sidelines. "
+                    "It won't auto-spend until released."
+                ),
                 "severity": "primary",
             }
         )
 
     # 6) Already thin book
     if held and park:
+        pretty_h = ", ".join(p.replace("-USD", "") for p in sorted(held)[:6])
         reasons.append(
             {
                 "code": "already_in",
-                "title": f"Open sleeve: {', '.join(sorted(held)[:6])}",
-                "detail": "Not flat cash-only — small risk on; park blocks *new* risk adds.",
+                "title": f"You still have a small position ({pretty_h})",
+                "detail": (
+                    "Not empty — just not adding more while cash-first mode is on. "
+                    "What you hold keeps working; we're skipping new FOMO buys."
+                ),
                 "severity": "info",
             }
         )
 
-    # Headline for scale FAQ
+    # Headline for lazy / FOMO traders
     if park and heat.get("hot"):
-        headline = "Market looks hot (24h) — posture is PARK. Idle is explained, not broken."
+        headline = (
+            "Markets look busy today — we're staying mostly in cash on purpose. "
+            "That's the strategy, not a bug."
+        )
     elif park:
-        headline = "Posture PARK — new buys off until layer/promote allows."
+        headline = (
+            "New buys are paused. Your money stays in cash until conditions look clearer."
+        )
     elif cream_n == 0 and live_would == 0:
-        headline = "Deploy allowed but no cream/entry clears — quality over chase."
+        headline = (
+            "We can buy, but nothing good enough showed up — better to wait than chase."
+        )
     else:
-        headline = "Gated participation active."
+        headline = "We're open to careful buys when something looks solid."
 
     try:
         total = float(live.get("total_usd") or live.get("total_balance") or 0)
@@ -432,11 +464,11 @@ def build_why_idle(
         "movers_not_in_bag": movers_out[:12],
         "reasons": reasons,
         "scale_faq": (
-            "We don't promise full exposure every green day. "
-            "We promise clear posture, quality entries, bag coverage process, "
-            "and a written why when cash wins."
+            "We don't try to own every green day. "
+            "We try to stay diversified with a short coin list, buy only when entries look solid, "
+            "and always show you why cash is winning when it is."
         ),
-    }
+        }
 
 
 def build_market_posture_payload(*, force_heat: bool = False) -> Dict[str, Any]:

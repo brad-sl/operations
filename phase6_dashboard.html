@@ -223,22 +223,22 @@
                     <div id="obs-preserve-sub" class="metric-sub"></div>
                 </div>
             </div>
-            <!-- Heat vs posture + Why idle (scale: explanation mandatory) -->
+            <!-- Heat vs posture + Why idle (plain English for hands-off traders) -->
             <div class="mt-3 grid grid-cols-1 lg:grid-cols-3 gap-3">
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card lg:col-span-1">
                     <div class="metric-label-wrap text-[10px] text-slate-400 w-full">
-                        <span>24h heat vs posture</span>
-                        <button type="button" class="metric-help-btn" aria-label="Heat vs posture"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
-                        <div class="metric-tip" role="tooltip">Board heat = Coinbase ~24h %. Risk posture = 30d BTC layer + PARK/DEPLOY. Green day does not force full invest. Cream = shadow would-buy under strict gates.</div>
+                        <span>Today vs our plan</span>
+                        <button type="button" class="metric-help-btn" aria-label="Today vs plan"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Left side: is the market busy today? Right side: are we buying or holding cash? A busy day does not force us to go all-in. "Open slots" means how many coins currently pass our buy checklist.</div>
                     </div>
                     <div id="obs-heat" class="text-base font-semibold mt-1">--</div>
                     <div id="obs-heat-sub" class="metric-sub text-left text-[11px] text-slate-400 mt-1 leading-snug"></div>
                 </div>
                 <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3 section-card lg:col-span-2">
                     <div class="metric-label-wrap text-[10px] text-slate-400 w-full">
-                        <span>Why idle?</span>
-                        <button type="button" class="metric-help-btn" aria-label="Why idle"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
-                        <div class="metric-tip" role="tooltip">Trader-facing reasons cash can win: stance park, cream empty, name not in bag, cooldown, cash hold. Participation optional; explanation mandatory at scale.</div>
+                        <span>Why so much cash?</span>
+                        <button type="button" class="metric-help-btn" aria-label="Why so much cash"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Plain reasons you might see cash instead of full crypto: holding cash on purpose, nothing good enough to buy, hot coins not on your short list, short pause after a sell, or money you set aside. Built for set-and-forget traders — no jargon required.</div>
                     </div>
                     <div id="obs-why-idle-head" class="text-sm font-medium text-slate-200 mt-1">--</div>
                     <ul id="obs-why-idle-list" class="mt-2 text-[11px] text-slate-400 space-y-1 list-none pl-0"></ul>
@@ -630,7 +630,7 @@
                     if (pm.adds_blocked) bits.push('no-add');
                     prSub.textContent = bits.filter(Boolean).join(' · ') || 'not risk-free ballast';
                 }
-                // 24h heat vs posture + Why idle (textContent only — no HTML injection)
+                // Today vs plan + Why so much cash (plain English; textContent only)
                 const heatEl = document.getElementById('obs-heat');
                 const heatSub = document.getElementById('obs-heat-sub');
                 const mh = metricsData.market_heat || {};
@@ -639,15 +639,13 @@
                 if (heatEl) {
                     const hot = mh.hot === true;
                     const btcH = mh.btc_change_24h_pct != null ? (Number(mh.btc_change_24h_pct) >= 0 ? '+' : '') + Number(mh.btc_change_24h_pct).toFixed(1) + '%' : '—';
-                    const mode2 = (rc2.strategy_mode === 'usdc_park' || rc2.allow_new_buys === false) ? 'PARK' : 'DEPLOY';
-                    const layer2 = rc2.regime_layer || rc2.regime || '—';
-                    heatEl.textContent = (hot ? 'HOT' : 'calm') + ' · ' + mode2;
-                    heatEl.className = 'text-base font-semibold mt-1 ' + (hot && mode2 === 'PARK' ? 'text-amber-300' : (hot ? 'text-emerald-400' : 'text-slate-300'));
+                    const holdingCash = (rc2.strategy_mode === 'usdc_park' || rc2.allow_new_buys === false);
+                    const modeLabel = holdingCash ? 'holding cash' : 'open to buys';
+                    heatEl.textContent = (hot ? 'Busy market' : 'Quiet market') + ' · ' + modeLabel;
+                    heatEl.className = 'text-base font-semibold mt-1 ' + (hot && holdingCash ? 'text-amber-300' : (hot ? 'text-emerald-400' : 'text-slate-300'));
                     if (heatSub) {
-                        const med = mh.median_change_24h_pct != null ? ('med ' + Number(mh.median_change_24h_pct).toFixed(1) + '%') : '';
-                        const creamN = cream.shadow_would_buy_count != null ? ('cream ' + cream.shadow_would_buy_count) : '';
-                        const layerBit = layer2 !== '—' ? ('layer ' + layer2) : '';
-                        heatSub.textContent = ['BTC 24h ' + btcH, layerBit, mode2, creamN, med].filter(Boolean).join(' · ');
+                        const creamN = cream.shadow_would_buy_count != null ? ('buy checklist: ' + cream.shadow_would_buy_count + ' open') : '';
+                        heatSub.textContent = ['Bitcoin today ' + btcH, modeLabel, creamN].filter(Boolean).join(' · ');
                     }
                 }
                 const whyHead = document.getElementById('obs-why-idle-head');
@@ -660,7 +658,7 @@
                     if (!reasons.length) {
                         const li0 = document.createElement('li');
                         li0.className = 'text-slate-500';
-                        li0.textContent = 'No idle reasons loaded';
+                        li0.textContent = 'No explanation loaded yet';
                         whyList.appendChild(li0);
                     } else {
                         reasons.slice(0, 6).forEach(function (r) {

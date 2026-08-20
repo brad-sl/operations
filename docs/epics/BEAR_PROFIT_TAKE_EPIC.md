@@ -15,7 +15,7 @@ Be **ready when bear hits**: rules-based partial profit-taking into strength, pr
 | Phase | Deliverable | Live money |
 |-------|-------------|------------|
 | **P1** | Spec, ladder shadow, tests, runner hook, plain messages | **No** |
-| **P2** | Offline path CF ladder vs ride-SL on bear legs; collection gates | No |
+| **P2** | Offline path CF ladder vs ride-SL on bear legs; collection gates | No — **ran 2026-08-20** `pursue_shadow` (less-loss; synthetic N=276; 0 ledger bear) |
 | **P3** | Optional relief-bounce detector (trough→strength) | No |
 | **P4** | Brad OK → live partial exits + 72h rebuy block wire | **Yes only on OK** |
 

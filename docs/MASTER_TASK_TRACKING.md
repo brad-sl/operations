@@ -1,7 +1,7 @@
-## P6-BEAR-PROFIT-TAKE-SHADOW-20260820 — ACTIVE (P1 shadow)
+## P6-BEAR-PROFIT-TAKE-SHADOW-20260820 — ACTIVE (P1 shadow + P2 CF done)
 
 **Type:** feature / exit (not Type:test auto_pickup)  
-**Status:** ACTIVE — Phase 1 shadow shipped (2026-08-20)  
+**Status:** ACTIVE — P1 shadow shipped; **P2 path CF ran 2026-08-20**  
 **auto_pickup:** false  
 **Priority:** P1 platform prep (bear readiness)  
 **Live money:** **NO** — `mode=shadow`, `live_apply` forced false  
@@ -19,10 +19,18 @@ When a real **down market** hits, take **partial** profit on temporary green (la
 - Messages: `compose_bear_tp_channels` (no AI)
 - State: `data/state/bear_profit_take_shadow_status.json`
 
-### Next (not started)
-- P2 path CF ladder vs ride-SL on bear legs  
-- P3 relief-bounce detector  
-- P4 Brad OK → live partial + 72h rebuy block  
+### P2 path CF (2026-08-20)
+- Script: `phase6/research/run_bear_ladder_path_cf.py`
+- Report: `reports/BEAR_LADDER_PATH_CF_LATEST.md`
+- State: `data/state/bear_ladder_path_cf_latest.json`
+- **Call:** `pursue_shadow` — less-loss vs ride-SL (~+0.94% mean ΔR, N=276 synthetic bear paths on real daily OHLCV)
+- **Caveats:** absolute mean still negative; **0 ledger bear entry legs**; full +6% TP also beats SL on this tape (ladder not uniquely better than one-shot TP)
+- **Not live promote**
+
+### Next
+- P3 relief-bounce detector (optional)  
+- Live bear calendar shadow episodes  
+- P4 Brad OK → live partial + 72h rebuy block only after live bear evidence  
 
 ---
 

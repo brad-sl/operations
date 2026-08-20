@@ -115,5 +115,11 @@ Follows Phase 2 of GIT_HERMES_OPERATIONALIZATION_PLAN."
 fi
 
 echo "=== Sync complete ==="
-git status --short | grep -E 'hermes/|scripts/hermes' | head -5
+# Empty grep under pipefail was exit 1 after a clean mirror (false daily-cron fail).
+mapfile -t _hs < <(git status --short 2>/dev/null | grep -E 'hermes/|scripts/hermes' || true)
+if ((${#_hs[@]})); then
+  printf '%s\n' "${_hs[@]:0:5}"
+else
+  echo "(hermes/ mirror clean in worktree)"
+fi
 echo "Verify with: python3 hermes-state/verify_baseline.py (or re-run sync --dry)"

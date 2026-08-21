@@ -25,6 +25,9 @@ COLLECTION = ROOT / "data/state/regime_exit_shadow_collection.json"
 STATUS = ROOT / "data/state/regime_exit_shadow_status.json"
 MAP_CFG = ROOT / "config/regime_exit_policy_map.json"
 TP_CFG = ROOT / "config/exit_automation.json"
+BEAR_CFG = ROOT / "config/bear_profit_take.json"
+BEAR_STATUS = ROOT / "data/state/bear_profit_take_shadow_status.json"
+BEAR_CF = ROOT / "data/state/bear_ladder_path_cf_latest.json"
 OUT_JSON = ROOT / "data/state/exit_promote_scoreboard_latest.json"
 OUT_MD = ROOT / "reports/EXIT_PROMOTE_SCOREBOARD_LATEST.md"
 
@@ -277,6 +280,111 @@ def evaluate_gates(
     }
 
 
+def _bear_ladder_lane() -> dict[str, Any]:
+    """Separate opt lane: partial ladder in bear (not global fixed TP)."""
+    cfg = _load(BEAR_CFG)
+    st = _load(BEAR_STATUS)
+    cf = _load(BEAR_CF)
+    prom = cfg.get("promotion") or {}
+    episodes = int(st.get("n_episodes_total") or st.get("episode_count") or 0)
+    # count multi-slice from recent episodes if present
+    multi = 0
+    for ep in st.get("recent_episodes") or st.get("episodes") or []:
+        try:
+            if int(ep.get("level") or ep.get("slices") or 0) >= 2 or str(ep.get("kind") or "") == "ladder_scale_out":
+                # level>=2 is second slice; count unique pairs later — rough
+                multi += 1
+        except Exception:
+            pass
+    # better: from CF payload
+    cf_call = (cf.get("recommendation") or prom.get("path_cf_call") or "unknown")
+    cf_plain = cf.get("plain_english") or ""
+    edge = None
+    try:
+        edge = ((cf.get("by_source") or {}).get("combined_bear") or {}).get("decision", {}).get(
+            "edge_class"
+        ) or prom.get("path_cf_edge_class")
+    except Exception:
+        edge = prom.get("path_cf_edge_class")
+
+    live_apply = bool(cfg.get("live_apply")) or bool(st.get("orders_placed"))
+    mode = str(cfg.get("mode") or st.get("mode") or "shadow")
+    path_cf_ok = str(cf_call) == "pursue_shadow" or str(prom.get("path_cf_call")) == "pursue_shadow"
+    min_ep = int(prom.get("min_ladder_episodes") or 10)
+    min_days = float(prom.get("shadow_min_bear_calendar_days") or 30)
+    bear_days = st.get("bear_calendar_days") or st.get("shadow_bear_days")
+    try:
+        bear_days_f = float(bear_days) if bear_days is not None else None
+    except Exception:
+        bear_days_f = None
+
+    checks = {
+        "enabled_shadow": {
+            "pass": bool(cfg.get("enabled", True)) and mode == "shadow" and not live_apply,
+            "value": {"enabled": cfg.get("enabled"), "mode": mode, "live_apply": live_apply},
+        },
+        "path_cf_pursue_shadow": {"pass": path_cf_ok, "value": cf_call},
+        "auto_promote_false": {
+            "pass": not bool(prom.get("auto_promote")),
+            "value": prom.get("auto_promote"),
+        },
+        "live_apply_false": {"pass": not live_apply, "value": live_apply},
+        "ladder_episodes_ge_min": {
+            "pass": episodes >= min_ep,
+            "value": episodes,
+            "need": min_ep,
+        },
+        "bear_calendar_days_ge_min": {
+            "pass": bear_days_f is not None and bear_days_f >= min_days,
+            "value": bear_days_f,
+            "need": min_days,
+        },
+    }
+    n_pass = sum(1 for c in checks.values() if c.get("pass"))
+    # Lane decision — never live from board
+    if live_apply or mode == "live":
+        lane_dec = "blocked_misconfig"
+        lane_go = "NO-GO — bear ladder already live-ish; audit"
+    elif not path_cf_ok:
+        lane_dec = "need_path_cf"
+        lane_go = "NO-GO live ladder — rerun path CF until pursue_shadow/drop"
+    elif not checks["ladder_episodes_ge_min"]["pass"] or not checks["bear_calendar_days_ge_min"]["pass"]:
+        lane_dec = "collecting_live_bear_shadow"
+        lane_go = (
+            "NO-GO live ladder — keep shadow; need live bear calendar episodes "
+            f"(episodes {episodes}/{min_ep}, bear_days {bear_days_f}/{min_days})"
+        )
+    else:
+        lane_dec = "ready_for_brad_review"
+        lane_go = (
+            "REVIEW ONLY — ladder collection gates met on paper; "
+            "Brad OK required. Less-loss edge class — not a profit printer."
+        )
+
+    return {
+        "lane": "bear_profit_take_ladder",
+        "portfolio_role": "trade_opt_exit_less_loss_bear",
+        "edge_class": edge or "LESS_LOSS_VS_SL",
+        "winning_path": prom.get("winning_path")
+        or "residual_long AND bounce_tags_ge_2_slices AND no_fomo_rebuy",
+        "mode": mode,
+        "live_apply": live_apply,
+        "path_cf_call": cf_call,
+        "path_cf_plain": cf_plain[:500] if cf_plain else None,
+        "shadow_episodes": episodes,
+        "bear_calendar_days": bear_days_f,
+        "status_plain": st.get("plain_english"),
+        "checks": checks,
+        "checks_pass": n_pass,
+        "checks_total": len(checks),
+        "decision": lane_dec,
+        "go_no_go": lane_go,
+        "live_ladder_allowed": False,
+        "brad_ok_required": True,
+        "related_spec": "docs/features/BEAR_PROFIT_TAKE_NO_SHORT_SPEC.md",
+    }
+
+
 def build_scoreboard(
     *,
     now: datetime | None = None,
@@ -300,6 +408,7 @@ def build_scoreboard(
         now=now,
     )
     sl_cf = _sl_cf_summary() if include_sl_cf else {"available": False, "skipped": True}
+    bear_lane = _bear_ladder_lane()
 
     # Optional: rescue-rate style from CF
     rescue = None
@@ -327,6 +436,23 @@ def build_scoreboard(
         "gates": gates,
         "sl_counterfactual": sl_cf,
         "rescue_summary": rescue,
+        "bear_ladder_lane": bear_lane,
+        "trade_opt_portfolio": [
+            {
+                "id": "regime_map_tp_trail",
+                "role": "profit_opt_by_regime",
+                "decision": gates.get("decision"),
+                "go_no_go": gates.get("go_no_go"),
+            },
+            {
+                "id": "bear_ladder_scale_out",
+                "role": bear_lane.get("portfolio_role"),
+                "edge_class": bear_lane.get("edge_class"),
+                "decision": bear_lane.get("decision"),
+                "go_no_go": bear_lane.get("go_no_go"),
+                "winning_path": bear_lane.get("winning_path"),
+            },
+        ],
         "open_would_fire_now": [
             {
                 "pair": s.get("pair"),
@@ -341,6 +467,7 @@ def build_scoreboard(
             "SL": "Exchange stop ~3% — live floor",
             "go_no_go": "Live TP/map flip readiness — never auto-enables",
             "decision": gates.get("decision"),
+            "bear_ladder": "Partial scale-out in bear only — less-loss lane, separate from full TP",
         },
         "flag": _flag_from_decision(gates.get("decision")),
     }
@@ -382,6 +509,26 @@ def render_md(d: dict[str, Any]) -> str:
     pe = g.get("plain_english_status")
     if pe:
         lines.extend([f"> {pe}", ""])
+
+    bl = d.get("bear_ladder_lane") or {}
+    if bl:
+        lines.extend(
+            [
+                "## Trade-opt lane: bear ladder (less-loss)",
+                "",
+                f"**Decision:** `{bl.get('decision')}`  ",
+                f"**Go/no-go:** {bl.get('go_no_go')}  ",
+                f"**Edge class:** `{bl.get('edge_class')}`  ",
+                f"**Winning path:** `{bl.get('winning_path')}`  ",
+                f"**Path CF:** `{bl.get('path_cf_call')}` · episodes={bl.get('shadow_episodes')} · "
+                f"bear_days={bl.get('bear_calendar_days')} · "
+                f"checks {bl.get('checks_pass')}/{bl.get('checks_total')}  ",
+                f"**Live ladder allowed by board:** **{bl.get('live_ladder_allowed')}**",
+                "",
+            ]
+        )
+        if bl.get("path_cf_plain"):
+            lines.extend([f"> {bl.get('path_cf_plain')}", ""])
 
     lines.extend(
         [

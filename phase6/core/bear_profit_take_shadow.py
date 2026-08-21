@@ -404,6 +404,56 @@ def run_bear_profit_take_cycle(
 def _write_status(payload: Dict[str, Any]) -> None:
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
+        # Collection rollup for scoreboard / promotion gates
+        coll_path = STATE_DIR / "bear_profit_take_collection.json"
+        coll: Dict[str, Any] = {}
+        if coll_path.exists():
+            try:
+                coll = json.loads(coll_path.read_text(encoding="utf-8"))
+            except Exception:
+                coll = {}
+        if not coll.get("started_at"):
+            coll["started_at"] = payload.get("as_of") or _iso()
+        days = set(coll.get("bear_days_seen") or [])
+        if str(payload.get("regime") or "").lower() == "bear":
+            day = str(payload.get("as_of") or "")[:10]
+            if len(day) >= 10:
+                days.add(day)
+        coll["bear_days_seen"] = sorted(days)
+        coll["bear_calendar_days"] = len(days)
+        n_ep = 0
+        pairs_lvls: Dict[str, set] = {}
+        if EVENTS_PATH.exists():
+            for line in EVENTS_PATH.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                n_ep += 1
+                pair = str(row.get("pair") or "")
+                try:
+                    lvl = int(row.get("level") or 0)
+                except (TypeError, ValueError):
+                    lvl = 0
+                if pair:
+                    pairs_lvls.setdefault(pair, set()).add(lvl)
+        multi = sum(1 for lvls in pairs_lvls.values() if len([x for x in lvls if x > 0]) >= 2)
+        coll["n_episodes_total"] = n_ep
+        coll["n_pairs_multi_slice"] = multi
+        coll["updated_at"] = payload.get("as_of") or _iso()
+        coll_path.write_text(json.dumps(coll, indent=2) + "\n", encoding="utf-8")
+        payload["bear_calendar_days"] = coll["bear_calendar_days"]
+        payload["n_episodes_total"] = n_ep
+        payload["n_pairs_multi_slice"] = multi
+        payload["collection"] = {
+            "started_at": coll.get("started_at"),
+            "bear_calendar_days": coll["bear_calendar_days"],
+            "n_episodes_total": n_ep,
+        }
+
         STATE_PATH.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
         report = PROJECT_ROOT / "reports" / "BEAR_PROFIT_TAKE_SHADOW_LATEST.md"
         lines = [
@@ -412,6 +462,7 @@ def _write_status(payload: Dict[str, Any]) -> None:
             f"**As of:** {payload.get('as_of')}",
             f"**Regime:** {payload.get('regime')} · status `{payload.get('status')}`",
             f"**Mode:** {payload.get('mode')} · orders_placed={payload.get('orders_placed')}",
+            f"**Collection:** bear_days={payload.get('bear_calendar_days')} · episodes={payload.get('n_episodes_total')}",
             "",
             payload.get("plain_english") or "",
             "",

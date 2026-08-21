@@ -28,8 +28,10 @@ When a real **down market** hits, take **partial** profit on temporary green (la
 - **Not live promote**
 
 ### Next
+- **Proceed plan:** `docs/research/BEAR_LADDER_TRADE_OPT_PROCEED.md`  
+- Scoreboard lane: `bear_ladder_scale_out` on exit promote board  
+- Live bear calendar shadow episodes (collect)  
 - P3 relief-bounce detector (optional)  
-- Live bear calendar shadow episodes  
 - P4 Brad OK → live partial + 72h rebuy block only after live bear evidence  
 
 ---

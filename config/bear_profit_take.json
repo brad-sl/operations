@@ -37,9 +37,14 @@
     "require_brad_ok": true,
     "shadow_min_bear_calendar_days": 30,
     "min_ladder_episodes": 10,
+    "min_multi_slice_episodes": 5,
     "require_path_cf": true,
     "path_cf_script": "phase6/research/run_bear_ladder_path_cf.py",
-    "note": "P2 script may not exist yet — gate stays closed"
+    "path_cf_call": "pursue_shadow",
+    "path_cf_edge_class": "LESS_LOSS_VS_SL",
+    "path_cf_as_of": "2026-08-20",
+    "winning_path": "residual_long AND bounce_tags_ge_2_slices AND no_fomo_rebuy",
+    "note": "P2 done pursue_shadow less-loss. Live still needs bear calendar shadow + Brad OK. Do not auto-promote."
   },
   "related": {
     "regime_exit_map_bear": "fixed_tp disabled — this feature is partial ladder only",

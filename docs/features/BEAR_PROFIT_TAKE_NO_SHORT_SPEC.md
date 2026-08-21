@@ -52,10 +52,16 @@ Not statistical “probability.” **Friction × emotional reliability for set-a
 | Offline prior | Early single-shot TP hurt vs ride-to-SL | Still respected |
 | **Bear profit-take** | — | **Separate** shadow: **partial ladder** on strength, not full dump at +6% |
 
-**Hypothesis to test in shadow (not assumed true):**  
-In bear, **scaling out 25% slices** on modest green vs entry (and parking proceeds conceptually in stables) beats **full ride-to-SL** on residual winners *and* beats **one-shot full TP**.
+**Hypothesis (P2 path CF 2026-08-20 — design evidence):**  
+In bear, **scaling out 25% slices** on modest green vs entry is **less-loss vs ride-to-SL** (~+0.94% mean ΔR, N=276 synthetic bear entries on real daily OHLCV). Absolute mean still slightly red. Full +6% TP also beats SL on that tape — ladder is the **partial / moon-bag / no-rebuy product**, not uniquely better than one-shot TP.
 
-If shadow + path study fails → **drop** ladder; keep ride/SL + park entries.
+**Winning path (formulated):**  
+`residual long × relief bounce tags ≥2 ladder slices × proceeds stay cash × accept SL when no bounce`  
+- No win if MFE never reaches +3%.  
+- All green paths had 2–3 slices; 0-slice paths ≈ −3% mean.  
+- ~30% of paths green; ~70% still stop out.
+
+If live bear shadow fails or worsens book → **drop** ladder; keep ride/SL + park entries. **Not live promote off P2 alone.**
 
 ---
 

@@ -44,7 +44,8 @@
     "path_cf_edge_class": "LESS_LOSS_VS_SL",
     "path_cf_as_of": "2026-08-20",
     "winning_path": "residual_long AND bounce_tags_ge_2_slices AND no_fomo_rebuy",
-    "note": "P2 done pursue_shadow less-loss. Live still needs bear calendar shadow + Brad OK. Do not auto-promote."
+    "brad_intent": "promote_asap_when_real_bear_data_gates_met",
+    "note": "P2 done pursue_shadow less-loss. Brad: do not forget — go live ASAP after real bear collection gates. Watch cron bear-ladder-promote-watch. Still require_brad_ok; no auto-promote."
   },
   "related": {
     "regime_exit_map_bear": "fixed_tp disabled — this feature is partial ladder only",

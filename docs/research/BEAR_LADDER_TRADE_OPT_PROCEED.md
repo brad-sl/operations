@@ -34,10 +34,12 @@ The **winning path** is a real opt candidate:
 | **2 Collect** | Wait for **real bear** calendar; count multi-slice would-fire episodes | No | Automatic |
 | **3 Optional P3** | Relief detector only if bounce timing looks late on live shadow | No | Later |
 | **4 Re-CF** | Re-run path CF after live bear legs exist (ledger > 0) | No | Auto / cron ok |
-| **5 Review** | Gates: path CF + ≥10 ladder episodes + ≥30 bear days + Brad OK | No until OK | Brad |
-| **6 Live** | One flip: partial sells + 72h rebuy block + stables park | **Yes** | Explicit Brad go only |
+| **5 Review** | Gates: path CF + ≥10 ladder episodes + ≥30 bear days + **Brad OK ASAP** | No until OK | Brad + watch cron |
+| **6 Live** | One flip: partial sells + 72h rebuy block + stables park | **Yes** | Explicit Brad go (intent: don't sit on it) |
 
-**Never:** auto-promote, short, FOMO re-entry, market as “bear money printer.”
+**Forget-proofing:** Hermes cron `bear-ladder-promote-watch` pings Telegram on regime→bear, episode milestones, and gates ready. Memory + MASTER flag Brad intent.
+
+**Never:** auto-promote without Brad, short, FOMO re-entry, market as “bear money printer.”
 
 ---
 

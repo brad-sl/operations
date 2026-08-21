@@ -27,12 +27,17 @@ When a real **down market** hits, take **partial** profit on temporary green (la
 - **Caveats:** absolute mean still negative; **0 ledger bear entry legs**; full +6% TP also beats SL on this tape (ladder not uniquely better than one-shot TP)
 - **Not live promote**
 
+### Brad intent (2026-08-20)
+**Do not forget.** Promote **as soon as real bear shadow data meets gates** — not “someday.”  
+Watchdog cron pings on bear entry / episode milestones / gates ready. **Still no auto live** — explicit Brad go.
+
 ### Next
 - **Proceed plan:** `docs/research/BEAR_LADDER_TRADE_OPT_PROCEED.md`  
 - Scoreboard lane: `bear_ladder_scale_out` on exit promote board  
+- **Watch:** `bear-ladder-promote-watch` (Hermes cron) → TG when data moves  
 - Live bear calendar shadow episodes (collect)  
 - P3 relief-bounce detector (optional)  
-- P4 Brad OK → live partial + 72h rebuy block only after live bear evidence  
+- P4 Brad OK → live partial + 72h rebuy block **ASAP after gates**  
 
 ---
 

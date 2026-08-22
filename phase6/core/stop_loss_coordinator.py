@@ -12,7 +12,7 @@ import os
 import json
 import logging
 from contextlib import contextmanager
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Callable
 
 from phase6.core.sl_preflight import (
     sanitize_reattach_order_id,
@@ -217,27 +217,61 @@ class StopLossCoordinator:
             return False
 
     @contextmanager
-    def suspend_reattach_context(self, pairs: List[str], new_positions: Dict[str, Any]):
+    def suspend_reattach_context(
+        self,
+        pairs: List[str],
+        new_positions: Dict[str, Any],
+        *,
+        refresh_positions: Optional[Callable[[], Dict[str, Any]]] = None,
+    ):
         """
         Atomic context manager for the full CR-03 cycle.
 
         Usage:
-            with coordinator.suspend_reattach_context(pairs, enriched_positions):
+            with coordinator.suspend_reattach_context(
+                pairs, enriched_positions, refresh_positions=get_fresh
+            ):
                 # perform rebalance / position changes here
                 pass
 
         new_positions should be an enriched dict from get_enriched_positions()
         (or at minimum contain 'amount' and 'entry_price'/'current_price').
+
+        refresh_positions: optional callable invoked AFTER the body succeeds (and
+        on atomic rollback) so SL reattach covers post-add full bag size, not the
+        pre-trade snapshot. Falls back to new_positions if refresh fails/empty.
         """
         suspend_summary = self.suspend_protective_orders(pairs)
+
+        def _positions_for_reattach() -> Dict[str, Any]:
+            if refresh_positions is None:
+                return new_positions
+            try:
+                refreshed = refresh_positions()
+                if isinstance(refreshed, dict) and refreshed:
+                    logger.info(
+                        "[CR-03] Using refreshed post-trade positions for SL reattach (n=%d)",
+                        len(refreshed),
+                    )
+                    return refreshed
+                logger.warning(
+                    "[CR-03] position refresh returned empty; using pre-trade snapshot"
+                )
+            except Exception as e:
+                logger.warning(
+                    "[CR-03] position refresh failed; using pre-trade snapshot: %s", e
+                )
+            return new_positions
+
         try:
             yield suspend_summary
-            result = self.reattach_protective_orders(new_positions)
+            pos = _positions_for_reattach()
+            result = self.reattach_protective_orders(pos)
             attached = [p for p, r in result.items() if r.get("status") == "attached"]
             logger.info(f"[CR-03] Re-attached stops for {len(attached)} pairs: {attached}")
             # ENG-S4-01: end-to-end CR-03 verification on success path
             try:
-                basket = list(new_positions.keys())
+                basket = list(pos.keys())
                 recon = self.sl_manager.verify_reconciliation(
                     basket=basket,
                     suspended=suspend_summary,
@@ -254,7 +288,7 @@ class StopLossCoordinator:
             if self.require_atomic:
                 logger.warning("[CR-03] Attempting restoration re-attach")
                 try:
-                    self.reattach_protective_orders(new_positions)
+                    self.reattach_protective_orders(_positions_for_reattach())
                 except Exception as rollback_err:
                     logger.critical(f"[CR-03] Restoration failed: {rollback_err}")
             raise

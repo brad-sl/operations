@@ -6,6 +6,57 @@
   "shadow_log_only": false,
   "knob_map_path": "config/regime_knob_map.json",
   "status_path": "data/state/regime_cash_status.json",
+  "add_risk": {
+    "enabled": true,
+    "min_gap_pct": 0.02,
+    "gap_full_pct": 0.25,
+    "use_gap_scale": true,
+    "min_move_usd": 50.0,
+    "min_position_usd": 25.0,
+    "note": "Factor-based BUY add sizing into existing stacks. Clips/skips adds only — never force-sells open bags. Budgets: open_upnl*k_profit, equity*h_add, book heat H_book, target weight room, cash_frac, rebalance_cap.",
+    "by_regime": {
+      "bull": {
+        "allow_pyramid": true,
+        "k_profit": 0.33,
+        "h_add": 0.02,
+        "H_book": 0.06,
+        "target_pair_weight": 0.22,
+        "cash_frac": 0.25
+      },
+      "flat": {
+        "allow_pyramid": true,
+        "k_profit": 0.25,
+        "h_add": 0.01,
+        "H_book": 0.04,
+        "target_pair_weight": 0.18,
+        "cash_frac": 0.12
+      },
+      "transition": {
+        "allow_pyramid": false,
+        "k_profit": 0.15,
+        "h_add": 0.005,
+        "H_book": 0.03,
+        "target_pair_weight": 0.15,
+        "cash_frac": 0.08
+      },
+      "bear": {
+        "allow_pyramid": false,
+        "k_profit": 0.0,
+        "h_add": 0.0,
+        "H_book": 0.02,
+        "target_pair_weight": 0.12,
+        "cash_frac": 0.0
+      },
+      "unknown": {
+        "allow_pyramid": false,
+        "k_profit": 0.0,
+        "h_add": 0.0,
+        "H_book": 0.02,
+        "target_pair_weight": 0.12,
+        "cash_frac": 0.0
+      }
+    }
+  },
   "hard_exit": {
     "enabled": true,
     "shadow_only": true,

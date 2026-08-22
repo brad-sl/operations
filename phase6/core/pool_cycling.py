@@ -446,6 +446,37 @@ def run_pool_cycling(
             scored_universe.append(p)
     holdings = load_holdings_usd()
     scores = score_universe(scored_universe, active, cfg.sticky_pairs, holdings)
+    # Soft observational idle-seat flags (does not change scores or swap gates).
+    seat_idle_meta: Dict[str, Any] = {"enabled": False, "n_flagged": 0, "flagged": []}
+    try:
+        from phase6.core.basket_seat_idle import (
+            annotate_scores_with_idle,
+            build_seat_idle_snapshot,
+            idle_flag_map,
+        )
+
+        idle_snap = build_seat_idle_snapshot(
+            active=active,
+            holdings=holdings,
+            write=False,
+        )
+        idle_map = idle_flag_map(idle_snap)
+        n_idle_ann = annotate_scores_with_idle(scores, idle_map)
+        seat_idle_meta = {
+            "enabled": True,
+            "hard_eject": False,
+            "n_flagged": int(idle_snap.get("n_idle_flagged") or 0),
+            "flagged": list(idle_snap.get("idle_flagged_pairs") or []),
+            "annotated_scores": n_idle_ann,
+            "as_of_date": idle_snap.get("as_of_date"),
+            "note": "observe_only — calendar idle is a cycle-out *candidate* flag, not an eject gate",
+        }
+    except Exception as exc:  # pragma: no cover — never block cycler
+        seat_idle_meta = {
+            "enabled": False,
+            "error": str(exc)[:200],
+            "hard_eject": False,
+        }
     swaps = propose_swaps(scores, active, cfg)
     proposed = apply_swaps_to_active(active, swaps)
     outside = [p for p in scored_universe if p not in set(active)]
@@ -505,6 +536,7 @@ def run_pool_cycling(
             "sticky_pairs": list(cfg.sticky_pairs),
             "apply_config": apply_config,
             "write_proposed": write_proposed,
+            "seat_idle": seat_idle_meta,
         },
         note=note,
         data_sources=list(data.get("data_sources") or []),
@@ -546,6 +578,12 @@ def report_to_plain_english(report: PoolCyclingReport) -> str:
         f"Opportunity ({len(report.opportunity_pool)}): {', '.join(report.opportunity_pool)}",
         f"Outside active: {', '.join(report.outside_active) or '(none — pool == active)'}",
     ]
+    idle_gate = (report.gates or {}).get("seat_idle") or {}
+    flagged = idle_gate.get("flagged") or []
+    if flagged:
+        lines.append(
+            f"Idle-seat soft flags (observe only, not eject): {', '.join(flagged)}"
+        )
     if not report.swaps:
         lines.append(
             "Swaps proposed: **none** (gates not met, or nothing outside active with edge)."

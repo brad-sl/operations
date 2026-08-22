@@ -1095,15 +1095,39 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
             closed_win = win_ratio_from_positions(trading)
             trades = LEDGER.get_recent_trades(limit=100)
-            closed = [t for t in trades if t.get("pnl") is not None and float(t.get("pnl") or 0) != 0]
+            DUST_OR_NOISE = {
+                "dust_sweep_after_sl",
+                "dust_sweep_orphan",
+                "dust_sweep",
+                "preserve_disarm",
+            }
+
+            def _exit_reason(t):
+                return str(t.get("reason") or t.get("exit_reason") or "")
+
+            closed_all = [t for t in trades if t.get("pnl") is not None and float(t.get("pnl") or 0) != 0]
+            closed = [t for t in closed_all if _exit_reason(t) not in DUST_OR_NOISE]
             win_ratio_exits = None
+            win_ratio_exits_raw = None
+            if closed_all:
+                raw_wins = sum(1 for t in closed_all if (t.get("pnl") or 0) > 0)
+                win_ratio_exits_raw = {
+                    "wins": raw_wins,
+                    "total": len(closed_all),
+                    "basis": "ledger_nonzero_pnl_including_dust",
+                }
             if closed:
                 win_wins = sum(1 for t in closed if (t.get("pnl") or 0) > 0)
                 win_ratio = win_wins / len(closed)
+                # mix breakdown for operator
+                from collections import Counter
+                by = Counter(_exit_reason(t) or "unknown" for t in closed)
                 win_ratio_exits = {
                     "wins": win_wins,
                     "total": len(closed),
-                    "basis": "ledger_nonzero_pnl",
+                    "basis": "ledger_nonzero_pnl_strategy",
+                    "excluded_dust_noise": len(closed_all) - len(closed),
+                    "by_reason": dict(by),
                 }
             else:
                 win_ratio = closed_win if trading else float(perf.get("win_rate", 0.0) or 0.0)
@@ -1114,6 +1138,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 out = dict(base)
                 out["win_ratio"] = round(float(win_ratio), 3)
                 out["win_ratio_exits"] = win_ratio_exits
+                if win_ratio_exits_raw is not None:
+                    out["win_ratio_exits_raw"] = win_ratio_exits_raw
                 out["total_trades"] = len(trades) or perf.get("total_trades", 0)
                 out["last_updated"] = datetime.now(timezone.utc).isoformat()
                 out["cache"] = cache_tag

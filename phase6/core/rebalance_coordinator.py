@@ -4,7 +4,7 @@ P4-05b: Daily rebalance orchestration (CR-03 window + ARCH-4 + legacy fallback).
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Optional, Dict, Any
 try:
     from .context import AccountContext
 except Exception:
@@ -132,8 +132,23 @@ class RebalanceCoordinator:
 
                 pre_positions = current_positions
 
+                def _refresh_positions_for_sl() -> Dict[str, Any]:
+                    """Post-trade bag sizes so CR-03 SL covers full position after adds."""
+                    raw = (
+                        getattr(runner, "portfolio", None)
+                        and runner.portfolio.get_enriched_positions()
+                        or {}
+                    )
+                    if isinstance(raw, dict) and "positions" in raw:
+                        return raw.get("positions") or {}
+                    return raw or {}
+
                 # Wrap core rebalance logic (order changes) inside suspend_reattach_context
-                with runner.stop_loss_coordinator.suspend_reattach_context(basket, pre_positions):
+                with runner.stop_loss_coordinator.suspend_reattach_context(
+                    basket,
+                    pre_positions,
+                    refresh_positions=_refresh_positions_for_sl,
+                ):
                     logger.info("[CR-03] Entered suspend_reattach_context - performing rebalance body")
 
                     # CR-03.3: Execute rebalance inside protected context
@@ -143,6 +158,7 @@ class RebalanceCoordinator:
                         filter_trade_plan_near_open_stop,
                         get_deployment_cooldown_pairs,
                     )
+                    from phase6.core.add_risk_sizer import filter_trade_plan_add_risk
 
                     cash = float(runner.exchange.get_account_balance("USD") or 0)
                     alloc_cash = effective_allocator_cash_usd(runner)
@@ -192,7 +208,7 @@ class RebalanceCoordinator:
                             total_capital=total_cap
                         )
                         plan = filter_trade_plan_manual_cooldown(runner, plan)
-                        # Soft gate: no light_tilt/adds into bags sitting on their stop
+                        # Soft/hard gap gates: no light_tilt/adds into bags sitting on their stop
                         plan = filter_trade_plan_near_open_stop(runner, plan)
 
                         # REGIME-CASH: regime → cash park / entry gates (RSI+sentiment+lockout)
@@ -207,6 +223,12 @@ class RebalanceCoordinator:
                             )
                         except Exception as e:
                             logger.warning("[REGIME-CASH] filter skipped: %s", e)
+
+                        # Factor-based clip on BUY *adds* into existing stacks (regime-aware)
+                        try:
+                            plan = filter_trade_plan_add_risk(runner, plan)
+                        except Exception as e:
+                            logger.warning("[ADD-RISK] filter skipped: %s", e)
 
                         # Respect trade buffer: do not churn on pairs traded in the recent window.
                         # Prevents immediate rotation of newly entered positions on the daily rebalance.

@@ -3,7 +3,7 @@
 **Product name (trader-facing):** **Smart Park**  
 **Internal FEAT:** `FEAT-PARK-USDC-PAXG-PACKAGE-2026-08`  
 **Audience:** New and non-technical crypto traders  
-**Status:** Product path built · live options you choose (defaults stay simple and safe)  
+**Status:** Product path built (W0) · live package **OFF** · **finish soon** (Brad 2026-08-21: not critical in current bull; complete before next park/bear) · defaults stay simple and safe  
 **Deep tech:** `PARK_USDC_PAXG_PACKAGE_SPEC.md` · checklist for operators  
 
 ---

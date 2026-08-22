@@ -1,3 +1,41 @@
+## P6-BASKET-SEAT-IDLE-TRACK-20260821 — ACTIVE (observe only)
+
+**Type:** instrumentation / membership research (not Type:test auto_pickup)  
+**Status:** ACTIVE — tracker shipped 2026-08-21  
+**auto_pickup:** false  
+**Priority:** P2 Path B membership  
+**Live money / live eject:** **NO** — soft flag only  
+**Source:** Brad — start tracking idle days in active basket as possible cycle-out flag
+
+### Plain English
+Count how long each **active basket seat** has been sitting without capital working (flat + no buys while seated). Surface as an **idle_cycle_flag** candidate for later cycling research. Does **not** auto-eject, change scores, or promote.
+
+### Definitions
+| Field | Meaning |
+|-------|---------|
+| seat_days | Calendar days since pair entered active basket |
+| capital_idle_days | Days with no BUY while seated (or days since last buy) |
+| flat_day_streak | Consecutive observed days held < $40 |
+| idle_cycle_flag | Soft: not sticky · seat≥7d · capital-idle≥7d · flat |
+
+### Shipped
+- Core: `phase6/core/basket_seat_idle.py`
+- CLI: `scripts/phase6/refresh_basket_seat_idle.py`
+- ISO: `scripts/phase6/test_isolation_basket_seat_idle.py`
+- State: `data/state/basket_seat_idle_latest.json`, `basket_seat_idle_daily.jsonl`
+- Soft annotate: pool cycler report `gates.seat_idle` + score reason `IDLE_SEAT_FLAG` (no score change)
+- Cron: `phase6-basket-seat-idle-refresh` @ 12:35 PT daily, local, `no_agent`
+
+### Next
+1. Collect daily streaks ≥2 weeks  
+2. Compare idle-flagged ejects vs arm CF excess (research only)  
+3. Only after Brad OK: optional soft preference in cycler eject ranking — still not hard gate alone
+
+### Non-goals
+Hard M2 fail on calendar idle; live promote; bag expand; deploy-gate conflation.
+
+---
+
 ## P6-BEAR-PROFIT-TAKE-SHADOW-20260820 — ACTIVE (P1 shadow + P2 CF done)
 
 **Type:** feature / exit (not Type:test auto_pickup)  
@@ -745,7 +783,162 @@ Never add Phase 6 / X / Apify jobs back to Linux crontab.
 **Kanban:** t_f1d02d37 (crypto-orchestrator)  
 Hard [ARMED-STOP] gate + isolation PASS + live verify (test+audit 0 + registry armed + MASTER/SPECS). GH#22 closed. Real data only.
 
+**Superseded policy (2026-08-21):** absolute hard ban replaced by gap-gated allow — see `P6-ARMED-STOP-GAP-ALLOW-20260821`.
+
 ---
+
+## P6-ARMED-STOP-GAP-ALLOW-20260821 — DONE (2026-08-21)
+
+**Type:** ops / risk product fix  
+**Status:** DONE (code + isolation + config + runner restart)  
+**Date:** 2026-08-21  
+**Priority:** P0  
+**auto_pickup:** false  
+**Parent:** `P6-NEAR-STOP-REBALANCE-RACE-20260813` (over-tight hard ban blocked long-runner adds)
+
+### Plain English
+Every bag has a stop by design. Absolute “no BUY if stop armed” made second-adds on winners (e.g. LINK +30% cushion) impossible. Fix: **allow adds when mark-to-stop gap ≥ 2%**; still block the near-stop race. After rebalance adds, CR-03 **refreshes positions** so SL reattach covers the **full bag**, not pre-trade size.
+
+### Policy
+| Case | Behavior |
+|------|----------|
+| Armed stop + existing bag + gap **&lt; 2%** (or gap unknown) | **Block** `[ARMED-STOP]` |
+| Armed stop + gap **≥ 2%** | **Allow** add; log healthy gap |
+| Soft `light_tilt` / `opportunistic` near-stop / underwater | Unchanged |
+
+Config: `risk_management.armed_stop_allow_add_min_gap_pct` (default 0.02; falls back to `near_stop_min_gap_pct`).
+
+### Impl
+- `phase6/core/runner_capital_events.py` — `evaluate_armed_stop_add_block` (gap-gated)
+- `phase6/core/stop_loss_coordinator.py` — `suspend_reattach_context(..., refresh_positions=)`
+- `phase6/core/rebalance_coordinator.py` — post-trade position refresh for full-bag SL
+- `config/trading_config_phase6.json` — `armed_stop_allow_add_min_gap_pct`
+- isolation: `scripts/phase6/test_isolation_near_stop_add_block.py` **PASS**
+
+---
+
+## P6-ADD-RISK-SIZER-20260821 — DONE (2026-08-21)
+
+**Type:** ops / risk product  
+**Status:** DONE (code + isolation + config; future adds only — no force-sell open bags)  
+**Date:** 2026-08-21  
+**Priority:** P0  
+**auto_pickup:** false  
+**Parent:** `P6-ARMED-STOP-GAP-ALLOW-20260821` (allow adds with healthy gap, then size them)
+
+### Plain English
+ARCH-4 emergency recovery dumped ~all free cash into LINK. Fix is **factor-based add sizing** on **existing stacks** only:
+
+```
+risk_budget = min(open_upnl × k_profit, equity × h_add, book_heat_left)
+max_add = risk_budget / stop_gap
+then min(exposure room, cash_frac slice, rebalance_cap)
+```
+
+Regime table sets k/h/H/target/cash_frac/allow_pyramid. **Does not** sell overweight open bags — only clips/skips future BUY adds.
+
+### Wire
+- `phase6/core/add_risk_sizer.py`
+- `rebalance_coordinator` after REGIME-CASH filter
+- `config/regime_cash_policy.json` → `add_risk.by_regime`
+- `config/trading_config_phase6.json` → `add_risk_sizer_enabled`
+- isolation: `scripts/phase6/test_isolation_add_risk_sizer.py` **PASS**
+
+### Bull defaults
+k_profit=0.33, h_add=2%, H_book=6%, target_pair_weight=22%, cash_frac=25%, min_gap=2%, gap_full=25%, min_move=$50.
+
+**Follow-on (required):** floor **ratchet after large-spread adds** — sizer alone is incomplete. See `P6-SL-RATCHET-AFTER-ADDS-20260821`.
+
+---
+
+## P6-SL-RATCHET-AFTER-ADDS-20260821 — DONE (2026-08-21)
+
+**Type:** ops / risk product — **functional gap closed**  
+**Status:** DONE (code + isolation + config + runner load)  
+**Date:** 2026-08-21  
+**Priority:** P0  
+**auto_pickup:** false  
+**blocked_on:** none  
+**Role:** crypto-engineer  
+**Parent:** `P6-ADD-RISK-SIZER-20260821` + `P6-ARMED-STOP-GAP-ALLOW-20260821`  
+**Spec (SSOT):** `docs/research/SL_FLOOR_RATCHET_AFTER_ADDS.md`  
+**Umbrella:** `P6-EXIT-WR-IMPROVE-STACK-20260821`
+
+### Plain English
+Always have a floor (Brad: no-SL BTC crash ~80%). After a bag **doubles/triples** (e.g. XLM 0.54→1.35) or large mark-vs-entry **air pocket**, stop must **ratchet up** — lock a slice of open gain; never loosen. Add-risk sizer limits *size*; ratchet sets *where the floor lives*.
+
+### Shipped
+| Piece | Path |
+|-------|------|
+| Core | `phase6/core/sl_floor_ratchet.py` |
+| Wire | `stop_loss_manager.attach_stop_loss` after genesis stop calc |
+| Config | `risk_management.sl_ratchet` (+ enabled) |
+| Isolation | `scripts/phase6/test_isolation_sl_floor_ratchet.py` **PASS** |
+
+### Triggers
+- Soft multiple ≥1.5 → lock ~35% of open run (+ BE buffer)  
+- Hard multiple ≥2.0 → lock ~50%  
+- Add gap / open air pocket >20% under mark when multiple ≥1.25 → raise floor to ~20% gap  
+- Never loosen vs existing live stop; clamp below mark  
+
+### Success
+- ~~Isolation multi-bagger / LINK air pocket / no over-ratchet small R~~  
+- Live reattach uses ratchet on next SL attach cycle  
+- Skill + gaps index updated  
+
+---
+
+## P6-EXIT-WR-IMPROVE-STACK-20260821 — IN_PROGRESS
+
+**Type:** ops / risk product — exit quality / WR  
+**Status:** IN_PROGRESS (P0 ratchet DONE; evidence DONE; live TP still NO)  
+**Date:** 2026-08-21  
+**Priority:** P0/P1  
+**auto_pickup:** false  
+**blocked_on:** live TP → shadow days + Brad OK (`exit_automation.promotion`)  
+**Role:** crypto-engineer  
+
+### Diagnosis (ledger)
+- Exit WR low because mix is **stop-dominated** (~7% WR on SL) while **rotation ~86%** WR.  
+- Last 30d ~2/34 strategy-ish exits mostly SL.  
+- Path study 60d (2026-08-21): **rescue rate 60%** (27/45 losses touched +6% on path) → enum **`design_shadow`**.
+
+### Priority stack
+| # | Item | Status | Card / artifact |
+|---|------|--------|-----------------|
+| P0 | SL floor ratchet after large spread | **DONE** | `P6-SL-RATCHET-AFTER-ADDS-20260821` |
+| P0 | Add-risk sizer + armed-stop gap gate | **DONE** | add-risk + near-stop cards |
+| P1 | Shadow TP/trail evidence → promote only with gates | **Evidence refreshed** · live **NO** | `reports/TP_TRAIL_PATH_STUDY_2026-08-21.md` · `data/state/tp_trail_path_study_latest.json` |
+| P1 | Idle/weak prefer exit before SL only | Observational idle shipped; **no hard eject** | seat-idle card |
+| P2 | WR metric hygiene (exclude dust) | **DONE** | `/api/performance` `basis=ledger_nonzero_pnl_strategy` + `win_ratio_exits_raw` |
+
+### Explicit non-goals
+- Disable SL to juice WR  
+- Auto-promote live TP without Brad  
+- Tighter hard SL as primary WR fix  
+
+### Next
+1. Keep shadow TP mode on honest basis; collect would-fires ≥ promotion thresholds.  
+2. Human review before `take_profit.mode=live`.  
+3. Optional: pair-level soft rotate preference for chronic 0% SL seats (separate card if needed).
+
+### Shadow week validation (Brad 2026-08-21)
+- **Intent:** +6% bank opportunity is material → **run shadow 7 days**, then review. **No auto live TP.**
+- **Window start:** `data/state/shadow_tp_validation_window.json` (started 2026-08-21 ~16:16 PT)
+- **Target end:** ~**2026-08-28** 09:00 PT review
+- **Daily ping:** Hermes cron `shadow-tp-validation-daily` @ **08:15 PT** → Telegram (`run_shadow_tp_validation_check.sh`)
+- **Day-7 job:** `shadow-tp-validation-day7-review` one-shot **2026-08-28 09:00 PT**
+- **Status CLI:** `scripts/phase6/shadow_tp_validation_status.py` (unique **episodes**, not raw tick spam)
+- **Artifacts:** `data/state/shadow_tp_validation_latest.json` · `reports/SHADOW_TP_VALIDATION_LATEST.md`
+- **Promo clock:** `shadow_tp_status.first_shadow_at` reset to window start; raw pre-window totals void for this gate
+
+### Evidence commands
+```bash
+PYTHONPATH=. .venv/bin/python phase6/research/run_tp_trail_path_study.py 60
+PYTHONPATH=. .venv/bin/python scripts/phase6/test_isolation_sl_floor_ratchet.py
+PYTHONPATH=. .venv/bin/python scripts/phase6/shadow_tp_validation_status.py --notify
+curl -s http://127.0.0.1:8502/api/performance | python3 -c "import sys,json;d=json.load(sys.stdin);print(d.get('win_ratio_exits'));print(d.get('win_ratio_exits_raw'))"
+```
 
 ---
 
@@ -843,6 +1036,56 @@ Race fix (sibling DONE). Risk-knob changes. Telegram spam.
 **Metrics:** `phase6/core/basket_pick_metrics.py` ledger `data/state/basket_pick_metrics.jsonl` pick `8b47ff6a-9c6` baseline RAVE @$0.367  
 **Refresh cron:** `phase6-basket-pick-metrics-refresh` daily (local)  
 **Orders:** none placed by promote — eligibility only  
+
+## P6-VOLUME-VELOCITY-SHADOW-20260821 — SHADOW ACTIVE
+
+**Type:** research / discovery funnel arm  
+**Status:** SHADOW ACTIVE (2026-08-21)  
+**Priority:** P2 (scout layer — not live membership)  
+**auto_pickup:** false  
+**blocked_on:** none for shadow; live promote → Brad OK + matured N  
+
+### Intent (Brad)
+RVOL / volume velocity identifies **early movers** for the **evaluation filter** as basket-swap *candidates* — not seats. Also track paper performance **even when never selected**. Hypothesis: **LQHV** (low-qualified high-velocity) may imply a different filter set than the legacy discovery funnel.
+
+### Funnel role
+```
+RVOL / burst → nominate → evaluate gates (discovery/cycler/membership) → swap candidate only if gates pass
+                └────────── paper MTM / MFE / forward r regardless of selection ──────────┘
+```
+
+### Metrics
+- Completed 1h RVOL (skip forming bar) · 3h burst RVOL · optional 1d RVOL  
+- Buckets: `early_coil` · `dual_tf` · `early_trend` · `hot_chase`  
+- Gate probes: discovery liq floor, quality row, promote_eligible, cycler proposed add  
+- Paper equal $100 from nomination; horizons 6h/1d/3d/7d when mature  
+
+### Artifacts
+| Piece | Path |
+|-------|------|
+| Core | `phase6/core/volume_velocity_shadow.py` |
+| CLI | `scripts/phase6/run_volume_velocity_shadow.py` |
+| Test | `scripts/phase6/test_isolation_volume_velocity_shadow.py` |
+| Cron | `phase6-volume-velocity-shadow` @ **10:45 & 22:45 PT** `no_agent` |
+| Wrapper | `~/.hermes/scripts/run_volume_velocity_shadow.sh` |
+| State | `data/state/volume_velocity_shadow_latest.json`, `volume_velocity_tracks.json` |
+| Report | `reports/VOLUME_VELOCITY_SHADOW_LATEST.md` |
+
+### Anti-bleed
+- No orders · no config apply · not Signals · not auto bag seat  
+- Vol/MCap deferred (no free reliable mcap on CB public path)  
+
+### First snapshot (2026-08-21)
+- ENS-USD dual_tf RVOL~8.2 · SHIB-USD early_trend RVOL~2.6  
+- Both **LQHV** (not in discovery contenders / no promote) — exactly the “you don’t know what you don’t know” lane  
+
+### Verify
+```bash
+PYTHONPATH=. python3 scripts/phase6/test_isolation_volume_velocity_shadow.py
+PYTHONPATH=. python3 scripts/phase6/run_volume_velocity_shadow.py --telegram
+```
+
+---
 
 ## PAIR-DISCOVERY-FUNNEL-001 — SHADOW (2026-08-08)
 
@@ -1006,17 +1249,18 @@ PYTHONPATH=. python scripts/phase6/test_isolation_capital_controls.py
 
 ---
 
-## FEAT-PARK-USDC-PAXG-PACKAGE-20260807 — W0 SHIPPED · LIVE OFF
+## FEAT-PARK-USDC-PAXG-PACKAGE-20260807 — W0 SHIPPED · LIVE OFF · **FINISH SOON**
 
 **Type:** feature / product scenario  
 **auto_pickup:** false  
-**blocked_on:** live enable → Brad OK + operator checklist  
-**Status:** **W0 SHIPPED** (2026-08-07) · live package **OFF**  
-**Priority:** high  
+**blocked_on:** live enable → health gates + Brad OK + operator checklist (not auto)  
+**Status:** **W0 SHIPPED** (2026-08-07) · live package **OFF** · **finish prioritized 2026-08-21**  
+**Priority:** **P1 near-term** (not P0 while bull/deploy; **do before next serious park regime**)  
 **Role:** platform / product  
-**Date:** 2026-08-07  
+**Date:** 2026-08-07 · **intent refresh:** 2026-08-21  
 **Gap:** SPECS_CODE_GAP §3 #2 (type A → W0 closed; live enable remains)  
 **Spec:** `docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md`  
+**Trader purpose:** `docs/features/PARK_SMART_IDLE_CASH.md`  
 **Checklist:** `docs/features/PARK_USDC_PAXG_OPERATOR_CHECKLIST.md`  
 **Config:** `config/park_package.json` · per-account `park_package` in `trader_accounts.json`  
 **Code:** `phase6/core/park_package.py` · hook `cycle_coordinator._maybe_park_package`  
@@ -1024,7 +1268,12 @@ PYTHONPATH=. python scripts/phase6/test_isolation_capital_controls.py
 **Status JSON:** `data/state/park_package_status.json`  
 **Doctrine:** `PARK_BALLAST_DECISION_MATRIX.md`, `PARK_REGIME_POLICY.md`  
 **Layers:** `LIVE_USDC_PARK.md`, `PRESERVE_HOLD_MVP_SPEC.md`  
-**Parent prefs:** `FEAT-PERSONALIZED-SETTINGS-IMPL-20260807` (W4 prefs surface)
+**Parent prefs:** `FEAT-PERSONALIZED-SETTINGS-IMPL-20260807` (W4 prefs surface)  
+**Enable gates:** `phase6-park-ballast` → `references/smart-park-enable-gates.md` · option-3 hold `references/smart-park-option3-hold.md`  
+**Related open:** MICRO PAXG stub STANDBY / E1 not open — re-arm hygiene when package finishes
+
+### Brad intent (2026-08-21)
+**Finish this feature.** Not critical in **current bull/deploy**, but **soon** — needed to carry the book through the **next park/bear** gracefully. Purpose is conditional park (cash + optional tiny gold + return path), not permanent anti-bull gold. Do **not** silent live-enable; complete waves + gates, then explicit go.
 
 ### Plain English
 One coherent **park stack**: idle capital → USDC carry (venue-quoted; never hard-code unquoted APY in UI) **plus** optional PAXG Hold (micro → full only on explicit scale). Not three disconnected toggles.
@@ -1038,20 +1287,23 @@ One coherent **park stack**: idle capital → USDC carry (venue-quoted; never ha
 6. Isolation PASS; primary USDC park remains off.  
 7. Index / gap / doctrine / LIVE_USDC_PARK linked.
 
-### Remaining (not W0)
+### Finish backlog (ordered)
 | Wave | Work | Gate |
 |------|------|------|
-| W2 | `allow_coordinate_toggles` apply USDC on/off from profile | Brad OK |
-| W3 | Auto trim B on deploy | Brad OK + shadow evidence |
-| W4 | Settings UI profile picker | settings FEAT |
-| W5 | Live enable primary `a_plus_b_micro` | Checklist §8 + Brad OK |
+| **F0** | Health gate re-score (deposit-adj windows, exit WR, trend, enforce) — hold enable if red | Cron/manual; no auto-enable |
+| **F1** | Preserve stub hygiene: STANDBY MICRO PAXG — decide re-arm E1 vs flat vs leave | Brad |
+| **W2** | `allow_coordinate_toggles` apply USDC on/off from profile | Brad OK |
+| **W3** | Auto trim B on deploy (shadow evidence first) | Brad OK |
+| **W4** | Settings UI profile picker (Option 3 default path) | settings FEAT |
+| **W5** | Live enable primary **`a_plus_b_micro`** (cash+yield+tiny gold) | Checklist §8 + Brad OK |
+| **W6** | Paper/soak under park signal; confirm thaw path doesn’t fight bull deploy | Evidence |
 
 ### Success criteria (original)
 1. ~~Spec~~ 2. ~~Checklist~~ 3. ~~Config + coordinator~~ 4. ~~Safe off + isolation~~ 5. ~~Docs~~  
-Live enable / paper soak = **open** under W5.
+Live enable / paper soak = **open** under W5–W6 · **finish soon per 2026-08-21**.
 
 ### Non-goals (unchanged)
-- Auto 20% PAXG · DeRisk · fixed 3.5% APY copy · silent live flips
+- Auto 20% PAXG · DeRisk · fixed 3.5% APY copy · silent live flips · gold day-trading · replacing bull re-entry
 
 ### Verification
 ```bash
@@ -10657,6 +10909,26 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260821`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260822** (opened 2026-08-22T00:00:17.318653)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260822`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

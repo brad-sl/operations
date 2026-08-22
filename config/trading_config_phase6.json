@@ -62,13 +62,31 @@
     "dust_sweep_orphan_each_cycle": true,
     "near_stop_add_block_enabled": true,
     "near_stop_min_gap_pct": 0.02,
+    "armed_stop_allow_add_min_gap_pct": 0.02,
     "near_stop_max_unrealized_pct": -0.01,
     "near_stop_require_existing_position": true,
     "near_stop_min_position_usd": 25.0,
     "near_stop_block_reasons": [
       "light_tilt_cash",
       "opportunistic_rotation_from_weak"
-    ]
+    ],
+    "add_risk_sizer_enabled": true,
+    "add_risk": {
+      "enabled": true,
+      "note": "Factor add sizer for existing stacks — see regime_cash_policy.add_risk + phase6/core/add_risk_sizer.py"
+    },
+    "sl_ratchet_enabled": true,
+    "sl_ratchet": {
+      "enabled": true,
+      "multiple_soft": 1.5,
+      "multiple_hard": 2.0,
+      "lock_frac_soft": 0.35,
+      "lock_frac_hard": 0.5,
+      "be_buffer_pct": 0.005,
+      "add_gap_max": 0.2,
+      "air_pocket_multiple_min": 1.25,
+      "note": "Raise SL floor after multi-bagger / air pocket; never loosen. docs/research/SL_FLOOR_RATCHET_AFTER_ADDS.md"
+    }
   },
   "preserve_mode": {
     "enabled": true,

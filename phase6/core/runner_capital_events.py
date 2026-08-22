@@ -611,7 +611,8 @@ def filter_trade_plan_manual_cooldown(runner: Any, plan: Any) -> Any:
 
 
 # Soft gate (#2): do not light-tilt / add into bags sitting on top of their stop.
-# Hard gate (#1) would block *all* buys with any open protective stop.
+# Armed gate (#1, 2026-08-21): gap-gated — allow adds on long runners when stop cushion
+# is healthy; still block near-stop race (manufactured SL). Full-bag SL reattach is CR-03.
 NEAR_STOP_ADD_REASONS = frozenset(
     {
         "light_tilt_cash",
@@ -628,9 +629,15 @@ def _near_stop_add_settings(runner: Any) -> Dict[str, Any]:
         reason_set = set(NEAR_STOP_ADD_REASONS)
     else:
         reason_set = {str(r) for r in reasons}
+    min_gap = float(rm.get("near_stop_min_gap_pct", 0.02))
+    # Explicit armed-add cushion; falls back to near_stop_min_gap_pct.
+    armed_min_gap = rm.get("armed_stop_allow_add_min_gap_pct")
+    if armed_min_gap is None:
+        armed_min_gap = min_gap
     return {
         "enabled": bool(rm.get("near_stop_add_block_enabled", True)),
-        "min_stop_gap_pct": float(rm.get("near_stop_min_gap_pct", 0.02)),
+        "min_stop_gap_pct": min_gap,
+        "armed_allow_add_min_gap_pct": float(armed_min_gap),
         "max_unrealized_pct": float(rm.get("near_stop_max_unrealized_pct", -0.01)),
         "reasons": reason_set,
         "require_existing_position": bool(
@@ -734,6 +741,68 @@ def _price_for_pair(runner: Any, pair: str, currents: Dict[str, float]) -> float
     return 0.0
 
 
+def _resolve_stop_price(
+    *,
+    stop_price: Optional[float],
+    entry_price: float,
+    settings: Dict[str, Any],
+) -> float:
+    stop = float(stop_price or 0)
+    if stop <= 0 and float(entry_price or 0) > 0:
+        sl_pct = float(settings.get("stop_loss_pct", 0.03) or 0.03)
+        stop = float(entry_price) * (1.0 - sl_pct)
+    return stop
+
+
+def evaluate_armed_stop_add_block(
+    *,
+    pair: str,
+    position_usd: float,
+    entry_price: float,
+    current_price: float,
+    stop_price: Optional[float],
+    settings: Dict[str, Any],
+    registry_open: bool,
+) -> Optional[str]:
+    """
+    Gap-gated armed-stop add gate (P6-ARMED-STOP-GAP-ALLOW-20260821).
+
+    When a bag already has an open protective stop, allow BUY adds only if
+    mark-to-stop gap >= armed_allow_add_min_gap_pct (default = near_stop_min_gap).
+    Blocks the near-stop race; permits long-runner pyramids with healthy cushion.
+
+    Pure helper (no I/O). Returns block reason or None to allow.
+    """
+    if not settings.get("enabled", True):
+        return None
+    if not registry_open:
+        return None
+    min_pos = float(settings.get("min_position_usd", 25.0))
+    if float(position_usd or 0) < min_pos:
+        return None
+
+    px = float(current_price or 0)
+    entry = float(entry_price or 0)
+    stop = _resolve_stop_price(stop_price=stop_price, entry_price=entry, settings=settings)
+    min_gap = float(
+        settings.get("armed_allow_add_min_gap_pct", settings.get("min_stop_gap_pct", 0.02))
+    )
+
+    # No mark or no stop → cannot prove cushion; keep race closed.
+    if px <= 0 or stop <= 0:
+        return (
+            f"armed_stop_gap_unknown (px={px:.4f} stop={stop:.4f} pair={pair})"
+        )
+
+    gap_pct = (px - stop) / px
+    if gap_pct < min_gap:
+        return (
+            f"armed_stop_gap:{gap_pct*100:.2f}%<min {min_gap*100:.2f}%"
+            f" (px={px:.4f} stop={stop:.4f})"
+        )
+    return None
+
+
 def evaluate_near_stop_add_block(
     *,
     pair: str,
@@ -761,10 +830,7 @@ def evaluate_near_stop_add_block(
     px = float(current_price or 0)
     if px <= 0:
         return None
-    stop = float(stop_price or 0)
-    if stop <= 0 and entry > 0:
-        sl_pct = float(settings.get("stop_loss_pct", 0.03) or 0.03)
-        stop = entry * (1.0 - sl_pct)
+    stop = _resolve_stop_price(stop_price=stop_price, entry_price=entry, settings=settings)
     if stop <= 0:
         return None
 
@@ -789,19 +855,17 @@ def evaluate_near_stop_add_block(
 
 def filter_trade_plan_near_open_stop(runner: Any, plan: Any) -> Any:
     """
-    Armed stop + near-stop gate (P6-NEAR-STOP-REBALANCE-RACE-20260813).
+    Armed stop + near-stop gate (P6-NEAR-STOP-REBALANCE-RACE + gap-allow 2026-08-21).
 
-    Hard block: any BUY add to pair with open armed protective stop in registry
-    (and existing position) is blocked. This covers rebalance BUYs (empty/"rebalance_buy"
-    reason, which previously bypassed) and second-adds to armed bags.
-    Prevents rebalance injecting capital minutes before an existing stop fires
-    (manufactured SL on the added size).
+    Armed gate (all BUY reasons, existing bag + open registry stop):
+      block only when mark-to-stop gap < armed_allow_add_min_gap_pct (or gap unknown).
+      Healthy cushion → allow long-runner add (CR-03 reattaches full-bag SL after).
 
     Soft (legacy): for light_tilt / opportunistic reasons, also block on
     gap < min or unrealized <= max (even without registry stop).
 
-    Stops are suspended inside rebalance context, but registry "open" marker
-    is the durable signal of "armed or protected position" for the gate.
+    Stops are suspended inside rebalance context; registry "open" is the durable
+    signal that the bag is a protected position for this gate.
     """
     if not getattr(plan, "actions", None):
         return plan
@@ -825,6 +889,7 @@ def filter_trade_plan_near_open_stop(runner: Any, plan: Any) -> Any:
         px = _price_for_pair(runner, pair, currents)
         reg = _latest_registry_stop_for_pair(pair)
         stop_px = None
+        reg_open = bool(reg and str(reg.get("status", "open")) != "closed")
         if reg:
             try:
                 stop_px = float(reg.get("stop_price") or 0) or None
@@ -836,19 +901,40 @@ def filter_trade_plan_near_open_stop(runner: Any, plan: Any) -> Any:
                 except (TypeError, ValueError):
                     pass
 
-        # Hard block: add into armed stop (covers rebalance path + second adds)
-        if reg and str(reg.get("status", "open")) != "closed":
-            min_pos = float(settings.get("min_position_usd", 25.0))
-            if pos_usd >= min_pos:
-                logger.info(
-                    "[ARMED-STOP] blocked %s %s $%.2f — add into armed stop (reg open sl=%s stop=%.4f)",
-                    reason or "BUY",
-                    pair,
-                    float(a.get("usd", 0) or 0),
-                    str(reg.get("sl_order_id", ""))[:8],
-                    stop_px or 0.0,
-                )
-                continue
+        # Gap-gated armed stop: block near-stop race; allow healthy long-runner adds.
+        armed_block = evaluate_armed_stop_add_block(
+            pair=pair,
+            position_usd=pos_usd,
+            entry_price=entry,
+            current_price=px,
+            stop_price=stop_px,
+            settings=settings,
+            registry_open=reg_open,
+        )
+        if armed_block:
+            logger.info(
+                "[ARMED-STOP] blocked %s %s $%.2f — %s (sl=%s)",
+                reason or "BUY",
+                pair,
+                float(a.get("usd", 0) or 0),
+                armed_block,
+                str((reg or {}).get("sl_order_id", ""))[:8],
+            )
+            continue
+        if reg_open and pos_usd >= float(settings.get("min_position_usd", 25.0)):
+            stop_for_log = _resolve_stop_price(
+                stop_price=stop_px, entry_price=entry, settings=settings
+            )
+            gap_log = ((px - stop_for_log) / px) if px > 0 and stop_for_log > 0 else None
+            logger.info(
+                "[ARMED-STOP] allow %s %s $%.2f — healthy gap%s (sl=%s stop=%.4f)",
+                reason or "BUY",
+                pair,
+                float(a.get("usd", 0) or 0),
+                f" {gap_log*100:.1f}%" if gap_log is not None else "",
+                str((reg or {}).get("sl_order_id", ""))[:8],
+                stop_for_log or 0.0,
+            )
 
         block = evaluate_near_stop_add_block(
             pair=pair,

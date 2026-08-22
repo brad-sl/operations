@@ -207,12 +207,76 @@ class StopLossManager:
             stop_price_str = self.exchange.quantize_price(pair, stop_price)
             limit_price_str = self.exchange.quantize_price(pair, limit_price)
 
-        # Ensure prices are valid vs calc base (ENG-S4-02: not stale raw entry_price)
-        anchor_for_stop_check = calc_base if calc_base and calc_base > 0 else entry_price
-        if stop_price >= anchor_for_stop_check:
-            logger.warning(
-                f"Stop price {stop_price} >= anchor {anchor_for_stop_check}, adjusting..."
+        # Floor ratchet: raise stop after large mark/entry spread (never loosen)
+        try:
+            from phase6.core.sl_floor_ratchet import apply_ratchet_to_stop_bundle
+
+            rm = {}
+            if isinstance(getattr(self, "config", None), dict):
+                rm = self.config.get("risk_management") or {}
+            elif isinstance(getattr(self, "config_dict", None), dict):
+                rm = self.config_dict.get("risk_management") or {}
+            # Prefer original runner entry for multiple math
+            ratchet_entry = float(anchor_entry or entry_price or calc_base or 0)
+            existing_stop = None
+            try:
+                from phase6.core.runner_capital_events import _latest_registry_stop_for_pair
+
+                row = _latest_registry_stop_for_pair(pair)
+                if isinstance(row, dict) and row.get("stop_price"):
+                    existing_stop = float(row["stop_price"])
+            except Exception:
+                pass
+            add_px = None
+            if fresh_buy and entry_price and float(entry_price) > 0:
+                # Fresh fill price for add-gap ratchet when topping up runners
+                add_px = float(entry_price)
+            pre_ratchet_stop = float(stop_price)
+            stop_price, limit_price, rdec = apply_ratchet_to_stop_bundle(
+                pair=pair,
+                entry=ratchet_entry,
+                mark=float(market_px or 0),
+                proposed_stop=float(stop_price),
+                proposed_limit=float(limit_price),
+                existing_stop=existing_stop,
+                add_price=add_px,
+                risk_management=rm if isinstance(rm, dict) else {},
             )
+            if rdec.applied and stop_price != pre_ratchet_stop:
+                stop_price_str = self.exchange.quantize_price(pair, stop_price)
+                limit_price_str = self.exchange.quantize_price(pair, limit_price)
+                stop_price = float(stop_price_str)
+                limit_price = float(limit_price_str)
+                # Keep stop strictly below market after quantize
+                if market_px > 0:
+                    stop_price, limit_price = ensure_stop_below_market(
+                        self.exchange, pair, stop_price, limit_price, market_px, pct
+                    )
+                    stop_price_str = self.exchange.quantize_price(pair, stop_price)
+                    limit_price_str = self.exchange.quantize_price(pair, limit_price)
+                    stop_price = float(stop_price_str)
+                    limit_price = float(limit_price_str)
+                anchor_reason = f"{anchor_reason}|ratchet:{','.join(rdec.reasons)}"
+        except Exception as e:
+            logger.warning("[SL-RATCHET] skipped for %s: %s", pair, e)
+
+        # Ensure prices are valid vs calc base (ENG-S4-02: not stale raw entry_price)
+        # After ratchet, anchor_for_stop_check must not force stop back down to genesis.
+        anchor_for_stop_check = calc_base if calc_base and calc_base > 0 else entry_price
+        if stop_price >= (market_px if market_px > 0 else anchor_for_stop_check):
+            logger.warning(
+                f"Stop price {stop_price} >= market/anchor, adjusting..."
+            )
+            price_inc = float(meta.get("price_increment", "0.0001"))
+            ref = market_px if market_px > 0 else anchor_for_stop_check
+            stop_price = ref - price_inc
+            stop_price_str = self.exchange.quantize_price(pair, stop_price)
+            stop_price = float(stop_price_str)
+            limit_price = stop_price - price_inc
+            limit_price_str = self.exchange.quantize_price(pair, limit_price)
+            limit_price = float(limit_price_str)
+        elif stop_price >= anchor_for_stop_check and market_px <= 0:
+            # legacy path when no market
             price_inc = float(meta.get("price_increment", "0.0001"))
             stop_price = anchor_for_stop_check - price_inc
             stop_price_str = self.exchange.quantize_price(pair, stop_price)

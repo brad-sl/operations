@@ -220,20 +220,39 @@ def open_db(timeout: float = DB_READ_TIMEOUT, readonly: bool = True):
 
 
 def get_sentiment_label(val):
-    """Pre-compute label for pure consumer dashboard (no client ifs)."""
+    """Strength-scaled sentiment label/color (aligned with live gates, not vanity green).
+
+    Trading-relevant floors (REGIME-CASH / SignalGenerator):
+      ±0.20  → weighted signal "positive/negative sentiment" contribution
+      +0.15  → bull *new-pair* min_sentiment_new_pair (empty seat)
+      -0.10  → bull min_sentiment for *existing* held seats
+    Values like +0.05 are mild — must NOT read as full emerald "Bullish".
+    """
     try:
         v = float(val) if val is not None else 0.0
     except (ValueError, TypeError):
         v = 0.0
-    if v > 0.03:
-        return "Bullish", "emerald-400"
-    elif v < -0.03:
-        return "Bearish", "red-400"
-    elif v > 0.01:
-        return "Mild Bullish", "emerald-300"
-    elif v < -0.01:
-        return "Mild Bearish", "red-300"
-    return "Neutral", "slate-400"
+    # Strong (signal-generator magnitude)
+    if v >= 0.20:
+        return "Strong bull", "emerald-400"
+    if v <= -0.20:
+        return "Strong bear", "red-400"
+    # Clears typical new-pair entry floor in bull (~0.15)
+    if v >= 0.15:
+        return "Bull (new-ok)", "emerald-300"
+    if v <= -0.15:
+        return "Bear", "red-300"
+    # Mild — visible but not "go" green (RAVE ~0.05 lives here)
+    if v >= 0.045:
+        return "Mild+", "cyan-400"
+    if v <= -0.045:
+        return "Mild-", "orange-400"
+    if v >= 0.015:
+        return "Soft+", "slate-300"
+    if v <= -0.015:
+        return "Soft-", "slate-300"
+    return "Neutral", "slate-500"
+
 
 def get_rsi_label(val):
     """Pre-compute RSI label for pure consumer (no client ifs)."""
@@ -1022,10 +1041,62 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     block_hours = float(_default_stop_block_hours())
             except Exception:
                 buy_blocks = {}
+
+            # Held seats (for new-pair vs add entry floors) — same idea as ·held in UI
+            held_pairs = set()
+            held_usd_map = {}
+            try:
+                st_live = load_live_state() or {}
+                for p in (st_live.get("trading_positions") or st_live.get("positions") or []):
+                    if not isinstance(p, dict):
+                        continue
+                    pair_h = str(p.get("pair") or p.get("product_id") or "")
+                    if not pair_h or pair_h in ("USD", "USDC"):
+                        continue
+                    usd = p.get("value_usd")
+                    if usd is None:
+                        usd = p.get("usd_value")
+                    if usd is None:
+                        usd = p.get("market_value")
+                    try:
+                        usd_f = float(usd or 0)
+                    except (TypeError, ValueError):
+                        usd_f = 0.0
+                    held_usd_map[pair_h] = usd_f
+                    # Flat dust ≠ held seat for new-pair sentiment floor
+                    if usd_f >= 25.0:
+                        held_pairs.add(pair_h)
+            except Exception:
+                held_pairs = set()
+                held_usd_map = {}
+
+            # REGIME-CASH entry floors (the "under the table" gates)
+            entry_snap = None
+            entry_floors = {
+                "min_sentiment": -0.1,
+                "min_sentiment_new_pair": 0.15,
+                "max_rsi": 70.0,
+            }
+            try:
+                from phase6.core.regime_cash_policy import resolve_regime_cash, evaluate_buy_entry
+                entry_snap = resolve_regime_cash()
+                if getattr(entry_snap, "entry", None):
+                    entry_floors = {
+                        "min_sentiment": float((entry_snap.entry or {}).get("min_sentiment", -0.1)),
+                        "min_sentiment_new_pair": float(
+                            (entry_snap.entry or {}).get("min_sentiment_new_pair", 0.15)
+                        ),
+                        "max_rsi": float((entry_snap.entry or {}).get("max_rsi", 70.0)),
+                    }
+            except Exception:
+                entry_snap = None
+                evaluate_buy_entry = None  # type: ignore
+
             # Preserve config basket order (not A→Z cache union).
             pairs = list(basket)
             rows = []
             blocked_pairs = []
+            gated_pairs = []
             for pair in pairs:
                 r = rsi_map.get(pair) or {}
                 s = sent_map.get(pair) or {}
@@ -1035,6 +1106,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 sent_v = s.get("sentiment")
                 if sent_v is None:
                     sent_v = 0.0
+                # Always recompute sentiment label/color here (strength scale) —
+                # do not trust cache labels that painted mild +0.05 as full Bullish.
+                sent_label, sent_color = get_sentiment_label(sent_v)
+                rsi_label, rsi_color = get_rsi_label(rsi_v)
                 status, st_color, conf, reason = get_combined_status(rsi_v, sent_v, pair=pair)
                 blk = buy_blocks.get(pair) or buy_blocks.get(str(pair).upper()) or {}
                 buy_blocked = bool(blk.get("blocked"))
@@ -1043,14 +1118,59 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     # Signal formula can still say BUY — block is a separate deploy gate.
                     if status == "BUY":
                         reason = (reason or "") + " · auto-BUY blocked until cooldown expires"
+
+                is_new_seat = pair not in held_pairs
+                sent_floor = (
+                    entry_floors["min_sentiment_new_pair"]
+                    if is_new_seat
+                    else entry_floors["min_sentiment"]
+                )
+                entry_allowed = True
+                entry_reasons = []
+                if entry_snap is not None and evaluate_buy_entry is not None:
+                    try:
+                        dec = evaluate_buy_entry(
+                            pair,
+                            entry_snap,
+                            sentiment=float(sent_v),
+                            rsi=float(rsi_v),
+                            lockout_pairs=set(blocked_pairs) | {
+                                p for p, b in buy_blocks.items() if (b or {}).get("blocked")
+                            },
+                            is_new_pair=is_new_seat,
+                        )
+                        entry_allowed = bool(dec.allowed)
+                        entry_reasons = list(dec.reasons or [])
+                    except Exception as _eg:
+                        entry_allowed = True
+                        entry_reasons = [f"entry_check_error:{_eg}"]
+
+                # BUY signal that cannot clear deploy entry gates → telegraph weak/gated
+                entry_gated = bool(status == "BUY" and not entry_allowed)
+                if entry_gated:
+                    gated_pairs.append(pair)
+                    why = "; ".join(entry_reasons) if entry_reasons else "entry_gate"
+                    seat = "new seat" if is_new_seat else "add"
+                    reason = (
+                        (reason or "BUY")
+                        + f" · gated ({seat}: need sent≥{sent_floor:.2f}; {why})"
+                    )
+                    # Dim the status green — not a clean deploy light
+                    st_color = "amber-400"
+
+                deploy_ready = bool(
+                    status == "BUY" and entry_allowed and not buy_blocked
+                    and bool(getattr(entry_snap, "allow_new_buys", True) if entry_snap else True)
+                )
+
                 rows.append({
                     "pair": pair,
                     "rsi": round(float(rsi_v), 2),
-                    "rsi_label": r.get("label") or get_rsi_label(rsi_v)[0],
-                    "rsi_color": r.get("color") or get_rsi_label(rsi_v)[1],
+                    "rsi_label": rsi_label,
+                    "rsi_color": rsi_color,
                     "sentiment": round(float(sent_v), 4),
-                    "sentiment_label": s.get("label") or get_sentiment_label(sent_v)[0],
-                    "sentiment_color": s.get("color") or get_sentiment_label(sent_v)[1],
+                    "sentiment_label": sent_label,
+                    "sentiment_color": sent_color,
                     "status": status,
                     "status_color": st_color,
                     "confidence": conf,
@@ -1058,14 +1178,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     # back-compat for older UI tooltip
                     "weighted": conf,
                     "in_active_basket": True,
+                    "held_usd": round(float(held_usd_map.get(pair) or 0.0), 2),
+                    "is_new_seat": is_new_seat,
                     "buy_blocked": buy_blocked,
                     "block_reason": blk.get("reason") if buy_blocked else None,
                     "block_source": blk.get("source") if buy_blocked else None,
                     "block_expires_at": blk.get("expires_at") if buy_blocked else None,
                     "block_hours_remaining": blk.get("hours_remaining") if buy_blocked else None,
                     "block_hours": blk.get("block_hours") if buy_blocked else block_hours,
+                    # Deploy telegraph (REGIME-CASH) — separate from signal Status
+                    "entry_allowed": entry_allowed,
+                    "entry_gated": entry_gated,
+                    "entry_reasons": entry_reasons,
+                    "entry_sent_floor": sent_floor,
+                    "deploy_ready": deploy_ready,
                 })
             ok = bool(rows)
+            regime_label = None
+            try:
+                if entry_snap is not None:
+                    regime_label = f"{entry_snap.regime}/{entry_snap.strategy_mode}"
+            except Exception:
+                regime_label = None
             self.send_json({
                 "status": "ok" if ok else "no_data",
                 "rows": rows,
@@ -1074,10 +1208,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "basket_scope": "active_trading",
                 "buy_blocked_pairs": blocked_pairs,
                 "buy_block_hours": block_hours,
+                "entry_gated_pairs": gated_pairs,
+                "entry_floors": entry_floors,
+                "regime": regime_label,
                 "rsi_source": rsi_src,
                 "sentiment_source": (sent_meta or {}).get("source"),
                 "sentiment_mode": (sent_meta or {}).get("mode"),
-                "formula": "SignalGenerator weighted (same as daily brief): RSI±0.4 at 30/70, sent±0.3 at ±0.2; BUY if score>0.25, SELL if <-0.25, else HOLD. Rows = global_settings.pairs only. ·blocked = post-SL/manual rebuy cooldown (no auto-BUY until expiry).",
+                "formula": (
+                    "Signal Status = SignalGenerator weighted (RSI±0.4 @30/70, sent±0.3 @±0.2; "
+                    "BUY if score>0.25). Deploy is separate: REGIME-CASH entry — "
+                    f"held min_sent≥{entry_floors['min_sentiment']}, "
+                    f"new seat min_sent≥{entry_floors['min_sentiment_new_pair']}, "
+                    f"max_rsi≤{entry_floors['max_rsi']}. "
+                    "·gated = BUY signal but fails entry (e.g. weak sent on empty seat). "
+                    "·blocked = post-SL/manual rebuy cooldown. "
+                    "Sent. colors scale by strength (mild ≠ full green)."
+                ),
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             })
             return
@@ -1152,8 +1298,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return eq.get("status") == "ok" and len(eq.get("points") or []) >= 2
 
             def _compute_and_store():
+                as_of = datetime.now(timezone.utc)
                 try:
-                    periods = compute_period_performance(total, DB_PATH, timeout=3.5)
+                    periods = compute_period_performance(
+                        total, DB_PATH, timeout=3.5, as_of=as_of
+                    )
                 except Exception:
                     periods = {
                         "today": None,
@@ -1171,9 +1320,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         days=30,
                         max_points=36,
                         timeout=3.5,
+                        as_of=as_of,
                     )
                 except Exception:
                     equity_trend = {"status": "timeout", "points": []}
+
+                # SSOT: Window/Recent on Account health must equal 30D/7D tiles exactly.
+                # compute_equity_trend already uses the tile formula; still overwrite so a
+                # future path drift cannot reintroduce dual numbers on one payload.
+                if isinstance(equity_trend, dict) and equity_trend.get("status") == "ok":
+                    d30 = periods.get("d30")
+                    d7 = periods.get("d7")
+                    if d30 is not None:
+                        equity_trend["window_return_pct"] = d30
+                    if d7 is not None:
+                        equity_trend["recent_return_pct"] = d7
+                    wr = equity_trend.get("window_return_pct")
+                    if d30 is not None and wr is not None:
+                        equity_trend["window_matches_period_tiles"] = abs(float(wr) - float(d30)) < 0.005
+                    else:
+                        equity_trend["window_matches_period_tiles"] = d30 is None or wr is None
 
                 payload = {
                     "status": "ok",

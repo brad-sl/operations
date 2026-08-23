@@ -1,8 +1,13 @@
 """
 Park package coordinator — USDC (A) + PAXG Hold (B) + REGIME-CASH (C).
 
-Evaluates coordinated sequences and writes status. Does not place orders.
+Evaluates coordinated sequences and writes status each cycle.
 Never auto-arms PAXG. Optional USDC toggle coordination is gated off by default.
+
+Auto trim B on deploy (when execution.auto_trim_b_on_deploy=true):
+  Edge-triggered park→deploy only — sells armed PAXG via disarm_preserve_hold.
+  Does not dump gold while already sitting in multi-day bull/deploy.
+  Skips Keep-Hold recommendations.
 
 Spec: docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md
 """
@@ -28,6 +33,16 @@ logger = logging.getLogger("phase6.park_package")
 
 PARK_PACKAGE_PATH = PROJECT_ROOT / "config/park_package.json"
 DEFAULT_STATUS_PATH = STATE_DIR / "park_package_status.json"
+AUTO_TRIM_STATE_PATH = STATE_DIR / "park_auto_trim_state.json"
+TRIM_ACTIONS = frozenset(
+    {
+        "TRIM_DEFAULT_TO_A",
+        "TRIM_DEFAULT",
+        "TRIM_TO_A",
+        "REPAIR_E1_OR_DISARM",  # if still armed after repair path fails — operator-safe flat
+    }
+)
+KEEP_HOLD_MARKERS = ("KEEP_HOLD",)
 
 PROFILES = frozenset({"off", "a_only", "a_plus_b_micro", "a_plus_b_full_eligible"})
 PROFILES_WANT_A = frozenset({"a_only", "a_plus_b_micro", "a_plus_b_full_eligible"})
@@ -331,7 +346,25 @@ def evaluate_park_package(
     allow_dual = bool(b_cfg.get("allow_preserve_with_crypto_util", False))
 
     if b_snap.get("armed"):
-        if regime.get("deploy_open") and not auto_trim:
+        rec = str(shadow_b.get("recommended_action") or "").strip().upper()
+        keep_hold = any(m in rec for m in KEEP_HOLD_MARKERS)
+        if regime.get("deploy_open") and auto_trim and not keep_hold:
+            step(
+                "auto_trim_B_to_A",
+                "TRIM_DEFAULT_TO_A — disarm+sell PAXG→A on park→deploy edge (auto)",
+                auto=True,
+                shadow=shadow_b,
+                edge_triggered=True,
+                note="Fires only on park→deploy transition; see park_auto_trim_state.json",
+            )
+        elif regime.get("deploy_open") and auto_trim and keep_hold:
+            step(
+                "keep_hold_b_on_deploy",
+                "KEEP_HOLD — auto trim skipped",
+                auto=True,
+                shadow=shadow_b,
+            )
+        elif regime.get("deploy_open") and not auto_trim:
             step(
                 "shadow_or_manual_trim_B_to_A",
                 shadow_b.get("recommended_action") or "TRIM_DEFAULT_TO_A (manual/shadow)",
@@ -486,10 +519,154 @@ def evaluate_and_write_status(
     return plan
 
 
+def _load_auto_trim_state() -> Dict[str, Any]:
+    if not AUTO_TRIM_STATE_PATH.exists():
+        return {}
+    try:
+        return json.loads(AUTO_TRIM_STATE_PATH.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def _save_auto_trim_state(st: Dict[str, Any]) -> None:
+    AUTO_TRIM_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    AUTO_TRIM_STATE_PATH.write_text(json.dumps(st, indent=2) + "\n", encoding="utf-8")
+
+
+def _posture_key(regime: Dict[str, Any]) -> str:
+    if regime.get("park_signal"):
+        return "park"
+    if regime.get("deploy_open"):
+        return "deploy"
+    return "other"
+
+
+def should_execute_auto_trim_b(plan: Dict[str, Any], pkg: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Gate for live B trim. Edge-triggered: only when posture moves park → deploy
+    while B is armed, package on, flag on, and not Keep-Hold.
+    """
+    out: Dict[str, Any] = {"execute": False, "reason": "init"}
+    if not plan.get("package_enabled"):
+        out["reason"] = "package_disabled"
+        return out
+    execution = pkg.get("execution") or {}
+    if not execution.get("auto_trim_b_on_deploy"):
+        out["reason"] = "auto_trim_b_on_deploy=false"
+        return out
+    b = plan.get("bucket_b") or {}
+    preserve = b.get("preserve") or {}
+    if not preserve.get("armed"):
+        out["reason"] = "b_not_armed"
+        return out
+    regime = (plan.get("bucket_c") or {}).get("regime") or {}
+    if regime.get("park_signal"):
+        out["reason"] = "park_signal_active"
+        return out
+    if not regime.get("deploy_open"):
+        out["reason"] = "deploy_not_open"
+        return out
+    rec = str((b.get("shadow") or {}).get("recommended_action") or "").upper()
+    if any(m in rec for m in KEEP_HOLD_MARKERS):
+        out["reason"] = "keep_hold"
+        return out
+
+    st = _load_auto_trim_state()
+    prev = str(st.get("last_posture") or "unknown")
+    cur = _posture_key(regime)
+    out["prev_posture"] = prev
+    out["cur_posture"] = cur
+    edge = prev == "park" and cur == "deploy"
+    if not edge:
+        out["reason"] = f"no_park_to_deploy_edge (prev={prev}, cur={cur})"
+        return out
+    edge_id = f"park->deploy@{st.get('last_park_seen_at')}"
+    if st.get("last_trim_ok") and st.get("last_trim_edge_id") == edge_id:
+        out["reason"] = "already_trimmed_this_edge"
+        return out
+    out["execute"] = True
+    out["reason"] = "park_to_deploy_edge"
+    return out
+
+
+def maybe_execute_auto_trim_b(
+    runner: "Phase6Runner",
+    plan: Dict[str, Any],
+    pkg: Dict[str, Any],
+    *,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """Live disarm+sell PAXG when should_execute_auto_trim_b says go."""
+    gate = should_execute_auto_trim_b(plan, pkg)
+    result: Dict[str, Any] = {
+        "attempted": False,
+        "ok": False,
+        "gate": gate,
+        "orders": False,
+        "dry_run": dry_run,
+    }
+    # Always refresh posture memory so we can detect the next park→deploy edge
+    regime = (plan.get("bucket_c") or {}).get("regime") or {}
+    st = _load_auto_trim_state()
+    cur = _posture_key(regime)
+    if cur == "park":
+        st["last_park_seen_at"] = _now()
+    st["last_posture"] = cur
+    st["updated_at"] = _now()
+    if not gate.get("execute"):
+        _save_auto_trim_state(st)
+        result["reason"] = gate.get("reason")
+        return result
+
+    result["attempted"] = True
+    if dry_run:
+        result["ok"] = True
+        result["reason"] = "dry_run_would_disarm_sell"
+        st["last_trim_preview"] = _now()
+        _save_auto_trim_state(st)
+        return result
+
+    exchange = getattr(runner, "exchange", None)
+    if exchange is None or getattr(exchange, "shadow_mode", False):
+        result["reason"] = "no_live_exchange"
+        _save_auto_trim_state(st)
+        return result
+
+    full_config = getattr(runner, "config_dict", None) or {}
+    try:
+        from phase6.core.preserve_hold import disarm_preserve_hold
+
+        disarm_out = disarm_preserve_hold(exchange, full_config, sell=True)
+        result["orders"] = True
+        result["ok"] = bool(disarm_out.get("ok"))
+        result["disarm"] = {
+            "ok": disarm_out.get("ok"),
+            "steps": (disarm_out.get("steps") or [])[:12],
+        }
+        result["reason"] = "disarmed" if result["ok"] else "disarm_failed"
+        st["last_trim_at"] = _now()
+        st["last_trim_ok"] = result["ok"]
+        st["last_trim_edge_id"] = f"park->deploy@{st.get('last_park_seen_at')}"
+        st["last_trim_reason"] = result["reason"]
+        logger.info(
+            "[PARK-PACKAGE] auto_trim_B_to_A ok=%s reason=%s",
+            result["ok"],
+            result["reason"],
+        )
+    except Exception as exc:
+        result["reason"] = f"disarm_exception:{exc}"
+        st["last_trim_at"] = _now()
+        st["last_trim_ok"] = False
+        st["last_error"] = str(exc)
+        logger.warning("[PARK-PACKAGE] auto_trim_B failed: %s", exc)
+    _save_auto_trim_state(st)
+    return result
+
+
 def maybe_park_package_cycle(runner: "Phase6Runner") -> Dict[str, Any]:
     """
     Runner hook: evaluate + write status each cycle when write_status_each_cycle.
-    Never places orders. Never arms B. Toggle coordinate only if explicitly allowed.
+    Never arms B. When auto_trim_b_on_deploy=true, may disarm+sell B on park→deploy edge.
     """
     try:
         pkg = load_park_package_config(getattr(runner, "account_id", None))
@@ -510,12 +687,31 @@ def maybe_park_package_cycle(runner: "Phase6Runner") -> Dict[str, Any]:
                 plan.get("coordinate_toggle_suggestion"),
             )
 
-        logger.debug(
-            "[PARK-PACKAGE] profile=%s enabled=%s warnings=%d",
-            plan.get("profile"),
-            plan.get("package_enabled"),
-            len(plan.get("consistency_warnings") or []),
-        )
+        trim_out = maybe_execute_auto_trim_b(runner, plan, pkg, dry_run=False)
+        plan["auto_trim_execution"] = {
+            k: trim_out.get(k)
+            for k in ("attempted", "ok", "reason", "orders", "gate")
+            if k in trim_out or True
+        }
+        # rewrite status with execution result
+        try:
+            write_park_package_status(plan)
+        except Exception:
+            pass
+
+        if trim_out.get("attempted"):
+            logger.info(
+                "[PARK-PACKAGE] auto_trim attempted ok=%s reason=%s",
+                trim_out.get("ok"),
+                trim_out.get("reason"),
+            )
+        else:
+            logger.debug(
+                "[PARK-PACKAGE] profile=%s enabled=%s auto_trim=%s",
+                plan.get("profile"),
+                plan.get("package_enabled"),
+                (trim_out.get("gate") or {}).get("reason"),
+            )
         return plan
     except Exception as exc:
         logger.warning("[PARK-PACKAGE] cycle failed: %s", exc)

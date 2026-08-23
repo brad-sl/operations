@@ -86,7 +86,7 @@ Fraction of **open trading positions** with a protective stop estimate / attach 
 
 ### After we sell a bag (rotation or liquidation), do we immediately buy the Signals “BUY”?
 
-**No — not by default.** Signals BUY/HOLD/SELL is **allocator context**, not an order. After a large free-capital event the disposition path is usually **hold cash** (plus pair rebuy cooldown). Flat option-B still only deploys small cash slices under entry gates (`rebalance_cap_usd`, RSI/sent floors). Mid-cycle `ROTATE_IN` logs are proposals, not fills.
+**No — not by default.** Signals BUY/HOLD/SELL is **allocator context**, not an order. After a large free-capital event the disposition path is usually **hold cash** (plus pair rebuy cooldown). Deploy still needs entry gates (RSI/sentiment/cooldowns). Internal soft cash budgets exist on some paths, but they are **not** a hard per-cycle dollar ceiling (recovery/rotation can exceed them) — the dashboard does **not** promise a “cap $N.” Mid-cycle `ROTATE_IN` logs are proposals, not fills.
 
 **2026-08-16 example:** BTC `rotation_exchange` ~$2k → cash hold / BTC cooldown → **no** follow BUY into LINK/RAVE despite tile BUY.
 

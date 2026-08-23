@@ -92,7 +92,7 @@ class CycleCoordinator:
             logger.debug("[PRESERVE] tick skipped: %s", exc)
 
     def _maybe_park_package(self, runner: Phase6Runner) -> None:
-        """USDC+PAXG package status (no orders; never auto-arms B)."""
+        """USDC+PAXG package status; optional edge-triggered auto trim B on deploy."""
         try:
             from phase6.core.park_package import maybe_park_package_cycle
 
@@ -101,7 +101,14 @@ class CycleCoordinator:
                 logger.debug("[PARK-PACKAGE] %s", out.get("error"))
             else:
                 warns = out.get("consistency_warnings") or []
-                if warns:
+                trim = out.get("auto_trim_execution") or {}
+                if trim.get("attempted"):
+                    logger.info(
+                        "[PARK-PACKAGE] auto_trim attempted ok=%s reason=%s",
+                        trim.get("ok"),
+                        trim.get("reason"),
+                    )
+                elif warns:
                     logger.info(
                         "[PARK-PACKAGE] profile=%s warnings=%s",
                         out.get("profile"),

@@ -1,3 +1,42 @@
+## P6-VOL-RISK-SCALAR-SHADOW-20260822 — ACTIVE (Tier 1 shadow)
+
+**Type:** risk / sizing research (not Type:test auto_pickup)  
+**Status:** SHADOW ACTIVE — shipped 2026-08-22  
+**auto_pickup:** false  
+**Priority:** P1 platform risk layer (pairs with add-risk + velocity)  
+**Live money / live size multiply:** **NO**
+
+### Plain English
+Volatility clustering (GARCH-class) + **volume velocity** set a **shadow size scalar** so we stop treating every signal as equal weather. Cuts hard when BTC vol or RVOL stress is elevated; barely fattens in quiet markets. **Does not pick direction, seat pairs, or place orders.**
+
+Vocabulary Brad was aiming at earlier this week: velocity/volume → **risk tolerance**, not only “find new coins.”
+
+### Shipped
+- Research: `docs/research/VOL_CLUSTERING_RISK_SIZING_TIER1.md`
+- Core: `phase6/core/vol_risk_scalar_shadow.py` (EWMA BTC/ETH + velocity dampen)
+- CLI: `scripts/phase6/run_vol_risk_scalar_shadow.py` (+ `.sh`)
+- ISO: `phase6/core/test_isolation_vol_risk_scalar_shadow.py` **PASS**
+- State: `data/state/vol_risk_scalar_shadow_latest.json`, `vol_risk_scalar_shadow_history.jsonl`
+- Report: `reports/VOL_RISK_SCALAR_SHADOW_LATEST.md`
+- First print (2026-08-22): **s≈0.59** (s_vol≈0.79 high · s_vel≈0.74) — would cut; live unchanged
+- Cron: `phase6-vol-risk-scalar-shadow` 2×/day near velocity job
+
+### Gates before any live multiply (Brad go)
+1. Multi-week history: cuts ahead of vol spikes  
+2. Quiet periods not stuck at s_max into subsequent DD  
+3. Doesn’t fight park/deploy  
+4. Velocity dampener not over-paralyzing calm outcomes  
+
+### Non-goals
+Live GARCH library; strategy switching mean-rev/momentum off vol; trader-facing hard $ from scalar; auto de-lever open bags every bar.
+
+### Next
+1. Collect history ≥2 weeks  
+2. Tier 1b: shadow stop-width ∝ σ̂ vs live SL (WR)  
+3. Brad review → optional live multiply on **new buys/adds only**
+
+---
+
 ## P6-BASKET-SEAT-IDLE-TRACK-20260821 — ACTIVE (observe only)
 
 **Type:** instrumentation / membership research (not Type:test auto_pickup)  
@@ -155,9 +194,10 @@ Multi-pair breadth + cash-idle after rotation is a catchable process gap; small 
   - Primary paper: **B4 vol-expand cluster** (7d +1.67% vs cash, hit~54%, N=76) — only ~+0.4pp vs always-long beta; **exploit_ready=false**
   - Secondary paper: **B1b** breadth 2%/k4 (N=294, 7d +1.03%)
   - **B3 drop** as breadth primary (negative vs cash)
-- Shadow swap CF refreshed + **confidence board**: `reports/BASKET_SWAP_CONFIDENCE_BOARD_LATEST.md`
-  - **HC=NO** all arms; decision point = 7d N≥12 + excess>0 + hit≥45% + sleeve>$0 (not p-value yet)
-  - `risk_adj_mom` sleeve ~+$20 after bounce but 7d N=0 — immature
+- Shadow swap CF + **confidence board** (auto-regen each CF run): `reports/BASKET_SWAP_CONFIDENCE_BOARD_LATEST.md`
+  - **2026-08-22 refresh:** HC=**NO**; leaders **risk_adj_mom** (sleeve ~+$427, 3d +7.2%) · **anti_pump** (~+$340, 3d +8.8%) · **dual_agree** (~+$146, 3d +4.7%)
+  - **dual_agree** arm (Brad): same-day `anti_pump`∩`risk_adj_mom` remove→add → `data/state/basket_select_arms/dual_agree/proposals.jsonl` (ledger N=8 backfill); still shadow-only
+  - Decision point unchanged: 7d N≥12 + excess>0 + hit≥45% + sleeve>$0; baseline still **modify_selector**
 - **Related:** squeeze/regime track `P6-RESEARCH-SQUEEZE-REGIME-BREAKOUT-20260819` (coil→confirm + M2 tags)
 
 ### Next
@@ -891,11 +931,11 @@ Always have a floor (Brad: no-SL BTC crash ~80%). After a bag **doubles/triples*
 ## P6-EXIT-WR-IMPROVE-STACK-20260821 — IN_PROGRESS
 
 **Type:** ops / risk product — exit quality / WR  
-**Status:** IN_PROGRESS (P0 ratchet DONE; evidence DONE; live TP still NO)  
+**Status:** IN_PROGRESS (P0 ratchet DONE; **live TP ON 2026-08-23** trail primary)  
 **Date:** 2026-08-21  
 **Priority:** P0/P1  
 **auto_pickup:** false  
-**blocked_on:** live TP → shadow days + Brad OK (`exit_automation.promotion`)  
+**blocked_on:** none for TP (Brad go 2026-08-23)  
 **Role:** crypto-engineer  
 
 ### Diagnosis (ledger)
@@ -908,7 +948,7 @@ Always have a floor (Brad: no-SL BTC crash ~80%). After a bag **doubles/triples*
 |---|------|--------|-----------------|
 | P0 | SL floor ratchet after large spread | **DONE** | `P6-SL-RATCHET-AFTER-ADDS-20260821` |
 | P0 | Add-risk sizer + armed-stop gap gate | **DONE** | add-risk + near-stop cards |
-| P1 | Shadow TP/trail evidence → promote only with gates | **Evidence refreshed** · live **NO** | `reports/TP_TRAIL_PATH_STUDY_2026-08-21.md` · `data/state/tp_trail_path_study_latest.json` |
+| P1 | Shadow TP/trail → **live** | **LIVE ON 2026-08-23** trail primary · fixed +6% fallback · post-TP **24h** | `config/exit_automation.json` · `phase6/core/shadow_tp.py` |
 | P1 | Idle/weak prefer exit before SL only | Observational idle shipped; **no hard eject** | seat-idle card |
 | P2 | WR metric hygiene (exclude dust) | **DONE** | `/api/performance` `basis=ledger_nonzero_pnl_strategy` + `win_ratio_exits_raw` |
 
@@ -917,20 +957,18 @@ Always have a floor (Brad: no-SL BTC crash ~80%). After a bag **doubles/triples*
 - Auto-promote live TP without Brad  
 - Tighter hard SL as primary WR fix  
 
-### Next
-1. Keep shadow TP mode on honest basis; collect would-fires ≥ promotion thresholds.  
-2. Human review before `take_profit.mode=live`.  
-3. Optional: pair-level soft rotate preference for chronic 0% SL seats (separate card if needed).
+### Live TP (Brad go 2026-08-23)
+- Trail **primary** arm +4% / trail 2% — software **market** exit (`live_market_exit=true`)
+- Fixed +6% **fallback** when trail not firing; **no** exchange limit attach
+- PAXG/preserve **excluded**; peak_r **re-seeded** on promote (no phantom LINK dump)
+- Post-TP rebuy block **24h** (`post_tp_rebuy_block`); post-SL remains 72h
+- Hard exit RSI still **operator loop**
 
-### Shadow week validation (Brad 2026-08-21)
-- **Intent:** +6% bank opportunity is material → **run shadow 7 days**, then review. **No auto live TP.**
-- **Window start:** `data/state/shadow_tp_validation_window.json` (started 2026-08-21 ~16:16 PT)
-- **Target end:** ~**2026-08-28** 09:00 PT review
-- **Daily ping:** Hermes cron `shadow-tp-validation-daily` @ **08:15 PT** → Telegram (`run_shadow_tp_validation_check.sh`)
-- **Day-7 job:** `shadow-tp-validation-day7-review` one-shot **2026-08-28 09:00 PT**
-- **Status CLI:** `scripts/phase6/shadow_tp_validation_status.py` (unique **episodes**, not raw tick spam)
-- **Artifacts:** `data/state/shadow_tp_validation_latest.json` · `reports/SHADOW_TP_VALIDATION_LATEST.md`
-- **Promo clock:** `shadow_tp_status.first_shadow_at` reset to window start; raw pre-window totals void for this gate
+### Next
+1. Watch first real trail/fixed live fills + Telegram live-exit pings.  
+2. Confirm post-TP ·blocked on Signals after a bank.  
+3. Day-7 cron (8/28) = ops review only — **not** a promote gate (already live).
+4. Later (not now): post-TP cool-off could become momentum/volume/RVOL-aware instead of fixed hours.
 
 ### Evidence commands
 ```bash
@@ -1176,7 +1214,7 @@ Turn specs↔code high-value gaps into tracked work. Children below are **QUEUED
 | # | Task ID | Title | Status | blocked_on |
 |---|---------|-------|--------|------------|
 | 1 | `FEAT-PERSONALIZED-SETTINGS-IMPL-20260807` | Per-trader settings UI/API (hold, cooldown, park prefs) | **W1+W2 SHIPPED** · W3+ QUEUED | W3 banner UI |
-| 2 | `FEAT-PARK-USDC-PAXG-PACKAGE-20260807` | Unified USDC carry + PAXG Hold park package | **W0 SHIPPED · LIVE OFF** | Live enable: Brad OK + checklist |
+| 2 | `FEAT-PARK-USDC-PAXG-PACKAGE-20260807` | Unified USDC carry + PAXG Hold park package | **LIVE ON** `a_plus_b_micro` (2026-08-22) | Monitor park signal / E1; W3 trim still shadow |
 | 3 | `P6-EXIT-PROFIT-LIVE-GATES-20260807` | Profit-exit live path (regime map primary; global shadow secondary) | QUEUED / GATED | `P6-REGIME-EXIT-POLICY-MAP-20260806` collection gates + Brad OK |
 | 4 | `P6-HARD-EXIT-AUTO-APPLY-GATES-20260807` | Hard-exit auto-apply promotion criteria | QUEUED / GATED | operator-loop evidence + Brad OK |
 | 5 | `P6-MID-CYCLE-ALLOCATOR-EVAL-20260807` | Mid-cycle deploy: eval → optional gated enable | QUEUED | none for **study**; enable needs Brad OK |
@@ -1249,70 +1287,47 @@ PYTHONPATH=. python scripts/phase6/test_isolation_capital_controls.py
 
 ---
 
-## FEAT-PARK-USDC-PAXG-PACKAGE-20260807 — W0 SHIPPED · LIVE OFF · **FINISH SOON**
+## FEAT-PARK-USDC-PAXG-PACKAGE-20260807 — **LIVE ON** · `a_plus_b_micro` (2026-08-22)
 
 **Type:** feature / product scenario  
 **auto_pickup:** false  
-**blocked_on:** live enable → health gates + Brad OK + operator checklist (not auto)  
-**Status:** **W0 SHIPPED** (2026-08-07) · live package **OFF** · **finish prioritized 2026-08-21**  
-**Priority:** **P1 near-term** (not P0 while bull/deploy; **do before next serious park regime**)  
+**blocked_on:** none for enable (Brad go 2026-08-22); remaining waves W3–W4/W6 soak  
+**Status:** **LIVE ENABLED** 2026-08-22 ~10:00 PT — Smart Park #3 (cash + yield path + tiny gold)  
+**Priority:** P1 monitor / finish residual waves  
 **Role:** platform / product  
-**Date:** 2026-08-07 · **intent refresh:** 2026-08-21  
-**Gap:** SPECS_CODE_GAP §3 #2 (type A → W0 closed; live enable remains)  
+**Date:** 2026-08-07 · **live:** 2026-08-22  
 **Spec:** `docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md`  
 **Trader purpose:** `docs/features/PARK_SMART_IDLE_CASH.md`  
-**Checklist:** `docs/features/PARK_USDC_PAXG_OPERATOR_CHECKLIST.md`  
-**Config:** `config/park_package.json` · per-account `park_package` in `trader_accounts.json`  
-**Code:** `phase6/core/park_package.py` · hook `cycle_coordinator._maybe_park_package`  
-**Isolation:** `phase6/core/test_isolation_park_package.py` **PASS**  
-**Status JSON:** `data/state/park_package_status.json`  
-**Doctrine:** `PARK_BALLAST_DECISION_MATRIX.md`, `PARK_REGIME_POLICY.md`  
-**Layers:** `LIVE_USDC_PARK.md`, `PRESERVE_HOLD_MVP_SPEC.md`  
-**Parent prefs:** `FEAT-PERSONALIZED-SETTINGS-IMPL-20260807` (W4 prefs surface)  
-**Enable gates:** `phase6-park-ballast` → `references/smart-park-enable-gates.md` · option-3 hold `references/smart-park-option3-hold.md`  
-**Related open:** MICRO PAXG stub STANDBY / E1 not open — re-arm hygiene when package finishes
+**Checklist:** `docs/features/PARK_USDC_PAXG_OPERATOR_CHECKLIST.md` §8 signed via Brad chat go  
 
-### Brad intent (2026-08-21)
-**Finish this feature.** Not critical in **current bull/deploy**, but **soon** — needed to carry the book through the **next park/bear** gracefully. Purpose is conditional park (cash + optional tiny gold + return path), not permanent anti-bull gold. Do **not** silent live-enable; complete waves + gates, then explicit go.
+### Live enable record (2026-08-22)
+- Brad: explicit go; accepts residual integration risk  
+- Profile: **`a_plus_b_micro`** (`config/park_package.json` + primary `trader_accounts.json`)  
+- **USDC park ON** primary `3176ac3f-…` + default (hot-reload; phase=`armed`, park_signal false under bull/deploy)  
+- **B MICRO re-armed:** existing ~$84 PAXG, **no extra buy** (`skip_target_topup`); cancelled crypto ~3% SL that locked size; **E1** `02a259c6-…` stop **$3119.03** qty **0.01797**/0.01834 · badge **MICRO** · not NAKED  
+- DeRisk **OFF** · no auto 20% · **`auto_trim_b_on_deploy=true`** (wired 2026-08-22): edge **park→deploy** only via `disarm_preserve_hold`; Keep-Hold skips; seeded `last_posture=deploy` so current bull does not fire  
+- Runner restarted PID live; preserve tick sees E1  
+- Isolation park_package **PASS** (incl. edge-trigger tests)  
 
-### Plain English
-One coherent **park stack**: idle capital → USDC carry (venue-quoted; never hard-code unquoted APY in UI) **plus** optional PAXG Hold (micro → full only on explicit scale). Not three disconnected toggles.
-
-### W0 delivered (2026-08-07)
-1. Package FEAT spec (profiles, sequences, double-spend, waves).  
-2. Operator checklist.  
-3. `park_package` config (book + account); **enabled=false**, **profile=off**.  
-4. Coordinator evaluate/status; **orders=false**; **never auto-arm B**.  
-5. Runner cycle hook (status only).  
-6. Isolation PASS; primary USDC park remains off.  
-7. Index / gap / doctrine / LIVE_USDC_PARK linked.
-
-### Finish backlog (ordered)
-| Wave | Work | Gate |
-|------|------|------|
-| **F0** | Health gate re-score (deposit-adj windows, exit WR, trend, enforce) — hold enable if red | Cron/manual; no auto-enable |
-| **F1** | Preserve stub hygiene: STANDBY MICRO PAXG — decide re-arm E1 vs flat vs leave | Brad |
-| **W2** | `allow_coordinate_toggles` apply USDC on/off from profile | Brad OK |
-| **W3** | Auto trim B on deploy (shadow evidence first) | Brad OK |
-| **W4** | Settings UI profile picker (Option 3 default path) | settings FEAT |
-| **W5** | Live enable primary **`a_plus_b_micro`** (cash+yield+tiny gold) | Checklist §8 + Brad OK |
-| **W6** | Paper/soak under park signal; confirm thaw path doesn’t fight bull deploy | Evidence |
-
-### Success criteria (original)
-1. ~~Spec~~ 2. ~~Checklist~~ 3. ~~Config + coordinator~~ 4. ~~Safe off + isolation~~ 5. ~~Docs~~  
-Live enable / paper soak = **open** under W5–W6 · **finish soon per 2026-08-21**.
+### Residual (not blocking enable)
+| Wave | Work | Status |
+|------|------|--------|
+| W3 | Auto trim B on deploy | **DONE** — edge-triggered live |
+| W4 | Settings UI profile picker | Open |
+| W6 | Soak under real park signal + thaw | **Monitor live** |
+| Hygiene | CLI `arm --micro` can top-up another $75 if inventory exists — use `skip_target_topup` | Known pitfall |
 
 ### Non-goals (unchanged)
-- Auto 20% PAXG · DeRisk · fixed 3.5% APY copy · silent live flips · gold day-trading · replacing bull re-entry
+- Auto 20% PAXG · DeRisk · fixed 3.5% APY copy · gold day-trading · replacing bull re-entry  
 
-### Verification
+### Verify
 ```bash
-PYTHONPATH=. .venv/bin/python phase6/core/test_isolation_park_package.py
-PYTHONPATH=. .venv/bin/python -c "from phase6.core.park_package import evaluate_and_write_status; print(evaluate_and_write_status().get('profile'), evaluate_and_write_status().get('orders'))"
+PYTHONPATH=. .venv/bin/python scripts/phase6/arm_preserve_hold.py status
+PYTHONPATH=. .venv/bin/python -c "from phase6.core.park_package import evaluate_and_write_status; p=evaluate_and_write_status(); print(p.get('package_enabled'), p.get('profile'))"
+python3 scripts/manage_trader_account.py park-status 3176ac3f-deca-4fca-9c67-87ba91f96558
 ```
 
 ---
-
 ## P6-EXIT-PROFIT-LIVE-GATES-20260807 — QUEUED / GATED
 
 **Type:** product / risk promotion  
@@ -10933,3 +10948,29 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260823** (opened 2026-08-23T00:00:30.190358)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260823`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+**CASH-20260823-001** — Cash policy suggestion: detector grid (score 5.1781)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-08-23T11:00:37.793767+00:00 | score=5.1781
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+

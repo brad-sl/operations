@@ -32,13 +32,19 @@
       "trader_id": "default",
       "display_name": "Primary Trading Bot account",
       "live_usdc_park": {
-        "enabled": false,
+        "enabled": true,
         "target_usdc_pct": 0.92,
         "min_usd_reserve_usd": 50.0
       },
       "park_package": {
-        "enabled": false,
-        "profile": "off"
+        "enabled": true,
+        "profile": "a_plus_b_micro",
+        "enable_note": {
+          "enabled_at": "2026-08-22T17:00:24.763500+00:00",
+          "by": "brad_go_2026-08-22",
+          "profile": "a_plus_b_micro",
+          "intent": "Smart Park #3 live enable \u2014 cash+yield+tiny gold; no auto 20%"
+        }
       },
       "capital_controls": {
         "manual_sell_hold_cash": true,
@@ -53,11 +59,17 @@
       "trader_id": "default",
       "display_name": "Env/default account id",
       "live_usdc_park": {
-        "enabled": false
+        "enabled": true
       },
       "park_package": {
-        "enabled": false,
-        "profile": "off"
+        "enabled": true,
+        "profile": "a_plus_b_micro",
+        "enable_note": {
+          "enabled_at": "2026-08-22T17:00:24.763500+00:00",
+          "by": "brad_go_2026-08-22",
+          "profile": "a_plus_b_micro",
+          "intent": "Smart Park #3 live enable \u2014 cash+yield+tiny gold; no auto 20%"
+        }
       },
       "capital_controls": {
         "manual_sell_hold_cash": true,

@@ -44,34 +44,125 @@ class StopLossCoordinator:
         self._buy_order_ids = dict(mapping or {})
 
 
-    def _get_original_entry(self, pair: str, value: Any) -> float:
-        """Robust lookup for ORIGINAL entry price (highest immediate risk fix).
-        Prefers enriched position data. Caller should ensure enriched positions
-        from get_enriched_positions() or ledger are passed.
-        Falls back to phase6_live_state.json (which carries ledger-derived entries)
-        for re-attach anchoring verification (SL-01).
+    def _latest_ledger_open_buy_entry(self, pair: str) -> float:
+        """Most recent BUY entry still open (after last full exit), else 0.
+
+        Prevents stale lot prices from a prior cycle (e.g. RAVE Aug-12 entry)
+        from anchoring SL on a brand-new buy at a lower print.
         """
-        if isinstance(value, dict):
-            for k in ("entry_price", "original_entry", "buy_fill_price", "entry"):
-                v = value.get(k)
-                if v and float(v) > 0:
-                    return float(v)
-        # Fallback to live_state (populated with entry_price from ledger/avg in dashboard)
         try:
-            live_state_path = str(PHASE6_LIVE_STATE)  # from .paths per DATA_FLOW
+            from phase6.core.trade_ledger import TradeLedger
+
+            trades = TradeLedger().get_recent_trades(limit=400) or []
+        except Exception as e:
+            logger.debug("[SL-ANCHOR] ledger open-buy lookup failed for %s: %s", pair, e)
+            return 0.0
+
+        pair_u = str(pair).upper()
+        # Newest first
+        def _ts(r: Dict[str, Any]) -> str:
+            return str(r.get("timestamp") or r.get("ts") or "")
+
+        rows = [
+            r
+            for r in trades
+            if str(r.get("pair") or "").upper() == pair_u
+            and str(r.get("side") or "").upper() in ("BUY", "SELL")
+        ]
+        rows.sort(key=_ts, reverse=True)
+        # Walk newest→oldest: if we hit SELL first, flat (no open lot from this window)
+        for r in rows:
+            side = str(r.get("side") or "").upper()
+            if side == "SELL":
+                reason = str(r.get("reason") or r.get("exit_reason") or "")
+                # dust after SL still means flat for anchor purposes once primary exit hit
+                return 0.0
+            if side == "BUY":
+                try:
+                    px = float(r.get("entry_price") or r.get("price") or 0)
+                except (TypeError, ValueError):
+                    px = 0.0
+                if px > 0:
+                    return px
+        return 0.0
+
+    def _get_original_entry(self, pair: str, value: Any) -> float:
+        """Lookup entry for SL anchor — never prefer a dead prior-cycle lot.
+
+        Order:
+          1) Explicit fill/entry fields on the position dict
+          2) Latest ledger BUY that is still the open lot (no later SELL)
+          3) live_state entry only if still plausible vs mark
+          4) 0 → caller uses current price
+        """
+        current_p = 0.0
+        if isinstance(value, dict):
+            try:
+                current_p = float(value.get("current_price") or value.get("price") or 0)
+            except (TypeError, ValueError):
+                current_p = 0.0
+            for k in ("buy_fill_price", "fill_price", "entry_price", "original_entry", "entry"):
+                v = value.get(k)
+                try:
+                    px = float(v) if v is not None else 0.0
+                except (TypeError, ValueError):
+                    px = 0.0
+                if px > 0:
+                    # Reject obviously stale high anchors (stop would sit at/above market)
+                    if current_p > 0 and px * 0.97 >= current_p:
+                        logger.warning(
+                            "[SL-ANCHOR] %s rejecting dict %s=$%.4f (mark $%.4f — stop would be >= market)",
+                            pair, k, px, current_p,
+                        )
+                        continue
+                    return px
+
+        ledger_px = self._latest_ledger_open_buy_entry(pair)
+        if ledger_px > 0:
+            if current_p <= 0 or ledger_px * 0.97 < current_p:
+                logger.info("[SL-ANCHOR ledger_open_buy] %s: using $%.4f", pair, ledger_px)
+                return ledger_px
+            logger.warning(
+                "[SL-ANCHOR] %s ledger buy $%.4f stale vs mark $%.4f — skip",
+                pair, ledger_px, current_p,
+            )
+
+        # Fallback to live_state only if mark-plausible
+        try:
+            live_state_path = str(PHASE6_LIVE_STATE)
             if os.path.exists(live_state_path):
-                import json
                 with open(live_state_path) as f:
                     ls = json.load(f)
                 for p in ls.get("positions", []):
                     p_pair = p.get("pair")
-                    if p_pair == pair or (p_pair and p_pair.replace("-USD", "") == pair.replace("-USD", "")):
+                    if p_pair == pair or (
+                        p_pair and p_pair.replace("-USD", "") == pair.replace("-USD", "")
+                    ):
                         ep = p.get("entry_price", 0)
-                        if ep and float(ep) > 0:
-                            logger.info(f"[SL-ANCHOR fallback#live_state] {pair}: using ${float(ep):.4f}")
-                            return float(ep)
+                        try:
+                            epf = float(ep) if ep else 0.0
+                        except (TypeError, ValueError):
+                            epf = 0.0
+                        if epf <= 0:
+                            continue
+                        mark = current_p
+                        if mark <= 0:
+                            try:
+                                mark = float(p.get("current_price") or 0)
+                            except (TypeError, ValueError):
+                                mark = 0.0
+                        if mark > 0 and epf * 0.97 >= mark:
+                            logger.warning(
+                                "[SL-ANCHOR] %s live_state entry $%.4f stale vs mark $%.4f — skip",
+                                pair, epf, mark,
+                            )
+                            continue
+                        logger.info(
+                            "[SL-ANCHOR fallback#live_state] %s: using $%.4f", pair, epf
+                        )
+                        return epf
         except Exception as e:
-            logger.debug(f"[SL-ANCHOR] live_state fallback skipped for {pair}: {e}")
+            logger.debug("[SL-ANCHOR] live_state fallback skipped for %s: %s", pair, e)
         return 0.0
 
     def suspend_protective_orders(self, pairs: List[str]) -> Dict[str, Any]:
@@ -133,7 +224,19 @@ class StopLossCoordinator:
                 # #1 HARDEN: Use robust original entry lookup (targeted anchoring fix)
                 intended_entry = self._get_original_entry(pair, value)
                 current_p = value.get("current_price") or value.get("price", 0)
+                try:
+                    current_p = float(current_p or 0)
+                except (TypeError, ValueError):
+                    current_p = 0.0
                 entry_for_calc = intended_entry if intended_entry > 0 else current_p
+                # Hard guard: never attach SL from an entry that already implies stop >= mark
+                if entry_for_calc > 0 and current_p > 0 and entry_for_calc * 0.97 >= current_p:
+                    logger.warning(
+                        "[SL-ANCHOR] %s entry $%.4f unusable vs mark $%.4f — anchoring to mark",
+                        pair, entry_for_calc, current_p,
+                    )
+                    entry_for_calc = current_p
+                    intended_entry = current_p
             else:
                 amount = float(value) if value else 0
                 entry_for_calc = 0

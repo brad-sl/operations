@@ -221,13 +221,116 @@ def test_deploy_sequence_mentions_trim_before_implied_c():
     assert trim["auto"] is False
 
 
+def test_auto_trim_sequence_when_flag_on():
+    book = {
+        "enabled": True,
+        "profile": "a_plus_b_micro",
+        "buckets": {"A": {}, "B": {"micro_usd": 75.0}},
+        "execution": {"auto_trim_b_on_deploy": True},
+    }
+    with patch.object(pp, "load_park_package_config", return_value={**book, "account_id": "x"}):
+        with patch.object(pp, "live_usdc_park_settings", return_value={"enabled": True}):
+            with patch.object(
+                pp,
+                "_preserve_snapshot",
+                return_value={"armed": True, "micro": True, "derisk_enabled": False},
+            ):
+                with patch.object(
+                    pp,
+                    "_regime_snapshot",
+                    return_value={
+                        "park_signal": False,
+                        "deploy_open": True,
+                        "rebalance_cap_usd": 75,
+                        "regime": "bull",
+                    },
+                ):
+                    with patch.object(pp, "_crypto_util_est", return_value=0.4):
+                        with patch.object(
+                            pp,
+                            "_shadow_b_recommendation",
+                            return_value={"recommended_action": "TRIM_DEFAULT_TO_A"},
+                        ):
+                            plan = pp.evaluate_park_package(account_id="x", full_config={})
+    trim = next(s for s in plan["sequence"] if s["id"] == "auto_trim_B_to_A")
+    assert trim["auto"] is True
+    assert plan["execution_flags"]["auto_trim_b_on_deploy"] is True
+
+
+def test_should_execute_edge_triggered_only(tmp_path, monkeypatch):
+    state_path = tmp_path / "park_auto_trim_state.json"
+    monkeypatch.setattr(pp, "AUTO_TRIM_STATE_PATH", state_path)
+
+    plan = {
+        "package_enabled": True,
+        "bucket_b": {
+            "preserve": {"armed": True},
+            "shadow": {"recommended_action": "TRIM_DEFAULT_TO_A"},
+        },
+        "bucket_c": {"regime": {"park_signal": False, "deploy_open": True}},
+    }
+    pkg = {"execution": {"auto_trim_b_on_deploy": True}}
+
+    # cold start already in deploy — no edge
+    g = pp.should_execute_auto_trim_b(plan, pkg)
+    assert g["execute"] is False
+    assert "no_park_to_deploy_edge" in g["reason"]
+
+    # seed prior park
+    state_path.write_text(json.dumps({"last_posture": "park", "last_park_seen_at": "t0"}))
+    g2 = pp.should_execute_auto_trim_b(plan, pkg)
+    assert g2["execute"] is True
+    assert g2["reason"] == "park_to_deploy_edge"
+
+    # keep-hold blocks
+    plan_kh = json.loads(json.dumps(plan))
+    plan_kh["bucket_b"]["shadow"]["recommended_action"] = "KEEP_HOLD_MICRO"
+    g3 = pp.should_execute_auto_trim_b(plan_kh, pkg)
+    assert g3["execute"] is False
+    assert g3["reason"] == "keep_hold"
+
+
+def test_maybe_execute_dry_run_on_edge(tmp_path, monkeypatch):
+    state_path = tmp_path / "park_auto_trim_state.json"
+    monkeypatch.setattr(pp, "AUTO_TRIM_STATE_PATH", state_path)
+    state_path.write_text(json.dumps({"last_posture": "park", "last_park_seen_at": "t0"}))
+    plan = {
+        "package_enabled": True,
+        "bucket_b": {
+            "preserve": {"armed": True},
+            "shadow": {"recommended_action": "TRIM_DEFAULT_TO_A"},
+        },
+        "bucket_c": {"regime": {"park_signal": False, "deploy_open": True}},
+    }
+    pkg = {"execution": {"auto_trim_b_on_deploy": True}}
+    runner = MagicMock()
+    runner.exchange = MagicMock(shadow_mode=False)
+    out = pp.maybe_execute_auto_trim_b(runner, plan, pkg, dry_run=True)
+    assert out["attempted"] is True
+    assert out["ok"] is True
+    assert out["orders"] is False
+    assert out["reason"] == "dry_run_would_disarm_sell"
+
+
 def test_maybe_cycle_no_orders():
     runner = MagicMock()
     runner.account_id = "iso-cycle"
     runner.config_dict = {"global_settings": {"strategy_mode": "usdc_park", "rebalance_cap_usd": 0}}
-    with patch.object(pp, "evaluate_and_write_status", return_value={"orders": False, "profile": "off"}):
-        out = pp.maybe_park_package_cycle(runner)
-    assert out.get("orders") is False
+    with patch.object(pp, "evaluate_and_write_status", return_value={
+        "orders": False,
+        "profile": "off",
+        "package_enabled": False,
+        "bucket_b": {"preserve": {"armed": False}, "shadow": {}},
+        "bucket_c": {"regime": {"park_signal": True, "deploy_open": False}},
+    }):
+        with patch.object(pp, "load_park_package_config", return_value={
+            "enabled": False,
+            "execution": {"write_status_each_cycle": True, "auto_trim_b_on_deploy": False},
+        }):
+            with patch.object(pp, "write_park_package_status"):
+                out = pp.maybe_park_package_cycle(runner)
+    assert out.get("error") is None
+    assert (out.get("auto_trim_execution") or {}).get("attempted") is False
 
 
 if __name__ == "__main__":
@@ -238,5 +341,49 @@ if __name__ == "__main__":
     test_warning_when_profile_wants_a_toggle_off()
     test_write_status_roundtrip()
     test_deploy_sequence_mentions_trim_before_implied_c()
+    test_auto_trim_sequence_when_flag_on()
+    # manual tmp for edge tests without pytest
+    import tempfile
+    from pathlib import Path as P
+
+    class _MP:
+        def __init__(self):
+            self._attrs = []
+
+        def setattr(self, obj, name, val):
+            self._attrs.append((obj, name, getattr(obj, name, None)))
+            setattr(obj, name, val)
+
+        def undo(self):
+            for obj, name, old in reversed(self._attrs):
+                if old is None and not hasattr(obj, name):
+                    continue
+                setattr(obj, name, old)
+
+    with tempfile.TemporaryDirectory() as td:
+        mp = _MP()
+        try:
+            sp = P(td) / "park_auto_trim_state.json"
+            mp.setattr(pp, "AUTO_TRIM_STATE_PATH", sp)
+            plan = {
+                "package_enabled": True,
+                "bucket_b": {
+                    "preserve": {"armed": True},
+                    "shadow": {"recommended_action": "TRIM_DEFAULT_TO_A"},
+                },
+                "bucket_c": {"regime": {"park_signal": False, "deploy_open": True}},
+            }
+            pkg = {"execution": {"auto_trim_b_on_deploy": True}}
+            g = pp.should_execute_auto_trim_b(plan, pkg)
+            assert g["execute"] is False
+            sp.write_text(json.dumps({"last_posture": "park", "last_park_seen_at": "t0"}))
+            g2 = pp.should_execute_auto_trim_b(plan, pkg)
+            assert g2["execute"] is True
+            runner = MagicMock()
+            runner.exchange = MagicMock(shadow_mode=False)
+            out = pp.maybe_execute_auto_trim_b(runner, plan, pkg, dry_run=True)
+            assert out["attempted"] and out["ok"]
+        finally:
+            mp.undo()
     test_maybe_cycle_no_orders()
     print("park_package isolation PASS")

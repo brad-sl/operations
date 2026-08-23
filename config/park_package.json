@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "enabled": false,
-  "profile": "off",
+  "enabled": true,
+  "profile": "a_plus_b_micro",
   "description": "Smart Park stack (trader voice: docs/features/PARK_SMART_IDLE_CASH.md). A=calm cash/USDC, B=optional gold, C=crypto when allowed. Technical: docs/features/PARK_USDC_PAXG_PACKAGE_SPEC.md",
   "research_usdc_apy_note": "Research class ~3.5% historically — NOT a live venue quote; never hard-code as product APY in UI",
   "buckets": {
@@ -48,7 +48,7 @@
   "execution": {
     "allow_coordinate_toggles": false,
     "auto_arm_b": false,
-    "auto_trim_b_on_deploy": false,
+    "auto_trim_b_on_deploy": true,
     "write_status_each_cycle": true
   },
   "status_path": "data/state/park_package_status.json",

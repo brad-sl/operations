@@ -208,7 +208,7 @@
                     <div class="metric-label-wrap text-[10px] text-slate-400 justify-center w-full">
                         <span>Regime</span>
                         <button type="button" class="metric-help-btn" aria-label="REGIME-CASH"><i class="fa-regular fa-circle-question text-[9px]"></i></button>
-                        <div class="metric-tip" role="tooltip">Active market regime (BTC window), boundary layer (soft_up/climb/pre_bull), and live cash stance. PARK = no new buys live. Layer is observability + shadow cream gates — not a live thaw until promote.</div>
+                        <div class="metric-tip" role="tooltip">Active market regime (BTC window), boundary layer (soft_up/climb/pre_bull), and live cash stance. PARK = no new buys live. DEPLOY = buys allowed under entry gates (RSI/sentiment/cooldowns) — not a fixed dollar spend ceiling per cycle. We do not show a “cap $N” here: soft budgets exist internally but recovery/rotation paths can exceed them, so a hard $ promise would be false.</div>
                     </div>
                     <div id="obs-regime" class="text-lg font-semibold tabular-nums mt-0.5">--</div>
                     <div id="obs-regime-sub" class="metric-sub"></div>
@@ -396,7 +396,7 @@
             return lastGood[key] || fresh;
         }
 
-        function renderEquityTrend(eq, { forceNa = false } = {}) {
+        function renderEquityTrend(eq, { forceNa = false, d30 = null, d7 = null } = {}) {
             const labelEl = document.getElementById('equity-health-label');
             const blurbEl = document.getElementById('equity-health-blurb');
             const winEl = document.getElementById('equity-window-ret');
@@ -462,13 +462,18 @@
             if (blurbEl) blurbEl.textContent = health.blurb || '';
 
             const fmtPct = (v) => (v == null || typeof v !== 'number') ? 'N/A' : ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+            // Prefer period tiles as SSOT so Window never drifts from 30D / Recent from 7D.
+            const winPct = (typeof d30 === 'number') ? d30
+                : (typeof eq.window_return_pct === 'number' ? eq.window_return_pct : null);
+            const recPct = (typeof d7 === 'number') ? d7
+                : (typeof eq.recent_return_pct === 'number' ? eq.recent_return_pct : null);
             if (winEl) {
-                winEl.textContent = fmtPct(eq.window_return_pct);
-                winEl.className = 'tabular-nums ' + ((eq.window_return_pct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400');
+                winEl.textContent = fmtPct(winPct);
+                winEl.className = 'tabular-nums ' + ((winPct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400');
             }
             if (recEl) {
-                recEl.textContent = fmtPct(eq.recent_return_pct);
-                recEl.className = 'tabular-nums ' + ((eq.recent_return_pct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400');
+                recEl.textContent = fmtPct(recPct);
+                recEl.className = 'tabular-nums ' + ((recPct || 0) >= 0 ? 'text-emerald-400' : 'text-red-400');
             }
             if (slopeEl) {
                 const s = (tr.slope_pct_per_day != null) ? tr.slope_pct_per_day : (health.slope_pct_per_day);
@@ -599,11 +604,13 @@
                         (mode === 'PARK' ? 'text-amber-300' : 'text-emerald-400');
                 }
                 if (regSub) {
+                    // Do NOT show rebalance_cap_usd as "cap $N" — it is a soft internal
+                    // budget on some paths only. ARCH-2 recovery / rotation can deploy far
+                    // more; a hard dollar label sets a false trader expectation (Brad 2026-08-22).
                     const btc = rc.btc_return_pct != null ? ('BTC ' + Number(rc.btc_return_pct).toFixed(1) + '%') : '';
                     const buys = rc.allow_new_buys === false ? 'no new buys' : 'buys gated';
-                    const cap = rc.rebalance_cap_usd != null ? ('cap $' + Number(rc.rebalance_cap_usd).toFixed(0)) : '';
                     const shadow = rc.shadow_stance ? ('shadow ' + rc.shadow_stance) : '';
-                    regSub.textContent = [btc, buys, cap, shadow].filter(Boolean).join(' · ');
+                    regSub.textContent = [btc, buys, shadow].filter(Boolean).join(' · ');
                 }
                 const prEl = document.getElementById("obs-preserve");
                 const prSub = document.getElementById("obs-preserve-sub");
@@ -794,9 +801,9 @@
                         const el = document.getElementById(id);
                         if (el && (!el.textContent || el.textContent === '--' || el.textContent === '')) el.textContent = 'N/A';
                     });
-                    renderEquityTrend(perfData.equity_trend, { forceNa: true });
+                    renderEquityTrend(perfData.equity_trend, { forceNa: true, d30: perfData.d30, d7: perfData.d7 });
                 } else {
-                    renderEquityTrend(perfData.equity_trend);
+                    renderEquityTrend(perfData.equity_trend, { d30: perfData.d30, d7: perfData.d7 });
                 }
             }
 
@@ -825,11 +832,21 @@
                 const mode = signalsData.sentiment_mode || '';
                 const blockedN = (signalsData.buy_blocked_pairs || []).length
                     || (signalsData.rows || []).filter(r => r && r.buy_blocked).length;
+                const gatedN = (signalsData.entry_gated_pairs || []).length
+                    || (signalsData.rows || []).filter(r => r && r.entry_gated).length;
                 const bits = [];
                 if (n) bits.push('basket ' + n);
+                if (gatedN) bits.push('gated ' + gatedN);
                 if (blockedN) bits.push('blocked ' + blockedN);
                 if (mode) bits.push('sent: ' + mode);
+                const floors = signalsData.entry_floors || {};
+                if (floors.min_sentiment_new_pair != null) {
+                    bits.push('new≥' + Number(floors.min_sentiment_new_pair).toFixed(2));
+                }
                 sigBadge.textContent = bits.join(' · ');
+                if (signalsData.formula) {
+                    sigBadge.title = signalsData.formula;
+                }
             }
             if (sigContainer && signalsData && signalsData.status === 'ok' && (signalsData.rows || []).length) {
                 const basketSet = new Set(
@@ -842,10 +859,17 @@
                     const ha = heldPairs.has(a.pair) ? 0 : 1;
                     const hb = heldPairs.has(b.pair) ? 0 : 1;
                     if (ha !== hb) return ha - hb;
-                    // BUY first, then HOLD, then SELL
-                    const rank = { BUY: 0, HOLD: 1, SELL: 2 };
-                    const ra = rank[a.status] ?? 3;
-                    const rb = rank[b.status] ?? 3;
+                    // deploy-ready BUY first, then gated BUY, then HOLD, then SELL
+                    const rankOf = (r) => {
+                        if (r.status === 'BUY' && r.deploy_ready) return 0;
+                        if (r.status === 'BUY' && r.entry_gated) return 1;
+                        if (r.status === 'BUY') return 2;
+                        if (r.status === 'HOLD') return 3;
+                        if (r.status === 'SELL') return 4;
+                        return 5;
+                    };
+                    const ra = rankOf(a);
+                    const rb = rankOf(b);
                     if (ra !== rb) return ra - rb;
                     // Within status: higher |confidence| first (not alphabetical)
                     const ca = Math.abs(Number(a.confidence ?? a.weighted ?? 0));
@@ -856,8 +880,19 @@
                 // Full active basket — do not truncate to A-list head
                 const body = rows.map(r => {
                     const flags = [];
-                    if (heldPairs.has(r.pair)) {
+                    if (heldPairs.has(r.pair) || (r.held_usd != null && Number(r.held_usd) >= 25)) {
                         flags.push('<span class="text-slate-500">·held</span>');
+                    } else if (r.is_new_seat) {
+                        flags.push('<span class="text-slate-600" title="Empty seat — new-pair sentiment floor applies">·flat</span>');
+                    }
+                    if (r.entry_gated) {
+                        const floor = (r.entry_sent_floor != null)
+                            ? ` need sent≥${Number(r.entry_sent_floor).toFixed(2)}`
+                            : '';
+                        const why = (r.entry_reasons && r.entry_reasons.length)
+                            ? r.entry_reasons.join('; ')
+                            : 'entry gate';
+                        flags.push(`<span class="text-amber-400" title="BUY signal but deploy gated (${why}).${floor}. Not a clean rebalance buy.">·gated</span>`);
                     }
                     if (r.buy_blocked) {
                         const hrs = (r.block_hours_remaining != null)
@@ -869,22 +904,34 @@
                         const why = r.block_reason || 'rebuy_cooldown';
                         flags.push(`<span class="text-amber-400" title="Auto-BUY blocked (${why})${exp}${hrs}. Signal may still show BUY.">·blocked</span>`);
                     }
+                    if (r.deploy_ready) {
+                        flags.push('<span class="text-emerald-500/80" title="BUY + entry gates clear + not cooldown-blocked. Still subject to size/cap at rebalance.">·ready</span>');
+                    }
                     const flagHtml = flags.length ? (' ' + flags.join(' ')) : '';
                     const rsiC = r.rsi_color ? ('text-' + r.rsi_color) : 'text-slate-400';
                     const sC = r.sentiment_color ? ('text-' + r.sentiment_color) : 'text-slate-400';
                     const stC = r.status_color ? ('text-' + r.status_color) : 'text-slate-300';
                     const stW = (r.status === 'BUY' || r.status === 'SELL') ? 'font-semibold' : 'font-medium';
+                    // Status stays BUY/HOLD/SELL only — gate state is the ·gated flag (not BUY·gate)
+                    const stText = r.status || 'HOLD';
                     let tip = (r.reason || '') + (r.confidence != null ? ` · conf ${r.confidence}` : '');
+                    tip += ` · sent ${Number(r.sentiment).toFixed(3)} (${r.sentiment_label || ''})`;
+                    if (r.is_new_seat) tip += ` · new seat floor sent≥${Number(r.entry_sent_floor ?? 0.15).toFixed(2)}`;
+                    else tip += ` · held floor sent≥${Number(r.entry_sent_floor ?? -0.1).toFixed(2)}`;
+                    if (r.entry_gated) {
+                        tip += ' · NOT deploy-ready (entry gated)';
+                    }
                     if (r.buy_blocked) {
                         tip += ` · BLOCKED auto-BUY (${r.block_reason || 'cooldown'}`
                             + (r.block_hours_remaining != null ? `, ${Number(r.block_hours_remaining).toFixed(1)}h left` : '')
                             + ')';
                     }
+                    if (r.deploy_ready) tip += ' · deploy-ready (size/cap still apply)';
                     return `<tr class="border-b border-slate-800/80 last:border-0">
                         <td class="py-2 pr-2 font-medium whitespace-nowrap">${r.pair}${flagHtml}</td>
                         <td class="py-2 px-2 text-right tabular-nums ${rsiC}" title="${r.rsi_label || ''}">${Number(r.rsi).toFixed(1)}</td>
-                        <td class="py-2 px-2 text-right tabular-nums ${sC}" title="${r.sentiment_label || ''}">${Number(r.sentiment).toFixed(2)}</td>
-                        <td class="py-2 pl-2 text-right ${stC} ${stW}" title="${tip}">${r.status || 'HOLD'}</td>
+                        <td class="py-2 px-2 text-right tabular-nums ${sC}" title="${r.sentiment_label || ''} · ${Number(r.sentiment).toFixed(3)}">${Number(r.sentiment).toFixed(2)}</td>
+                        <td class="py-2 pl-2 text-right ${stC} ${stW}" title="${tip}">${stText}</td>
                     </tr>`;
                 }).join('');
                 sigContainer.innerHTML = `<table class="w-full text-xs">

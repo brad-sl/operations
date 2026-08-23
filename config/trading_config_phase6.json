@@ -73,7 +73,7 @@
     "add_risk_sizer_enabled": true,
     "add_risk": {
       "enabled": true,
-      "note": "Factor add sizer for existing stacks — see regime_cash_policy.add_risk + phase6/core/add_risk_sizer.py"
+      "note": "Factor add sizer for existing stacks \u2014 see regime_cash_policy.add_risk + phase6/core/add_risk_sizer.py"
     },
     "sl_ratchet_enabled": true,
     "sl_ratchet": {

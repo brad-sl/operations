@@ -9,7 +9,7 @@
     "hard_exit.operator_approve (true=human loop; false=auto when live_apply)"
   ],
   "take_profit": {
-    "mode": "shadow",
+    "mode": "live",
     "fixed_tp_pct": 0.06,
     "trail": {
       "enabled": true,
@@ -18,22 +18,25 @@
       "breakeven_lock_pct": 0.005
     },
     "min_position_usd": 25.0,
-    "notify_on_would_fire": false,
-    "notify_dedupe_hours": 12,
+    "notify_on_would_fire": true,
+    "notify_dedupe_hours": 6,
     "live_attach_on_buy": false,
-    "live_market_exit": false,
-    "note": "shadow: log would-fire only (Telegram muted 2026-08-06 — weekly review). Prefer regime_exit_policy_map for policy. live_attach_on_buy requires mode=live."
+    "live_market_exit": true,
+    "post_tp_block_rebuy_hours": 24,
+    "exclude_pairs": ["PAXG-USD", "PAXG-USDC"],
+    "brad_promoted_at": "2026-08-23T05:30:00Z",
+    "note": "LIVE 2026-08-23 Brad go: trail primary (arm+4%/trail 2%), fixed +6% software fallback. Market exits only (no exchange limit TP attach). PAXG/preserve excluded. Post-TP rebuy block 24h (simple cool-off; not momentum-aware yet). Hard exit still operator loop."
   },
   "promotion": {
     "shadow_min_calendar_days": 7,
     "shadow_min_would_fire_events": 5,
     "require_path_study_design_shadow": true,
     "auto_promote": false,
-    "note": "Global TP promotion is a one-time settings flip (mode shadow→live), not per-trade approvals. Prefer regime-aware path: config/regime_exit_policy_map.json + docs/REGIME_EXIT_POLICY_MAP.md (60d multi-regime gates)."
+    "note": "Promoted early by Brad 2026-08-23 after LINK giveback poster child + path CF. Calendar gate superseded by explicit go."
   },
   "regime_exit_map": {
     "path": "config/regime_exit_policy_map.json",
     "doc": "docs/REGIME_EXIT_POLICY_MAP.md",
-    "note": "Profit optimization by Bull/Flat/Bear. Shadow-only until collection gates + Brad OK."
+    "note": "Still shadow for regime-specific map; global trail/fixed live via take_profit knobs above."
   }
 }

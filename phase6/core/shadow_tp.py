@@ -4,10 +4,12 @@
 Philosophy: few end-user knobs in config/exit_automation.json.
   mode=off     — disabled
   mode=shadow  — evaluate open book, write state, optional Telegram would-fire
-  mode=live    — reserved: attach fixed TP on buys when live_attach_on_buy;
-                 market trail exits only if live_market_exit (default false)
+  mode=live    — trail market exits when live_market_exit (primary);
+                 fixed_tp market exit as fallback when trail not firing;
+                 optional exchange fixed TP attach when live_attach_on_buy
 
 Does NOT place orders in shadow. Does NOT mutate take_profit_pct in trading_config.
+Preserve / PAXG sleeve is never TP'd by this module.
 """
 from __future__ import annotations
 
@@ -15,6 +17,7 @@ import hashlib
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -28,8 +31,14 @@ CFG_PATH = PROJECT_ROOT / "config" / "exit_automation.json"
 STATE_PATH = PROJECT_ROOT / "data" / "state" / "shadow_tp_status.json"
 EVENTS_PATH = PROJECT_ROOT / "data" / "state" / "shadow_tp_events.jsonl"
 DEDUPE_PATH = PROJECT_ROOT / "data" / "state" / "shadow_tp_notify_dedupe.json"
+LIVE_EXITS_PATH = PROJECT_ROOT / "data" / "state" / "shadow_tp_live_exits.jsonl"
 REGISTRY_PATH = PROJECT_ROOT / "data" / "state" / "protective_orders_registry.jsonl"
 TRADES_PATH = PROJECT_ROOT / "trades" / "phase6_trades.jsonl"
+
+# Never bank preserve ballast via crypto TP
+_TP_EXCLUDE_BASES = frozenset({"PAXG", "PAX"})
+_TP_EXCLUDE_PAIRS = frozenset({"PAXG-USD", "PAXG-USDC", "PAX-USD"})
+
 
 
 def _now() -> datetime:
@@ -341,6 +350,264 @@ def evaluate_signals(
     return signals, peak_r
 
 
+def is_tp_excluded_pair(pair: str) -> bool:
+    """Preserve ballast / gold never get crypto TP exits."""
+    p = (pair or "").strip().upper()
+    if not p:
+        return True
+    if p in _TP_EXCLUDE_PAIRS:
+        return True
+    base = p.split("-")[0] if "-" in p else p
+    if base in _TP_EXCLUDE_BASES:
+        return True
+    try:
+        from phase6.core.preserve_hold import should_protect_preserve_sleeve
+
+        if should_protect_preserve_sleeve(pair=p):
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def select_live_exit_signals(signals: List[ShadowSignal]) -> List[ShadowSignal]:
+    """Trail primary, fixed fallback — one exit per pair per cycle.
+
+    If both trail and fixed_tp fire for the same pair, keep trail only.
+    """
+    by_pair: Dict[str, List[ShadowSignal]] = {}
+    for s in signals:
+        if is_tp_excluded_pair(s.pair):
+            continue
+        if s.kind not in ("trail", "fixed_tp", "breakeven_lock"):
+            continue
+        by_pair.setdefault(s.pair, []).append(s)
+
+    chosen: List[ShadowSignal] = []
+    for pair, sigs in by_pair.items():
+        trail = next((s for s in sigs if s.kind == "trail"), None)
+        if trail is not None:
+            chosen.append(trail)
+            continue
+        fixed = next((s for s in sigs if s.kind == "fixed_tp"), None)
+        if fixed is not None:
+            chosen.append(fixed)
+            continue
+        be = next((s for s in sigs if s.kind == "breakeven_lock"), None)
+        if be is not None:
+            chosen.append(be)
+    return chosen
+
+
+def _ledger_tp_sell(
+    exchange: Any,
+    *,
+    pair: str,
+    qty: float,
+    exit_price: float,
+    entry_price: float,
+    order_id: Optional[str],
+    kind: str,
+    detail: str,
+) -> None:
+    reason = f"take_profit_{kind}" if not str(kind).startswith("take_profit") else str(kind)
+    try:
+        pnl = None
+        pnl_pct = None
+        if entry_price > 0 and exit_price > 0 and qty > 0:
+            pnl = (exit_price - entry_price) * qty
+            pnl_pct = (exit_price / entry_price) - 1.0
+        from phase6.core.trade_ledger import TradeLedger
+
+        TradeLedger().log_trade(
+            {
+                "pair": pair,
+                "side": "SELL",
+                "qty": qty,
+                "entry_price": entry_price if entry_price > 0 else None,
+                "exit_price": exit_price,
+                "pnl": pnl,
+                "pnl_pct": pnl_pct,
+                "order_id": order_id,
+                "reason": reason,
+                "exit_reason": reason,
+                "signal_source": "shadow_tp_live",
+                "mode": "live",
+                "sleeve": "trade",
+                "tp_kind": kind,
+                "tp_detail": detail,
+                "fill_verified": True,
+            },
+            exchange=exchange,
+        )
+    except Exception as e:
+        logger.warning("[LIVE-TP] ledger failed %s: %s", pair, e)
+
+
+def execute_live_tp_exits(
+    exchange: Any,
+    signals: List[ShadowSignal],
+    *,
+    positions: Optional[Dict[str, Any]] = None,
+    dry_run: bool = False,
+) -> List[Dict[str, Any]]:
+    """Market-sell chosen TP signals. Cancels open stops on pair first."""
+    out: List[Dict[str, Any]] = []
+    if not exchange or not signals:
+        return out
+
+    try:
+        from phase6.core.sl_preflight import cancel_open_stops_for_pair, poll_available_after_cancel
+    except Exception:
+        cancel_open_stops_for_pair = None  # type: ignore
+        poll_available_after_cancel = None  # type: ignore
+
+    for s in signals:
+        pair = s.pair
+        row: Dict[str, Any] = {
+            "pair": pair,
+            "kind": s.kind,
+            "r": s.r,
+            "detail": s.detail,
+            "dry_run": dry_run,
+            "as_of": _iso(),
+        }
+        if is_tp_excluded_pair(pair):
+            row["success"] = False
+            row["skipped"] = True
+            row["skip_reason"] = "preserve_or_excluded"
+            out.append(row)
+            continue
+
+        if dry_run:
+            row["success"] = True
+            row["skipped"] = False
+            row["note"] = "dry_run_no_order"
+            out.append(row)
+            continue
+
+        try:
+            if cancel_open_stops_for_pair is not None:
+                cancel_open_stops_for_pair(exchange, pair)
+                if poll_available_after_cancel is not None:
+                    poll_available_after_cancel(exchange, pair, timeout=4.0)
+                else:
+                    time.sleep(0.8)
+        except Exception as ce:
+            logger.warning("[LIVE-TP] cancel stops %s: %s", pair, ce)
+
+        # Size from exchange available
+        qty = 0.0
+        try:
+            base = pair.split("-")[0]
+            if hasattr(exchange, "get_crypto_available"):
+                qty = float(exchange.get_crypto_available(base) or 0)
+            if qty <= 0 and hasattr(exchange, "get_available_balance"):
+                qty = float(exchange.get_available_balance(base) or 0)
+        except Exception as be:
+            row["success"] = False
+            row["error"] = f"balance:{be}"
+            out.append(row)
+            continue
+
+        if qty <= 0 and positions and isinstance(positions.get(pair), dict):
+            try:
+                qty = float(positions[pair].get("amount") or positions[pair].get("qty") or 0)
+            except (TypeError, ValueError):
+                qty = 0.0
+
+        if qty <= 0:
+            row["success"] = False
+            row["skipped"] = True
+            row["skip_reason"] = "zero_qty"
+            out.append(row)
+            continue
+
+        try:
+            if hasattr(exchange, "quantize_size"):
+                qty = float(exchange.quantize_size(pair, qty))
+        except Exception:
+            pass
+
+        if qty <= 0:
+            row["success"] = False
+            row["skipped"] = True
+            row["skip_reason"] = "zero_after_quantize"
+            out.append(row)
+            continue
+
+        if not hasattr(exchange, "place_market_sell"):
+            row["success"] = False
+            row["error"] = "no_place_market_sell"
+            out.append(row)
+            continue
+
+        try:
+            result = exchange.place_market_sell(pair, qty) or {}
+        except Exception as se:
+            row["success"] = False
+            row["error"] = str(se)[:200]
+            out.append(row)
+            logger.error("[LIVE-TP] sell exception %s: %s", pair, se)
+            continue
+
+        ok = bool(result.get("success"))
+        oid = result.get("order_id")
+        row["success"] = ok
+        row["order_id"] = oid
+        row["size"] = qty
+        if not ok:
+            row["error"] = result.get("error")
+            out.append(row)
+            logger.warning("[LIVE-TP] sell failed %s: %s", pair, row.get("error"))
+            continue
+
+        exit_px = float(s.mark_px or 0)
+        filled = float(result.get("size") or qty)
+        if oid and hasattr(exchange, "get_order_fill_details"):
+            try:
+                time.sleep(0.6)
+                fill = exchange.get_order_fill_details(oid) or {}
+                if float(fill.get("average_filled_price") or 0) > 0:
+                    exit_px = float(fill["average_filled_price"])
+                if float(fill.get("filled_size") or 0) > 0:
+                    filled = float(fill["filled_size"])
+            except Exception:
+                pass
+        row["exit_price"] = exit_px
+        row["filled_qty"] = filled
+
+        _ledger_tp_sell(
+            exchange,
+            pair=pair,
+            qty=filled,
+            exit_price=exit_px,
+            entry_price=float(s.entry_px or 0),
+            order_id=str(oid) if oid else None,
+            kind=s.kind,
+            detail=s.detail,
+        )
+        logger.info(
+            "[LIVE-TP] %s %s r=%.2f%% qty=%.6f px=%.4f oid=%s",
+            pair,
+            s.kind,
+            100.0 * float(s.r),
+            filled,
+            exit_px,
+            oid,
+        )
+        out.append(row)
+
+        try:
+            LIVE_EXITS_PATH.parent.mkdir(parents=True, exist_ok=True)
+            with LIVE_EXITS_PATH.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(row, default=str) + "\n")
+        except Exception:
+            pass
+
+    return out
+
+
 def _fingerprint(signals: List[ShadowSignal]) -> str:
     parts = sorted(f"{s.pair}:{s.kind}:{round(s.r, 3)}" for s in signals)
     return hashlib.sha1("|".join(parts).encode()).hexdigest()[:16]
@@ -430,6 +697,8 @@ def run_shadow_tp_cycle(
     cfg: Optional[Dict[str, Any]] = None,
     notify: Optional[bool] = None,
     prior_state: Optional[Dict[str, Any]] = None,
+    exchange: Any = None,
+    dry_run_live: bool = False,
 ) -> Dict[str, Any]:
     cfg = cfg or load_exit_automation()
     tp = _tp_cfg(cfg)
@@ -455,6 +724,9 @@ def run_shadow_tp_cycle(
         "would_fire_count_total": int(prior.get("would_fire_count_total") or 0),
         "first_shadow_at": prior.get("first_shadow_at"),
         "promotion_hint": None,
+        "live_exits": [],
+        "live_market_exit": bool(tp.get("live_market_exit")),
+        "live_attach_on_buy": bool(tp.get("live_attach_on_buy")),
     }
 
     if mode == "off":
@@ -497,15 +769,75 @@ def run_shadow_tp_cycle(
         result["would_fire_reset_at"] = _iso()
 
     signals, peak_r = evaluate_signals(marks, tp, peak_r=peak_in)
+    # Never surface PAXG/preserve as actionable
+    signals = [s for s in signals if not is_tp_excluded_pair(s.pair)]
+
+    # Live promote seed: shadow peaks can sit far above mark (LINK gave back).
+    # If we keep them, trail stop is in the sky and first live tick sells the bag.
+    # Once per brad_promoted_at (or first live_market_exit), re-seed peak_r := current r.
+    if mode == "live" and bool(tp.get("live_market_exit")):
+        promo = str(tp.get("brad_promoted_at") or "")
+        seeded = str(prior.get("live_peak_seeded_for") or "")
+        if promo and promo != seeded:
+            reseeds = {}
+            for m in marks:
+                if m.r is None or is_tp_excluded_pair(m.pair):
+                    continue
+                old = float(peak_r.get(m.pair) or m.r)
+                new = float(m.r)
+                if old - new > 1e-6:
+                    logger.info(
+                        "[LIVE-TP] re-seed peak_r %s %.4f -> %.4f (promote %s)",
+                        m.pair,
+                        old,
+                        new,
+                        promo,
+                    )
+                reseeds[m.pair] = new
+                peak_r[m.pair] = new
+            # Drop stale peaks for pairs no longer held
+            held_pairs = {m.pair for m in marks}
+            for k in list(peak_r.keys()):
+                if k not in held_pairs and k not in reseeds:
+                    # keep small history but zero out huge orphans later
+                    pass
+            result["live_peak_seeded_for"] = promo
+            result["live_peak_seeded_at"] = _iso()
+            # Re-evaluate with honest peaks (no phantom trail fire)
+            signals, peak_r = evaluate_signals(marks, tp, peak_r=peak_r)
+            signals = [s for s in signals if not is_tp_excluded_pair(s.pair)]
+            result["note"] = (result.get("note") or "") + " peak_r re-seeded on live promote;"
+        elif prior.get("live_peak_seeded_for"):
+            result["live_peak_seeded_for"] = prior.get("live_peak_seeded_for")
+            result["live_peak_seeded_at"] = prior.get("live_peak_seeded_at")
+
     result["peak_r"] = peak_r
     result["marks"] = [asdict(m) for m in marks]
     result["signals"] = [asdict(s) for s in signals]
     result["n_signals"] = len(signals)
-    if result.get("first_shadow_at") is None and mode == "shadow":
+    if result.get("first_shadow_at") is None and mode in ("shadow", "live"):
         result["first_shadow_at"] = _iso()
     if signals:
         result["would_fire_count_total"] = int(result["would_fire_count_total"]) + len(signals)
         append_events(signals, mode=mode)
+
+    # Live market exits: trail primary, fixed fallback
+    if mode == "live" and bool(tp.get("live_market_exit")) and signals:
+        chosen = select_live_exit_signals(signals)
+        result["live_exit_candidates"] = [asdict(s) for s in chosen]
+        if chosen and exchange is not None:
+            try:
+                result["live_exits"] = execute_live_tp_exits(
+                    exchange,
+                    chosen,
+                    positions=positions,
+                    dry_run=bool(dry_run_live),
+                )
+            except Exception as le:
+                logger.error("[LIVE-TP] execute failed: %s", le)
+                result["live_exit_error"] = str(le)[:200]
+        elif chosen and exchange is None:
+            result["live_exit_note"] = "candidates_present_but_no_exchange_handle"
 
     # Promotion hint (settings flip — not per-trade)
     prom = dict(cfg.get("promotion") or {})
@@ -531,7 +863,11 @@ def run_shadow_tp_cycle(
         "would_fire_count_total": result["would_fire_count_total"],
         "events_needed": events_needed,
         "ready_for_settings_flip_review": ready,
-        "action_if_ready": "Set take_profit.mode=live and live_attach_on_buy=true (one-time knob). Not per-trade approve.",
+        "action_if_ready": (
+            "Live: mode=live + live_market_exit (trail primary) "
+            "+ optional live_attach_on_buy fixed fallback. Brad OK required."
+        ),
+        "brad_promoted_at": tp.get("brad_promoted_at"),
     }
 
     do_notify = bool(tp.get("notify_on_would_fire", True)) if notify is None else notify
@@ -556,13 +892,26 @@ def run_shadow_tp_cycle(
             result["notified"] = _telegram("\n".join(lines))
             result["notify_fingerprint"] = fp
 
+    # Live exit telegram (brief)
+    if mode == "live" and result.get("live_exits") and do_notify:
+        sold = [x for x in result["live_exits"] if x.get("success") and not x.get("skipped")]
+        if sold:
+            lines = ["<b>LIVE TP exit</b>", ""]
+            for x in sold[:6]:
+                lines.append(
+                    f"• <b>{x.get('pair')}</b> {x.get('kind')} "
+                    f"r={100*float(x.get('r') or 0):.1f}% oid={x.get('order_id')}"
+                )
+            _telegram("\n".join(lines))
+
     _write_state(result)
     if signals:
         logger.info(
-            "[SHADOW-TP] mode=%s n=%s pairs=%s",
+            "[SHADOW-TP] mode=%s n=%s pairs=%s live_exits=%s",
             mode,
             len(signals),
             [s.pair for s in signals],
+            len(result.get("live_exits") or []),
         )
     return result
 
@@ -751,7 +1100,9 @@ def apply_shadow_tp_from_runner(runner: Any) -> Dict[str, Any]:
                 except Exception:
                     pass
 
-    return run_shadow_tp_cycle(held, prices, positions=positions, cfg=cfg)
+    return run_shadow_tp_cycle(
+        held, prices, positions=positions, cfg=cfg, exchange=ex
+    )
 
 
 def effective_tp_pct_for_buy(cfg: Optional[Dict[str, Any]] = None) -> Optional[float]:

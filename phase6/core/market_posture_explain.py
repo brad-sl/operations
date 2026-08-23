@@ -267,11 +267,11 @@ def build_why_idle(
         reasons.append(
             {
                 "code": "stance_deploy",
-                "title": "New buys are allowed (with limits)",
+                "title": "New buys are allowed (entry rules still apply)",
                 "detail": (
-                    f"Market look is open enough to add a little risk"
-                    + (f" (up to about ${float(cap):.0f} this cycle)" if cap is not None else "")
-                    + ". We still only buy when a coin looks like a good entry."
+                    "Market look is open enough to add risk when a coin clears the "
+                    "entry checklist. There is no fixed dollar ceiling shown here — "
+                    "size depends on the path (and can be larger after recovery/rotation)."
                 ),
                 "severity": "info",
             }

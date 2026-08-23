@@ -67,7 +67,14 @@ def test_why_idle_deploy_empty_entry():
     assert "stance_deploy" in codes
     assert "entry_gates" in codes
     assert "RSI" not in why["headline"]
-    print("  why_idle deploy empty OK (plain English)")
+    # No hard dollar cycle promise (cap is soft; recovery can exceed)
+    blob = " ".join(
+        f"{r.get('title','')} {r.get('detail','')}" for r in why["reasons"]
+    ).lower()
+    assert "this cycle" not in blob
+    assert "up to about $" not in blob
+    assert "cap $" not in blob
+    print("  why_idle deploy empty OK (plain English, no false $ cap)")
 
 
 if __name__ == "__main__":

@@ -43,6 +43,11 @@ CF_LATEST = STATE_DIR / "basket_swap_shadow_counterfactual_latest.json"
 CF_ARMS_LATEST = STATE_DIR / "basket_select_arms_cf_latest.json"
 CF_MD = PROJECT_ROOT / "reports" / "BASKET_SWAP_SHADOW_CF_LATEST.md"
 ARMS_MD = PROJECT_ROOT / "reports" / "BASKET_SELECT_ARMS_SHADOW_LATEST.md"
+BOARD_MD = PROJECT_ROOT / "reports" / "BASKET_SWAP_CONFIDENCE_BOARD_LATEST.md"
+BOARD_JSON = STATE_DIR / "basket_swap_confidence_board_latest.json"
+DUAL_AGREE_DIR = ARMS_DIR / "dual_agree"
+DUAL_AGREE_JSONL = DUAL_AGREE_DIR / "proposals.jsonl"
+DUAL_AGREE_LATEST = STATE_DIR / "basket_dual_agree_latest.json"
 DISCOVERY_LATEST = STATE_DIR / "discovery_pipeline_latest.json"
 CONTENDERS_JSON = STATE_DIR / "pair_discovery_contenders.json"
 POOL_LATEST = STATE_DIR / "pool_cycling_latest.json"
@@ -57,6 +62,13 @@ MIN_N_FOR_DECIDE = 12
 MIN_7D_N = 8
 MODIFY_IF_MEAN_EXCESS_7D_LT = 0.0
 MODIFY_IF_HIT_RATE_7D_LT = 0.45
+
+# High-confidence arm gates (Brad / skill phase6-breadth-and-membership-edge)
+HC_MIN_7D_N = 12
+HC_MIN_EXCESS_7D = 0.0
+HC_MIN_HIT_7D = 0.45
+# Dual-agree co-leaders (paper only)
+DUAL_AGREE_ARMS = ("anti_pump", "risk_adj_mom")
 
 
 def _utc_now() -> datetime:
@@ -628,7 +640,374 @@ ARMS: List[ArmSpec] = [
         title="Never swap (hold membership)",
         prior="Structural control. Recent window beat baseline sleeve — default until another arm wins.",
     ),
+    ArmSpec(
+        name="dual_agree",
+        title="Dual agree (anti_pump ∩ risk_adj_mom)",
+        prior=(
+            "Intersection of co-leaders: only paper swaps where both anti_pump and "
+            "risk_adj_mom nominate the same remove→add on the same day. Higher bar, "
+            "fewer swaps. Shadow only until HC gates clear."
+        ),
+    ),
 ]
+
+
+def _load_arm_proposal_rows(arm_name: str) -> List[Dict[str, Any]]:
+    path = ARMS_DIR / arm_name / "proposals.jsonl"
+    if not path.exists():
+        return []
+    rows: List[Dict[str, Any]] = []
+    for line in path.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            s = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if s.get("status") in {"superseded", "superseded_pump_brake", "void"}:
+            continue
+        ts = parse_ts(s.get("ts"))
+        if not ts or not s.get("add") or not s.get("remove"):
+            continue
+        rows.append({**s, "ts": ts, "arm": arm_name})
+    return rows
+
+
+def _dual_agree_existing_keys() -> set:
+    keys = set()
+    if not DUAL_AGREE_JSONL.exists():
+        return keys
+    for line in DUAL_AGREE_JSONL.read_text().splitlines():
+        if not line.strip():
+            continue
+        try:
+            e = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        ts = parse_ts(e.get("ts"))
+        if ts and e.get("remove") and e.get("add"):
+            keys.add((ts.date().isoformat(), e["remove"], e["add"]))
+    return keys
+
+
+def record_dual_agree_swaps(
+    arms_prop: Optional[Dict[str, Any]] = None,
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """
+    Paper dual-agree log: remove→add only when both co-leader arms nominate it
+    on the same calendar day. Backfills from arm ledgers + new proposals this run.
+    Never places orders.
+    """
+    now = now or _utc_now()
+    DUAL_AGREE_DIR.mkdir(parents=True, exist_ok=True)
+
+    by_arm: Dict[str, List[Dict[str, Any]]] = {
+        a: _load_arm_proposal_rows(a) for a in DUAL_AGREE_ARMS
+    }
+    if arms_prop:
+        for arm_name in DUAL_AGREE_ARMS:
+            for w in arms_prop.get("written") or []:
+                if w.get("arm") != arm_name:
+                    continue
+                ts = parse_ts(w.get("ts")) or now
+                by_arm.setdefault(arm_name, []).append({**w, "ts": ts, "arm": arm_name})
+            for s in ((arms_prop.get("arms") or {}).get(arm_name) or {}).get("swaps") or []:
+                if not s.get("add") or not s.get("remove"):
+                    continue
+                ts = parse_ts(s.get("ts")) or now
+                by_arm.setdefault(arm_name, []).append(
+                    {**s, "ts": ts, "arm": arm_name, "proposal_id": s.get("proposal_id")}
+                )
+
+    hits: Dict[Tuple[str, str, str], Dict[str, Dict[str, Any]]] = {}
+    for arm_name, rows in by_arm.items():
+        for r in rows:
+            ts = r["ts"] if isinstance(r["ts"], datetime) else parse_ts(r["ts"])
+            if not ts:
+                continue
+            key = (ts.date().isoformat(), str(r["remove"]), str(r["add"]))
+            hits.setdefault(key, {})[arm_name] = r
+
+    existing = _dual_agree_existing_keys()
+    written: List[Dict[str, Any]] = []
+    for key, arm_map in sorted(hits.items()):
+        if not all(a in arm_map for a in DUAL_AGREE_ARMS):
+            continue
+        if key in existing:
+            continue
+        day, rem, add = key
+        ts_candidates = []
+        for a in DUAL_AGREE_ARMS:
+            t = arm_map[a]["ts"]
+            ts_candidates.append(t if isinstance(t, datetime) else parse_ts(t))
+        ts_candidates = [t for t in ts_candidates if t is not None]
+        ts_use = max(ts_candidates) if ts_candidates else now
+        a0 = arm_map[DUAL_AGREE_ARMS[0]]
+        a1 = arm_map[DUAL_AGREE_ARMS[1]]
+        rec = {
+            "proposal_id": str(uuid.uuid4())[:12],
+            "ts": _iso(ts_use),
+            "arm": "dual_agree",
+            "remove": rem,
+            "add": add,
+            "delta": None,
+            "add_score": None,
+            "remove_score": None,
+            "reason": (
+                f"dual_agree: {DUAL_AGREE_ARMS[0]}∩{DUAL_AGREE_ARMS[1]} "
+                f"{rem}→{add} day={day}"
+            ),
+            "agree_arms": list(DUAL_AGREE_ARMS),
+            "source_ids": {
+                DUAL_AGREE_ARMS[0]: a0.get("proposal_id"),
+                DUAL_AGREE_ARMS[1]: a1.get("proposal_id"),
+            },
+            "membership_boundary": "heightened_potential_M0-M3; deploy_ready_not_required",
+            "live_promote": False,
+        }
+        with DUAL_AGREE_JSONL.open("a") as f:
+            f.write(json.dumps(rec) + "\n")
+        written.append(rec)
+        existing.add(key)
+
+    ledger_n = 0
+    if DUAL_AGREE_JSONL.exists():
+        ledger_n = sum(1 for line in DUAL_AGREE_JSONL.read_text().splitlines() if line.strip())
+
+    live_pair: Optional[Dict[str, Any]] = None
+    if arms_prop:
+        sw: Dict[str, Tuple[Any, Any]] = {}
+        for a in DUAL_AGREE_ARMS:
+            swaps = ((arms_prop.get("arms") or {}).get(a) or {}).get("swaps") or []
+            if swaps:
+                sw[a] = (swaps[0].get("remove"), swaps[0].get("add"))
+        if len(sw) == 2 and sw[DUAL_AGREE_ARMS[0]] == sw[DUAL_AGREE_ARMS[1]]:
+            live_pair = {
+                "remove": sw[DUAL_AGREE_ARMS[0]][0],
+                "add": sw[DUAL_AGREE_ARMS[0]][1],
+                "agreed": True,
+            }
+        elif len(sw) == 2:
+            live_pair = {
+                "anti_pump": {"remove": sw["anti_pump"][0], "add": sw["anti_pump"][1]},
+                "risk_adj_mom": {
+                    "remove": sw["risk_adj_mom"][0],
+                    "add": sw["risk_adj_mom"][1],
+                },
+                "agreed": False,
+            }
+
+    latest = {
+        "ts": _iso(now),
+        "agree_arms": list(DUAL_AGREE_ARMS),
+        "new_agreements": written,
+        "total_ledger_n": ledger_n,
+        "this_run": live_pair,
+        "note": (
+            "Shadow only. dual_agree = same-day remove→add nominated by both co-leader arms. "
+            "No live basket swaps."
+        ),
+    }
+    DUAL_AGREE_LATEST.write_text(json.dumps(latest, indent=2, default=str) + "\n")
+    (DUAL_AGREE_DIR / "latest.json").write_text(json.dumps(latest, indent=2, default=str) + "\n")
+    return latest
+
+
+def build_confidence_board(cf: Dict[str, Any]) -> Dict[str, Any]:
+    """Regenerate HC board from current CF aggregates. No p-values at thin N."""
+    as_of = cf.get("as_of") or _iso(_utc_now())
+    decide_base = cf.get("decide") or {}
+    arms_out: List[Dict[str, Any]] = []
+    any_hc = False
+    sleeve_pos: List[str] = []
+
+    for arm_name, agg in sorted((cf.get("aggregate_by_arm") or {}).items()):
+        d1 = agg.get("1d") or {}
+        d3 = agg.get("3d") or {}
+        d7 = agg.get("7d") or {}
+        ps = agg.get("paper_sleeve_to_now") or {}
+        n7 = int(d7.get("n") or 0)
+        ex7 = d7.get("mean_excess_pct")
+        hit7 = d7.get("hit_excess_gt0")
+        sleeve = ps.get("delta_usd")
+        n7_ok = n7 >= HC_MIN_7D_N
+        ex7_ok = ex7 is not None and float(ex7) > HC_MIN_EXCESS_7D
+        hit7_ok = hit7 is not None and float(hit7) >= HC_MIN_HIT_7D
+        sleeve_ok = sleeve is not None and float(sleeve) > 0
+        hc = bool(n7_ok and ex7_ok and hit7_ok and sleeve_ok)
+        if hc:
+            any_hc = True
+        if sleeve_ok:
+            sleeve_pos.append(arm_name)
+        missing = []
+        if not n7_ok:
+            missing.append("n7")
+        if not ex7_ok:
+            missing.append("ex7")
+        if not hit7_ok:
+            missing.append("hit7")
+        if not sleeve_ok:
+            missing.append("sleeve")
+        arms_out.append(
+            {
+                "arm": arm_name,
+                "n1": int(d1.get("n") or 0),
+                "ex1": d1.get("mean_excess_pct"),
+                "hit1": d1.get("hit_excess_gt0"),
+                "n3": int(d3.get("n") or 0),
+                "ex3": d3.get("mean_excess_pct"),
+                "hit3": d3.get("hit_excess_gt0"),
+                "n7": n7,
+                "ex7": ex7,
+                "hit7": hit7,
+                "sleeve_delta": sleeve,
+                "sleeve_n": ps.get("n"),
+                "gates": {
+                    "n7_ok": n7_ok,
+                    "ex7_ok": ex7_ok,
+                    "hit7_ok": hit7_ok,
+                    "sleeve_ok": sleeve_ok,
+                },
+                "high_confidence": hc,
+                "missing": missing,
+            }
+        )
+
+    def _sort_key(a: Dict[str, Any]) -> Tuple:
+        return (
+            0 if a["high_confidence"] else 1,
+            -(float(a["sleeve_delta"]) if a["sleeve_delta"] is not None else -1e18),
+            -(float(a["ex3"]) if a["ex3"] is not None else -1e18),
+        )
+
+    ranked = sorted(arms_out, key=_sort_key)
+    leaders = [
+        a["arm"]
+        for a in ranked
+        if (a.get("sleeve_delta") or 0) > 0 and (a.get("ex3") or 0) > 0
+    ][:3]
+
+    if any_hc:
+        pe = (
+            f"High-confidence arm(s) present: "
+            f"{[a['arm'] for a in arms_out if a['high_confidence']]}. "
+            "Still not live — Brad review required before any promote."
+        )
+        status = "high_confidence_shadow"
+    elif leaders:
+        pe = (
+            f"No selection arm is high-confidence yet (need 7d N≥{HC_MIN_7D_N}, "
+            f"excess>0, hit≥{int(HC_MIN_HIT_7D*100)}%, sleeve>$0). "
+            f"Sleeve+3d leaders: {leaders}. "
+            f"Baseline: {decide_base.get('status')} — {decide_base.get('plain_english')} "
+            "Keep shadow; no live batch promote."
+        )
+        status = "keep_shadow_collecting"
+    else:
+        pe = (
+            f"No arm clears HC gates. Baseline: {decide_base.get('status')} — "
+            f"{decide_base.get('plain_english')} Keep shadow; no live batch promote."
+        )
+        status = "keep_shadow_collecting"
+
+    board = {
+        "as_of": as_of,
+        "decide_baseline": decide_base,
+        "high_confidence_definition": {
+            "n7_min": HC_MIN_7D_N,
+            "ex7_gt": HC_MIN_EXCESS_7D,
+            "hit7_min": HC_MIN_HIT_7D,
+            "sleeve_delta_gt": 0.0,
+            "note": "Operational bar only; no p-values until N7≥12 + two-slice stability.",
+        },
+        "any_arm_high_confidence": any_hc,
+        "status": status,
+        "arms": arms_out,
+        "sleeve_positive": sleeve_pos,
+        "leaders_sleeve_and_3d": leaders,
+        "plain_english": pe,
+        "dual_agree_arms": list(DUAL_AGREE_ARMS),
+    }
+
+    def _cell(n: Any, ex: Any, hit: Any) -> str:
+        if not n:
+            return "N=0"
+        hs = "" if hit is None else f" hit={int(float(hit)*100)}%"
+        return f"N={n} {float(ex):+.2f}%{hs}" if ex is not None else f"N={n}"
+
+    lines = [
+        "# Basket swap — winner-picking confidence board",
+        f"As of `{as_of}`",
+        "",
+        "## Plain English",
+        "",
+        pe,
+        "",
+        "## Decision point (when we stop saying “keep collecting”)",
+        "",
+        "**Promote-to-Brad-review (still not live)** when **any arm** hits all of:",
+        "",
+        f"1. **7d N ≥ {HC_MIN_7D_N}** matured ADD-vs-REMOVE swaps",
+        "2. **7d mean excess > 0%** (add beats remove on average)",
+        f"3. **7d hit rate ≥ {int(HC_MIN_HIT_7D*100)}%**",
+        "4. **Paper sleeve $ to-now > $0** vs stay-on-remove",
+        "",
+        f"**Modify / drop arm family** when 7d N ≥ {HC_MIN_7D_N} **and** mean excess < 0 "
+        "**and** hit < 45% (or sleeve deeply negative).",
+        "",
+        "**Statistical significance:** we do **not** claim p-values yet. "
+        "At thin 7d N, a t-test is underpowered. Operational bar above is the decision point.",
+        "",
+        f"**Any arm high-confidence right now?** **{'YES' if any_hc else 'NO'}**",
+        "",
+        "## Scoreboard (from current CF)",
+        "",
+        "| Arm | 1d | 3d | 7d | Sleeve Δ$ | HC? | Missing |",
+        "|-----|----|----|----|-----------|-----|---------|",
+    ]
+    for a in ranked:
+        sd = a["sleeve_delta"]
+        sd_s = "n/a" if sd is None else f"${float(sd):+.2f}"
+        miss = ",".join(a["missing"]) if a["missing"] else "—"
+        lines.append(
+            f"| `{a['arm']}` | {_cell(a['n1'], a['ex1'], a['hit1'])} | "
+            f"{_cell(a['n3'], a['ex3'], a['hit3'])} | "
+            f"{_cell(a['n7'], a['ex7'], a['hit7'])} | {sd_s} | "
+            f"{'yes' if a['high_confidence'] else 'no'} | {miss} |"
+        )
+
+    lines += ["", "## Read of current tape", ""]
+    for a in ranked[:6]:
+        bits = []
+        if a.get("ex3") is not None and a["n3"]:
+            bits.append(f"3d excess {float(a['ex3']):+.2f}% (N={a['n3']})")
+        if a.get("sleeve_delta") is not None:
+            bits.append(f"sleeve ${float(a['sleeve_delta']):+.0f}")
+        if a.get("n7"):
+            bits.append(f"7d N={a['n7']}")
+        else:
+            bits.append("7d immature")
+        lines.append(
+            f"- **`{a['arm']}`:** {'; '.join(bits)} → missing {a['missing'] or 'none'}."
+        )
+
+    lines += [
+        "",
+        "Bottom line: **decision point not reached** unless HC=yes above. "
+        "Continue shadow proposals + CF. **No live basket swaps.**",
+        "",
+        f"Co-leader dual-agree log: `{DUAL_AGREE_JSONL}` "
+        f"(arms: {', '.join(DUAL_AGREE_ARMS)}).",
+        "",
+        "CF: `reports/BASKET_SWAP_SHADOW_CF_LATEST.md`",
+        "JSON: `data/state/basket_swap_confidence_board_latest.json`",
+        "",
+    ]
+    BOARD_MD.parent.mkdir(parents=True, exist_ok=True)
+    BOARD_MD.write_text("\n".join(lines) + "\n")
+    BOARD_JSON.write_text(json.dumps(board, indent=2, default=str) + "\n")
+    return board
 
 
 def _load_json(path: Path) -> Any:
@@ -1045,23 +1424,36 @@ def write_reports(cf: Dict[str, Any], arms_prop: Optional[Dict[str, Any]] = None
                 alines.append("- Latest paper swap: *(none)*")
         alines.append("")
     ARMS_MD.write_text("\n".join(alines) + "\n")
+    build_confidence_board(cf)
 
 
 def run_full(propose: bool = True) -> Dict[str, Any]:
     arms_prop = propose_arm_swaps() if propose else None
+    # Intersection log before CF so dual_agree ledger is in load_baseline_swaps()
+    dual = record_dual_agree_swaps(arms_prop)
     swaps = load_baseline_swaps()
     unique = dedupe_swaps(swaps)
     cf = evaluate_swaps(unique)
     write_reports(cf, arms_prop)
-    return {"cf": cf, "arms_prop": arms_prop}
+    board = build_confidence_board(cf)
+    return {
+        "cf": cf,
+        "arms_prop": arms_prop,
+        "dual_agree": dual,
+        "confidence_board": board,
+    }
 
 
 def plain_english_summary(bundle: Dict[str, Any]) -> str:
     cf = bundle.get("cf") or {}
     decide = cf.get("decide") or {}
+    board = bundle.get("confidence_board") or {}
+    dual = bundle.get("dual_agree") or {}
     lines = [
         "Basket select shadow CF",
         f"Gate: {decide.get('status')} — {decide.get('plain_english')}",
+        f"HC board: {board.get('status')} · any_HC={board.get('any_arm_high_confidence')} "
+        f"· leaders={board.get('leaders_sleeve_and_3d')}",
         "",
         "Arm scoreboard (mean excess when matured):",
     ]
@@ -1081,6 +1473,20 @@ def plain_english_summary(bundle: Dict[str, Any]) -> str:
         lines.append("New paper proposals this run:")
         for w in written:
             lines.append(f"  [{w.get('arm')}] {w.get('remove')} → {w.get('add')}")
+    new_da = dual.get("new_agreements") or []
+    if new_da or dual.get("this_run") is not None:
+        lines.append("")
+        lines.append(
+            f"Dual-agree ({'+'.join(dual.get('agree_arms') or DUAL_AGREE_ARMS)}): "
+            f"ledger_n={dual.get('total_ledger_n')} new={len(new_da)}"
+        )
+        tr = dual.get("this_run")
+        if isinstance(tr, dict) and tr.get("agreed"):
+            lines.append(f"  this_run AGREED {tr.get('remove')} → {tr.get('add')}")
+        elif isinstance(tr, dict) and tr.get("agreed") is False:
+            lines.append("  this_run diverged (co-leaders disagree on pair)")
+        for w in new_da[:8]:
+            lines.append(f"  [dual_agree] {w.get('remove')} → {w.get('add')}")
     lines.append("")
     lines.append("Anti-bleed: config untouched, no orders.")
     return "\n".join(lines)

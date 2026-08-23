@@ -106,6 +106,7 @@ def test_live_state_if_present():
 
 
 def test_equity_trend_has_points_and_health():
+    from datetime import datetime, timezone
     from phase6.core.dashboard_serve_helpers import compute_equity_trend, _linreg_slope_intercept
     s, _ = _linreg_slope_intercept([0.0, 10.0], [100.0, 90.0])
     assert s < 0
@@ -114,7 +115,9 @@ def test_equity_trend_has_points_and_health():
     total = 2500.0
     if live_path.exists():
         total = float(json.loads(live_path.read_text()).get("total_usd") or total)
-    eq = compute_equity_trend(total, db, days=30, max_points=36, timeout=5.0)
+    # Shared clock so Window and 30D cannot diverge via sliding nearest_ts
+    as_of = datetime.now(timezone.utc)
+    eq = compute_equity_trend(total, db, days=30, max_points=36, timeout=5.0, as_of=as_of)
     print("equity_trend:", {k: eq.get(k) for k in ("status", "point_count", "window_return_pct", "recent_return_pct")})
     print("health:", eq.get("health"))
     assert eq.get("status") == "ok", eq
@@ -123,14 +126,21 @@ def test_equity_trend_has_points_and_health():
     # Deposit-adjusted window should not look like raw ~+250% from funding
     wr = eq.get("window_return_pct")
     assert wr is not None and wr < 80.0, f"window_return looks deposit-inflated: {wr}"
-    # Window must match 30D tile method (single-hop deposit-adj), not a drifted path sum
-    perf = compute_period_performance(total, db, timeout=5.0)
+    # Window must match 30D tile exactly (same start/end/flow; 2-dp rounded)
+    perf = compute_period_performance(total, db, timeout=5.0, as_of=as_of)
     d30 = perf.get("d30")
+    d7 = perf.get("d7")
     if d30 is not None and wr is not None:
-        assert abs(float(wr) - float(d30)) < 1.0, (
-            f"Window {wr} must agree with 30D tile {d30} (deposit-adj endpoint formula)"
+        assert abs(float(wr) - float(d30)) < 0.005, (
+            f"Window {wr} must equal 30D tile {d30} (same nearest_ts + live end + flow)"
         )
-        print(f"PASS: window_return_pct={wr} ~= d30={d30}")
+        print(f"PASS: window_return_pct={wr} == d30={d30}")
+    rr = eq.get("recent_return_pct")
+    if d7 is not None and rr is not None:
+        assert abs(float(rr) - float(d7)) < 0.005, (
+            f"Recent {rr} must equal 7D tile {d7}"
+        )
+        print(f"PASS: recent_return_pct={rr} == d7={d7}")
     print("PASS: equity trend series + health label")
 
 

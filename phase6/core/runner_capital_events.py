@@ -24,12 +24,30 @@ from phase6.core.portfolio_disposition import (
 
 logger = logging.getLogger(__name__)
 
-RUNNER_EVENTS_JSONL = Path("data/state/capital_events_runner.jsonl")
-DEFAULT_STATE_FILE = Path("data/state/phase6_runner_state.json")
-TRADES_JSONL = Path("trades/phase6_trades.jsonl")
+# Absolute paths — dashboard often runs with cwd=/ and relative paths miss the ledger
+# (would hide post-SL rebuy blocks on Signals ·blocked / ·ready).
+try:
+    from phase6.core.paths import PROJECT_ROOT, STATE_DIR
+except Exception:  # pragma: no cover
+    PROJECT_ROOT = Path(__file__).resolve().parents[2]
+    STATE_DIR = PROJECT_ROOT / "data" / "state"
+
+RUNNER_EVENTS_JSONL = STATE_DIR / "capital_events_runner.jsonl"
+DEFAULT_STATE_FILE = STATE_DIR / "phase6_runner_state.json"
+TRADES_JSONL = PROJECT_ROOT / "trades" / "phase6_trades.jsonl"
 
 STOP_EXCHANGE_REASONS = frozenset(
     {"stop_loss_exchange", "stop_loss", "sl", "stoploss"}
+)
+# Live TP market exits (shadow_tp) — shorter cool-off than SL (default 24h)
+TP_EXIT_REASONS = frozenset(
+    {
+        "take_profit_trail",
+        "take_profit_fixed_tp",
+        "take_profit_fixed",
+        "take_profit_breakeven_lock",
+        "take_profit_exchange",
+    }
 )
 
 
@@ -482,7 +500,7 @@ def load_buy_block_status(
                 hours = float(pol["stop_loss_exchange_block_rebuy_hours"])
         except Exception:
             try:
-                cc = Path("data/state/capital_user_controls.json")
+                cc = STATE_DIR / "capital_user_controls.json"
                 if cc.exists():
                     pol = (json.loads(cc.read_text()).get("capital_controls_policy") or {})
                     if pol.get("stop_loss_exchange_block_rebuy_hours") is not None:
@@ -520,7 +538,7 @@ def load_buy_block_status(
     except Exception:
         pass
     try:
-        cc = Path("data/state/capital_user_controls.json")
+        cc = STATE_DIR / "capital_user_controls.json"
         if cc.exists():
             raw = json.loads(cc.read_text())
             cooldown_maps.append(
@@ -569,9 +587,47 @@ def load_buy_block_status(
     except Exception:
         pass
 
+    # 3) Live take-profit SELLs → shorter post-TP cool-off (default 24h)
+    #    Prevents same-cycle / FOMO rebuy after banking a winner (LINK-class giveback loop).
+    tp_hours = 24.0
+    try:
+        from phase6.core.shadow_tp import load_exit_automation
+
+        tp_cfg = (load_exit_automation().get("take_profit") or {})
+        if tp_cfg.get("post_tp_block_rebuy_hours") is not None:
+            tp_hours = float(tp_cfg["post_tp_block_rebuy_hours"])
+    except Exception:
+        pass
+    if tp_hours > 0:
+        tp_cutoff = now - tp_hours * 3600.0
+        # Load enough history for the longer of SL/TP windows
+        lookback = max(hours_f, tp_hours)
+        try:
+            for t in _load_recent_ledger_sells(lookback, jsonl_path=jsonl_path):
+                pair = t.get("pair")
+                if not pair:
+                    continue
+                reason = str(t.get("reason") or t.get("exit_reason") or t.get("source") or "").lower()
+                is_tp = (
+                    reason in TP_EXIT_REASONS
+                    or reason.startswith("take_profit")
+                    or "take_profit" in reason
+                )
+                if not is_tp:
+                    continue
+                ts = _parse_trade_ts(str(t.get("timestamp", "")))
+                if ts is None or ts < tp_cutoff:
+                    continue
+                exp_ts = ts + tp_hours * 3600.0
+                _put(str(pair), exp_ts, "post_tp_rebuy_block", "ledger_take_profit")
+        except Exception:
+            pass
+
     out: Dict[str, Dict[str, Any]] = {}
     for pair, (exp_ts, reason, source) in best.items():
         left = max(0.0, (exp_ts - now) / 3600.0)
+        # block_hours reflects the rule that created this block
+        bh = tp_hours if reason == "post_tp_rebuy_block" else hours_f
         out[pair] = {
             "blocked": True,
             "reason": reason,
@@ -579,7 +635,7 @@ def load_buy_block_status(
             "expires_ts": exp_ts,
             "expires_at": datetime.fromtimestamp(exp_ts, tz=timezone.utc).isoformat(),
             "hours_remaining": round(left, 2),
-            "block_hours": hours_f,
+            "block_hours": bh,
         }
     return out
 

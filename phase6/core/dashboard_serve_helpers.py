@@ -187,11 +187,15 @@ def compute_equity_trend(
     days: int = 30,
     max_points: int = 48,
     timeout: float = 1.5,
+    as_of: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """Deposit-adjusted equity index + linear trend for dashboard health chart.
 
     Returns series of {t, nav, index} where index starts at 100 and compounds
     adjusted period returns between samples (external deposits/withdrawals removed).
+
+    as_of: optional shared clock so Window % uses the same cutoff as period tiles
+    computed in the same request (avoids nearest_ts sliding while this path runs).
     """
     from phase6.core.portfolio_external_flows import (
         adjusted_period_return_pct,
@@ -213,7 +217,9 @@ def compute_equity_trend(
         out["status"] = "no_data"
         return out
 
-    now = datetime.now(timezone.utc)
+    now = as_of if as_of is not None else datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
     cutoff = now - timedelta(days=max(1, int(days)))
 
     try:
@@ -310,32 +316,53 @@ def compute_equity_trend(
                 }
             )
 
-        # Endpoint truth (same formula as 1D/7D/14D/30D tiles): single-hop deposit-adj
-        # over the chart window. Path shape uses segments; Window % must match tiles.
+        # Endpoint truth MUST match period tiles (compute_period_performance):
+        #   start = _nearest_ts(now - days)  — last snapshot AT OR BEFORE cutoff
+        #   end   = current_total_usd (live)
+        #   flow  = net_external_flow_between(start, MAX(account_balances.ts))
+        # Chart hour-buckets (first ts >= cutoff) are a different start and MUST NOT
+        # drive Window % — that was the 30D tile vs Window desync (e.g. −0.38 vs −0.05).
         first_ts, first_nav = samples[0][0], float(samples[0][1])
         last_ts, last_nav = samples[-1][0], float(samples[-1][1])
-        # Prefer last DB balance ts for flow end when last sample is synthetic "now"
         end_flow_ts = last_ts
         try:
             max_row = conn.execute("SELECT MAX(ts) FROM account_balances").fetchone()
             if max_row and max_row[0]:
-                # If last sample is live "now", flow through latest persisted snapshot
                 end_flow_ts = max_row[0]
         except Exception:
             pass
-        window_flow = float(
-            net_external_flow_between(conn, first_ts, end_flow_ts, _total_usd_at_ts) or 0.0
-        )
-        window_return_pct = adjusted_period_return_pct(last_nav, first_nav, window_flow)
 
-        # If path drifted from endpoint truth (legacy clamp residue), re-anchor path
-        # so the last index matches window_return while keeping relative segment shape.
+        tile_start_ts = _nearest_ts(conn, cutoff)
+        if tile_start_ts:
+            tile_start_nav = float(_total_usd_at_ts(conn, tile_start_ts))
+            window_flow = float(
+                net_external_flow_between(
+                    conn, tile_start_ts, end_flow_ts, _total_usd_at_ts
+                )
+                or 0.0
+            )
+            # Same endpoints as d30/d7 tiles: live total as end NAV.
+            window_return_pct = adjusted_period_return_pct(
+                float(current_total_usd), tile_start_nav, window_flow
+            )
+            window_start_ts = tile_start_ts
+            window_start_nav = tile_start_nav
+        else:
+            # Fallback only when no pre-cutoff snapshot exists
+            window_flow = float(
+                net_external_flow_between(conn, first_ts, end_flow_ts, _total_usd_at_ts)
+                or 0.0
+            )
+            window_return_pct = adjusted_period_return_pct(
+                float(current_total_usd), first_nav, window_flow
+            )
+            window_start_ts = first_ts
+            window_start_nav = first_nav
+
+        # Re-anchor path end to tile Window so chart score matches the number shown
         path_end = ys[-1]
         target_end = 100.0 * (1.0 + float(window_return_pct) / 100.0)
-        if path_end > 0 and abs(path_end - target_end) > 0.15:
-            # Blend: shift logs so end lands on target (multiplicative scale of excess)
-            # index' = 100 * (index/100)**k chosen so end matches — simpler linear blend:
-            # index' = 100 + (index-100) * (target-100)/(path_end-100) when path moved
+        if path_end > 0 and abs(path_end - target_end) > 0.05:
             if abs(path_end - 100.0) > 1e-6:
                 scale = (target_end - 100.0) / (path_end - 100.0)
                 ys = [100.0 + (y - 100.0) * scale for y in ys]
@@ -344,35 +371,33 @@ def compute_equity_trend(
             for i, y in enumerate(ys):
                 points[i]["index"] = round(y, 3)
 
+        # Match 7D tile while conn still open: nearest at now-7d → live total
+        recent_return_pct = None
+        ts7 = _nearest_ts(conn, now - timedelta(days=7))
+        if ts7:
+            past7 = float(_total_usd_at_ts(conn, ts7))
+            flow7 = float(
+                net_external_flow_between(conn, ts7, end_flow_ts, _total_usd_at_ts) or 0.0
+            )
+            if past7 > 0:
+                recent_return_pct = adjusted_period_return_pct(
+                    float(current_total_usd), past7, flow7
+                )
+
         conn.close()
 
         slope, intercept = _linreg_slope_intercept(xs, ys)
         slope_pct_per_day = slope  # index units ≈ % of start
-        recent_return_pct = None
-        # Match 7D tile: nearest snapshot at now-7d → same endpoint formula
-        try:
-            c2 = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=timeout)
-            c2.execute(f"PRAGMA busy_timeout={int(timeout * 1000)}")
-            ts7 = _nearest_ts(c2, now - timedelta(days=7))
-            if ts7:
-                past7 = float(_total_usd_at_ts(c2, ts7))
-                flow7 = float(
-                    net_external_flow_between(c2, ts7, end_flow_ts, _total_usd_at_ts) or 0.0
-                )
-                if past7 > 0:
-                    recent_return_pct = adjusted_period_return_pct(last_nav, past7, flow7)
-            c2.close()
-        except Exception:
+        if recent_return_pct is None and xs[-1] >= 3:
             # fallback: path-index over last ~7 chart days
-            if xs[-1] >= 3:
-                cut = xs[-1] - min(7.0, xs[-1] * 0.35)
-                j = 0
-                for k, d in enumerate(xs):
-                    if d >= cut:
-                        j = k
-                        break
-                if j < len(ys) - 1 and ys[j] > 0:
-                    recent_return_pct = round((ys[-1] / ys[j] - 1.0) * 100.0, 2)
+            cut = xs[-1] - min(7.0, xs[-1] * 0.35)
+            j = 0
+            for k, d in enumerate(xs):
+                if d >= cut:
+                    j = k
+                    break
+            if j < len(ys) - 1 and ys[j] > 0:
+                recent_return_pct = round((ys[-1] / ys[j] - 1.0) * 100.0, 2)
 
         y0 = intercept + slope * xs[0]
         y1 = intercept + slope * xs[-1]
@@ -400,6 +425,8 @@ def compute_equity_trend(
         )
         out["window_matches_period_tiles"] = True
         out["window_external_flow_usd"] = round(window_flow, 2)
+        out["window_start_ts"] = window_start_ts
+        out["window_start_nav"] = round(float(window_start_nav), 2)
         out["point_count"] = len(points)
         out["span_days"] = round(xs[-1], 2) if xs else None
         return out
@@ -413,11 +440,15 @@ def compute_period_performance(
     current_total_usd: float,
     db_path: Path,
     timeout: float = 0.45,
+    *,
+    as_of: Optional[datetime] = None,
 ) -> Dict[str, Any]:
     """Portfolio % change vs DB snapshot before each cutoff, **deposit-adjusted**.
 
     If no snapshot at or before cutoff (insufficient history), returns None for that
     period key (never numeric 0.0 for missing window per KPI truth requirements).
+
+    as_of: optional shared clock with compute_equity_trend so 30D and Window agree.
     """
     from phase6.core.portfolio_external_flows import (
         adjusted_period_return_pct,
@@ -437,7 +468,9 @@ def compute_period_performance(
         out["source"] = "no_db_or_total"
         return out
 
-    now = datetime.now(timezone.utc)
+    now = as_of if as_of is not None else datetime.now(timezone.utc)
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
     windows = {
         "today": now - timedelta(days=1),
         "h24": now - timedelta(hours=24),

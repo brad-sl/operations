@@ -26,6 +26,52 @@ class StopLossManager:
 
         # Adaptive SL support (#3 risk-aware sizing)
         self.adaptive_sl_enabled = config.get("risk_management", {}).get("adaptive_sl", True)
+        rm0 = config.get("risk_management") or {}
+        try:
+            self.sl_base_pct = float(rm0.get("sl_base_pct", self.default_sl_pct))
+        except (TypeError, ValueError):
+            self.sl_base_pct = float(self.default_sl_pct)
+        try:
+            self.sl_min_pct = float(rm0.get("sl_min_pct", 0.015))
+        except (TypeError, ValueError):
+            self.sl_min_pct = 0.015
+        try:
+            self.sl_max_pct = float(rm0.get("sl_max_pct", 0.05))
+        except (TypeError, ValueError):
+            self.sl_max_pct = 0.05
+        self.sl_tp_symmetry = dict(rm0.get("sl_tp_symmetry") or {})
+
+    def _live_tp_context(self) -> tuple:
+        """(live_tp_active, trail_arm_pct) from exit_automation + optional symmetry override.
+
+        Fail-open: on any load error treat as live_tp off so SL path stays safe/legacy.
+        """
+        live = False
+        arm = None
+        try:
+            from phase6.core.shadow_tp import load_exit_automation, _tp_cfg
+
+            tp = _tp_cfg(load_exit_automation())
+            mode = str(tp.get("mode") or "off").strip().lower()
+            live = mode == "live"
+            trail = dict(tp.get("trail") or {})
+            if trail.get("enabled", True):
+                arm = float(trail.get("arm_pct") or 0.04)
+        except Exception as e:
+            logger.debug("live TP context load failed (symmetry skipped): %s", e)
+            live = False
+            arm = None
+        # Explicit override from risk_management.sl_tp_symmetry (tests / ops)
+        sym = getattr(self, "sl_tp_symmetry", None) or {}
+        if sym.get("trail_arm_pct") is not None:
+            try:
+                arm = float(sym.get("trail_arm_pct"))
+            except (TypeError, ValueError):
+                pass
+        if sym.get("force_live_tp_active") is not None:
+            live = bool(sym.get("force_live_tp_active"))
+        return live, arm
+
     def get_sl_pct(
         self,
         pair: str,
@@ -37,11 +83,19 @@ class StopLossManager:
             return self.default_sl_pct
         try:
             from phase6.core.sl_risk_scorer import get_adaptive_sl_pct
+
+            live_tp, trail_arm = self._live_tp_context()
+            base = float(getattr(self, "sl_base_pct", self.default_sl_pct))
             return get_adaptive_sl_pct(
                 pair=pair,
-                base_pct=self.default_sl_pct,
+                base_pct=base,
                 regime_bias=regime_bias,
                 risk_data=risk_data,
+                min_pct=float(getattr(self, "sl_min_pct", 0.015)),
+                max_pct=float(getattr(self, "sl_max_pct", 0.05)),
+                live_tp_active=live_tp,
+                trail_arm_pct=trail_arm,
+                symmetry=getattr(self, "sl_tp_symmetry", None),
             )
         except Exception as e:
             logger.debug(f"Adaptive SL fallback for {pair}: {e}")

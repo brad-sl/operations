@@ -140,6 +140,76 @@ def get_sl_risk(pair: str, current_price: Optional[float] = None, **kwargs) -> D
     }
 
 
+# Live-TP economic floor (one rule, few knobs). See apply_sl_tp_symmetry.
+DEFAULT_SL_TP_SYMMETRY: Dict[str, Any] = {
+    "enabled": True,
+    # When take_profit.mode == live: never let adaptive tighten below base.
+    "never_tighter_than_base_when_live_tp": True,
+    # Also floor at trail_arm * this frac (0.85 * 4% arm → 3.4%).
+    "min_sl_frac_of_trail_arm": 0.85,
+}
+
+
+def apply_sl_tp_symmetry(
+    adaptive_pct: float,
+    *,
+    base_pct: float,
+    min_pct: float,
+    max_pct: float,
+    live_tp_active: bool = False,
+    trail_arm_pct: Optional[float] = None,
+    symmetry: Optional[Dict[str, Any]] = None,
+) -> float:
+    """
+    Single economic floor so adaptive SL and live trail TP are not inverted.
+
+    Problem (UNI 2026-08-23): adaptive tightened to ~2.2% while trail arm
+    needs +4% before any profit path helps → noise stops kill the lot first.
+
+    Rules (only when live_tp_active and symmetry.enabled):
+      floor = adaptive
+      if never_tighter_than_base_when_live_tp: floor = max(floor, base_pct)
+      if trail_arm_pct > 0: floor = max(floor, trail_arm * min_sl_frac_of_trail_arm)
+      result = clamp(floor, min_pct, max_pct)
+
+    When live TP is off/shadow: return adaptive unchanged (still clamped).
+    No ATR / range / pair-special adapters — keep this maintainable.
+    """
+    lo = float(min_pct)
+    hi = float(max_pct)
+    if hi < lo:
+        lo, hi = hi, lo
+    base = float(base_pct)
+    try:
+        pct = float(adaptive_pct)
+    except (TypeError, ValueError):
+        pct = base
+
+    cfg = dict(DEFAULT_SL_TP_SYMMETRY)
+    if isinstance(symmetry, dict):
+        cfg.update({k: v for k, v in symmetry.items() if v is not None})
+
+    if live_tp_active and bool(cfg.get("enabled", True)):
+        floor = pct
+        if bool(cfg.get("never_tighter_than_base_when_live_tp", True)):
+            floor = max(floor, base)
+        try:
+            arm = float(trail_arm_pct) if trail_arm_pct is not None else None
+        except (TypeError, ValueError):
+            arm = None
+        if arm is not None and arm > 0:
+            try:
+                frac = float(cfg.get("min_sl_frac_of_trail_arm", 0.85))
+            except (TypeError, ValueError):
+                frac = 0.85
+            frac = max(0.0, min(2.0, frac))
+            floor = max(floor, arm * frac)
+        pct = floor
+
+    pct = max(lo, min(hi, pct))
+    return round(pct, 4)
+
+
 def get_adaptive_sl_pct(
     pair: str,
     base_pct: float = 0.03,
@@ -147,12 +217,17 @@ def get_adaptive_sl_pct(
     risk_data: Optional[Dict[str, Any]] = None,
     min_pct: float = 0.015,
     max_pct: float = 0.05,
+    live_tp_active: bool = False,
+    trail_arm_pct: Optional[float] = None,
+    symmetry: Optional[Dict[str, Any]] = None,
 ) -> float:
     """
     Compute risk-aware / adaptive stop loss percentage.
     - Tighter stops for HIGH/CRITICAL risk (from RSI) or risk-off regime.
     - Slightly wider for LOW risk / risk-on.
     - Anchors to base_pct from config (default 3%).
+    - When live TP is on, apply_sl_tp_symmetry raises a floor so SL is not
+      economically inverted vs trail arm (see risk_management.sl_tp_symmetry).
     Used by StopLossManager to avoid fixed 3% always.
     """
     if risk_data is None:
@@ -183,8 +258,15 @@ def get_adaptive_sl_pct(
     multiplier = multiplier * (1.0 - (risk_score - 0.2) * 0.5)  # slight damp
 
     adaptive = base_pct * max(0.5, min(1.5, multiplier))
-    adaptive = max(min_pct, min(max_pct, adaptive))
-    return round(adaptive, 4)
+    return apply_sl_tp_symmetry(
+        adaptive,
+        base_pct=base_pct,
+        min_pct=min_pct,
+        max_pct=max_pct,
+        live_tp_active=live_tp_active,
+        trail_arm_pct=trail_arm_pct,
+        symmetry=symmetry,
+    )
 
 def get_all_sl_risks(basket: List[str], price_map: Optional[Dict[str, float]] = None) -> Dict[str, Dict[str, Any]]:
     """
@@ -196,7 +278,14 @@ def get_all_sl_risks(basket: List[str], price_map: Optional[Dict[str, float]] = 
     return {pair: get_sl_risk(pair, price_map.get(pair)) for pair in basket}
 
 # Convenience for other consumers
-__all__ = ["get_sl_risk", "get_all_sl_risks", "get_sl_risks"]  # alias
+__all__ = [
+    "get_sl_risk",
+    "get_all_sl_risks",
+    "get_sl_risks",
+    "get_adaptive_sl_pct",
+    "apply_sl_tp_symmetry",
+    "DEFAULT_SL_TP_SYMMETRY",
+]
 
 def get_sl_risks(basket: List[str], price_map: Optional[Dict[str, float]] = None) -> Dict[str, Dict[str, Any]]:
     """Alias for get_all_sl_risks (some older references)."""

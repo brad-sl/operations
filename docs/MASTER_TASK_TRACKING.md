@@ -1,3 +1,74 @@
+## P6-SL-TP-SYMMETRY-FLOOR-20260823 — DONE
+
+**Type:** exit / risk threshold (adaptive SL vs live trail TP)  
+**Status:** DONE — shipped 2026-08-23  
+**auto_pickup:** false  
+**Priority:** P1 (threshold economics; not another peak-bind bug)  
+**Doc:** `docs/research/SL_TP_SYMMETRY_FLOOR.md`  
+**Isolation:** `scripts/phase6/test_isolation_sl_tp_symmetry.py` **PASS**
+
+### Plain English
+Adaptive SL could tighten hot names to ~2% while live trail TP only helps after +4%. That dumps lots on noise before any profit path. When live TP is on, SL now floors at **max(base 3%, trail_arm×0.85 → 3.4%)**. Live TP off = old adaptive. **No ATR/pair adapters.**
+
+### Shipped
+- `apply_sl_tp_symmetry` + kwargs on `get_adaptive_sl_pct` (`phase6/core/sl_risk_scorer.py`)
+- `StopLossManager.get_sl_pct` + `_live_tp_context` (reads `exit_automation` trail arm)
+- Config `risk_management.sl_tp_symmetry`
+- Skill `phase6-sl-exits-and-dust` note
+
+### Verification (all PASS)
+```
+PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_tp_symmetry.py
+PYTHONPATH=. python3 phase6/core/test_isolation_shadow_tp.py
+PYTHONPATH=. python3 phase6/core/test_isolation_live_tp_exit.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_floor_ratchet.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_coordinator_attach.py
+PYTHONPATH=. python3 phase6/core/test_isolation_sl_stale_anchor.py
+PYTHONPATH=. python3 phase6/core/test_isolation_ledger_sl_truth.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_same_session_sl.py
+```
+
+### Non-goals / honesty
+Does **not** guarantee holding through −4% wicks (UNI day wash still deeper than 3.4%). No change to trail arm/fixed TP. Runner restart required for new attaches.
+
+### UNI counterfactual
+Legacy HIGH ~1.7–2.2% → with floor **3.4%** (stop ~$4.417 on $4.573 entry vs actual $4.469).
+
+---
+
+## P6-STALE-PEAK-LOT-BIND-20260823 — DONE
+
+**Type:** bugfix / exit core (live TP trail)  
+**Status:** DONE — shipped 2026-08-23  
+**auto_pickup:** false  
+**Priority:** P0 (must never sell fresh lots on inherited peak_r)  
+**Ops:** P6-OPS-20260823-001  
+**Report:** `reports/INCIDENT_UNI_STALE_PEAK_TP_2026-08-23.md`
+
+### Plain English
+UNI rebal buy was trail-sold ~1–2 min later at a small loss because live TP thought the bag had already run +11%. Peak belonged to an old lot. Peaks are now **bound to the current lot entry**; new buys start clean. Trade times store UTC and **display in the trader’s timezone** (Brad: America/Los_Angeles).
+
+### Shipped
+- `sanitize_peak_r_for_lots` + `peak_lot` state in `phase6/core/shadow_tp.py`
+- Clear peak after real live TP exit (not dry_run)
+- ISO: `phase6/core/test_isolation_live_tp_exit.py` PASS (UNI repro, same-lot trail, entry change)
+- `config/trader_accounts.json` → `ui.display_timezone` / `locale`
+- `trader_account_config.ui_display_settings` + `/api/trades` + `/api/ui-prefs`
+- Dashboard `fmtTraderLocal` with explicit `timeZone`
+- Ledger timestamps always UTC `Z`
+- Live state: UNI peak cleared; `peak_lot` force-rebind
+
+### Verification
+```
+PYTHONPATH=. .venv/bin/python phase6/core/test_isolation_live_tp_exit.py  # PASS
+PYTHONPATH=. .venv/bin/python phase6/core/test_isolation_shadow_tp.py     # PASS
+```
+
+### Non-goals
+Change trail arm/trail %; auto-promote; disable live TP.
+
+---
+
 ## P6-VOL-RISK-SCALAR-SHADOW-20260822 — ACTIVE (Tier 1 shadow)
 
 **Type:** risk / sizing research (not Type:test auto_pickup)  
@@ -10974,3 +11045,23 @@ Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to co
 Source sweep: 2026-08-23T11:00:37.793767+00:00 | score=5.1781
 Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
 
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260824** (opened 2026-08-24T00:00:10.248363)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260824`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

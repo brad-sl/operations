@@ -857,7 +857,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 key=lambda t: str(t.get("timestamp") or t.get("ts") or ""),
                 reverse=True,
             )
-            self.send_json({"trades": trades, "mode": MODE, "count": len(trades), "source": "TradeLedger"})
+            # Per-trader display TZ (storage stays UTC / Coinbase standard)
+            try:
+                from phase6.core.trader_account_config import (
+                    resolve_runner_account_id,
+                    ui_display_settings,
+                )
+                ui = ui_display_settings(resolve_runner_account_id(None))
+            except Exception:
+                ui = {
+                    "display_timezone": "America/Los_Angeles",
+                    "locale": "en-US",
+                }
+            self.send_json({
+                "trades": trades,
+                "mode": MODE,
+                "count": len(trades),
+                "source": "TradeLedger",
+                "timestamp_storage": "UTC",
+                "display_timezone": ui.get("display_timezone") or "America/Los_Angeles",
+                "locale": ui.get("locale") or "en-US",
+            })
+        elif path == '/api/ui-prefs':
+            try:
+                from phase6.core.trader_account_config import (
+                    resolve_runner_account_id,
+                    ui_display_settings,
+                )
+                ui = ui_display_settings(resolve_runner_account_id(None))
+            except Exception as e:
+                ui = {
+                    "display_timezone": "America/Los_Angeles",
+                    "locale": "en-US",
+                    "error": str(e)[:120],
+                }
+            self.send_json({"status": "ok", **ui, "timestamp_storage": "UTC"})
         elif path == '/api/sentiment':
             # Scorer first (includes free_fallback when X empty/spend-cap)
             try:
@@ -1425,14 +1459,79 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             executed_rebalances = [r for r in rebalances if (r.get("executed") or 0) > 0]
             self.send_json({"rebalances": executed_rebalances, "count": len(executed_rebalances), "source": "rebalance_history.jsonl (executed only)", "last_updated": datetime.now(timezone.utc).isoformat()})
         elif path == '/api/recovery':
+            # SSOT = live buy blocks (post-SL / post-TP / capital controls).
+            # Do NOT trust stale recovery_state.json alone (was empty since 2026-07-03
+            # while UNI/LINK/RAVE were blocked — Recovery tile lied "None").
             try:
-                rec_path = Path("data/state/recovery_state.json")
-                if rec_path.exists():
-                    self.send_json(json.loads(rec_path.read_text()))
-                else:
-                    self.send_json({"mode": "normal", "cooldown_pairs": [], "last_update": datetime.now(timezone.utc).isoformat()})
+                from phase6.core.runner_capital_events import load_buy_block_status
+
+                blocks = load_buy_block_status() or {}
+                pairs = sorted(
+                    [
+                        p
+                        for p, b in blocks.items()
+                        if isinstance(b, dict) and b.get("blocked")
+                    ]
+                )
+                details = []
+                for p in pairs:
+                    b = blocks[p]
+                    details.append(
+                        {
+                            "pair": p,
+                            "reason": b.get("reason"),
+                            "source": b.get("source"),
+                            "hours_remaining": b.get("hours_remaining"),
+                            "block_hours": b.get("block_hours"),
+                            "expires_at": b.get("expires_at"),
+                        }
+                    )
+                # Mode: normal unless we are thin on positions (legacy field)
+                mode = "normal"
+                try:
+                    rec_path = Path("data/state/recovery_state.json")
+                    if rec_path.exists():
+                        legacy = json.loads(rec_path.read_text())
+                        if legacy.get("mode") in ("emergency", "normal", "recovery"):
+                            mode = legacy.get("mode") or mode
+                except Exception:
+                    pass
+                if not pairs and mode == "emergency":
+                    # thin book without blocks still recovery-ish
+                    pass
+                self.send_json(
+                    {
+                        "mode": mode,
+                        "cooldown_pairs": pairs,
+                        "cooldown_details": details,
+                        "last_update": datetime.now(timezone.utc).isoformat(),
+                        "source": "load_buy_block_status",
+                        "display_timezone": (
+                            __import__(
+                                "phase6.core.trader_account_config",
+                                fromlist=["ui_display_settings"],
+                            ).ui_display_settings(None).get("display_timezone")
+                            or "America/Los_Angeles"
+                        ),
+                    }
+                )
             except Exception as e:
-                self.send_json({"error": str(e)})
+                # Fallback to file if block loader fails
+                try:
+                    rec_path = Path("data/state/recovery_state.json")
+                    if rec_path.exists():
+                        self.send_json(json.loads(rec_path.read_text()))
+                    else:
+                        self.send_json(
+                            {
+                                "mode": "normal",
+                                "cooldown_pairs": [],
+                                "last_update": datetime.now(timezone.utc).isoformat(),
+                                "error": str(e)[:160],
+                            }
+                        )
+                except Exception as e2:
+                    self.send_json({"error": str(e2), "cooldown_pairs": []})
         elif path == '/api/metrics':
             self.send_json(fetch_dashboard_metrics())
         elif path == '/api/brief':

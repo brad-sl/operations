@@ -86,6 +86,12 @@
       "add_gap_max": 0.2,
       "air_pocket_multiple_min": 1.25,
       "note": "Raise SL floor after multi-bagger / air pocket; never loosen. docs/research/SL_FLOOR_RATCHET_AFTER_ADDS.md"
+    },
+    "sl_tp_symmetry": {
+      "enabled": true,
+      "never_tighter_than_base_when_live_tp": true,
+      "min_sl_frac_of_trail_arm": 0.85,
+      "note": "When take_profit.mode=live, floor adaptive SL so it is not tighter than base and not much tighter than trail arm. One pure rule — no ATR/pair adapters. Isolation: scripts/phase6/test_isolation_sl_tp_symmetry.py. Docs: docs/research/SL_TP_SYMMETRY_FLOOR.md"
     }
   },
   "preserve_mode": {

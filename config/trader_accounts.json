@@ -25,6 +25,11 @@
       "stop_loss_exchange_block_rebuy_hours": 72,
       "manual_sell_cancel_stops": true,
       "ui_show_hold_banner": true
+    },
+    "ui": {
+      "display_timezone": "America/Los_Angeles",
+      "locale": "en-US",
+      "note": "Ledger/API timestamps stay UTC (Coinbase). Dashboard formats with display_timezone per trader."
     }
   },
   "accounts": {
@@ -53,6 +58,10 @@
         "stop_loss_exchange_block_rebuy_hours": 72,
         "manual_sell_cancel_stops": true,
         "ui_show_hold_banner": true
+      },
+      "ui": {
+        "display_timezone": "America/Los_Angeles",
+        "locale": "en-US"
       }
     },
     "default": {
@@ -78,6 +87,10 @@
         "stop_loss_exchange_block_rebuy_hours": 72,
         "manual_sell_cancel_stops": true,
         "ui_show_hold_banner": true
+      },
+      "ui": {
+        "display_timezone": "America/Los_Angeles",
+        "locale": "en-US"
       }
     }
   }

@@ -7,12 +7,38 @@ Persistent trade logging (JSONL + daily CSV)
 See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths and rules."""
 
 import json
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .context import AccountContext
+
+
+def _utc_iso_z(dt: Optional[datetime] = None) -> str:
+    """Coinbase-standard UTC timestamp with Z suffix (never naive local)."""
+    d = dt or datetime.now(timezone.utc)
+    if d.tzinfo is None:
+        d = d.replace(tzinfo=timezone.utc)
+    else:
+        d = d.astimezone(timezone.utc)
+    # Keep millis; always Z
+    return d.isoformat().replace("+00:00", "Z")
+
+
+def _normalize_trade_timestamp(raw: Any) -> str:
+    """Force trade timestamps to UTC ISO with Z for storage + JS Date.parse."""
+    if raw is None or raw == "":
+        return _utc_iso_z()
+    s = str(raw).strip()
+    try:
+        t = datetime.fromisoformat(s.replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            # Ledger convention: naive = UTC (never host-local)
+            t = t.replace(tzinfo=timezone.utc)
+        return t.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+    except Exception:
+        return _utc_iso_z()
 
 
 class TradeLedger:
@@ -81,9 +107,11 @@ class TradeLedger:
                 except Exception:
                     trade["fill_verified"] = False
 
-        # Add timestamp if missing
-        if "timestamp" not in trade:
-            trade["timestamp"] = datetime.utcnow().isoformat()
+        # Add timestamp if missing; always normalize to UTC Z (Coinbase standard)
+        if "timestamp" not in trade or not trade.get("timestamp"):
+            trade["timestamp"] = _utc_iso_z()
+        else:
+            trade["timestamp"] = _normalize_trade_timestamp(trade.get("timestamp"))
 
         pair = trade.get("pair") or trade.get("product_id")
         if pair and "indicators_at_trade" not in trade:
@@ -183,7 +211,7 @@ class TradeLedger:
           actions_taken
         """
         if "timestamp" not in context:
-            context["timestamp"] = datetime.utcnow().isoformat() + "Z"
+            context["timestamp"] = _utc_iso_z()
 
         context["type"] = "decision_context"
         context["source"] = "allocator_or_runner"
@@ -215,7 +243,7 @@ class TradeLedger:
         """Append a full influence snapshot (called from report + decisions)."""
         if "timestamp" not in snapshot:
             snapshot = dict(snapshot)
-            snapshot["timestamp"] = datetime.utcnow().isoformat() + "Z"
+            snapshot["timestamp"] = _utc_iso_z()
         with open(self.stack_log_path, "a") as f:
             f.write(json.dumps(snapshot) + "\n")
 

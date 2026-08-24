@@ -396,6 +396,42 @@
             return lastGood[key] || fresh;
         }
 
+        // Per-trader display TZ. Storage/API = UTC (Coinbase). Never rely on browser host TZ.
+        let DASH_TZ = 'America/Los_Angeles';
+        let DASH_LOCALE = 'en-US';
+        function applyUiPrefs(payload) {
+            if (!payload || typeof payload !== 'object') return;
+            if (payload.display_timezone) DASH_TZ = String(payload.display_timezone);
+            if (payload.locale) DASH_LOCALE = String(payload.locale);
+        }
+        function parseUtcTs(raw) {
+            if (raw == null || raw === '') return null;
+            let s = String(raw).trim().replace(' ', 'T');
+            // Naive ISO from ledger = UTC. Force Z so browsers don't treat as local.
+            if (/^\d{4}-\d{2}-\d{2}T/.test(s) && !/[zZ]|[+-]\d{2}:?\d{2}$/.test(s)) {
+                s += 'Z';
+            }
+            const d = new Date(s);
+            return isNaN(d.getTime()) ? null : d;
+        }
+        function fmtTraderLocal(raw, {dateStyle = true, timeStyle = true} = {}) {
+            const d = parseUtcTs(raw);
+            if (!d) return raw || '—';
+            const opts = { timeZone: DASH_TZ };
+            if (dateStyle) { opts.month = 'short'; opts.day = 'numeric'; }
+            if (timeStyle) { opts.hour = '2-digit'; opts.minute = '2-digit'; }
+            try {
+                if (dateStyle && timeStyle) {
+                    return d.toLocaleDateString(DASH_LOCALE, {month:'short', day:'numeric', timeZone: DASH_TZ})
+                        + ' ' + d.toLocaleTimeString(DASH_LOCALE, {hour:'2-digit', minute:'2-digit', timeZone: DASH_TZ});
+                }
+                if (timeStyle) return d.toLocaleTimeString(DASH_LOCALE, {hour:'2-digit', minute:'2-digit', timeZone: DASH_TZ});
+                return d.toLocaleDateString(DASH_LOCALE, {month:'short', day:'numeric', timeZone: DASH_TZ});
+            } catch (e) {
+                return d.toISOString();
+            }
+        }
+
         function renderEquityTrend(eq, { forceNa = false, d30 = null, d7 = null } = {}) {
             const labelEl = document.getElementById('equity-health-label');
             const blurbEl = document.getElementById('equity-health-blurb');
@@ -511,6 +547,7 @@
             );
             const perfData = pickPayload('performance', settledValue(settled[2]), perfHasNumbers);
             const tradesData = pickPayload('trades', settledValue(settled[3]), (p) => !!(p && Array.isArray(p.trades)));
+            if (tradesData) applyUiPrefs(tradesData);
             const signalsData = pickPayload('signals', settledValue(settled[4]), (p) => !!(p && p.status === 'ok' && (p.rows || []).length));
             const rebalData = pickPayload('rebalances', settledValue(settled[5]), (p) => !!(p && Array.isArray(p.rebalances)));
             const metricsData = pickPayload('metrics', settledValue(settled[6]), (p) => !!(p && p.metrics));
@@ -537,10 +574,9 @@
                 if (tsEl) {
                     const lastUpd = mainData.last_updated || new Date().toISOString();
                     try {
-                        const d = new Date(lastUpd.replace(' ', 'T'));
-                        tsEl.textContent = d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ', ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                        tsEl.textContent = fmtTraderLocal(lastUpd);
                     } catch(e) {
-                        tsEl.textContent = 'Updated ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                        tsEl.textContent = 'Updated ' + fmtTraderLocal(new Date().toISOString(), {dateStyle: false});
                     }
                 }
                 totalEl.textContent = '$' + parseFloat(total).toFixed(2);
@@ -948,22 +984,22 @@
             }
 
 
-            // Trades - newest first (pair, side, qty, short date + time)
+            // Trades - newest first (pair, side, qty, short date + time in trader local TZ)
             const tradesContainer = document.getElementById('trades-list');
             if (tradesContainer && tradesData && tradesData.trades && tradesData.trades.length) {
+                applyUiPrefs(tradesData);
                 const sortedTrades = (tradesData.trades || []).slice().sort((a, b) => {
-                    const ta = Date.parse(a.timestamp || a.ts || '') || 0;
-                    const tb = Date.parse(b.timestamp || b.ts || '') || 0;
+                    const ta = (parseUtcTs(a.timestamp || a.ts) || new Date(0)).getTime();
+                    const tb = (parseUtcTs(b.timestamp || b.ts) || new Date(0)).getTime();
                     return tb - ta; // descending: most recent first
                 });
                 tradesContainer.innerHTML = sortedTrades.slice(0, 5).map(t => {
                     let timeStr = '';
-                    if (t.timestamp) {
+                    if (t.timestamp || t.ts) {
                         try {
-                            const d = new Date(t.timestamp);
-                            timeStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                            timeStr = fmtTraderLocal(t.timestamp || t.ts);
                         } catch(e) {
-                            timeStr = t.timestamp.slice(11,16) || '';
+                            timeStr = String(t.timestamp || t.ts).slice(11,16) || '';
                         }
                     }
                     const qty = t.qty ? parseFloat(t.qty).toFixed(4) : '';
@@ -988,7 +1024,7 @@
                         <span class="${sideClass}">${side}</span>
                         ${reasonBadge}
                         <span class="text-slate-400 tabular-nums">${qty}</span>
-                        <span class="text-slate-500">${timeStr}</span>
+                        <span class="text-slate-500" title="UTC ${t.timestamp || t.ts || ''} · shown ${DASH_TZ}">${timeStr}</span>
                     </div>`;
                 }).join('');
             } else if (tradesContainer && !tradesContainer.children.length) {
@@ -1004,10 +1040,9 @@
                         let timeStr = '';
                         if (r.timestamp) {
                             try {
-                                const d = new Date(r.timestamp);
-                                timeStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'}) + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+                                timeStr = fmtTraderLocal(r.timestamp);
                             } catch(e) {
-                                timeStr = r.timestamp.slice(11,16) || '';
+                                timeStr = String(r.timestamp).slice(11,16) || '';
                             }
                         }
                         const pairs = r.pairs_after || r.pairs_before || '?';
@@ -1059,22 +1094,46 @@
         
         initDashboard();
     
-        // Recovery Status - pure from /api/recovery
+        // Recovery Status - pure from /api/recovery (live buy blocks SSOT)
                 async function updateRecoveryStatus(posDataForRec = null) {
             try {
                 const res = await fetch('/api/recovery');
                 let data = {mode: 'normal', cooldown_pairs: [], last_update: ''};
                 if (res.ok) data = await res.json();
+                if (data.display_timezone) applyUiPrefs(data);
                 const modeEl = document.getElementById('recovery-mode');
                 const coolEl = document.getElementById('cooldown-pairs');
                 const lastEl = document.getElementById('last-recovery');
                 if (modeEl) modeEl.textContent = data.mode || 'normal';
-                if (coolEl) coolEl.textContent = (data.cooldown_pairs || []).join(', ') || 'None';
+                if (coolEl) {
+                    const details = data.cooldown_details || [];
+                    if (details.length) {
+                        // Show pair + short reason + hours left (hover has full)
+                        coolEl.textContent = details.map(d => {
+                            const hrs = (d.hours_remaining != null)
+                                ? `${Number(d.hours_remaining).toFixed(0)}h`
+                                : '';
+                            const why = (d.reason || '')
+                                .replace('post_sl_rebuy_block', 'post-SL')
+                                .replace('post_tp_rebuy_block', 'post-TP')
+                                .replace('rebuy_cooldown', 'cooldown');
+                            return hrs ? `${d.pair} (${why} ${hrs})` : `${d.pair} (${why})`;
+                        }).join(', ');
+                        coolEl.title = details.map(d =>
+                            `${d.pair}: ${d.reason || ''} · ${d.source || ''} · exp ${d.expires_at || ''}`
+                        ).join('\n');
+                    } else {
+                        const pairs = data.cooldown_pairs || [];
+                        coolEl.textContent = pairs.length ? pairs.join(', ') : 'None';
+                        coolEl.title = pairs.length
+                            ? 'Active auto-BUY blocks'
+                            : 'No active post-SL / post-TP / capital rebuy blocks';
+                    }
+                }
                 if (lastEl) {
                     if (data.last_update) {
                         try {
-                            const d = new Date(data.last_update);
-                            lastEl.textContent = d.toLocaleString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit'});
+                            lastEl.textContent = fmtTraderLocal(data.last_update);
                         } catch (e) {
                             lastEl.textContent = String(data.last_update).slice(0, 19);
                         }

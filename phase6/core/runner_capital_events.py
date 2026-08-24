@@ -273,26 +273,47 @@ def split_disposition_pairs_by_ledger(
     pairs_sold: List[str],
     window_hours: float = 48.0,
     jsonl_path: Path = TRADES_JSONL,
-) -> Tuple[List[str], List[str]]:
+) -> Tuple[List[str], List[str], List[str]]:
     """
-    Pairs with a recent ledger SELL tagged as exchange stop → shorter cooldown, no cash hold.
-    Remaining pairs keep manual liquidation policy (hold + longer cooldown).
+    Classify disposition pairs from recent ledger SELLs.
+
+    Returns (stop_pairs, tp_pairs, manual_pairs):
+      - stop: exchange SL / dust after SL → SL cooldown policy
+      - tp: live take_profit_* → post-TP cool-off only (no cash hold / no 48h manual)
+      - manual: true operator liquidations → manual hold + longer cooldown
     """
     if not pairs_sold:
-        return [], []
+        return [], [], []
     sold_set = set(pairs_sold)
     stop_pairs: set = set()
+    tp_pairs: set = set()
     for t in _load_recent_ledger_sells(window_hours, jsonl_path=jsonl_path):
         pair = t.get("pair")
         if pair not in sold_set:
             continue
-        reason = str(t.get("reason") or t.get("source") or "").lower()
-        if reason in STOP_EXCHANGE_REASONS or reason == "stop_loss_exchange":
+        reason = str(
+            t.get("reason") or t.get("exit_reason") or t.get("source") or ""
+        ).lower()
+        is_stop = (
+            reason in STOP_EXCHANGE_REASONS
+            or reason == "stop_loss_exchange"
+            or "stop_loss" in reason
+            or reason.startswith("dust_sweep_after_sl")
+            or "dust_sweep_after_sl" in reason
+        )
+        is_tp = (
+            reason in TP_EXIT_REASONS
+            or reason.startswith("take_profit")
+            or "take_profit" in reason
+        )
+        if is_stop:
             stop_pairs.add(pair)
-        elif "stop_loss_exchange" in reason:
-            stop_pairs.add(pair)
-    manual_pairs = [p for p in pairs_sold if p not in stop_pairs]
-    return sorted(stop_pairs), manual_pairs
+        elif is_tp:
+            tp_pairs.add(pair)
+    # Prefer stop over tp if both somehow present; manual = neither
+    tp_pairs -= stop_pairs
+    manual_pairs = [p for p in pairs_sold if p not in stop_pairs and p not in tp_pairs]
+    return sorted(stop_pairs), sorted(tp_pairs), manual_pairs
 
 
 def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[str, Any]) -> None:
@@ -302,14 +323,26 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
         pair_deltas = event.get("pair_deltas") or {}
         window = float(settings.get("stop_loss_ledger_lookback_hours", 48.0))
         ledger_path = Path(settings.get("ledger_jsonl_path") or TRADES_JSONL)
-        stop_pairs, manual_pairs = split_disposition_pairs_by_ledger(
+        stop_pairs, tp_pairs, manual_pairs = split_disposition_pairs_by_ledger(
             pairs_sold, window_hours=window, jsonl_path=ledger_path
         )
         event["pairs_exchange_stop"] = stop_pairs
+        event["pairs_take_profit"] = tp_pairs
         event["pairs_manual_intent"] = manual_pairs
 
         stop_hours = float(settings.get("stop_loss_exchange_block_rebuy_hours", 72.0))
         manual_hours = float(settings.get("manual_sell_block_rebuy_hours", 48.0))
+        # TP cool-off is ledger-driven (post_tp_block_rebuy_hours, default 24).
+        # Do NOT also stamp capital-controls 48/72h or park TP proceeds as cash hold.
+        tp_hours = 24.0
+        try:
+            from phase6.core.shadow_tp import load_exit_automation
+
+            tp_cfg = (load_exit_automation().get("take_profit") or {})
+            if tp_cfg.get("post_tp_block_rebuy_hours") is not None:
+                tp_hours = float(tp_cfg["post_tp_block_rebuy_hours"])
+        except Exception:
+            pass
         stop_hold = bool(settings.get("stop_loss_exchange_hold_cash", True))
         manual_hold = bool(settings.get("manual_sell_hold_cash", True))
 
@@ -334,7 +367,7 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
         if stop_hold and stop_pairs:
             for p in stop_pairs:
                 stop_hold_add += abs(float(pair_deltas.get(p, 0.0) or 0.0))
-            if stop_hold_add <= 0.0 and stop_pairs and not manual_pairs:
+            if stop_hold_add <= 0.0 and stop_pairs and not manual_pairs and not tp_pairs:
                 stop_hold_add = float(event.get("cash_delta_usd") or event.get("sold_usd") or 0.0)
             elif stop_hold_add <= 0.0 and stop_pairs:
                 total_sold = sum(abs(float(pair_deltas.get(p, 0.0) or 0.0)) for p in pairs_sold)
@@ -344,6 +377,12 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
                     stop_hold_add = cash_delta * (stop_sold / total_sold)
             hold_add += stop_hold_add
             event["cash_hold_added_exchange_stop_usd"] = round(stop_hold_add, 2)
+
+        # TP proceeds are free to redeploy after the short post-TP block — never cash-hold.
+        if tp_pairs:
+            tp_sold = sum(abs(float(pair_deltas.get(p, 0.0) or 0.0)) for p in tp_pairs)
+            event["cash_hold_skipped_take_profit_usd"] = round(tp_sold, 2)
+            event["pairs_take_profit_no_cash_hold"] = list(tp_pairs)
 
         if not stop_hold and stop_pairs:
             for p in stop_pairs:
@@ -371,17 +410,24 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
             _register_manual_sell_cooldown(runner, stop_pairs, stop_hours, state_path)
         if manual_pairs:
             _register_manual_sell_cooldown(runner, manual_pairs, manual_hours, state_path)
+        # TP: do not write capital-controls cooldown — load_buy_block_status uses ledger + 24h.
+        # (Registering here used to stack 48h manual on top of 24h post-TP.)
 
         event["rebuy_cooldown_hours_stop_exchange"] = stop_hours if stop_pairs else None
         event["rebuy_cooldown_hours_manual"] = manual_hours if manual_pairs else None
+        event["rebuy_cooldown_hours_take_profit"] = tp_hours if tp_pairs else None
         event["rebuy_blocked_pairs"] = list(pairs_sold)
         event["stop_loss_exchange_hold_cash"] = stop_hold
-        if stop_pairs and manual_pairs:
+        if tp_pairs and not stop_pairs and not manual_pairs:
+            event["action"] = "take_profit_no_cash_hold"
+        elif stop_pairs and manual_pairs:
             event["action"] = (
                 "split_stop_hold_and_manual"
                 if stop_hold
                 else "split_stop_exchange_vs_manual"
             )
+        elif stop_pairs and tp_pairs:
+            event["action"] = "split_stop_and_take_profit"
         elif stop_pairs:
             event["action"] = (
                 "hold_cash_block_rebuy_stop_exchange"
@@ -391,7 +437,10 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
         else:
             event["action"] = "hold_cash_block_rebuy"
         if settings.get("manual_sell_cancel_stops") and pairs_sold:
-            event["stops_cancelled"] = _cancel_stops_for_pairs(runner, pairs_sold)
+            # Cancel stops for manual only — TP/SL already exited
+            cancel_targets = list(manual_pairs) if manual_pairs else []
+            if cancel_targets:
+                event["stops_cancelled"] = _cancel_stops_for_pairs(runner, cancel_targets)
     elif et == "manual_crypto_swap":
         event["action"] = "acknowledge_swap"
         pairs_sold = event.get("pairs_sold") or []
@@ -637,6 +686,32 @@ def load_buy_block_status(
             "hours_remaining": round(left, 2),
             "block_hours": bh,
         }
+
+    # Operator waivers (e.g. clear bug-driven blocks so pairs can re-enter)
+    # data/state/buy_block_waivers.json:
+    #   {"pairs": {"UNI-USD": {"note": "...", "expires_ts": null}}}
+    try:
+        wpath = STATE_DIR / "buy_block_waivers.json"
+        if wpath.exists():
+            wraw = json.loads(wpath.read_text())
+            wpairs = (wraw.get("pairs") or {}) if isinstance(wraw, dict) else {}
+            for pair, meta in (wpairs.items() if isinstance(wpairs, dict) else []):
+                p = str(pair)
+                if p not in out:
+                    continue
+                exp_w = None
+                if isinstance(meta, dict) and meta.get("expires_ts") is not None:
+                    try:
+                        exp_w = float(meta["expires_ts"])
+                    except (TypeError, ValueError):
+                        exp_w = None
+                if exp_w is not None and exp_w <= now:
+                    continue  # waiver expired
+                # Drop block while waiver active
+                out.pop(p, None)
+    except Exception:
+        pass
+
     return out
 
 

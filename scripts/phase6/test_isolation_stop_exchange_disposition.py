@@ -30,10 +30,11 @@ def test_split_and_apply_stop_exchange():
             )
             + "\n"
         )
-        stop, manual = split_disposition_pairs_by_ledger(
+        stop, tp, manual = split_disposition_pairs_by_ledger(
             ["AVAX-USD", "OP-USD"], window_hours=48, jsonl_path=trades
         )
         assert stop == ["AVAX-USD"], stop
+        assert tp == [], tp
         assert manual == ["OP-USD"], manual
 
         state = Path(td) / "state.json"
@@ -125,7 +126,63 @@ def test_stop_exchange_hold_cash_true_72h():
         print("PASS stop_exchange hold_cash=true 72h")
 
 
+def test_take_profit_not_manual_cash_hold():
+    """Live TP must not park cash hold or stamp 48h capital cooldown."""
+    with tempfile.TemporaryDirectory() as td:
+        trades = Path(td) / "trades.jsonl"
+        ts = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        trades.write_text(
+            json.dumps(
+                {
+                    "pair": "LINK-USD",
+                    "side": "SELL",
+                    "reason": "take_profit_fixed_tp",
+                    "timestamp": ts,
+                }
+            )
+            + "\n"
+        )
+        stop, tp, manual = split_disposition_pairs_by_ledger(
+            ["LINK-USD"], window_hours=48, jsonl_path=trades
+        )
+        assert stop == []
+        assert tp == ["LINK-USD"]
+        assert manual == []
+
+        state = Path(td) / "state.json"
+        state.write_text("{}")
+        runner = MagicMock()
+        runner.state_file = str(state)
+        runner._manual_liquidation_cash_hold_usd = 0.0
+        runner._manual_sell_cooldown = {}
+        runner.stop_loss_coordinator = MagicMock(client=None)
+
+        settings = {
+            "manual_sell_hold_cash": True,
+            "manual_sell_block_rebuy_hours": 48.0,
+            "stop_loss_exchange_hold_cash": True,
+            "stop_loss_exchange_block_rebuy_hours": 72.0,
+            "stop_loss_ledger_lookback_hours": 48.0,
+            "manual_sell_cancel_stops": False,
+            "ledger_jsonl_path": str(trades),
+        }
+        event = {
+            "event_type": "manual_liquidation_to_cash",
+            "pairs_sold": ["LINK-USD"],
+            "pair_deltas": {"LINK-USD": -1299.0},
+            "cash_delta_usd": 1286.0,
+        }
+        apply_manual_disposition(runner, event, settings)
+        assert event["action"] == "take_profit_no_cash_hold"
+        assert getattr(runner, "_manual_liquidation_cash_hold_usd", 0) == 0.0
+        data = json.loads(state.read_text())
+        cd = data.get("manual_sell_cooldown") or {}
+        assert "LINK-USD" not in cd, cd
+        print("PASS take_profit no cash hold / no capital cooldown")
+
+
 if __name__ == "__main__":
     test_split_and_apply_stop_exchange()
     test_stop_exchange_hold_cash_true_72h()
+    test_take_profit_not_manual_cash_hold()
     print("ALL PASS")

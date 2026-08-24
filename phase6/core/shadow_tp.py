@@ -350,6 +350,119 @@ def evaluate_signals(
     return signals, peak_r
 
 
+def sanitize_peak_r_for_lots(
+    marks: List[PositionMark],
+    peak_r: Optional[Dict[str, float]] = None,
+    peak_lot: Optional[Dict[str, Any]] = None,
+    *,
+    tp_cfg: Optional[Dict[str, Any]] = None,
+    entry_rel_tol: float = 0.005,
+    orphan_drop: bool = True,
+) -> Tuple[Dict[str, float], Dict[str, Any], List[Dict[str, Any]]]:
+    """Bind trail peaks to the current lot so a new buy never inherits old peak_r.
+
+    Incident 2026-08-23 UNI: peak_r=0.1123 from a prior bag/promote seed survived a
+    fresh rebalance lot (entry ~$4.57, mark_r~-0.3%). Gap gate required peak-r > 0.15
+    so UNI's ~0.115 gap slipped through and live trail market-sold within ~90s at a loss.
+
+    Rules (ordered):
+      1. Drop peaks for pairs not currently marked (flat book / full exit).
+      2. If lot entry_px moved by more than entry_rel_tol vs peak_lot → reset peak := r.
+      3. First sighting of a pair (no peak_lot row) with a leftover peak_r → treat as new
+         lot; reset peak := r (do not inherit unbound orphan peaks).
+      4. Same lot (entry within tol): keep peak_r so real trail pullbacks still fire.
+    """
+    # tp_cfg reserved for future trail-aware knobs; lot identity is the SSOT.
+    _ = tp_cfg
+
+    peak_r = dict(peak_r or {})
+    peak_lot = dict(peak_lot or {})
+    events: List[Dict[str, Any]] = []
+    held = {m.pair for m in marks}
+
+    if orphan_drop:
+        for pair in list(peak_r.keys()):
+            if pair not in held:
+                old = peak_r.pop(pair, None)
+                peak_lot.pop(pair, None)
+                events.append(
+                    {
+                        "pair": pair,
+                        "action": "drop_orphan_peak",
+                        "old_peak": old,
+                        "reason": "pair_not_held",
+                    }
+                )
+                logger.info(
+                    "[SHADOW-TP] drop orphan peak_r %s (was %.4f) — pair not held",
+                    pair,
+                    float(old or 0),
+                )
+
+    for m in marks:
+        if m.r is None or m.entry_px is None or m.entry_px <= 0:
+            continue
+        pair = m.pair
+        r_f = float(m.r)
+        entry_f = float(m.entry_px)
+        qty_f = float(m.qty or 0)
+        lot = peak_lot.get(pair) if isinstance(peak_lot.get(pair), dict) else None
+        prev_peak = peak_r.get(pair)
+        reset_reason = None
+
+        if lot is None:
+            # Unbound peak from a prior episode / promote seed without lot meta.
+            if prev_peak is not None and float(prev_peak) - r_f > 1e-9:
+                reset_reason = "unbound_peak_new_lot"
+        else:
+            try:
+                lot_entry = float(lot.get("entry_px") or 0)
+            except (TypeError, ValueError):
+                lot_entry = 0.0
+            if lot_entry > 0:
+                rel = abs(entry_f - lot_entry) / lot_entry
+                if rel > entry_rel_tol:
+                    reset_reason = f"entry_changed rel={rel:.4f}"
+            else:
+                reset_reason = "lot_entry_missing"
+
+        if reset_reason is not None:
+            old = float(prev_peak) if prev_peak is not None else None
+            peak_r[pair] = r_f
+            events.append(
+                {
+                    "pair": pair,
+                    "action": "reset_peak",
+                    "old_peak": old,
+                    "new_peak": r_f,
+                    "entry_px": entry_f,
+                    "mark_r": r_f,
+                    "reason": reset_reason,
+                }
+            )
+            logger.info(
+                "[SHADOW-TP] reset peak_r %s %s -> %.4f (%s entry=%.6f)",
+                pair,
+                f"{old:.4f}" if old is not None else "None",
+                r_f,
+                reset_reason,
+                entry_f,
+            )
+
+        # Always refresh lot binding to current mark basis after sanitize.
+        peak_lot[pair] = {
+            "entry_px": entry_f,
+            "qty": qty_f,
+            "entry_source": m.entry_source,
+            "bound_at": _iso(),
+        }
+        # Ensure peak key exists even when no prior
+        if pair not in peak_r:
+            peak_r[pair] = r_f
+
+    return peak_r, peak_lot, events
+
+
 def is_tp_excluded_pair(pair: str) -> bool:
     """Preserve ballast / gold never get crypto TP exits."""
     p = (pair or "").strip().upper()
@@ -739,34 +852,24 @@ def run_shadow_tp_cycle(
         result["mode"] = "shadow"
 
     marks = marks_from_holdings(held_usd, prices, positions=positions)
-    # Drop peaks from lying lifetime cost basis (e.g. BTC peak_r~0.50 while true r~0.03)
+    # Bind peaks to current lots. Stale peak_r from prior bags / promote seeds must
+    # never arm trail on a fresh buy (UNI 2026-08-23 incident).
     peak_in = dict(result["peak_r"] or {})
-    peak_sanitized = False
-    mark_by = {m.pair: m for m in marks}
-    for pair, pk in list(peak_in.items()):
-        m = mark_by.get(pair)
-        if not m or m.r is None:
-            continue
-        try:
-            pk_f = float(pk)
-            r_f = float(m.r)
-        except (TypeError, ValueError):
-            continue
-        if pk_f - r_f > 0.15 and r_f < 0.08:
-            logger.info(
-                "[SHADOW-TP] reset peak_r %s %.4f -> %.4f (stale peak vs lot basis)",
-                pair,
-                pk_f,
-                r_f,
-            )
-            peak_in[pair] = r_f
-            peak_sanitized = True
-    if peak_sanitized:
-        # Prior would-fire totals / calendar are not trustworthy after basis repair
-        result["would_fire_count_total"] = 0
-        result["first_shadow_at"] = _iso()
-        result["peak_r_reset_reason"] = "entry_basis_repair"
-        result["would_fire_reset_at"] = _iso()
+    peak_lot_in = dict(prior.get("peak_lot") or {})
+    peak_in, peak_lot_out, peak_events = sanitize_peak_r_for_lots(
+        marks,
+        peak_in,
+        peak_lot_in,
+        tp_cfg=tp,
+    )
+    if peak_events:
+        result["peak_sanitize_events"] = peak_events
+        # Only hard-reset would-fire calendar when we repaired a phantom peak on a held pair
+        if any(e.get("action") == "reset_peak" for e in peak_events):
+            result["would_fire_count_total"] = 0
+            result["first_shadow_at"] = _iso()
+            result["peak_r_reset_reason"] = "lot_bind_or_phantom_armed"
+            result["would_fire_reset_at"] = _iso()
 
     signals, peak_r = evaluate_signals(marks, tp, peak_r=peak_in)
     # Never surface PAXG/preserve as actionable
@@ -795,12 +898,21 @@ def run_shadow_tp_cycle(
                     )
                 reseeds[m.pair] = new
                 peak_r[m.pair] = new
+                # Bind lot meta to post-seed peak so next cycle doesn't treat as unbound
+                if m.entry_px and m.entry_px > 0:
+                    peak_lot_out[m.pair] = {
+                        "entry_px": float(m.entry_px),
+                        "qty": float(m.qty or 0),
+                        "entry_source": m.entry_source,
+                        "bound_at": _iso(),
+                        "seeded_on_promote": promo,
+                    }
             # Drop stale peaks for pairs no longer held
             held_pairs = {m.pair for m in marks}
             for k in list(peak_r.keys()):
-                if k not in held_pairs and k not in reseeds:
-                    # keep small history but zero out huge orphans later
-                    pass
+                if k not in held_pairs:
+                    peak_r.pop(k, None)
+                    peak_lot_out.pop(k, None)
             result["live_peak_seeded_for"] = promo
             result["live_peak_seeded_at"] = _iso()
             # Re-evaluate with honest peaks (no phantom trail fire)
@@ -812,6 +924,7 @@ def run_shadow_tp_cycle(
             result["live_peak_seeded_at"] = prior.get("live_peak_seeded_at")
 
     result["peak_r"] = peak_r
+    result["peak_lot"] = peak_lot_out
     result["marks"] = [asdict(m) for m in marks]
     result["signals"] = [asdict(s) for s in signals]
     result["n_signals"] = len(signals)
@@ -833,6 +946,19 @@ def run_shadow_tp_cycle(
                     positions=positions,
                     dry_run=bool(dry_run_live),
                 )
+                # Clear peak/lot after real exits so a rebuy starts clean (never on dry_run)
+                if not dry_run_live:
+                    for ex in result["live_exits"] or []:
+                        if not ex.get("success") or ex.get("skipped") or ex.get("dry_run"):
+                            continue
+                        p = ex.get("pair")
+                        if not p:
+                            continue
+                        peak_r.pop(p, None)
+                        peak_lot_out.pop(p, None)
+                        logger.info("[LIVE-TP] cleared peak_r/peak_lot for %s after exit", p)
+                    result["peak_r"] = peak_r
+                    result["peak_lot"] = peak_lot_out
             except Exception as le:
                 logger.error("[LIVE-TP] execute failed: %s", le)
                 result["live_exit_error"] = str(le)[:200]

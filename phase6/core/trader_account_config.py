@@ -25,6 +25,12 @@ DEFAULT_CAPITAL_CONTROLS: Dict[str, Any] = {
     "ui_show_hold_banner": True,
 }
 
+# UI / display prefs — per trader (Coinbase stores fills in UTC; dash shows local).
+DEFAULT_UI_PREFS: Dict[str, Any] = {
+    "display_timezone": "America/Los_Angeles",
+    "locale": "en-US",
+}
+
 
 def _deep_merge(base: dict, override: dict) -> dict:
     out = deepcopy(base)
@@ -129,6 +135,39 @@ def capital_controls_settings(account_id: Optional[str] = None) -> Dict[str, Any
 
 def capital_controls_for_runner(runner: Any = None) -> Dict[str, Any]:
     return capital_controls_settings(resolve_runner_account_id(runner))
+
+
+def ui_display_settings(account_id: Optional[str] = None) -> Dict[str, Any]:
+    """Per-trader display prefs (timezone for timestamps, locale).
+
+    Storage/API timestamps stay UTC (Coinbase standard). Dashboards must format
+    with display_timezone so a UTC browser/host never shows wall-clock UTC as
+    if it were the trader's afternoon.
+    """
+    aid = (account_id or "default").strip() or "default"
+    cfg = resolve_account_config(aid)
+    raw = dict(cfg.get("ui") or {})
+    out = dict(DEFAULT_UI_PREFS)
+    tz = raw.get("display_timezone") or out["display_timezone"]
+    tz = str(tz).strip() or out["display_timezone"]
+    # Light validation — fall back rather than throw on junk
+    try:
+        from zoneinfo import ZoneInfo
+
+        ZoneInfo(tz)
+        out["display_timezone"] = tz
+    except Exception:
+        logger.warning("invalid display_timezone %r for %s — using default", tz, aid)
+        out["display_timezone"] = DEFAULT_UI_PREFS["display_timezone"]
+    loc = raw.get("locale") or out["locale"]
+    out["locale"] = str(loc).strip() or DEFAULT_UI_PREFS["locale"]
+    out["account_id"] = aid
+    out["source"] = "trader_accounts.ui"
+    return out
+
+
+def ui_display_for_runner(runner: Any = None) -> Dict[str, Any]:
+    return ui_display_settings(resolve_runner_account_id(runner))
 
 
 def live_usdc_park_settings(account_id: str) -> Dict[str, Any]:

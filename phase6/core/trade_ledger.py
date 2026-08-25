@@ -193,6 +193,17 @@ class TradeLedger:
             "sl_attached": result.get("sl_attached"),
             "sl_truth_source": result.get("sl_truth_source"),
         }
+        # RSI-primary entry tags (optional; set by filtered TradePlan / executor)
+        for k in (
+            "entry_drivers",
+            "sentiment_only",
+            "sentiment_led",
+            "entry_rsi",
+            "entry_sentiment",
+            "reason",
+        ):
+            if result.get(k) is not None:
+                trade_record[k] = result.get(k)
         ex = exchange if str(mode).lower() == "live" and exchange is not None else None
         self.log_trade(trade_record, exchange=ex)
 

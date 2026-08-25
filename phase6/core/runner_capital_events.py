@@ -712,7 +712,124 @@ def load_buy_block_status(
     except Exception:
         pass
 
+    # EXIT-H4: structure-aware early release of post_tp blocks only
+    try:
+        out = _apply_post_tp_structure_early_release(out, now=now)
+    except Exception:
+        pass
+
     return out
+
+
+def _post_tp_structure_cfg() -> Dict[str, Any]:
+    """Knobs from exit_automation.take_profit (fail-closed to flat 24h)."""
+    defaults = {
+        "structure_aware": True,
+        "early_release_phases": [1, 2],  # ignition, trend
+        "min_hours_floor": 4.0,  # never release before this
+        "require_structure_ok": True,
+    }
+    try:
+        from phase6.core.shadow_tp import load_exit_automation
+
+        tp = (load_exit_automation().get("take_profit") or {})
+        defaults["structure_aware"] = bool(
+            tp.get("post_tp_structure_aware", defaults["structure_aware"])
+        )
+        if tp.get("post_tp_early_release_phases") is not None:
+            defaults["early_release_phases"] = [
+                int(x) for x in (tp.get("post_tp_early_release_phases") or [])
+            ]
+        if tp.get("post_tp_min_hours_floor") is not None:
+            defaults["min_hours_floor"] = float(tp["post_tp_min_hours_floor"])
+        defaults["require_structure_ok"] = bool(
+            tp.get("post_tp_require_structure_ok", defaults["require_structure_ok"])
+        )
+    except Exception:
+        pass
+    return defaults
+
+
+def _apply_post_tp_structure_early_release(
+    blocks: Dict[str, Dict[str, Any]],
+    *,
+    now: float,
+) -> Dict[str, Dict[str, Any]]:
+    """
+    If a pair is post_tp blocked but currently in early run phase (ignition/trend)
+    with structure_ok, drop the block after min_hours_floor so dry powder can
+    fish real early opportunities (not FOMO scraps).
+    """
+    cfg = _post_tp_structure_cfg()
+    if not cfg.get("structure_aware", True):
+        return blocks
+    floor_h = float(cfg.get("min_hours_floor") or 4.0)
+    allow_phases = {int(x) for x in (cfg.get("early_release_phases") or [1, 2])}
+    require_struct = bool(cfg.get("require_structure_ok", True))
+
+    try:
+        from phase6.core.run_phase_deploy import (
+            PHASE_IGNITION,
+            PHASE_TREND,
+            classify_run_phase,
+            load_run_phase_config,
+            fetch_daily_candles_public,
+        )
+        from phase6.core.run_lifecycle import classify_structure
+    except Exception:
+        return blocks
+
+    # Map phase names if ints missing
+    if not allow_phases:
+        allow_phases = {PHASE_IGNITION, PHASE_TREND}
+
+    phase_cfg = load_run_phase_config(None)
+    drop: List[str] = []
+    for pair, meta in list(blocks.items()):
+        if not isinstance(meta, dict):
+            continue
+        if str(meta.get("reason") or "") != "post_tp_rebuy_block":
+            continue
+        # elapsed since block started = block_hours - hours_remaining
+        try:
+            bh = float(meta.get("block_hours") or 24.0)
+            left = float(meta.get("hours_remaining") or 0.0)
+            elapsed = max(0.0, bh - left)
+        except (TypeError, ValueError):
+            continue
+        if elapsed < floor_h:
+            continue
+        try:
+            candles = fetch_daily_candles_public(pair, limit=40) or []
+            if len(candles) < 15:
+                continue
+            snap = classify_run_phase(pair, candles, phase_cfg)
+            phase = int(getattr(snap, "phase", 0) or 0)
+            if phase not in allow_phases:
+                continue
+            struct_ok = True
+            if require_struct:
+                try:
+                    sc = classify_structure(candles, pair=pair)
+                    struct_ok = bool(getattr(sc, "structure_ok_for_entry", False))
+                except Exception:
+                    # fallback: phase alone
+                    struct_ok = phase in (PHASE_IGNITION, PHASE_TREND)
+            if require_struct and not struct_ok:
+                continue
+            drop.append(pair)
+            logger.info(
+                "[POST-TP] structure early-release %s phase=%s elapsed_h=%.1f",
+                pair,
+                phase,
+                elapsed,
+            )
+        except Exception as e:
+            logger.debug("[POST-TP] structure check fail %s: %s", pair, e)
+            continue
+    for p in drop:
+        blocks.pop(p, None)
+    return blocks
 
 
 def effective_allocator_cash_usd(runner: Any) -> float:

@@ -91,7 +91,7 @@
       "enabled": true,
       "never_tighter_than_base_when_live_tp": true,
       "min_sl_frac_of_trail_arm": 0.85,
-      "note": "When take_profit.mode=live, floor adaptive SL so it is not tighter than base and not much tighter than trail arm. One pure rule — no ATR/pair adapters. Isolation: scripts/phase6/test_isolation_sl_tp_symmetry.py. Docs: docs/research/SL_TP_SYMMETRY_FLOOR.md"
+      "note": "When take_profit.mode=live, floor adaptive SL so it is not tighter than base and not much tighter than trail arm. One pure rule \u2014 no ATR/pair adapters. Isolation: scripts/phase6/test_isolation_sl_tp_symmetry.py. Docs: docs/research/SL_TP_SYMMETRY_FLOOR.md"
     }
   },
   "preserve_mode": {
@@ -171,5 +171,125 @@
     "x_min_usable_posts_total": 1,
     "free_max_age_hours": 18,
     "note": "Phase3 temp: when X empty/spend-cap, use free hybrid (funding+RSS+F&G). primary=x|free_hybrid|x_with_free_fallback|off"
+  },
+  "rsi_primary_deploy": {
+    "enabled": true,
+    "note": "RSI=structure; sentiment=timing reinforce. P0 hard gates live. Ignition propose + dual_peak live under run_lifecycle. Fade stays shadow (dual_peak covers pre-dump).",
+    "rsi_oversold_max": 35.0,
+    "rsi_structure_max": 40.0,
+    "rsi_deadband_low": 40.0,
+    "rsi_deadband_high": 60.0,
+    "rsi_continuation_max": 68.0,
+    "mom_continuation_pct": 1.5,
+    "sentiment_reinforce_min": 0.2,
+    "sentiment_only_size_frac": 0.35,
+    "max_pair_weight": 0.3,
+    "max_pair_weight_recovery": 0.35,
+    "max_single_share_of_free_cash": 0.5,
+    "enforce_rebalance_cap": true,
+    "min_move_usd": 50.0,
+    "sentiment_fade": {
+      "mode": "shadow",
+      "fade_delta": 0.4,
+      "fade_floor": 0.15,
+      "trim_fraction": 0.5,
+      "min_position_usd": 25.0,
+      "tp_arm_pct": 0.04,
+      "notify_telegram": true,
+      "notify_dedupe_hours": 6,
+      "time_stop_hours": 0
+    }
+  },
+  "run_phase_deploy": {
+    "enabled": true,
+    "note": "P0: block NEW buys in extension/exhaustion/distribution. Spec: docs/research/RUN_PHASE_DEPLOY_GATE_2026-08-24.md",
+    "ext_from_low_10d": 0.15,
+    "ext_from_low_20d": 0.25,
+    "ext_rsi": 70.0,
+    "ext_days_since_ignition": 8,
+    "exhaust_rsi": 80.0,
+    "exhaust_from_low_10d": 0.32,
+    "climax_vol_ratio": 1.8,
+    "dist_off_peak_pct": 0.03,
+    "dist_peak_lookback": 5,
+    "dist_min_from_low_10d": 0.15,
+    "ignition_vol_ratio": 1.5,
+    "block_new_phase_ge": 3,
+    "phase_size_frac": {
+      "0": 1.0,
+      "1": 1.0,
+      "2": 1.0,
+      "3": 0.0,
+      "4": 0.0,
+      "5": 0.0
+    },
+    "allow_add_phase_ge": false,
+    "add_phase_ge_size_frac": 0.0,
+    "min_holding_usd_for_add": 25.0,
+    "min_move_usd": 50.0,
+    "fail_open_on_missing_candles": false,
+    "ext_rsi_min_from_low_10d": 0.12,
+    "exhaust_min_from_low_10d": 0.1
+  },
+  "run_lifecycle": {
+    "note": "LIVE deploy: fish early (propose), hold while metrics+sent agree, dual-peak exit before dump. Spec: docs/research/RUN_LIFECYCLE_P1_P2_2026-08-24.md",
+    "structure": {
+      "sma_fast": 20,
+      "sma_slow": 50,
+      "rsi_band_low": 45.0,
+      "rsi_band_high": 68.0,
+      "fib_zone_low": 0.382,
+      "fib_zone_high": 0.618,
+      "fib_extension_late": 1.0,
+      "min_swing_pct": 0.06
+    },
+    "ignition_scout": {
+      "enabled": true,
+      "mode": "propose",
+      "min_score": 0.55,
+      "max_proposals": 4,
+      "deploy_frac": 0.18,
+      "max_open_seats": 4,
+      "proposal_usd_cap": 500.0,
+      "proposal_usd_floor": 100.0,
+      "require_structure_ok": true,
+      "allow_phases": [
+        1,
+        2
+      ],
+      "sentiment_boost_min": 0.05,
+      "sentiment_boost_weight": 0.12,
+      "notify_telegram": true,
+      "ballast_pairs": [
+        "PAXG-USD",
+        "PAXG-USDC",
+        "USDC-USD"
+      ]
+    },
+    "dual_peak_exit": {
+      "enabled": true,
+      "mode": "live",
+      "mfe_stall_bars": 2,
+      "failed_high_off_peak": 0.03,
+      "min_peak_return": 0.02,
+      "sent_fade_delta": 0.3,
+      "sent_fade_floor": 0.2,
+      "climax_vol_ratio": 1.8,
+      "extension_partial_frac": 0.33,
+      "dual_trim_frac": 0.5,
+      "min_position_usd": 25.0,
+      "tp_arm_pct": 0.04,
+      "notify_telegram": true,
+      "notify_dedupe_hours": 6.0,
+      "hold_while_metrics_and_sent_agree": true,
+      "extension_partial_live": true,
+      "extension_partial_shadow": true,
+      "live_min_trim_usd": 40.0,
+      "live_max_trims_per_tick": 2,
+      "ballast_pairs": [
+        "PAXG-USD",
+        "PAXG-USDC"
+      ]
+    }
   }
 }

@@ -1,3 +1,58 @@
+## ANALYST-REGIME-BULL-KNOBS-20260824 — QUEUED (strategy)
+
+**Type:** test  
+**Date:** 2026-08-24  
+**Role:** Crypto-Analyst  
+**Status:** **RUNNING** — auto-pickup trial `ANALYST-REGIME-BULL-KNOBS-20260824-TRIAL` at 2026-08-24T17:01:00  
+**auto_pickup:** true  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** regime_bull_knobs  
+**duration_days:** 3  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-REGIME-BULL-KNOBS-20260824.md`  
+**Strategy plan:** `PLAN-BULL-KNOBS-002` · workstream `WS-REGIME-KNOBS`  
+**Regime focus:** bull  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**Protocol:** `docs/testing/trials/PLAN-BULL-KNOBS-002_PROTOCOL.md`  
+**Launch mode:** `live_regime`  
+**emit_only_when_regime:** `bull`
+
+### Goal
+Bull regime: util/cap/RSI vs leaving edge on table (re-test)
+
+### Hypothesis
+Bull live knobs under-deploy or over-trade vs scorecard winner
+
+### Success metric
+Beat live bull + USDC hurdle on bull windows; DD bound
+
+### Success criteria (frozen before run)
+```json
+{
+  "primary_window": "bull_windows",
+  "min_n_trades": 15,
+  "must_beat_baseline_ret_pp": 0.0,
+  "must_beat_baseline_dd_pp": 0.0,
+  "require_both_ret_and_dd": true,
+  "usdc_hurdle": true,
+  "sparse_is": "inconclusive_not_promote",
+  "live_promote_allowed": false,
+  "shadow_ok_if": "primary_pass_and_n_ok",
+  "cr_accept_only_if": "beats live bull + USDC on primary; DD bound; N>=15"
+}
+```
+
+### Non-goals
+- No live trading config / regime policy writes without Brad + promotion gates
+- Real data only
+- No promote on sparse N or bags-only edge
+- Close only via `trial_cycle.py decide` with follow_on + decision packet
+
+### Queue
+Emitted by `phase6/research/analyst_test_strategy.py` → pickup via `master_test_pickup.py`.
+
+---
+
 ## P6-SL-TP-SYMMETRY-FLOOR-20260823 — DONE
 
 **Type:** exit / risk threshold (adaptive SL vs live trail TP)  
@@ -11061,6 +11116,186 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260824`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+## SOFT-DOWN SIGNED RESIDUAL — 2026-08-24 (Brad)
+
+**Problem:** After transition→deploy, downside residual (−10…−8) would inherit upside $75 deploy.
+
+**Fix:** Signed residual.
+| BTC 30d | Coarse regime | Live |
+|---------|---------------|------|
+| > +flat … < bull | `transition` | deploy **$75** |
+| bear < r < −flat | **`soft_down`** | de-risk **$35**, tighter gates, no pyramid |
+| ≤ bear | `bear` | park $0 |
+
+Detector: `classify_regime_layer` coarse=`soft_down`. Resolve safety: `transition`+negative ret → soft_down.
+ISO: regime_cash_policy + boundary_layers PASS.
+
+## TRANSITION DEPLOY THAW — 2026-08-24 (Brad)
+
+**Product call:** Flat and bull already allow trades. Transition residual (+8…+15 BTC/30d) is **not** special enough to force park/$0.
+
+| Before | After |
+|--------|--------|
+| transition → `usdc_park`, allow_new_buys=false, knob cap=$0 | transition → **deploy**, allow_new_buys=**true**, cap=**$75** rebalance (not rotation) |
+| Scorecard preferred usdc_hold | Operator override; USDC may still win offline ann — accepted |
+
+**Still park:** bear, unknown.
+
+**Still bind on transition buys:** regime entry RSI/sent, RSI-primary, run-phase, dual-peak exits, pair caps.
+
+**Files:** `config/regime_cash_policy.json`, `config/regime_knob_map.json`  
+**ISO:** `phase6/core/test_isolation_regime_cash_policy.py` (+ `test_transition_allows_gated_deploy`)
+
+**Live now:** detector is **bull** (~+24%) so this thaw is latent until next residual band.
+
+
+## EXIT HARDENING BACKLOG — 2026-08-24 (Brad go)
+
+Valid exit-stack follow-ups. H1 done first; H2–H5 progressed 2026-08-24.
+
+| ID | Task | Status |
+|----|------|--------|
+| **EXIT-H1** | SL reattach after lifecycle partial sell | **DONE** — `reattach_sl_after_lifecycle_trim` in `run_lifecycle.py` |
+| **EXIT-H2** | Optional exchange TP attach-on-buy | **WIRED default OFF** — `order_executor` uses `effective_tp_pct_for_buy`; flip `exit_automation.take_profit.live_attach_on_buy=true` only if you want resting exchange TP *in addition* to software trail (risk of double-path). Software market TP remains primary. |
+| **EXIT-H3** | Hard exit auto (drop operator-approve) | **READY flip** — path verified: `operator_approve=false` + `live_apply=true` + `shadow_only=false` merges SELLs. **Still operator loop by default** (no silent auto). |
+| **EXIT-H4** | Post-TP rebuy cool-off structure-aware | **LIVE** — after 4h floor, drop `post_tp_rebuy_block` if phase ignition/trend + structure_ok. Knobs in `exit_automation.take_profit`. |
+| **EXIT-H5** | Position qty SSOT on `phase6_live_state` | **LIVE** — `phase6/core/position_qty.py`; writers emit amount/qty/quantity; live state backfilled. |
+
+Isolation: `scripts/phase6/test_isolation_exit_hardening_h2_h5.py` ALL PASSED.
+
+## RUN LIFECYCLE LIVE DEPLOY — 2026-08-24
+
+**Brad go:** fish early / hold while metrics+sent agree / jump before dump.
+
+| Piece | Setting |
+|-------|---------|
+| ignition_scout.mode | **propose** |
+| deploy_frac | **0.18** (~15–20% seats) |
+| max_open_seats | **4** |
+| dual_peak_exit.mode | **live** |
+| hold_while_metrics_and_sent_agree | **true** |
+| extension_partial_live | **true** (33% when phase≥ext) |
+| sentiment_fade | shadow (dual_peak owns live pre-dump) |
+| P0 run_phase + rsi_primary | still hard-bind |
+
+**Paths:** `phase6/core/run_lifecycle.py` · rebalance proposes · `monitor_reentry_sl_tp` live trims  
+**Verify:** isolation P0/P1/P2 PASSED · ignition ticket > rebalance_cap · dry_run exits empty (no dual signal now)
+
+---
+
+## RUN LIFECYCLE 12MO CF + PnL — 2026-08-24
+
+**Window:** 2025-08-24 → 2026-08-24 (366d) · $10k start · 7 pairs OHLCV
+**Script:** `scripts/phase6/backtest_run_lifecycle_12mo_cf.py`
+**Report:** `data/state/run_lifecycle_12mo_cf_report.json`
+
+| Arm | PnL$ | Ret% | MaxDD% | Sharpe |
+|-----|------|------|--------|--------|
+| lifecycle_deployed | **+$1,657** | **+16.6%** | **-10.9%** | **1.08** |
+| lifecycle_conservative | +$277 | +2.8% | -2.0% | 0.95 |
+| chase_fomo | -$1,869 | -18.7% | -37.5% | -0.59 |
+| btc_hodl | -$3,052 | -30.5% | -52.9% | -0.61 |
+| eq_basket_hodl | -$5,275 | -52.8% | -68.6% | -0.98 |
+
+Note: no historical X sentiment (momentum proxy). Structure CF not live guarantee.
+
+---
+
+## RUN LIFECYCLE P1+P2 (ignition scout + dual-peak) — 2026-08-24
+
+**Status:** SHADOW live (monitor + rebalance board). No auto sells; scout mode=`shadow` (set `propose` to append capped BUYs).
+**Spec:** `docs/research/RUN_LIFECYCLE_P1_P2_2026-08-24.md`
+**Module:** `phase6/core/run_lifecycle.py`
+**Config:** `run_lifecycle` in trading_config_phase6.json
+
+### P1 Ignition scout
+- RSI paired with SMA20/50 + Fib 38.2–61.8 (not RSI alone)
+- Only phase 1–2 + structure_ok; sentiment small boost only
+- Board: `data/state/ignition_scout_board.json`
+- CF LINK: propose YES Aug 11–14; **no** from Aug 15–24
+
+### P2 Dual-peak exit shadow
+- dual_peak = price stall/failed-high/climax **×** sent fade
+- extension_partial shadow at phase≥3
+- Events: `data/state/dual_peak_exit_shadow_events.jsonl`
+- CF: dual_peak fires Aug 23–24 on Aug11 entry path
+- Monitor: `monitor_reentry_sl_tp.py`
+
+### Validation
+- Isolation ALL PASSED · CF PASSED → `data/state/run_lifecycle_p12_cf_report.json`
+
+---
+
+## RUN-PHASE DEPLOY GATE (P0) — 2026-08-24
+
+**Status:** LIVE on rebalance path (after RSI-primary filter).
+**Spec:** `docs/research/RUN_PHASE_DEPLOY_GATE_2026-08-24.md`
+**Module:** `phase6/core/run_phase_deploy.py`
+**Config:** `run_phase_deploy` in `config/trading_config_phase6.json`
+
+### What it does
+- Classifies daily run phase: base → ignition → trend → **extension → exhaustion → distribution**
+- **Blocks NEW buys** (and late-phase adds) when phase ≥ 3
+- Features: % from 10d/20d low, Wilder RSI, vol ratio, days since ignition, off-peak %
+- Fail-closed if candles missing
+
+### Validation
+- Isolation: `scripts/phase6/test_isolation_run_phase_deploy.py` — **ALL PASSED**
+- CF LINK Aug 8–24: `scripts/phase6/backtest_run_phase_deploy_cf.py` — **PASSED**
+  - ALLOW window: Aug 10–14 (ignition)
+  - BLOCK from Aug 15 through Aug 24 (incl. poster-child recovery buy)
+  - Report: `data/state/run_phase_deploy_cf_report.json`
+- Thresholds: `ext_from_low_10d=0.15`, `ext_rsi=70` w/ min pct10 0.12, `exhaust_rsi=80`
+
+### Not yet (P1/P2)
+- Auto-enter ignition scouts
+- Dual-peak scale-out exits
+
+---
+
+## RSI-PRIMARY / SENTIMENT-REINFORCE (2026-08-24) — P0 live + P1 shadow
+
+**Status:** DONE (code + isolation + CF). Live book not auto-trimmed.
+
+**Principle:** RSI = structure. Sentiment = timing reinforce only.
+
+**Spec:** `docs/research/RSI_PRIMARY_SENTIMENT_REINFORCE_2026-08-24.md`
+
+**Code:**
+- `phase6/core/rsi_primary_deploy.py` — classify, hard ticket/pair/free-cash caps, sent-only haircut, entry lots, fade shadow
+- Wire: `rebalance_coordinator` filter after add_risk; entry tags in `_execute_trade_plan`; config `rsi_primary_deploy`
+- Isolation: `scripts/phase6/test_isolation_rsi_primary_deploy.py` — ALL PASSED
+- CF BT: `scripts/phase6/backtest_rsi_primary_deploy_cf.py` — PASSED
+  - LINK 09:00 poster child: $1925 → **$100** (haircut×0.35 then ticket_cap)
+  - 260 ledger BUYs: max ticket CF capped at $150; 15 large tickets would have been clipped
+- Fade shadow runner: `scripts/phase6/run_sentiment_fade_shadow.py` (LINK lot backfilled; mode=shadow, no live sell)
+
+**Not done / out of scope:** live sentiment-fade trim (needs Brad go); mid-cycle buys; auto-exit current LINK.
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260825** (opened 2026-08-25T00:00:18.275668)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260825`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

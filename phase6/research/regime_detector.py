@@ -36,13 +36,13 @@ def classify_regime_layer(
     soft_up_width_pct: float = SOFT_UP_WIDTH_PCT,
     pre_bull_width_pct: float = PRE_BULL_WIDTH_PCT,
 ) -> Dict[str, Any]:
-    """Split coarse regime into boundary layers (no live capital effect by itself).
+    """Split BTC 30d into coarse policy regime + boundary layer.
 
-    Coarse regime stays bull|bear|flat|transition|unknown for policy keys.
-    Layers refine transition (and name primary regimes) for dashboard + shadow.
+    Coarse policy keys (live money):
+      bull | bear | flat | transition (upside residual only) | soft_down | unknown
 
-    Upside residual (flat, bull): soft_up → climb → pre_bull
-    Downside residual (bear, -flat): soft_down
+    Brad 2026-08-24: downside residual is first-class soft_down (de-risk), not
+    the same ``transition`` bucket as flat→bull (deploy). Signed residual.
     """
     bull = float(bull_return_pct)
     bear = float(bear_return_pct)
@@ -58,10 +58,10 @@ def classify_regime_layer(
     elif abs(r) <= flat:
         layer, coarse = "flat", "flat"
     elif r < 0:
-        # bear < r < -flat
-        layer, coarse = "soft_down", "transition"
+        # bear < r < -flat  → soft_down (live de-risk, not upside transition)
+        layer, coarse = "soft_down", "soft_down"
     else:
-        # r > flat
+        # r > flat — upside residual still coarse "transition"
         soft_hi = flat + soft_w
         pre_lo = bull - pre_w
         if r <= soft_hi + 1e-12:
@@ -78,23 +78,23 @@ def classify_regime_layer(
         "bull": "Bull — full deploy posture",
         "bear": "Bear — park",
         "flat": "Flat — range / gated micro",
-        "soft_down": "Soft-down — thin residual near bear (park)",
-        "soft_up": "Soft-up — just above flat (shadow: Flat-B-like)",
-        "climb": "Climb — up but not bull (shadow: micro sleeve)",
-        "pre_bull": "Pre-bull — last step into bull (shadow: step-up micro)",
-        "transition_core": "Transition-core — residual park",
+        "soft_down": "Soft-down — thin residual near bear (de-risk)",
+        "soft_up": "Soft-up — just above flat (layer of transition deploy)",
+        "climb": "Climb — up but not bull (layer of transition deploy)",
+        "pre_bull": "Pre-bull — last step into bull (layer of transition deploy)",
+        "transition_core": "Transition-core — residual",
         "unknown": "Unknown",
     }
-    # Shadow stance suggestion only — live policy unchanged until promote
+    # Live-aligned stance labels (dashboard/shadow); money still via coarse regime policy
     shadow_stance = {
         "bull": "deploy",
         "bear": "park",
         "flat": "flat_b",
-        "soft_down": "park",
-        "soft_up": "flat_b_tight",
-        "climb": "micro_climb",
-        "pre_bull": "micro_pre_bull",
-        "transition_core": "park",
+        "soft_down": "derisk",
+        "soft_up": "transition_deploy",
+        "climb": "transition_deploy",
+        "pre_bull": "transition_deploy",
+        "transition_core": "transition_deploy",
         "unknown": "park",
     }.get(layer, "park")
 
@@ -114,6 +114,8 @@ def classify_regime_layer(
             "climb_lo": round(flat + soft_w, 4),
             "climb_hi": round(bull - pre_w, 4),
             "pre_bull_lo": round(bull - pre_w, 4),
+            "soft_down_lo": bear,
+            "soft_down_hi": -flat,
         },
     }
 

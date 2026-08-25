@@ -19,15 +19,17 @@ def test_classify_layers_default_cuts():
     assert classify_regime_layer(-12)["regime_layer"] == "bear"
     assert classify_regime_layer(3)["regime_layer"] == "flat"
     assert classify_regime_layer(-3)["regime_layer"] == "flat"
-    # residual
+    # residual — signed: downside is first-class soft_down (not transition)
     assert classify_regime_layer(-9)["regime_layer"] == "soft_down"
-    assert classify_regime_layer(-9)["regime"] == "transition"
+    assert classify_regime_layer(-9)["regime"] == "soft_down"
+    assert classify_regime_layer(-9)["shadow_stance"] == "derisk"
     assert classify_regime_layer(9.0)["regime_layer"] == "soft_up"  # 8..10
+    assert classify_regime_layer(9.0)["regime"] == "transition"
     assert classify_regime_layer(11.0)["regime_layer"] == "climb"  # 10..14
     assert classify_regime_layer(14.2)["regime_layer"] == "pre_bull"  # 14..15
-    assert classify_regime_layer(9)["shadow_stance"] == "flat_b_tight"
-    assert classify_regime_layer(11)["shadow_stance"] == "micro_climb"
-    assert classify_regime_layer(14.5)["shadow_stance"] == "micro_pre_bull"
+    assert classify_regime_layer(9)["shadow_stance"] == "transition_deploy"
+    assert classify_regime_layer(11)["shadow_stance"] == "transition_deploy"
+    assert classify_regime_layer(14.5)["shadow_stance"] == "transition_deploy"
 
 
 def test_shadow_gates_cream_not_chase():
@@ -56,17 +58,42 @@ def test_shadow_gates_cream_not_chase():
     )
     assert r2["would_buy"] is True
 
-    # park layer never
+    # soft_down derisk: hot RSI blocked
     r3 = evaluate_shadow_gates(
         layer="soft_down",
         pair="ETH-USD",
-        rsi=40.0,
+        rsi=55.0,
         sentiment=0.5,
-        is_new_pair=True,
+        is_new_pair=False,
         blocked=False,
         util=0.1,
     )
     assert r3["would_buy"] is False
+
+    # soft_down derisk: cream path allowed (live $35 sleeve)
+    r4 = evaluate_shadow_gates(
+        layer="soft_down",
+        pair="ETH-USD",
+        rsi=40.0,
+        sentiment=0.5,
+        is_new_pair=False,
+        blocked=False,
+        util=0.1,
+    )
+    assert r4["would_buy"] is True
+    assert float(r4.get("cap_usd") or 0) <= 35.0 + 1e-9
+
+    # bear still park
+    r5 = evaluate_shadow_gates(
+        layer="bear",
+        pair="ETH-USD",
+        rsi=40.0,
+        sentiment=0.5,
+        is_new_pair=False,
+        blocked=False,
+        util=0.1,
+    )
+    assert r5["would_buy"] is False
 
 
 def test_detect_regime_emits_layer():
@@ -74,7 +101,7 @@ def test_detect_regime_emits_layer():
 
     d = detect_regime(use_live_price=True)
     assert "regime_layer" in d
-    assert d["regime"] in ("bull", "bear", "flat", "transition", "unknown")
+    assert d["regime"] in ("bull", "bear", "flat", "transition", "soft_down", "unknown")
     assert d["regime_layer"]
 
 

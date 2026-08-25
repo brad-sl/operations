@@ -13,7 +13,7 @@
     "use_gap_scale": true,
     "min_move_usd": 50.0,
     "min_position_usd": 25.0,
-    "note": "Factor-based BUY add sizing into existing stacks. Clips/skips adds only — never force-sells open bags. Budgets: open_upnl*k_profit, equity*h_add, book heat H_book, target weight room, cash_frac, rebalance_cap.",
+    "note": "Factor-based BUY add sizing into existing stacks. Clips/skips adds only \u2014 never force-sells open bags. Budgets: open_upnl*k_profit, equity*h_add, book heat H_book, target weight room, cash_frac, rebalance_cap.",
     "by_regime": {
       "bull": {
         "allow_pyramid": true,
@@ -38,6 +38,14 @@
         "H_book": 0.03,
         "target_pair_weight": 0.15,
         "cash_frac": 0.08
+      },
+      "soft_down": {
+        "allow_pyramid": false,
+        "k_profit": 0.08,
+        "h_add": 0.0,
+        "H_book": 0.025,
+        "target_pair_weight": 0.12,
+        "cash_frac": 0.04
       },
       "bear": {
         "allow_pyramid": false,
@@ -66,7 +74,7 @@
     "notify_dedupe_hours": 12,
     "min_sell_usd": 25.0,
     "max_pair_fraction": 1.0,
-    "note": "TG-02: hard prefer_exit (RSI/sentiment) → shadow + Telegram pending. Brad decides via hard_exit_controls. park_prefer_reduce NEVER auto. live_apply blocked while operator_approve=true."
+    "note": "TG-02: hard prefer_exit (RSI/sentiment) \u2192 shadow + Telegram pending. Brad decides via hard_exit_controls. park_prefer_reduce NEVER auto. live_apply blocked while operator_approve=true. EXIT-H3 READY: set operator_approve=false AND live_apply=true AND shadow_only=false to auto-merge hard SELLs into rebalance plan (still notifies)."
   },
   "detector": {
     "lookback_days": 30,
@@ -76,18 +84,18 @@
     "soft_up_width_pct": 2.0,
     "pre_bull_width_pct": 1.0,
     "use_live_price": true,
-    "note": "Layer widths refine transition into soft_up/climb/pre_bull for dashboard+shadow only. Live park/deploy still uses coarse regime + knob_map until promote."
+    "note": "Layers soft_up/climb/pre_bull refine upside transition. soft_down is first-class live regime (de-risk $35). transition = upside residual only (deploy $75). Brad 2026-08-24 signed residual."
   },
   "regimes": {
     "bull": {
-      "label": "Bull — liberal re-entry",
+      "label": "Bull \u2014 liberal re-entry",
       "strategy_mode": "deploy",
       "allow_new_buys": true,
       "target_max_util_pct": 0.85,
       "rebalance_cap_usd": 200.0,
-      "min_cash_reserve_pct": 0.10,
+      "min_cash_reserve_pct": 0.1,
       "entry": {
-        "min_sentiment": -0.10,
+        "min_sentiment": -0.1,
         "min_sentiment_new_pair": 0.15,
         "max_rsi": 70.0,
         "require_lockout_clear": true
@@ -98,7 +106,7 @@
       }
     },
     "flat": {
-      "label": "Flat — cautious gated deploy (operator thaw 2026-07-18 B)",
+      "label": "Flat \u2014 cautious gated deploy (operator thaw 2026-07-18 B)",
       "strategy_mode": "deploy",
       "allow_new_buys": true,
       "target_max_util_pct": 0.65,
@@ -114,18 +122,18 @@
         "overbought_rsi": 65.0,
         "max_sentiment_hold": -0.15
       },
-      "notes": "Not full park-off. RSI/sentiment gates enforce; small cap. Analyst OPT may propose tighter/looser knobs — promote only via gates."
+      "notes": "Not full park-off. RSI/sentiment gates enforce; small cap. Analyst OPT may propose tighter/looser knobs \u2014 promote only via gates."
     },
     "bear": {
-      "label": "Bear — park cash, strict entry",
+      "label": "Bear \u2014 park cash, strict entry",
       "strategy_mode": "usdc_park",
       "allow_new_buys": false,
       "target_max_util_pct": 0.25,
       "rebalance_cap_usd": 0.0,
-      "min_cash_reserve_pct": 0.70,
+      "min_cash_reserve_pct": 0.7,
       "entry": {
-        "min_sentiment": 0.40,
-        "min_sentiment_new_pair": 0.50,
+        "min_sentiment": 0.4,
+        "min_sentiment_new_pair": 0.5,
         "max_rsi": 45.0,
         "require_lockout_clear": true
       },
@@ -135,33 +143,53 @@
       }
     },
     "transition": {
-      "label": "Transition — prefer cash until regime stabilizes",
-      "strategy_mode": "usdc_park",
-      "allow_new_buys": false,
-      "target_max_util_pct": 0.45,
-      "rebalance_cap_usd": 50.0,
-      "min_cash_reserve_pct": 0.45,
+      "label": "Transition \u2014 gated deploy (flat-like; Brad thaw 2026-08-24)",
+      "strategy_mode": "deploy",
+      "allow_new_buys": true,
+      "target_max_util_pct": 0.55,
+      "rebalance_cap_usd": 75.0,
+      "min_cash_reserve_pct": 0.4,
       "entry": {
-        "min_sentiment": 0.20,
-        "min_sentiment_new_pair": 0.30,
+        "min_sentiment": 0.2,
+        "min_sentiment_new_pair": 0.3,
         "max_rsi": 58.0,
         "require_lockout_clear": true
       },
       "exit": {
         "overbought_rsi": 68.0,
-        "max_sentiment_hold": -0.20
-      }
+        "max_sentiment_hold": -0.2
+      },
+      "notes": "Upside residual only (+flat\u2026+bull). Downside residual is soft_down."
+    },
+    "soft_down": {
+      "label": "Soft-down \u2014 de-risk sleeve (flat\u2192bear strip; Brad 2026-08-24)",
+      "strategy_mode": "deploy",
+      "allow_new_buys": true,
+      "target_max_util_pct": 0.4,
+      "rebalance_cap_usd": 35.0,
+      "min_cash_reserve_pct": 0.55,
+      "entry": {
+        "min_sentiment": 0.3,
+        "min_sentiment_new_pair": 0.4,
+        "max_rsi": 50.0,
+        "require_lockout_clear": true
+      },
+      "exit": {
+        "overbought_rsi": 62.0,
+        "max_sentiment_hold": -0.1
+      },
+      "notes": "Thin band bear_cut < BTC30d < -flat (~\u221210\u2026\u22128). Not full park (whipsaw); not flat $75. Half-ish flat cap, tighter gates, no pyramid. Dual-peak/SL still bind. Full park at bear."
     },
     "unknown": {
-      "label": "Unknown — fail-safe park",
+      "label": "Unknown \u2014 fail-safe park",
       "strategy_mode": "usdc_park",
       "allow_new_buys": false,
-      "target_max_util_pct": 0.30,
+      "target_max_util_pct": 0.3,
       "rebalance_cap_usd": 0.0,
-      "min_cash_reserve_pct": 0.60,
+      "min_cash_reserve_pct": 0.6,
       "entry": {
-        "min_sentiment": 0.50,
-        "min_sentiment_new_pair": 0.50,
+        "min_sentiment": 0.5,
+        "min_sentiment_new_pair": 0.5,
         "max_rsi": 40.0,
         "require_lockout_clear": true
       },
@@ -191,7 +219,7 @@
       "scorecard_job": "phase6/research/run_regime_scorecard.py",
       "knob_apply": "phase6/research/apply_regime_knob_map_from_scorecard.py",
       "opt_weekly": "phase6/research/run_analyst_opt_weekly.py",
-      "note": "RC-06 COMPLETE: continuous scorecard→knob_map→cash policy suggestions (sweep)→gated to leaderboard/proposals (cash_policy_suggestions.py). Weekly OPT chain updated. Promote only via gates; manual apply to policy JSON."
+      "note": "RC-06 COMPLETE: continuous scorecard\u2192knob_map\u2192cash policy suggestions (sweep)\u2192gated to leaderboard/proposals (cash_policy_suggestions.py). Weekly OPT chain updated. Promote only via gates; manual apply to policy JSON."
     }
   }
 }

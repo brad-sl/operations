@@ -23,9 +23,13 @@
     "live_attach_on_buy": false,
     "live_market_exit": true,
     "post_tp_block_rebuy_hours": 24,
+    "post_tp_structure_aware": true,
+    "post_tp_early_release_phases": [1, 2],
+    "post_tp_min_hours_floor": 4.0,
+    "post_tp_require_structure_ok": true,
     "exclude_pairs": ["PAXG-USD", "PAXG-USDC"],
     "brad_promoted_at": "2026-08-23T05:30:00Z",
-    "note": "LIVE 2026-08-23 Brad go: trail primary (arm+4%/trail 2%), fixed +6% software fallback. Market exits only (no exchange limit TP attach). PAXG/preserve excluded. Post-TP rebuy block 24h (simple cool-off; not momentum-aware yet). Hard exit still operator loop."
+    "note": "LIVE trail primary (arm+4%/trail 2%), fixed +6% software fallback. live_attach_on_buy=false (H2 path wired, not flipped — software market exit remains primary). Post-TP 24h cool-off with EXIT-H4 structure early-release after 4h if phase ignition/trend + structure_ok. Hard exit still operator loop (H3 ready: set operator_approve=false + live_apply=true)."
   },
   "promotion": {
     "shadow_min_calendar_days": 7,
@@ -38,5 +42,12 @@
     "path": "config/regime_exit_policy_map.json",
     "doc": "docs/REGIME_EXIT_POLICY_MAP.md",
     "note": "Still shadow for regime-specific map; global trail/fixed live via take_profit knobs above."
+  },
+  "exit_hardening": {
+    "EXIT-H1_sl_reattach_after_lifecycle_partial": "done",
+    "EXIT-H2_live_attach_on_buy": "wired_default_false",
+    "EXIT-H3_hard_exit_auto": "ready_flip_operator_approve_false_live_apply_true",
+    "EXIT-H4_post_tp_structure_aware": "live",
+    "EXIT-H5_qty_ssot": "live"
   }
 }

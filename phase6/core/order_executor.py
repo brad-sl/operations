@@ -140,13 +140,31 @@ class OrderExecutor:
                     order_id=order_id if order_id else None,
                     fresh_buy=True,
                 )
+                # EXIT-H2: exchange fixed TP only when exit_automation says
+                # mode=live AND live_attach_on_buy (effective_tp_pct_for_buy).
                 effective_tp = tp_pct
                 if effective_tp is None:
-                    effective_tp = getattr(self.stop_loss_manager, 'default_tp_pct', None)
+                    try:
+                        from phase6.core.shadow_tp import effective_tp_pct_for_buy
+
+                        cfg = getattr(self.stop_loss_manager, "config", None) or {}
+                        # Prefer exit_automation when trading_config has no take_profit block
+                        if not isinstance(cfg, dict) or "take_profit" not in cfg:
+                            cfg = None
+                        effective_tp = effective_tp_pct_for_buy(cfg)
+                    except Exception:
+                        effective_tp = None
+                if effective_tp is None:
+                    # Do NOT fall back to default_tp_pct — that would attach
+                    # exchange TP while software trail is the primary path.
+                    effective_tp = None
                 if effective_tp and effective_tp > 0:
-                    tp_result = self.stop_loss_manager.attach_take_profit(pair, entry_price, size, effective_tp)
+                    tp_result = self.stop_loss_manager.attach_take_profit(
+                        pair, entry_price, size, effective_tp
+                    )
                 self.logger.info(
-                    f"[SL/TP] Post-buy for {pair}: entry=${entry_price:.4f} size={size:.8f} SL={sl_result} TP={tp_result}"
+                    f"[SL/TP] Post-buy for {pair}: entry=${entry_price:.4f} size={size:.8f} "
+                    f"SL={sl_result} TP={tp_result} tp_pct={effective_tp}"
                 )
 
             # ENG-S3-03: re-query fill after SL attach (settlement poll completed inside attach)

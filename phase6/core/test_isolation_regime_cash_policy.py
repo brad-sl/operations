@@ -212,6 +212,56 @@ def test_hard_exit_shadow_only():
         assert body["n"] >= 1
 
 
+def test_transition_allows_gated_deploy():
+    """Brad 2026-08-24: upside transition is not a special park zone — flat-like deploy."""
+    pol = load_policy()
+    snap = resolve_regime_cash(
+        policy=pol,
+        detection={"regime": "transition", "confidence": 1.0, "btc_return_pct": 11.0},
+    )
+    assert snap.strategy_mode == "deploy"
+    assert snap.allow_new_buys is True
+    assert float(snap.rebalance_cap_usd) > 0
+    # gates still bind (RSI too hot)
+    hot = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=80.0)
+    assert hot.allowed is False
+    # structure-ish ok path can clear entry gates
+    ok = evaluate_buy_entry("ETH-USD", snap, sentiment=0.35, rsi=50.0)
+    assert ok.allowed is True, ok.reasons
+
+
+def test_soft_down_derisk_not_transition_deploy():
+    """Downside residual must not inherit upside transition $75 deploy."""
+    pol = load_policy()
+    # detector-style soft_down
+    snap = resolve_regime_cash(
+        policy=pol,
+        detection={
+            "regime": "soft_down",
+            "regime_layer": "soft_down",
+            "confidence": 1.0,
+            "btc_return_pct": -9.0,
+        },
+    )
+    assert snap.regime == "soft_down"
+    assert snap.strategy_mode == "deploy"
+    assert snap.allow_new_buys is True
+    assert 0 < float(snap.rebalance_cap_usd) <= 40.0
+    # tighter than flat: RSI 52 fails soft_down max 50
+    mid = evaluate_buy_entry("ETH-USD", snap, sentiment=0.45, rsi=52.0)
+    assert mid.allowed is False
+    ok = evaluate_buy_entry("ETH-USD", snap, sentiment=0.45, rsi=45.0)
+    assert ok.allowed is True, ok.reasons
+
+    # legacy mislabel: transition + negative ret → soft_down
+    legacy = resolve_regime_cash(
+        policy=pol,
+        detection={"regime": "transition", "confidence": 1.0, "btc_return_pct": -9.0},
+    )
+    assert legacy.regime == "soft_down"
+    assert float(legacy.rebalance_cap_usd) <= 40.0
+
+
 def test_hard_exit_never_park_soft():
     from phase6.core.regime_cash_policy import (
         build_hard_exit_sell_actions,
@@ -221,10 +271,11 @@ def test_hard_exit_never_park_soft():
         load_policy,
     )
 
+    # Park soft only on true park regimes (bear); transition now deploys
     pol = load_policy()
     snap = resolve_regime_cash(
         policy=pol,
-        detection={"regime": "transition", "confidence": 1.0, "btc_return_pct": 11.0},
+        detection={"regime": "bear", "confidence": 1.0, "btc_return_pct": -15.0},
     )
     assert snap.strategy_mode == "usdc_park" or snap.allow_new_buys is False
     dec = prefer_exit("LINK-USD", snap, sentiment=0.5, rsi=40.0)
@@ -246,5 +297,7 @@ if __name__ == "__main__":
     test_filter_plan_enforces_bear_park()
     test_flat_option_b_gated_deploy()
     test_hard_exit_shadow_only()
+    test_transition_allows_gated_deploy()
+    test_soft_down_derisk_not_transition_deploy()
     test_hard_exit_never_park_soft()
     print("regime_cash_policy isolation PASS")

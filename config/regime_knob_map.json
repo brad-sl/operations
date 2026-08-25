@@ -207,11 +207,11 @@
       }
     },
     "transition": {
-      "scenario_id": "usdc_hold",
-      "strategy_mode": "usdc_park",
-      "note": "scorecard recent optimal=usdc_hold ann=3.5% best_alt=defensive_rebalance_14d alt_ann=2.7514% (max annualized vs USDC carry)",
+      "scenario_id": "transition_flat_like_deploy_75",
+      "strategy_mode": "deploy",
+      "note": "Brad 2026-08-24: upside residual only. Downside residual → soft_down.",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 0.0,
+        "global_settings.rebalance_cap_usd": 75.0,
         "global_settings.risk_free_preference": "USDC",
         "global_settings.risk_free_apy_pct": 3.5
       },
@@ -220,10 +220,10 @@
         "rebal_freq": 7
       },
       "usdc_benchmark": {
-        "beats_usdc_benchmark": true,
-        "annualized_return_pct": 3.5,
+        "beats_usdc_benchmark": false,
+        "annualized_return_pct": 2.7514,
         "usdc_apy_pct": 3.5,
-        "reason": "optimal_strategy"
+        "reason": "operator_override_deploy_over_usdc_carry"
       },
       "scorecard": {
         "winner_id": "usdc_hold",
@@ -259,11 +259,39 @@
           "comparison_metric": "annualized_return_pct"
         }
       }
+    },
+    "soft_down": {
+      "scenario_id": "soft_down_derisk_35",
+      "strategy_mode": "deploy",
+      "note": "Brad 2026-08-24: flat→bear strip. De-risk sleeve cap $35, not park, not flat $75. Signed residual so −9% ≠ +11%.",
+      "live_overlay": {
+        "global_settings.rebalance_cap_usd": 35.0,
+        "global_settings.risk_free_preference": "USDC",
+        "global_settings.risk_free_apy_pct": 3.5
+      },
+      "arch4_params": {
+        "use_rotation": false,
+        "rebal_freq": 7
+      },
+      "usdc_benchmark": {
+        "beats_usdc_benchmark": false,
+        "annualized_return_pct": 0.0,
+        "usdc_apy_pct": 3.5,
+        "reason": "operator_derisk_sleeve_not_usdc_only"
+      },
+      "scorecard": {
+        "winner_id": "soft_down_derisk_35",
+        "optimal_strategy_id": "soft_down_derisk_35",
+        "beats_baseline": false,
+        "note": "Operator product sleeve; not scorecard-promoted."
+      }
     }
   },
   "updated_from_scorecard_at": "2026-08-23T11:00:37.405870+00:00",
   "scorecard_generated_at": "2026-08-23T11:00:36.088004+00:00",
   "operator_overrides_preserved": [
-    "flat"
+    "flat",
+    "transition",
+    "soft_down"
   ]
 }

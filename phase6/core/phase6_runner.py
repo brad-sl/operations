@@ -1106,6 +1106,8 @@ class Phase6Runner:
                 positions.append({
                     "pair": pair_name,
                     "amount": amount,
+                    "qty": amount,
+                    "quantity": amount,
                     "available": float(data.get("available", amount)) if isinstance(data, dict) else amount,
                     "hold": float(data.get("hold", 0) or 0) if isinstance(data, dict) else 0.0,
                     "current_price": price,
@@ -1131,6 +1133,14 @@ class Phase6Runner:
                 positions = recompute_trading_positions_pnl(positions, self.trade_ledger)
             except Exception as _basis_e:
                 logger.warning("[DASHBOARD] position cost basis recompute failed: %s", _basis_e)
+
+            # EXIT-H5: qty SSOT aliases after basis recompute
+            try:
+                from phase6.core.position_qty import normalize_positions_list
+
+                positions = normalize_positions_list(positions)
+            except Exception:
+                pass
 
             total_usd = usd + usdc + total_holdings_value
 
@@ -1228,12 +1238,18 @@ class Phase6Runner:
             self.logger.info("[ARCH-4] No actions in TradePlan")
             return 0, []
         exec_plan = []
+        # Preserve RSI-primary entry tags for post-fill lot recording
+        action_by_pair = {}
         for a in trade_plan.actions:
-            exec_plan.append({
-                "pair": a.get("pair"),
+            pair = a.get("pair")
+            row = {
+                "pair": pair,
                 "action": str(a.get("action", "")).upper(),
-                "usd_amount": float(a.get("usd", a.get("usd_amount", 0)))
-            })
+                "usd_amount": float(a.get("usd", a.get("usd_amount", 0))),
+            }
+            exec_plan.append(row)
+            if pair:
+                action_by_pair[str(pair)] = a
         if self.shadow_mode:
             self.logger.info(f"[ARCH-4 SHADOW EXEC] Plan: {exec_plan}")
             return len(exec_plan), []
@@ -1255,6 +1271,27 @@ class Phase6Runner:
                     oid = r.get("order_id") or r.get("id")
                     if pair and oid:
                         cycle_ids[pair] = str(oid)
+                    # P1: durable entry-driver lot tag (sentiment-led fade needs this)
+                    if pair:
+                        try:
+                            from phase6.core.rsi_primary_deploy import record_entry_from_buy_action
+
+                            src = action_by_pair.get(str(pair)) or {}
+                            tagged = dict(src)
+                            tagged.setdefault("pair", pair)
+                            if r.get("usd_amount") is not None:
+                                tagged["usd"] = r.get("usd_amount")
+                            elif r.get("usd") is not None:
+                                tagged["usd"] = r.get("usd")
+                            ep = float(r.get("entry_price") or 0.0)
+                            record_entry_from_buy_action(
+                                tagged,
+                                entry_price=ep,
+                                order_id=str(oid) if oid else None,
+                                qty=r.get("size") or r.get("qty"),
+                            )
+                        except Exception as tag_e:
+                            self.logger.debug("[RSI-PRIMARY] entry lot tag skipped: %s", tag_e)
             self._recent_buy_order_ids = cycle_ids
             if getattr(self, "stop_loss_coordinator", None):
                 self.stop_loss_coordinator.set_buy_order_ids(cycle_ids)

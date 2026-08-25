@@ -73,9 +73,18 @@ SHADOW_GATES: Dict[str, Dict[str, Any]] = {
         "min_sentiment": 0.25,
         "min_sentiment_new": 0.35,
     },
+    # soft_down: live de-risk sleeve (Brad 2026-08-24) — not full park
+    "soft_down": {
+        "label": "derisk",
+        "allow": True,
+        "cap_usd": 35.0,
+        "max_util": 0.40,
+        "max_rsi": 50.0,
+        "min_sentiment": 0.30,
+        "min_sentiment_new": 0.40,
+    },
     # park layers — shadow would-buy always empty by stance
     "bear": {"label": "park", "allow": False},
-    "soft_down": {"label": "park", "allow": False},
     "transition_core": {"label": "park", "allow": False},
     "unknown": {"label": "park", "allow": False},
     "bull": {

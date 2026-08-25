@@ -80,6 +80,8 @@ def refresh() -> dict:
             {
                 "pair": pair,
                 "amount": amount,
+                "qty": amount,
+                "quantity": amount,
                 "available": avail,
                 "hold": hold_amt,
                 "current_price": px,
@@ -92,6 +94,13 @@ def refresh() -> dict:
             }
         )
         total_holdings += value
+
+    try:
+        from phase6.core.position_qty import normalize_positions_list
+
+        positions = normalize_positions_list(positions)
+    except Exception:
+        pass
 
     total_usd = usd + usdc + total_holdings
     state = {
@@ -109,6 +118,10 @@ def refresh() -> dict:
         "cash_usd": usd,
         "last_updated": datetime.now().isoformat(),
         "source": "refresh_dashboard_live_state.py",
+        "qty_ssot": {
+            "schema": "position_qty_v1",
+            "aliases": ["amount", "qty", "quantity"],
+        },
     }
 
     prior = {}

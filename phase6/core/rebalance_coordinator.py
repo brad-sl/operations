@@ -230,6 +230,86 @@ class RebalanceCoordinator:
                         except Exception as e:
                             logger.warning("[ADD-RISK] filter skipped: %s", e)
 
+                        # RSI-primary / sentiment-reinforce: hard ticket+pair caps + sent-only haircut
+                        # (binds on Emergency Recovery; does not auto-sell existing book)
+                        try:
+                            from phase6.core.rsi_primary_deploy import (
+                                filter_trade_plan_rsi_primary_deploy,
+                            )
+
+                            plan = filter_trade_plan_rsi_primary_deploy(
+                                runner,
+                                plan,
+                                sentiment_scores=sentiment_scores,
+                                rsi_values=getattr(runner, "rsi_values", {}) or {},
+                            )
+                        except Exception as e:
+                            logger.warning("[RSI-PRIMARY] filter skipped: %s", e)
+
+                        # Run-phase gate: block NEW buys in extension/exhaustion/distribution
+                        try:
+                            from phase6.core.run_phase_deploy import (
+                                filter_trade_plan_run_phase_deploy,
+                            )
+
+                            plan = filter_trade_plan_run_phase_deploy(runner, plan)
+                        except Exception as e:
+                            logger.warning("[RUN-PHASE] filter skipped: %s", e)
+
+                        # P1 ignition scout: shadow board always; propose mode may append early BUY hints
+                        try:
+                            from phase6.core.run_lifecycle import (
+                                apply_ignition_proposals_to_plan,
+                                run_ignition_scout,
+                            )
+
+                            # Refresh scout board each rebalance (shadow)
+                            try:
+                                pool = list(
+                                    (runner.config_dict.get("phase_6_specific") or {}).get(
+                                        "opportunity_pool"
+                                    )
+                                    or (runner.config_dict.get("global_settings") or {}).get(
+                                        "pairs"
+                                    )
+                                    or []
+                                )
+                                if pool:
+                                    run_ignition_scout(
+                                        pool,
+                                        config_dict=runner.config_dict,
+                                        sentiment_by_pair=sentiment_scores or {},
+                                        write_board=True,
+                                    )
+                            except Exception as _sc_e:
+                                logger.debug("[IGNITION-SCOUT] board refresh: %s", _sc_e)
+
+                            plan = apply_ignition_proposals_to_plan(
+                                runner, plan, config_dict=runner.config_dict
+                            )
+                            # Re-apply hard gates if proposals added
+                            if any(
+                                a.get("ignition_scout")
+                                for a in (plan.actions or [])
+                                if isinstance(a, dict)
+                            ):
+                                from phase6.core.rsi_primary_deploy import (
+                                    filter_trade_plan_rsi_primary_deploy,
+                                )
+                                from phase6.core.run_phase_deploy import (
+                                    filter_trade_plan_run_phase_deploy,
+                                )
+
+                                plan = filter_trade_plan_rsi_primary_deploy(
+                                    runner,
+                                    plan,
+                                    sentiment_scores=sentiment_scores,
+                                    rsi_values=getattr(runner, "rsi_values", {}) or {},
+                                )
+                                plan = filter_trade_plan_run_phase_deploy(runner, plan)
+                        except Exception as e:
+                            logger.warning("[IGNITION-SCOUT] skipped: %s", e)
+
                         # Respect trade buffer: do not churn on pairs traded in the recent window.
                         # Prevents immediate rotation of newly entered positions on the daily rebalance.
                         buffer_hours = runner.config_dict.get("global_settings", {}).get("trade_buffer_hours", 24)

@@ -112,6 +112,18 @@ def resolve_regime_cash(
         )
     regime = str(detection.get("regime") or "unknown")
     regime_layer = str(detection.get("regime_layer") or regime or "unknown")
+    # Signed residual safety: downside must not inherit upside transition deploy
+    try:
+        btc_r = detection.get("btc_return_pct")
+        btc_f = float(btc_r) if btc_r is not None else None
+    except (TypeError, ValueError):
+        btc_f = None
+    if regime_layer == "soft_down" or (
+        regime == "transition" and btc_f is not None and btc_f < 0
+    ):
+        regime = "soft_down"
+        if regime_layer in ("", "transition", "unknown"):
+            regime_layer = "soft_down"
     layer_label = str(detection.get("layer_label") or "")
     shadow_stance = str(detection.get("shadow_stance") or "")
     regimes = pol.get("regimes") or {}

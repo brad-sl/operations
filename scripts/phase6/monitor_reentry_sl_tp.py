@@ -411,6 +411,119 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
         "peak_lot_pairs": sorted(peak_lot.keys()),
         "ok": len(alerts) == 0,
     }
+    # P1 sentiment-fade shadow (no live sell; dual_peak owns live structure exits)
+    try:
+        from phase6.core.rsi_primary_deploy import run_sentiment_fade_shadow
+        import json as _json
+        from pathlib import Path as _Path
+
+        _cfg = {}
+        _cp = _Path("config/trading_config_phase6.json")
+        if _cp.exists():
+            _cfg = _json.loads(_cp.read_text())
+        fade_rows = run_sentiment_fade_shadow(config_dict=_cfg, notify=True)
+        result["sentiment_fade_shadow"] = fade_rows
+        for fr in fade_rows:
+            notes.append(
+                f"SENT_FADE_SHADOW {fr.get('pair')} would_trim=${fr.get('would_trim_usd')} "
+                f"sent {fr.get('entry_sentiment')}→{fr.get('current_sentiment')}"
+            )
+        result["notes"] = notes[:40]
+    except Exception as _fe:
+        result["sentiment_fade_error"] = str(_fe)
+
+    # P2 dual-peak: shadow board always; LIVE trims when mode=live
+    try:
+        from phase6.core.run_lifecycle import (
+            apply_lifecycle_exits_live,
+            run_dual_peak_exit_shadow,
+            load_lifecycle_config,
+        )
+        import json as _json2
+        from pathlib import Path as _Path2
+
+        _cfg2 = {}
+        _cp2 = _Path2("config/trading_config_phase6.json")
+        if _cp2.exists():
+            _cfg2 = _json2.loads(_cp2.read_text())
+        p2_mode = str(
+            (load_lifecycle_config(_cfg2).get("dual_peak_exit") or {}).get("mode") or "shadow"
+        ).lower()
+        if p2_mode == "live":
+            # Prefer exchange already built in this monitor if present
+            ex = None
+            try:
+                from phase6.core.exchange_client import CoinbaseExchangeClient
+
+                ex = CoinbaseExchangeClient(mode="live")
+            except Exception:
+                ex = None
+            live_out = apply_lifecycle_exits_live(
+                config_dict=_cfg2, exchange=ex, dry_run=False, notify=True
+            )
+            result["dual_peak_exit_live"] = {
+                "events": live_out.get("events") or [],
+                "executed": live_out.get("executed") or [],
+                "skipped": live_out.get("skipped") or [],
+                "error": live_out.get("error"),
+                "note": live_out.get("note"),
+            }
+            for er in live_out.get("executed") or []:
+                notes.append(
+                    f"DUAL_PEAK_LIVE {er.get('kind')} {er.get('pair')} "
+                    f"qty={er.get('filled_qty') or er.get('qty')} oid={er.get('order_id')}"
+                )
+            for dr in live_out.get("events") or []:
+                if not any(
+                    (x.get("pair") == dr.get("pair") and x.get("kind") == dr.get("kind"))
+                    for x in (live_out.get("executed") or [])
+                ):
+                    notes.append(
+                        f"DUAL_PEAK_SIGNAL {dr.get('kind')} {dr.get('pair')} "
+                        f"would_trim=${dr.get('would_trim_usd')} phase={dr.get('phase_name')}"
+                    )
+        else:
+            dp_rows = run_dual_peak_exit_shadow(config_dict=_cfg2, notify=True)
+            result["dual_peak_exit_shadow"] = dp_rows
+            for dr in dp_rows:
+                notes.append(
+                    f"DUAL_PEAK_SHADOW {dr.get('kind')} {dr.get('pair')} "
+                    f"would_trim=${dr.get('would_trim_usd')} phase={dr.get('phase_name')}"
+                )
+        result["notes"] = notes[:50]
+    except Exception as _de:
+        result["dual_peak_exit_error"] = str(_de)
+
+    # P1 ignition scout board refresh (propose/shadow)
+    try:
+        from phase6.core.run_lifecycle import run_ignition_scout
+        import json as _json3
+        from pathlib import Path as _Path3
+
+        _cfg3 = {}
+        _cp3 = _Path3("config/trading_config_phase6.json")
+        if _cp3.exists():
+            _cfg3 = _json3.loads(_cp3.read_text())
+        pool = list(
+            (_cfg3.get("phase_6_specific") or {}).get("opportunity_pool")
+            or (_cfg3.get("global_settings") or {}).get("pairs")
+            or []
+        )
+        if pool:
+            board = run_ignition_scout(pool, config_dict=_cfg3, write_board=True)
+            result["ignition_scout_top"] = board.get("top") or []
+            result["ignition_scout_mode"] = (
+                ((_cfg3.get("run_lifecycle") or {}).get("ignition_scout") or {}).get("mode")
+            )
+            for t in (board.get("top") or [])[:5]:
+                notes.append(
+                    f"IGNITION_SCOUT {t.get('pair')} score={t.get('score')} "
+                    f"phase={t.get('phase_name')} struct={t.get('structure_ok')}"
+                )
+            result["notes"] = notes[:50]
+    except Exception as _ie:
+        result["ignition_scout_error"] = str(_ie)
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, indent=2) + "\n")
     # advance cursor to newest trade ts

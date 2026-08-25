@@ -625,9 +625,19 @@ def execute_live_tp_exits(
 
         if qty <= 0 and positions and isinstance(positions.get(pair), dict):
             try:
-                qty = float(positions[pair].get("amount") or positions[pair].get("qty") or 0)
-            except (TypeError, ValueError):
-                qty = 0.0
+                from phase6.core.position_qty import position_qty
+
+                qty = float(position_qty(positions[pair], 0.0))
+            except Exception:
+                try:
+                    qty = float(
+                        positions[pair].get("amount")
+                        or positions[pair].get("qty")
+                        or positions[pair].get("quantity")
+                        or 0
+                    )
+                except (TypeError, ValueError):
+                    qty = 0.0
 
         if qty <= 0:
             row["success"] = False

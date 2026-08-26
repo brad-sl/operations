@@ -238,6 +238,205 @@ def is_hard_exit(decision: EntryDecision) -> bool:
     return bool(hard_exit_reasons(decision.reasons))
 
 
+RSI_MEMORY_PATH = PROJECT_ROOT / "data/state/hard_exit_rsi_memory.json"
+
+
+def _load_rsi_memory(path: Optional[Path] = None) -> Dict[str, Any]:
+    p = path or RSI_MEMORY_PATH
+    try:
+        if p.exists():
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            return raw if isinstance(raw, dict) else {}
+    except Exception:
+        pass
+    return {"schema": "hard_exit_rsi_memory_v1", "pairs": {}}
+
+
+def _save_rsi_memory(mem: Dict[str, Any], path: Optional[Path] = None) -> None:
+    p = path or RSI_MEMORY_PATH
+    try:
+        p.parent.mkdir(parents=True, exist_ok=True)
+        mem = dict(mem or {})
+        mem["schema"] = "hard_exit_rsi_memory_v1"
+        mem["updated_at"] = datetime.now(timezone.utc).isoformat()
+        p.write_text(json.dumps(mem, indent=2), encoding="utf-8")
+    except Exception as e:
+        logger.warning("[REGIME-HARD-EXIT] rsi memory write failed: %s", e)
+
+
+def update_rsi_memory(
+    rsi_values: Optional[Dict[str, float]],
+    *,
+    path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Persist last RSI per pair for cross-up detection (call after gate eval)."""
+    mem = _load_rsi_memory(path)
+    pairs = dict(mem.get("pairs") or {})
+    now = datetime.now(timezone.utc).isoformat()
+    for pair, raw in (rsi_values or {}).items():
+        try:
+            v = float(raw)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            continue
+        prev = pairs.get(str(pair)) or {}
+        pairs[str(pair)] = {
+            "rsi": v,
+            "prev_rsi": prev.get("rsi"),
+            "as_of": now,
+        }
+    mem["pairs"] = pairs
+    _save_rsi_memory(mem, path)
+    return mem
+
+
+def _parse_ts_flex(raw: Any) -> Optional[datetime]:
+    if raw is None:
+        return None
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo else raw.replace(tzinfo=timezone.utc)
+    try:
+        t = datetime.fromisoformat(str(raw).replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return t
+    except Exception:
+        return None
+
+
+def _last_buy_ts_for_pair(pair: str) -> Optional[datetime]:
+    """Best-effort hold clock from ledger last BUY."""
+    try:
+        from phase6.core.paths import PROJECT_ROOT as ROOT
+
+        trades = ROOT / "trades" / "phase6_trades.jsonl"
+        if not trades.exists():
+            return None
+        last: Optional[datetime] = None
+        with trades.open(encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    r = json.loads(line)
+                except Exception:
+                    continue
+                if str(r.get("pair") or "") != pair:
+                    continue
+                if str(r.get("side") or "").upper() != "BUY":
+                    continue
+                t = _parse_ts_flex(r.get("timestamp") or r.get("ts") or r.get("filled_at"))
+                if t and (last is None or t > last):
+                    last = t
+        return last
+    except Exception:
+        return None
+
+
+def evaluate_cautious_hard_gates(
+    pair: str,
+    *,
+    regime: str,
+    rsi: Optional[float],
+    overbought: float,
+    mark_r: Optional[float],
+    hold_hours: Optional[float],
+    prev_rsi: Optional[float],
+    cfg: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Quality gates for cautious H3 (flat auto path).
+
+    Returns {ok, reasons_fail, reasons_ok, auto_regime}.
+    """
+    c = cfg or {}
+    if not c.get("enabled", False):
+        return {
+            "ok": True,
+            "skipped": True,
+            "reasons_fail": [],
+            "reasons_ok": ["cautious_disabled"],
+            "auto_regime": False,
+        }
+    auto_regs = {str(x).lower() for x in (c.get("auto_apply_regimes") or ["flat"])}
+    auto_regime = str(regime or "").lower() in auto_regs
+    fails: List[str] = []
+    oks: List[str] = []
+
+    min_hold = float(c.get("min_hold_hours") or 24.0)
+    if hold_hours is None:
+        fails.append("hold_hours_unknown")
+    elif float(hold_hours) < min_hold:
+        fails.append(f"hold {float(hold_hours):.1f}h < {min_hold}h")
+    else:
+        oks.append(f"hold {float(hold_hours):.1f}h")
+
+    min_r = float(c.get("min_mark_r") if c.get("min_mark_r") is not None else 0.0)
+    if mark_r is None:
+        fails.append("mark_r_unknown")
+    elif float(mark_r) < min_r:
+        fails.append(f"mark_r {float(mark_r):.3f} < {min_r}")
+    else:
+        oks.append(f"mark_r {float(mark_r):.3f}")
+
+    if c.get("require_rsi_cross", True):
+        if rsi is None:
+            fails.append("rsi_unknown")
+        elif prev_rsi is None:
+            # First observation while already overbought — do not treat as cross
+            fails.append("rsi_cross_no_prev")
+        elif float(prev_rsi) >= float(overbought):
+            fails.append(f"rsi_no_cross prev {float(prev_rsi):.1f} already >= {overbought}")
+        elif float(rsi) < float(overbought):
+            fails.append(f"rsi {float(rsi):.1f} < {overbought}")
+        else:
+            oks.append(f"rsi_cross {float(prev_rsi):.1f}->{float(rsi):.1f}>={overbought}")
+    else:
+        oks.append("rsi_cross_not_required")
+
+    return {
+        "ok": len(fails) == 0,
+        "skipped": False,
+        "reasons_fail": fails,
+        "reasons_ok": oks,
+        "auto_regime": auto_regime,
+    }
+
+
+def _position_mark_and_hold(
+    pair: str,
+    position_meta: Optional[Dict[str, Any]],
+) -> tuple[Optional[float], Optional[float]]:
+    """Return (mark_r, hold_hours)."""
+    meta = (position_meta or {}).get(pair) or {}
+    mark_r: Optional[float] = None
+    try:
+        if meta.get("unrealized_pnl_pct") is not None:
+            mark_r = float(meta["unrealized_pnl_pct"])
+            # ledger sometimes stores  -3 for -3% vs -0.03
+            if abs(mark_r) > 1.5:
+                mark_r = mark_r / 100.0
+        else:
+            ep = float(meta.get("entry_price") or 0)
+            cp = float(meta.get("current_price") or meta.get("price") or 0)
+            if ep > 0 and cp > 0:
+                mark_r = (cp - ep) / ep
+    except (TypeError, ValueError):
+        mark_r = None
+
+    hold_hours: Optional[float] = None
+    opened = _parse_ts_flex(
+        meta.get("opened_at")
+        or meta.get("entry_time")
+        or meta.get("opened_at_utc")
+        or meta.get("first_fill_at")
+    )
+    if opened is None:
+        opened = _last_buy_ts_for_pair(pair)
+    if opened is not None:
+        hold_hours = (datetime.now(timezone.utc) - opened).total_seconds() / 3600.0
+    return mark_r, hold_hours
+
+
 def build_hard_exit_sell_actions(
     held_positions: Dict[str, float],
     snap: RegimeCashSnapshot,
@@ -247,17 +446,27 @@ def build_hard_exit_sell_actions(
     min_sell_usd: float = 25.0,
     max_pair_fraction: float = 1.0,
     existing_pairs: Optional[Set[str]] = None,
+    position_meta: Optional[Dict[str, Dict[str, Any]]] = None,
+    cautious_cfg: Optional[Dict[str, Any]] = None,
+    rsi_memory: Optional[Dict[str, Any]] = None,
+    apply_cautious_filter: bool = True,
 ) -> List[Dict[str, Any]]:
     """Propose SELL actions for hard prefer_exit hits only.
 
     held_positions: pair → value_usd
     Does NOT include park_prefer_reduce.
+    When cautious_flat enabled + apply_cautious_filter, drop proposals that fail
+    quality gates (still logged via gate_fail on discarded list by caller if needed).
     """
     sentiment_scores = sentiment_scores or {}
     rsi_values = rsi_values or {}
     existing_pairs = existing_pairs or set()
     actions: List[Dict[str, Any]] = []
     frac = max(0.0, min(1.0, float(max_pair_fraction)))
+    mem_pairs = (rsi_memory or {}).get("pairs") or {}
+    overbought = float((snap.exit or {}).get("overbought_rsi") or 80.0)
+    ccfg = cautious_cfg or {}
+
     for pair, raw_val in (held_positions or {}).items():
         try:
             val = float(raw_val or 0.0)
@@ -267,11 +476,16 @@ def build_hard_exit_sell_actions(
             continue
         if pair in existing_pairs:
             continue
+        rsi_v = rsi_values.get(pair)
+        try:
+            rsi_f = float(rsi_v) if rsi_v is not None else None
+        except (TypeError, ValueError):
+            rsi_f = None
         dec = prefer_exit(
             pair,
             snap,
             sentiment=sentiment_scores.get(pair),
-            rsi=rsi_values.get(pair),
+            rsi=rsi_f,
         )
         hard = hard_exit_reasons(dec.reasons)
         if not hard:
@@ -279,6 +493,43 @@ def build_hard_exit_sell_actions(
         sell_usd = round(val * frac, 2)
         if sell_usd < float(min_sell_usd):
             continue
+
+        mark_r, hold_hours = _position_mark_and_hold(pair, position_meta)
+        prev_rsi = None
+        try:
+            prev_rsi = (mem_pairs.get(pair) or {}).get("rsi")
+            if prev_rsi is not None:
+                prev_rsi = float(prev_rsi)
+        except (TypeError, ValueError):
+            prev_rsi = None
+
+        gate = evaluate_cautious_hard_gates(
+            pair,
+            regime=str(snap.regime or ""),
+            rsi=rsi_f,
+            overbought=overbought,
+            mark_r=mark_r,
+            hold_hours=hold_hours,
+            prev_rsi=prev_rsi,
+            cfg=ccfg if ccfg.get("enabled") else {"enabled": False},
+        )
+        # Cautious filter: only drop when enabled and hard was RSI-led
+        # (sentiment_weak alone can still surface for operator without cross)
+        hard_is_rsi = any("rsi_overbought" in str(h).lower() for h in hard)
+        if (
+            apply_cautious_filter
+            and ccfg.get("enabled")
+            and hard_is_rsi
+            and not gate.get("skipped")
+            and not gate.get("ok")
+        ):
+            logger.info(
+                "[REGIME-HARD-EXIT] cautious drop %s fail=%s",
+                pair,
+                gate.get("reasons_fail"),
+            )
+            continue
+
         actions.append(
             {
                 "pair": pair,
@@ -290,6 +541,9 @@ def build_hard_exit_sell_actions(
                 "exit_class": "hard_exit",
                 "exit_reasons": hard,
                 "shadow_source": "prefer_exit_hard",
+                "cautious_gates": gate,
+                "mark_r": mark_r,
+                "hold_hours": hold_hours,
             }
         )
     return actions
@@ -304,11 +558,15 @@ def apply_hard_exit_to_plan(
     rsi_values: Optional[Dict[str, float]] = None,
     hard_cfg: Optional[Dict[str, Any]] = None,
     shadow_log_path: Optional[Path] = None,
+    position_meta: Optional[Dict[str, Dict[str, Any]]] = None,
+    rsi_memory_path: Optional[Path] = None,
 ) -> Any:
     """TG-02: attach hard-exit SELL proposals.
 
-    Default shadow_only: log proposals, do not mutate live plan actions.
-    live_apply=true (operator): merge SELLs into plan.
+    Default: operator_approve blocks global live_apply.
+    Cautious flat (2026-08-25): when cautious_flat.enabled and regime in
+    auto_apply_regimes and proposal passes quality gates, merge that SELL
+    even while operator_approve stays true for other regimes.
     """
     cfg = hard_cfg or {}
     if not cfg.get("enabled", False):
@@ -316,7 +574,9 @@ def apply_hard_exit_to_plan(
     min_usd = float(cfg.get("min_sell_usd") or 25.0)
     max_frac = float(cfg.get("max_pair_fraction") or 1.0)
     shadow_only = bool(cfg.get("shadow_only", True))
-    live_apply = bool(cfg.get("live_apply", False)) and not shadow_only
+    live_apply_global = bool(cfg.get("live_apply", False)) and not shadow_only
+    operator = bool(cfg.get("operator_approve", True))
+    ccfg = dict(cfg.get("cautious_flat") or {})
 
     existing = set()
     for a in list(getattr(plan, "actions", None) or []):
@@ -325,6 +585,7 @@ def apply_hard_exit_to_plan(
             if p:
                 existing.add(p)
 
+    mem = _load_rsi_memory(rsi_memory_path)
     proposals = build_hard_exit_sell_actions(
         held_positions,
         snap,
@@ -333,9 +594,33 @@ def apply_hard_exit_to_plan(
         min_sell_usd=min_usd,
         max_pair_fraction=max_frac,
         existing_pairs=existing,
+        position_meta=position_meta,
+        cautious_cfg=ccfg,
+        rsi_memory=mem,
+        apply_cautious_filter=True,
     )
+
+    # Which proposals may auto-merge under cautious flat?
+    auto_regs = {str(x).lower() for x in (ccfg.get("auto_apply_regimes") or ["flat"])}
+    regime_l = str(snap.regime or "").lower()
+    cautious_auto_on = bool(ccfg.get("enabled")) and regime_l in auto_regs
+    live_proposals: List[Dict[str, Any]] = []
+    if live_apply_global and not operator:
+        live_proposals = list(proposals)
+    elif cautious_auto_on:
+        for p in proposals:
+            g = p.get("cautious_gates") or {}
+            if g.get("ok") and g.get("auto_regime", True):
+                q = dict(p)
+                q["reason"] = "regime_hard_exit_cautious_flat"
+                q["exit_class"] = "hard_exit_cautious_flat"
+                live_proposals.append(q)
+
+    live_apply = bool(live_proposals)
+
     try:
         plan.regime_hard_exit_proposals = proposals  # type: ignore[attr-defined]
+        plan.regime_hard_exit_live_proposals = live_proposals  # type: ignore[attr-defined]
         plan.regime_hard_exit_shadow = not live_apply  # type: ignore[attr-defined]
     except Exception:
         pass
@@ -347,13 +632,20 @@ def apply_hard_exit_to_plan(
         "strategy_mode": snap.strategy_mode,
         "shadow_only": not live_apply,
         "live_apply": live_apply,
-        "operator_approve": bool(cfg.get("operator_approve", True)),
+        "operator_approve": operator,
+        "cautious_flat": {
+            "enabled": bool(ccfg.get("enabled")),
+            "auto_apply_regimes": list(auto_regs),
+            "regime_match": cautious_auto_on,
+            "n_live": len(live_proposals),
+        },
         "proposals": proposals,
+        "live_proposals": live_proposals,
         "n": len(proposals),
     }
-    # Operator loop: never live_apply while operator_approve is on
-    if bool(cfg.get("operator_approve", True)):
-        live_apply = False
+
+    # Legacy global path: operator_approve forces shadow unless cautious live set
+    if operator and not live_proposals:
         payload["live_apply"] = False
         payload["shadow_only"] = True
 
@@ -364,15 +656,17 @@ def apply_hard_exit_to_plan(
     except Exception as e:
         logger.warning("[REGIME-HARD-EXIT] shadow write failed: %s", e)
 
-    if proposals:
+    if proposals or live_proposals:
         logger.info(
-            "[REGIME-HARD-EXIT] %s n=%s pairs=%s",
+            "[REGIME-HARD-EXIT] %s n=%s live_n=%s pairs=%s live=%s",
             "LIVE_APPLY" if live_apply else "SHADOW+NOTIFY",
             len(proposals),
+            len(live_proposals),
             [p.get("pair") for p in proposals],
+            [p.get("pair") for p in live_proposals],
         )
-        # Decision-loop notify (Telegram + pending inbox); never auto-sell
-        if bool(cfg.get("notify_telegram", True)) or bool(cfg.get("operator_approve", True)):
+        # Always notify on new proposals (operator visibility); live still merges
+        if bool(cfg.get("notify_telegram", True)) or operator or live_apply:
             try:
                 from phase6.scripts.hard_exit_controls import maybe_notify_hard_exits
 
@@ -389,8 +683,15 @@ def apply_hard_exit_to_plan(
             except Exception as e:
                 logger.warning("[REGIME-HARD-EXIT] notify skipped: %s", e)
 
-    if live_apply and proposals and getattr(plan, "actions", None) is not None:
-        plan.actions = list(plan.actions) + proposals
+    if live_apply and live_proposals and getattr(plan, "actions", None) is not None:
+        plan.actions = list(plan.actions) + live_proposals
+
+    # Update RSI memory after eval so next cycle can detect cross
+    try:
+        update_rsi_memory(rsi_values, path=rsi_memory_path)
+    except Exception as e:
+        logger.warning("[REGIME-HARD-EXIT] rsi memory update failed: %s", e)
+
     return plan
 
 
@@ -545,7 +846,8 @@ def apply_to_runner_plan(
                     held_vals[str(k)] = float(v or 0.0)
             except (TypeError, ValueError):
                 continue
-        # Prefer portfolio enriched values when available
+        # Prefer portfolio enriched values when available + position meta for gates
+        position_meta: Dict[str, Dict[str, Any]] = {}
         try:
             port = getattr(runner, "portfolio", None)
             if port and hasattr(port, "get_enriched_positions"):
@@ -556,6 +858,30 @@ def apply_to_runner_plan(
                         pair = str(p.get("pair") or "")
                         if pair and pair not in ("USD", "USDC"):
                             held_vals[pair] = float(p.get("value_usd") or held_vals.get(pair) or 0.0)
+                            position_meta[pair] = {
+                                "entry_price": p.get("entry_price") or p.get("avg_entry"),
+                                "current_price": p.get("current_price") or p.get("price"),
+                                "unrealized_pnl_pct": p.get("unrealized_pnl_pct"),
+                                "opened_at": p.get("opened_at") or p.get("entry_time"),
+                                "value_usd": p.get("value_usd"),
+                            }
+        except Exception:
+            pass
+        # Fallback: runner.current_positions dict form
+        try:
+            pos = getattr(runner, "current_positions", None) or {}
+            for k, v in pos.items():
+                if not isinstance(v, dict):
+                    continue
+                pair = str(k)
+                if pair not in position_meta:
+                    position_meta[pair] = {
+                        "entry_price": v.get("entry_price") or v.get("avg_entry"),
+                        "current_price": v.get("current_price") or v.get("price"),
+                        "unrealized_pnl_pct": v.get("unrealized_pnl_pct"),
+                        "opened_at": v.get("opened_at") or v.get("entry_time"),
+                        "value_usd": v.get("value_usd"),
+                    }
         except Exception:
             pass
         plan = apply_hard_exit_to_plan(
@@ -565,6 +891,7 @@ def apply_to_runner_plan(
             sentiment_scores=sentiment_scores,
             rsi_values=rsi,
             hard_cfg=hard_cfg,
+            position_meta=position_meta,
         )
     except Exception as e:
         logger.warning("[REGIME-HARD-EXIT] apply skipped: %s", e)

@@ -243,20 +243,39 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
         blocks = {}
         notes.append(f"buy_block_status_error={exc}")
 
-    # LINK should be post_tp 24h if blocked; UNI/RAVE should NOT be blocked (waived)
+    # Buy-block hygiene (policy, not hardcodes to one pair):
+    #   post_tp_rebuy_block  → ~24h
+    #   post_sl_rebuy_block  → ~72h (default)
+    # Stale one-off: UNI/RAVE were waived — still flag if those reappear blocked.
     for p in ("UNI-USD", "RAVE-USD"):
         if p in blocks:
-            alerts.append(f"BLOCK_SHOULD_BE_CLEAR {p} still blocked reason={blocks[p].get('reason')}")
-    if "LINK-USD" in blocks:
-        b = blocks["LINK-USD"]
-        if b.get("reason") != "post_tp_rebuy_block" or float(b.get("block_hours") or 0) > 24.5:
             alerts.append(
-                f"LINK_BLOCK_NOT_24H reason={b.get('reason')} block_hours={b.get('block_hours')}"
+                f"BLOCK_SHOULD_BE_CLEAR {p} still blocked reason={blocks[p].get('reason')}"
+            )
+    for pair, b in (blocks or {}).items():
+        if pair in ("UNI-USD", "RAVE-USD"):
+            continue  # handled above
+        reason = str(b.get("reason") or "")
+        try:
+            hours = float(b.get("block_hours") or 0)
+        except (TypeError, ValueError):
+            hours = 0.0
+        if reason == "post_tp_rebuy_block" and hours <= 24.5:
+            notes.append(
+                f"{pair} post-TP OK hours_left={b.get('hours_remaining')} exp={b.get('expires_at')}"
+            )
+        elif reason == "post_sl_rebuy_block" and hours <= 72.5:
+            notes.append(
+                f"{pair} post-SL OK hours_left={b.get('hours_remaining')} "
+                f"block_hours={hours} exp={b.get('expires_at')}"
+            )
+        elif reason in ("post_tp_rebuy_block", "post_sl_rebuy_block"):
+            alerts.append(
+                f"BLOCK_HOURS_UNEXPECTED {pair} reason={reason} block_hours={hours}"
             )
         else:
-            notes.append(
-                f"LINK post-TP OK hours_left={b.get('hours_remaining')} exp={b.get('expires_at')}"
-            )
+            # unknown block class — note only (not page every 10m)
+            notes.append(f"{pair} block reason={reason} hours={hours}")
 
     # Peak hygiene for currently held bags
     for pair, h in held.items():
@@ -544,11 +563,18 @@ def main() -> int:
     ap.add_argument("--lookback-hours", type=float, default=12.0)
     ap.add_argument("--json", action="store_true", help="Always print full JSON")
     args = ap.parse_args()
-    result = evaluate(lookback_hours=args.lookback_hours)
+    try:
+        result = evaluate(lookback_hours=args.lookback_hours)
+    except Exception as exc:
+        # Real failure → exit 1 so Hermes pages
+        print(f"REENTRY_SL_TP_MONITOR_ERROR: {exc}", file=sys.stderr)
+        return 1
     if args.json:
         print(json.dumps(result, indent=2))
-        return 0 if result.get("ok") else 1
-    # no_agent quiet when healthy
+        return 0
+    # no_agent + telegram: exit 0 always on successful eval.
+    # Empty stdout = silent (healthy). Non-empty = deliver alert body.
+    # Exit 1 was wrongly treated as "cron failed 9×" for policy alerts.
     if result.get("ok"):
         return 0
     print(f"REENTRY_SL_TP_ALERT n={len(result['alerts'])} ts={result['ts']}")
@@ -557,7 +583,7 @@ def main() -> int:
     for n in (result.get("notes") or [])[:8]:
         print(f"  note: {n}")
     print(f"  detail: {OUT}")
-    return 1
+    return 0
 
 
 if __name__ == "__main__":

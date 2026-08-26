@@ -5,13 +5,11 @@ Phase 6 Daily Trading Intelligence Briefing — Crypto Analyst
 
 This script produces the canonical daily briefing delivered via cron/Telegram.
 
-Structure (as designed):
-- Header + Persona
-- Current State (basket, per-pair signals, coverage, runner state, Polymarket)
-- Honest Assessment (mandatory)
-- Evolution Notes
-- Strategic Modification Proposals (structured: ID, title, description, benefits, risks, priority/effort/category)
-- Decision Approval Required (simple reply options at the bottom)
+Telegram structure (decision_brief_v1 — Brad 2026-08-25):
+- BOTTOM LINE (go/no-go plain English)
+- Do now / Book / Stance / Wounds / What's next
+- Needs your call (only if new proposals)
+Side effects still: backlog JSON, MASTER append, intel_strategic_brief.json, weekly assessment
 
 Proposals:
 - Get unique IDs (ANALYST-YYYYMMDD-NNN) that flow from generation through backlog, acceptance, Kanban, and deployment.
@@ -520,8 +518,8 @@ def feed_proposals_to_master_backlog(new_proposals):
 
         added.append(pid)
 
-    if added:
-        print(f"New proposals added to MASTER: {added}")
+    # Quiet: MASTER append is a side effect; TG body must stay decision-only
+    return added
 
 
 def _run_background_analyst_jobs(basket, sent_scores):
@@ -536,11 +534,8 @@ def _run_background_analyst_jobs(basket, sent_scores):
         (PROJECT_ROOT / "data/state/pm_tilt_retrospective_analysis.json").write_text(
             json.dumps(analysis, indent=2)
         )
-        if analysis.get("tiebreaker_activations", 0) > 0:
-            print("\n=== PM tilt (event) ===")
-            print(f"Tie-breaker activations: {analysis['tiebreaker_activations']}")
-            for s in (analysis.get("tuning_suggestions") or [])[:1]:
-                print(f"  Suggestion: {s.get('title')}")
+        # Event artifact on disk only — do not print to Telegram stdout
+        _ = analysis.get("tiebreaker_activations", 0)
     except Exception:
         pass
 
@@ -574,12 +569,13 @@ def _run_background_analyst_jobs(basket, sent_scores):
 
 
 def main():
+    """
+    Telegram body = decision-first plain English (see decision_brief.py).
+    Ops/JSON artifacts still built for runner + MASTER; not dumped raw to TG.
+    """
     from phase6.core.sentiment_scorer import load_sentiment_scores
     from phase6.core.basket_signal_coverage import assess_pair_signal_coverage
-
-    print("=== Phase 6 Daily Brief — Crypto Analyst ===")
-    print(f"{date.today().isoformat()} | {datetime.now(timezone.utc).strftime('%H:%M')} UTC")
-    print()
+    from phase6.research.decision_brief import format_decision_brief
 
     basket = load_basket()
     sent_scores = load_sentiment_scores(universe=basket)
@@ -592,47 +588,33 @@ def main():
     cov = assess_pair_signal_coverage(basket=basket, sentiment_scores=sent_scores)
     full_count = int(cov.get("full_count", 0))
 
-    high_sl = [
-        p
-        for p in basket
-        if str(sl_risks.get(p, {}).get("level", "")).upper() in ("HIGH", "CRITICAL")
-    ]
-    print("=== Health ===")
-    print(
-        f"Signals: {full_count}/{len(basket)} FULL | "
-        f"Last rebalance: {state.get('last_rebalance_date', '?')}"
-    )
-    print(f"SL elevated: {high_sl or 'none'}")
-    try:
-        from phase6.core.same_session_sl import format_brief_line, summarize as _ss_sl
-
-        _ss = _ss_sl(persist=True)
-        print(format_brief_line(_ss))
-    except Exception as _ss_err:
-        print(f"Same-session SL (<2h): n/a ({type(_ss_err).__name__})")
-    print(
-        f"Regime (Polymarket risk-on): {float(poly.get('risk_on_bias', 0.5))} | "
-        f"markets {poly.get('num_markets', '?')}"
-    )
-
-    actionable = []
+    # Structured signals for decision brief (BUY/SELL only drive "Do now")
+    signal_rows = []
     for pair in basket:
         rsi_val = latest.get("rsi", {}).get(pair)
         sent_val = latest.get("sentiment", {}).get(pair, 0.0)
         signal = sg.generate_signal(pair, rsi_val or 50.0, sentiment=sent_val or 0.0)
         slr = sl_risks.get(pair, {"level": "unknown"})
-        risk_level = str(slr.get("level", "unknown")).upper()
-        if signal.signal in ("BUY", "SELL") or risk_level in ("HIGH", "CRITICAL"):
-            reason = (signal.reason or "")[:48]
-            actionable.append(f"{pair}: {signal.signal} — {reason} | SL {slr.get('level')}")
-    print("Actionable:")
-    if actionable:
-        for line in actionable:
-            print(f"  {line}")
-    else:
-        print("  none (monitor mode)")
-    print()
+        signal_rows.append(
+            {
+                "pair": pair,
+                "signal": signal.signal,
+                "reason": (signal.reason or "")[:72],
+                "sl_level": slr.get("level"),
+            }
+        )
 
+    same_session = None
+    same_session_3d = None
+    try:
+        from phase6.core.same_session_sl import summarize as _ss_sl
+
+        same_session = _ss_sl(persist=True)  # default ~30d health metric on disk
+        same_session_3d = _ss_sl(persist=False, lookback_days=3.0)
+    except Exception:
+        pass
+
+    # Background side effects (PM tilt file, influence stack) — quiet on TG
     _run_background_analyst_jobs(basket, sent_scores)
 
     lb = None
@@ -641,51 +623,47 @@ def main():
         from phase6.research.optimization_brief import build_daily_opt_brief, load_leaderboard
 
         lb = load_leaderboard()
-        opt_text, opt_brief = build_daily_opt_brief(lb)
-        print(opt_text)
-        print()
+        _opt_text, opt_brief = build_daily_opt_brief(lb)
+        # Keep verbose opt_text off Telegram (decision_brief uses opt_brief JSON)
+        del _opt_text
     except Exception as e:
-        print(f"=== Wealth & scenarios ===\n(skipped: {e})\n")
+        opt_brief = {"deployment_hint": f"hold — wealth block skipped ({type(e).__name__})"}
 
-    # === Honest Assessment (mandatory, data-driven) ===
-    print("=== Honest Assessment ===")
+    # Honest assessment still computed for weekly artifact / evolution — not printed
     try:
-        from phase6.research.analyst_narrative import format_honest_assessment
+        from phase6.research.analyst_narrative import (
+            format_honest_assessment,
+            build_evolution_note,
+            persist_weekly_assessment,
+        )
 
-        for line in format_honest_assessment(
+        assessment_lines = format_honest_assessment(
             full_coverage_count=full_count,
             total_pairs=len(basket),
             sl_risks=sl_risks,
             opt_brief=opt_brief,
             leaderboard=lb,
-        ):
-            print(line)
-    except Exception as e:
-        print(f"(assessment fallback: {e})")
-        if full_count >= len(basket) - 2:
-            print("Coverage is genuinely good. SL layer remains a weak link.")
-        else:
-            print("Coverage still patchy.")
-    print()
-
-    try:
-        from phase6.research.analyst_narrative import build_evolution_note
-
+        )
         new_evolution = build_evolution_note(
             full_coverage_count=full_count,
             total_pairs=len(basket),
             opt_brief=opt_brief,
             leaderboard=lb,
         )
+        try:
+            persist_weekly_assessment(assessment_lines, new_evolution, opt_brief)
+        except Exception:
+            pass
     except Exception:
+        assessment_lines = []
         new_evolution = {
             "thesis": "Platform + allocator should deliver better-timed rotation.",
             "outcome": f"Allocator active. {full_count} FULL signals.",
-            "evolution_note": "Run regime scorecard; shadow before live knobs.",
+            "evolution_note": "Keep gates; paper-trial OPT winners before live settings.",
         }
     learnings = add_evolution_note(learnings, new_evolution)
 
-    # === Prospects (new ideas only) ===
+    # Prospects (persist + optional TG "Needs your call")
     existing_proposals = load_existing_proposals()
     existing_ids = {p.get("id") for p in existing_proposals if p.get("id")}
     known_title_keys = collect_known_proposal_titles()
@@ -703,15 +681,6 @@ def main():
         leaderboard=lb,
     )
 
-    print("=== Prospects (new proposals) ===")
-    if not proposals:
-        print("No new strategic modifications this cycle.")
-        print(f"Next focus: {new_evolution.get('evolution_note', 'n/a')}")
-    else:
-        for p in proposals:
-            print(f"  {p['id']}: {p['title']} [{p.get('priority', '?')}]")
-    print()
-
     # Persist (deduped, quiet)
     try:
         all_proposals = existing_proposals + [p for p in proposals if p["id"] not in existing_ids]
@@ -721,7 +690,6 @@ def main():
     except Exception:
         pass
 
-    # Feed to canonical proposed backlog (with IDs)
     try:
         backlog = load_proposed_backlog()
         existing_backlog_ids = {p.get("id") for p in backlog.get("proposals", [])}
@@ -763,25 +731,29 @@ def main():
             "last_rebalance": state.get("last_rebalance_date"),
             "optimization": opt_brief,
             "note": "Soft context for next rebalance.",
+            "format": "decision_brief_v1",
         }
         BRIEF_CACHE.parent.mkdir(parents=True, exist_ok=True)
         json.dump(brief, open(BRIEF_CACHE, "w"), indent=2)
     except Exception:
         pass
 
-    if proposals:
-        print("\n=== Decisions ===")
-        for i, p in enumerate(proposals, 1):
-            print(f"{i}. {p['id']}: {p['title']}")
-        print('Reply: "proceed with 1" | "wait" | "none"')
+    # 48h post-deploy watch stays off TG unless you want it later (still available via backlog tools)
 
-    try:
-        backlog = load_proposed_backlog()
-        generate_followup_validation(learnings, backlog, sl_risks, proposals)
-    except Exception:
-        pass
-
-    print("\n— End brief —")
+    body = format_decision_brief(
+        basket=basket,
+        full_count=full_count,
+        last_rebalance=str(state.get("last_rebalance_date") or "?"),
+        poly=poly,
+        sl_risks=sl_risks,
+        signals=signal_rows,
+        opt_brief=opt_brief,
+        same_session=same_session,
+        same_session_3d=same_session_3d,
+        proposals=proposals,
+        next_focus=str(new_evolution.get("evolution_note") or ""),
+    )
+    print(body)
 
 
 if __name__ == "__main__":

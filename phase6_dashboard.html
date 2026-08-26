@@ -870,10 +870,13 @@
                     || (signalsData.rows || []).filter(r => r && r.buy_blocked).length;
                 const gatedN = (signalsData.entry_gated_pairs || []).length
                     || (signalsData.rows || []).filter(r => r && r.entry_gated).length;
+                const maxN = (signalsData.max_blocked_pairs || []).length
+                    || (signalsData.rows || []).filter(r => r && r.block_max).length;
                 const bits = [];
                 if (n) bits.push('basket ' + n);
                 if (gatedN) bits.push('gated ' + gatedN);
                 if (blockedN) bits.push('blocked ' + blockedN);
+                if (maxN) bits.push('block-max ' + maxN);
                 if (mode) bits.push('sent: ' + mode);
                 const floors = signalsData.entry_floors || {};
                 if (floors.min_sentiment_new_pair != null) {
@@ -899,10 +902,11 @@
                     const rankOf = (r) => {
                         if (r.status === 'BUY' && r.deploy_ready) return 0;
                         if (r.status === 'BUY' && r.entry_gated) return 1;
-                        if (r.status === 'BUY') return 2;
-                        if (r.status === 'HOLD') return 3;
-                        if (r.status === 'SELL') return 4;
-                        return 5;
+                        if (r.status === 'BUY' && r.block_max) return 2;
+                        if (r.status === 'BUY') return 3;
+                        if (r.status === 'HOLD') return 4;
+                        if (r.status === 'SELL') return 5;
+                        return 6;
                     };
                     const ra = rankOf(a);
                     const rb = rankOf(b);
@@ -940,15 +944,22 @@
                         const why = r.block_reason || 'rebuy_cooldown';
                         flags.push(`<span class="text-amber-400" title="Auto-BUY blocked (${why})${exp}${hrs}. Signal may still show BUY.">·blocked</span>`);
                     }
+                    if (r.block_max) {
+                        const mad = (r.max_add_usd != null) ? ` max add $${Number(r.max_add_usd).toFixed(0)}` : '';
+                        const wt = (r.held_weight_pct != null) ? ` · held ${Number(r.held_weight_pct).toFixed(0)}% eq` : '';
+                        const tgt = (r.target_pair_weight != null) ? ` (target ≤${(Number(r.target_pair_weight)*100).toFixed(0)}%)` : '';
+                        const why = r.add_block_reason || 'add_risk';
+                        flags.push(`<span class="text-rose-400" title="Add blocked at size: ${why}${mad}${wt}${tgt}. Same gate as AM rebalance ADD-RISK skip. Status can still be BUY.">·block-max</span>`);
+                    }
                     if (r.deploy_ready) {
-                        flags.push('<span class="text-emerald-500/80" title="BUY + entry gates clear + not cooldown-blocked. Still subject to size/cap at rebalance.">·ready</span>');
+                        flags.push('<span class="text-emerald-500/80" title="BUY + entry gates clear + not cooldown-blocked + add-risk room. Still subject to cash/slot at rebalance.">·ready</span>');
                     }
                     const flagHtml = flags.length ? (' ' + flags.join(' ')) : '';
                     const rsiC = r.rsi_color ? ('text-' + r.rsi_color) : 'text-slate-400';
                     const sC = r.sentiment_color ? ('text-' + r.sentiment_color) : 'text-slate-400';
                     const stC = r.status_color ? ('text-' + r.status_color) : 'text-slate-300';
                     const stW = (r.status === 'BUY' || r.status === 'SELL') ? 'font-semibold' : 'font-medium';
-                    // Status stays BUY/HOLD/SELL only — gate state is the ·gated flag (not BUY·gate)
+                    // Status stays BUY/HOLD/SELL only — gate state is the ·gated / ·block-max flag
                     const stText = r.status || 'HOLD';
                     let tip = (r.reason || '') + (r.confidence != null ? ` · conf ${r.confidence}` : '');
                     tip += ` · sent ${Number(r.sentiment).toFixed(3)} (${r.sentiment_label || ''})`;
@@ -962,7 +973,13 @@
                             + (r.block_hours_remaining != null ? `, ${Number(r.block_hours_remaining).toFixed(1)}h left` : '')
                             + ')';
                     }
-                    if (r.deploy_ready) tip += ' · deploy-ready (size/cap still apply)';
+                    if (r.block_max) {
+                        tip += ` · BLOCK-MAX add (${r.add_block_reason || 'add_risk'}`
+                            + (r.max_add_usd != null ? `, max_add $${Number(r.max_add_usd).toFixed(0)}` : '')
+                            + (r.held_weight_pct != null ? `, wt ${Number(r.held_weight_pct).toFixed(0)}%` : '')
+                            + ')';
+                    }
+                    if (r.deploy_ready) tip += ' · deploy-ready';
                     return `<tr class="border-b border-slate-800/80 last:border-0">
                         <td class="py-2 pr-2 font-medium whitespace-nowrap">${r.pair}${flagHtml}</td>
                         <td class="py-2 px-2 text-right tabular-nums ${rsiC}" title="${r.rsi_label || ''}">${Number(r.rsi).toFixed(1)}</td>

@@ -808,6 +808,11 @@ def report_open_pairs_add_room(
             other_book_heat_usd=other,
         )
         weight = meta["value"] / max(equity_usd, 1e-9)
+        max_add_f = None if max_add == float("inf") else float(max_add)
+        # block-max: existing stack cannot clear min_move at rebalance (same gate as ADD-RISK skip)
+        block_max = bool(
+            max_add_f is not None and max_add_f + 1e-9 < float(factors.min_move_usd)
+        )
         out.append(
             {
                 "pair": pair,
@@ -817,8 +822,11 @@ def report_open_pairs_add_room(
                 "stop_gap_pct": detail.get("stop_gap_pct"),
                 "stop_price": detail.get("stop_price"),
                 "pair_heat_usd": round(heats.get(pair, 0.0), 2),
-                "max_add_usd": None if max_add == float("inf") else round(float(max_add), 2),
+                "max_add_usd": None if max_add_f is None else round(max_add_f, 2),
+                "min_move_usd": float(factors.min_move_usd),
+                "target_pair_weight": float(factors.target_pair_weight),
                 "over_target": weight > factors.target_pair_weight + 1e-9,
+                "block_max": block_max,
                 "status": "over_target_no_forced_sell" if weight > factors.target_pair_weight else "in_band",
                 "detail_reason": detail.get("reason"),
                 "budgets": {
@@ -832,3 +840,145 @@ def report_open_pairs_add_room(
             }
         )
     return out
+
+
+def load_add_room_by_pair_for_dashboard() -> Dict[str, Any]:
+    """
+    Live-state snapshot of add-risk room per held pair for Signals telegraph.
+
+    Returns:
+      {
+        "by_pair": { "LINK-USD": {block_max, max_add_usd, ...}, ... },
+        "max_blocked_pairs": ["LINK-USD", ...],
+        "regime": "bull",
+        "min_move_usd": 50.0,
+        "target_pair_weight": 0.22,
+        "enabled": True,
+      }
+    """
+    empty: Dict[str, Any] = {
+        "by_pair": {},
+        "max_blocked_pairs": [],
+        "regime": "unknown",
+        "min_move_usd": float(_DEFAULT_FACTORS["min_move_usd"]),
+        "target_pair_weight": float(_DEFAULT_FACTORS["target_pair_weight"]),
+        "enabled": True,
+    }
+    try:
+        from pathlib import Path
+        import json
+
+        live_path = Path("data/state/phase6_live_state.json")
+        if not live_path.is_file():
+            # absolute from package root fallback
+            live_path = Path(__file__).resolve().parents[2] / "data/state/phase6_live_state.json"
+        if not live_path.is_file():
+            return empty
+        live = json.loads(live_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        logger.warning("[ADD-RISK] dashboard live state load failed: %s", e)
+        return empty
+
+    positions = live.get("positions") or live.get("trading_positions") or []
+    equity = _f(live.get("total_usd") or live.get("equity_usd"), 0.0)
+    cash = _f(live.get("cash_usd"), 0.0)
+    if equity <= 0 and isinstance(positions, list):
+        equity = sum(_f(r.get("value_usd"), 0.0) for r in positions if isinstance(r, dict)) + cash
+
+    # Prefer live SL estimates; fall back to registry inside report_open_pairs_add_room
+    stops: Dict[str, float] = {}
+    if isinstance(positions, list):
+        for row in positions:
+            if not isinstance(row, dict):
+                continue
+            pair = str(row.get("pair") or "")
+            if not pair:
+                continue
+            sp = _f(row.get("sl_stop_price_est") or row.get("stop_price"), 0.0)
+            if sp > 0:
+                stops[pair] = sp
+
+    # Factors without a runner — same policy path as rebalance
+    regime = "unknown"
+    regime_entry: Dict[str, Any] = {}
+    policy_ar: Dict[str, Any] = {}
+    rm: Dict[str, Any] = {}
+    cap = None
+    reserve = None
+    try:
+        from phase6.core.regime_cash_policy import load_policy, resolve_regime_cash
+
+        pol = load_policy()
+        policy_ar = pol.get("add_risk") if isinstance(pol.get("add_risk"), dict) else {}
+        snap = resolve_regime_cash(policy=pol)
+        regime = str(getattr(snap, "regime", None) or "unknown")
+        cap = getattr(snap, "rebalance_cap_usd", None)
+        reserve = getattr(snap, "min_cash_reserve_pct", None)
+        regimes = (pol.get("regimes") or {}) if isinstance(pol, dict) else {}
+        regime_entry = regimes.get(regime) if isinstance(regimes.get(regime), dict) else {}
+    except Exception as e:
+        logger.warning("[ADD-RISK] dashboard regime resolve failed: %s", e)
+
+    try:
+        from pathlib import Path
+        import json
+
+        cfg_path = Path("config/trading_config_phase6.json")
+        if not cfg_path.is_file():
+            cfg_path = Path(__file__).resolve().parents[2] / "config/trading_config_phase6.json"
+        if cfg_path.is_file():
+            cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+            rm = cfg.get("risk_management") if isinstance(cfg.get("risk_management"), dict) else {}
+            gs = cfg.get("global_settings") if isinstance(cfg.get("global_settings"), dict) else {}
+            if cap is None and gs.get("rebalance_cap_usd") is not None:
+                cap = gs.get("rebalance_cap_usd")
+    except Exception:
+        pass
+
+    factors = resolve_add_risk_factors(
+        regime=regime,
+        regime_entry=regime_entry if isinstance(regime_entry, dict) else {},
+        policy_add_risk=policy_ar if isinstance(policy_ar, dict) else {},
+        risk_management=rm if isinstance(rm, dict) else {},
+        rebalance_cap_usd=_f(cap) if cap is not None else None,
+        min_cash_reserve_pct=_f(reserve) if reserve is not None else None,
+    )
+    if isinstance(rm, dict) and rm.get("stop_loss_pct") is not None:
+        factors.stop_loss_pct = _f(rm.get("stop_loss_pct"), factors.stop_loss_pct)
+    if isinstance(rm, dict) and rm.get("near_stop_min_gap_pct") is not None:
+        factors.min_gap_pct = _f(rm.get("near_stop_min_gap_pct"), factors.min_gap_pct)
+
+    if not factors.enabled:
+        empty["enabled"] = False
+        empty["regime"] = factors.regime
+        return empty
+
+    rows = report_open_pairs_add_room(
+        positions=positions if isinstance(positions, list) else positions,
+        equity_usd=equity,
+        cash_usd=cash,
+        factors=factors,
+        stops=stops or None,
+    )
+    by_pair: Dict[str, Any] = {}
+    blocked: List[str] = []
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        pair = str(row.get("pair") or "")
+        if not pair:
+            continue
+        by_pair[pair] = row
+        if row.get("block_max"):
+            blocked.append(pair)
+
+    return {
+        "by_pair": by_pair,
+        "max_blocked_pairs": blocked,
+        "regime": factors.regime,
+        "min_move_usd": float(factors.min_move_usd),
+        "target_pair_weight": float(factors.target_pair_weight),
+        "enabled": bool(factors.enabled),
+        "equity_usd": round(equity, 2),
+        "cash_usd": round(cash, 2),
+    }

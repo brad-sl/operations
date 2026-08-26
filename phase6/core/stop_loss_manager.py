@@ -377,10 +377,35 @@ class StopLossManager:
                     if sl_order_id and not self.shadow_mode:
                         try:
                             from phase6.core.protective_orders_registry import register_protective_order
+                            # Economic entry for diagnostics: never store a basis that sits
+                            # *below* the stop (stale-low calc_base after ratchet keeps stop).
+                            reg_entry = float(anchor_entry or entry_price or calc_base or 0)
+                            sp = float(stop_price or 0)
+                            pct_f = float(pct or 0.03)
+                            if reg_entry > 0 and sp > reg_entry * 1.01:
+                                # Prefer an anchor above the stop; else imply from stop+sl%
+                                for cand in (anchor_entry, entry_price, calc_base):
+                                    try:
+                                        c = float(cand or 0)
+                                    except (TypeError, ValueError):
+                                        c = 0.0
+                                    if c > sp:
+                                        reg_entry = c
+                                        break
+                                else:
+                                    if pct_f > 0 and pct_f < 0.5:
+                                        reg_entry = sp / (1.0 - pct_f)
+                                logger.warning(
+                                    "[SL-REGISTRY] %s adjusted entry $%.4f for stop $%.4f "
+                                    "(avoid stale-low basis)",
+                                    pair,
+                                    reg_entry,
+                                    sp,
+                                )
                             register_protective_order(
                                 pair=pair,
                                 sl_order_id=str(sl_order_id),
-                                entry_price=float(calc_base or entry_price),
+                                entry_price=float(reg_entry or calc_base or entry_price or 0),
                                 qty=float(size),
                                 stop_price=float(stop_price),
                                 limit_price=float(limit_price),

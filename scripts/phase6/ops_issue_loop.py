@@ -48,6 +48,8 @@ ROUTES: list[tuple[re.Pattern[str], str, int, list[str]]] = [
 DEFAULT_ASSIGNEE = "crypto-engineer"
 DEFAULT_PRIORITY = 3
 DEFAULT_SKILLS = ["trading-bot-operations", "phase6-ops-triage"]
+JOBS_JSON = Path.home() / ".hermes/cron/jobs.json"
+CRON_ERR_RE = re.compile(r"^Hermes cron recent error:\s*(.+)$", re.I)
 
 
 def _now() -> str:
@@ -437,15 +439,124 @@ def _kanban_show(task_id: str) -> dict[str, Any] | None:
         return {"id": task_id, "status": m.group(1) if m else None, "raw": text[:500]}
 
 
+def _load_jobs() -> list[dict[str, Any]]:
+    if not JOBS_JSON.exists():
+        return []
+    try:
+        raw = json.loads(JOBS_JSON.read_text())
+    except Exception:
+        return []
+    return raw if isinstance(raw, list) else list(raw.get("jobs") or [])
+
+
+def _cron_status_by_name() -> dict[str, dict[str, Any]]:
+    out: dict[str, dict[str, Any]] = {}
+    for j in _load_jobs():
+        name = str(j.get("name") or "").strip()
+        if name:
+            out[name] = j
+        jid = str(j.get("id") or "").strip()
+        if jid:
+            out[jid] = j
+    return out
+
+
+def cmd_ingest_cron_errors(args: argparse.Namespace) -> int:
+    """Promote enabled Hermes crons with last_status=error into registry (idempotent)."""
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from scripts.phase6.ops_triage_tasks import promote_finding  # type: ignore
+
+    results = []
+    for j in _load_jobs():
+        if not j.get("enabled", True):
+            continue
+        if str(j.get("last_status") or "").lower() != "error":
+            continue
+        name = str(j.get("name") or j.get("id") or "unknown")
+        jid = str(j.get("id") or "")
+        finding = f"Hermes cron recent error: {name}"
+        entry = promote_finding(
+            finding,
+            priority="medium",
+            evidence=[f"~/.hermes/cron/jobs.json id={jid}", f"last_run={j.get('last_run_at')}"],
+            no_github=bool(getattr(args, "no_github", False)),
+            source="ops_issue_loop_cron_ingest",
+            extra={
+                "auto_promoted": True,
+                "cron_job_id": jid,
+                "cron_name": name,
+            },
+        )
+        results.append({"finding": finding, "result": entry.get("id") or entry.get("skipped")})
+    print(json.dumps({"ingest_cron_errors": True, "results": results}, indent=2))
+    return 0
+
+
 def cmd_reconcile(args: argparse.Namespace) -> int:
-    """If Kanban done or GH closed → registry done + close the other side."""
+    """If Kanban done or GH closed → registry done + close the other side.
+
+    Also: cron-error findings auto-close when that job's last_status is ok again.
+    """
     rows = _load_registry()
     actions = []
+    cron_map = _cron_status_by_name()
+
     for r in rows:
         if r.get("status") not in ("open", "in_progress"):
             continue
         issue = r.get("github_issue")
         ktid = r.get("kanban_task_id")
+        finding = str(r.get("finding") or "")
+
+        # Auto-close recovered cron failures
+        m = CRON_ERR_RE.match(finding.strip())
+        cron_name = r.get("cron_name") or (m.group(1).strip() if m else None)
+        jid = r.get("cron_job_id")
+        job = None
+        if jid and jid in cron_map:
+            job = cron_map[jid]
+        elif cron_name and cron_name in cron_map:
+            job = cron_map[cron_name]
+        if job is not None and str(job.get("last_status") or "").lower() == "ok":
+            note = (
+                f"cron recovered: {job.get('name')} last_status=ok "
+                f"at {job.get('last_run_at')}"
+            )
+            r["status"] = "done"
+            r["closed"] = _day()
+            r["resolution_note"] = r.get("resolution_note") or note
+            r.setdefault("loop", {})["reconciled_at"] = _now()
+            r.setdefault("loop", {})["auto_closed_reason"] = "cron_recovered"
+            if ktid:
+                _run(
+                    [
+                        "hermes",
+                        "kanban",
+                        "--board",
+                        BOARD,
+                        "complete",
+                        str(ktid),
+                        "--result",
+                        note[:500],
+                    ]
+                )
+            if issue:
+                _run(
+                    [
+                        "gh",
+                        "issue",
+                        "close",
+                        str(issue),
+                        "-R",
+                        REPO,
+                        "--comment",
+                        f"Auto-closed: {note}",
+                    ]
+                )
+            actions.append({"id": r.get("id"), "closed": True, "note": [note]})
+            continue
+
         gh_closed = False
         if issue:
             cp = _run(
@@ -473,9 +584,10 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
                 note.append(f"gh #{issue} closed")
             r["status"] = "done"
             r["closed"] = _day()
-            r["resolution_note"] = r.get("resolution_note") or ("loop reconcile: " + ", ".join(note))
+            r["resolution_note"] = r.get("resolution_note") or (
+                "loop reconcile: " + ", ".join(note)
+            )
             r.setdefault("loop", {})["reconciled_at"] = _now()
-            # close GH if still open
             if issue and not gh_closed:
                 _run(
                     [
@@ -489,7 +601,6 @@ def cmd_reconcile(args: argparse.Namespace) -> int:
                         f"Closed by ops_issue_loop reconcile — Kanban `{ktid}` complete.",
                     ]
                 )
-            # complete kanban if GH closed but card still open
             if ktid and gh_closed and not kanban_done:
                 _run(
                     [
@@ -547,17 +658,16 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    """Full tick: sync → route → ensure-kanban → reconcile → status → optional dispatch."""
+    """Full tick: ingest cron errors → sync → route → ensure-kanban → reconcile → dispatch."""
     started = _now()
     results: dict[str, Any] = {"started_at": started}
-    # chain
     for name, fn in [
+        ("ingest_cron_errors", cmd_ingest_cron_errors),
         ("sync", cmd_sync),
         ("route", cmd_route),
         ("ensure_kanban", cmd_ensure_kanban),
         ("reconcile", cmd_reconcile),
     ]:
-        # capture printed json by re-running logic is hard; call and note rc
         rc = fn(args)
         results[name] = {"rc": rc}
         if rc != 0:
@@ -580,6 +690,13 @@ def main() -> int:
 
     sp = sub.add_parser("sync", help="Ingest open GH issues into registry")
     sp.set_defaults(func=cmd_sync)
+
+    ip = sub.add_parser(
+        "ingest-cron-errors",
+        help="Promote enabled Hermes crons with last_status=error into registry",
+    )
+    ip.add_argument("--no-github", action="store_true")
+    ip.set_defaults(func=cmd_ingest_cron_errors)
 
     rp = sub.add_parser("route", help="Auto-assign profile + priority")
     rp.add_argument("--gh-assign", action="store_true", help="Also assign GH issue to @me")
@@ -606,7 +723,10 @@ def main() -> int:
     )
     ep.set_defaults(func=cmd_ensure_kanban)
 
-    cp = sub.add_parser("reconcile", help="Close registry/GH when Kanban or GH finished")
+    cp = sub.add_parser(
+        "reconcile",
+        help="Close registry/GH when Kanban or GH finished / cron recovered",
+    )
     cp.set_defaults(func=cmd_reconcile)
 
     dp = sub.add_parser("dispatch", help="One hermes kanban dispatch pass")
@@ -624,10 +744,10 @@ def main() -> int:
     runp.add_argument("--force-goal", action="store_true")
     runp.add_argument("--goal-max-turns", type=int, default=12)
     runp.add_argument("--no-goal", action="store_true", help="Deprecated no-op")
+    runp.add_argument("--no-github", action="store_true", help="Skip GH on cron ingest promote")
     runp.set_defaults(func=cmd_run)
 
     args = p.parse_args()
-    # defaults for shared flags
     if not hasattr(args, "gh_assign"):
         args.gh_assign = False
     if not hasattr(args, "dry_run"):
@@ -644,6 +764,8 @@ def main() -> int:
         args.no_goal = False
     if not hasattr(args, "dispatch"):
         args.dispatch = False
+    if not hasattr(args, "no_github"):
+        args.no_github = False
     return int(args.func(args))
 
 

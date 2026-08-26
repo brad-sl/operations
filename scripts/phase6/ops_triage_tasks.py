@@ -59,46 +59,70 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_promote(args: argparse.Namespace) -> int:
+def promote_finding(
+    finding: str,
+    *,
+    priority: str = "medium",
+    evidence: list[str] | str | None = None,
+    master_ref: str = "",
+    no_github: bool = False,
+    source: str = "ops_triage",
+    extra: dict | None = None,
+) -> dict:
+    """Idempotent promote → registry (+ optional GH). Returns entry or skipped dict."""
     rows = _load_registry()
     day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    slug = _slug(args.finding)
+    slug = _slug(finding)
     for r in rows:
-        if r.get("status") == "open" and _slug(r.get("finding", "")) == slug:
-            print(json.dumps({"skipped": "duplicate", "existing": r}, indent=2))
-            return 0
+        if r.get("status") in ("open", "in_progress") and _slug(r.get("finding", "")) == slug:
+            return {"skipped": "duplicate", "existing": r}
 
     task_id = _next_id(rows, day)
-    master_ref = args.master_ref or task_id.replace("P6-OPS-", "P6-OPS-").replace(
-        f"P6-OPS-{day.replace('-', '')}-", "P6-OPS-"
-    )
-    if not args.master_ref:
+    if not master_ref:
         master_ref = f"P6-OPS-{slug.upper()[:32]}"
 
-    evidence = [p.strip() for p in (args.evidence or "").split(",") if p.strip()]
-    entry = {
+    if isinstance(evidence, str):
+        evidence_list = [p.strip() for p in evidence.split(",") if p.strip()]
+    else:
+        evidence_list = list(evidence or [])
+
+    entry: dict = {
         "id": task_id,
         "opened": day,
-        "source": "ops_triage",
-        "priority": args.priority,
+        "source": source,
+        "priority": priority,
         "status": "open",
-        "finding": args.finding,
+        "finding": finding,
         "master_ref": master_ref,
-        "evidence": evidence,
+        "evidence": evidence_list,
     }
+    if extra:
+        entry.update(extra)
 
-    if not args.no_github:
+    if not no_github:
         body = (
-            f"## Source\nOps triage promote (`{task_id}`).\n\n"
-            f"## Finding\n{args.finding}\n\n"
+            f"## Source\nOps promote (`{task_id}`, source={source}).\n\n"
+            f"## Finding\n{finding}\n\n"
             f"## Evidence\n"
-            + "\n".join(f"- `{p}`" for p in evidence)
+            + "\n".join(f"- `{p}`" for p in evidence_list)
             + f"\n\n## MASTER\n`docs/MASTER_TASK_TRACKING.md` — **{master_ref}**\n"
+            + "\n## Loop\nAfter promote: `ops_issue_loop.py run --gh-assign --dispatch` "
+            "→ Kanban `crypto-bot-project` for auto pickup.\n"
         )
-        title = f"P6-OPS: {args.finding[:72]}"
+        title = f"P6-OPS: {finding[:72]}"
         try:
             out = subprocess.run(
-                ["gh", "issue", "create", "--title", title, "--label", "bug,Trading Bot", "--body", body],
+                [
+                    "gh",
+                    "issue",
+                    "create",
+                    "--title",
+                    title,
+                    "--label",
+                    "bug,Trading Bot",
+                    "--body",
+                    body,
+                ],
                 cwd=str(ROOT),
                 capture_output=True,
                 text=True,
@@ -114,6 +138,18 @@ def cmd_promote(args: argparse.Namespace) -> int:
 
     rows.append(entry)
     _save_registry(rows)
+    return entry
+
+
+def cmd_promote(args: argparse.Namespace) -> int:
+    entry = promote_finding(
+        args.finding,
+        priority=args.priority,
+        evidence=args.evidence,
+        master_ref=args.master_ref or "",
+        no_github=bool(args.no_github),
+        source="ops_triage",
+    )
     print(json.dumps(entry, indent=2))
     return 0
 

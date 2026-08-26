@@ -66,16 +66,25 @@
     }
   },
   "hard_exit": {
-    "enabled": true,
-    "shadow_only": true,
-    "live_apply": false,
-    "operator_approve": true,
-    "notify_telegram": true,
-    "notify_dedupe_hours": 12,
-    "min_sell_usd": 25.0,
-    "max_pair_fraction": 1.0,
-    "note": "TG-02: hard prefer_exit (RSI/sentiment) \u2192 shadow + Telegram pending. Brad decides via hard_exit_controls. park_prefer_reduce NEVER auto. live_apply blocked while operator_approve=true. EXIT-H3 READY: set operator_approve=false AND live_apply=true AND shadow_only=false to auto-merge hard SELLs into rebalance plan (still notifies)."
-  },
+      "enabled": true,
+      "shadow_only": true,
+      "live_apply": false,
+      "operator_approve": true,
+      "notify_telegram": true,
+      "notify_dedupe_hours": 12,
+      "min_sell_usd": 25.0,
+      "max_pair_fraction": 1.0,
+      "cautious_flat": {
+        "enabled": true,
+        "auto_apply_regimes": ["flat"],
+        "min_hold_hours": 24.0,
+        "require_rsi_cross": true,
+        "min_mark_r": 0.0,
+        "min_sell_usd": 25.0,
+        "note": "Brad 2026-08-25 cautious path: in flat only, auto-merge hard SELLs when RSI crosses up through overbought after entry, mark green (r>=0), held >=24h. Bull/bear/transition stay operator loop. Quality filters also drop low-quality shadow proposals."
+      },
+      "note": "H3 cautious flat (2026-08-25): operator_approve remains true globally; flat may auto-apply when cautious_flat gates pass. Bull/bear never auto from this path. park_prefer_reduce NEVER auto."
+    },
   "detector": {
     "lookback_days": 30,
     "bull_return_pct": 15.0,

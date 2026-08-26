@@ -14,6 +14,7 @@ import sqlite3
 import concurrent.futures
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any, Dict
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -1126,6 +1127,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 entry_snap = None
                 evaluate_buy_entry = None  # type: ignore
 
+            # ADD-RISK room (held stacks) — ·block-max when max_add < min_move
+            add_room_by: Dict[str, Any] = {}
+            max_blocked_pairs: list = []
+            add_room_meta: Dict[str, Any] = {}
+            try:
+                from phase6.core.add_risk_sizer import load_add_room_by_pair_for_dashboard
+                _ar = load_add_room_by_pair_for_dashboard() or {}
+                add_room_by = _ar.get("by_pair") or {}
+                max_blocked_pairs = list(_ar.get("max_blocked_pairs") or [])
+                add_room_meta = {
+                    "min_move_usd": _ar.get("min_move_usd"),
+                    "target_pair_weight": _ar.get("target_pair_weight"),
+                    "regime": _ar.get("regime"),
+                    "enabled": _ar.get("enabled"),
+                }
+            except Exception:
+                add_room_by = {}
+                max_blocked_pairs = []
+                add_room_meta = {}
+
             # Preserve config basket order (not A→Z cache union).
             pairs = list(basket)
             rows = []
@@ -1192,9 +1213,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     # Dim the status green — not a clean deploy light
                     st_color = "amber-400"
 
+                # ADD-RISK: held stack with no meaningful add room
+                ar = add_room_by.get(pair) or add_room_by.get(str(pair).upper()) or {}
+                block_max = bool(ar.get("block_max"))
+                max_add_usd = ar.get("max_add_usd")
+                held_weight_pct = ar.get("weight_pct")
+                over_target = bool(ar.get("over_target"))
+                add_block_reason = ar.get("detail_reason") if block_max else None
+                if block_max and status == "BUY":
+                    why_ar = str(add_block_reason or "add_risk")
+                    wtxt = f" wt {held_weight_pct:.0f}%" if held_weight_pct is not None else ""
+                    mad = f" max_add=${float(max_add_usd):.0f}" if max_add_usd is not None else ""
+                    reason = (reason or "BUY") + f" · block-max ({why_ar}{wtxt}{mad})"
+                    # Keep Status BUY (signal) — flag carries the gate; dim slightly if not already gated
+                    if not entry_gated and st_color == "emerald-400":
+                        st_color = "amber-400"
+
                 deploy_ready = bool(
                     status == "BUY" and entry_allowed and not buy_blocked
                     and bool(getattr(entry_snap, "allow_new_buys", True) if entry_snap else True)
+                    and not block_max
                 )
 
                 rows.append({
@@ -1226,6 +1264,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "entry_reasons": entry_reasons,
                     "entry_sent_floor": sent_floor,
                     "deploy_ready": deploy_ready,
+                    # ADD-RISK size telegraph — held stack maxed / no add budget
+                    "block_max": block_max,
+                    "max_add_usd": max_add_usd,
+                    "held_weight_pct": held_weight_pct,
+                    "over_target": over_target,
+                    "add_block_reason": add_block_reason,
+                    "target_pair_weight": (add_room_meta or {}).get("target_pair_weight"),
+                    "min_move_usd": (add_room_meta or {}).get("min_move_usd"),
                 })
             ok = bool(rows)
             regime_label = None
@@ -1243,6 +1289,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "buy_blocked_pairs": blocked_pairs,
                 "buy_block_hours": block_hours,
                 "entry_gated_pairs": gated_pairs,
+                "max_blocked_pairs": max_blocked_pairs,
+                "add_room": add_room_meta,
                 "entry_floors": entry_floors,
                 "regime": regime_label,
                 "rsi_source": rsi_src,
@@ -1256,6 +1304,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     f"max_rsi≤{entry_floors['max_rsi']}. "
                     "·gated = BUY signal but fails entry (e.g. weak sent on empty seat). "
                     "·blocked = post-SL/manual rebuy cooldown. "
+                    "·block-max = held stack add-risk budget $0 / below min_move "
+                    "(over target weight, zero risk budget, or gap). "
+                    "·ready requires entry clear + not cooldown + not block-max. "
                     "Sent. colors scale by strength (mild ≠ full green)."
                 ),
                 "last_updated": datetime.now(timezone.utc).isoformat(),

@@ -154,6 +154,87 @@ def _infer_entry_from_stop(stop_price: float, sl_pct: float = DEFAULT_SL_PCT) ->
     return entry, "inferred_from_stop"
 
 
+def _registry_entry_consistent_with_stop(
+    entry_px: float, stop_px: Optional[float], *, sl_pct: float = DEFAULT_SL_PCT
+) -> bool:
+    """Reject registry rows where stop sits well *above* entry (stale-low basis).
+
+    Normal crypto SL: stop ≈ entry*(1-sl) (below entry). Mild BE ratchet may put
+    stop slightly above entry. A stop >> entry with a much lower entry is the
+    LINK 2026-08-25 failure mode (entry $10, stop $11.28 → fake +12% PnL).
+    """
+    if entry_px <= 0:
+        return False
+    if stop_px is None or stop_px <= 0:
+        return True
+    # Allow stop down to deep adaptive SL and up to small BE lock above entry
+    lo = entry_px * (1.0 - max(sl_pct * 2.5, 0.08))
+    hi = entry_px * 1.015
+    return lo <= float(stop_px) <= hi
+
+
+def resolve_sl_fill_entry(
+    *,
+    pair: str,
+    fill_ts: str,
+    fill_px: float,
+    ledger: TradeLedger,
+    sl_order_id: Optional[str] = None,
+    stop_px: Optional[float] = None,
+    sl_pct: float = DEFAULT_SL_PCT,
+) -> Tuple[Optional[float], str]:
+    """Pick economic entry for SL fill diagnostics (prefer open-lot buy over stale registry)."""
+    ledger_px, ledger_src = _entry_from_ledger_buys(ledger, pair, fill_ts)
+    reg = lookup_entry_for_pair(sl_order_id, pair)
+    reg_px: Optional[float] = None
+    if reg and reg.get("entry_price"):
+        try:
+            reg_px = float(reg["entry_price"])
+        except (TypeError, ValueError):
+            reg_px = None
+    if stop_px is None and reg and reg.get("stop_price"):
+        try:
+            stop_px = float(reg["stop_price"])
+        except (TypeError, ValueError):
+            stop_px = None
+
+    reg_ok = bool(
+        reg_px
+        and reg_px > 0
+        and _registry_entry_consistent_with_stop(reg_px, stop_px, sl_pct=sl_pct)
+    )
+
+    # Prefer last open-lot BUY when present and not absurd vs fill
+    if ledger_px and ledger_px > 0:
+        if fill_px <= 0 or abs(ledger_px - fill_px) / max(fill_px, 1e-12) <= 0.35:
+            if reg_ok and reg_px is not None and abs(reg_px - ledger_px) / ledger_px <= 0.02:
+                return reg_px, "protective_registry"
+            if reg_px and reg_px > 0 and not reg_ok:
+                return ledger_px, "ledger_last_buy_over_stale_registry"
+            return ledger_px, ledger_src
+
+    if reg_ok and reg_px is not None:
+        return reg_px, "protective_registry"
+
+    if reg_px and reg_px > 0 and not reg_ok:
+        # Stale registry: try imply from stop, else keep ledger if any
+        if stop_px and stop_px > 0:
+            implied, src = _infer_entry_from_stop(float(stop_px), sl_pct=sl_pct)
+            if implied and implied > 0:
+                return implied, f"{src}_registry_inconsistent"
+        if ledger_px and ledger_px > 0:
+            return ledger_px, "ledger_last_buy_registry_inconsistent"
+
+    if stop_px and stop_px > 0:
+        return _infer_entry_from_stop(float(stop_px), sl_pct=sl_pct)
+
+    if ledger_px and ledger_px > 0:
+        return ledger_px, ledger_src
+    if reg_px and reg_px > 0:
+        return reg_px, "protective_registry_unchecked"
+    return None, "none"
+
+
 def build_ledger_row_from_fill(
     order: Dict[str, Any],
     exchange: Any,
@@ -185,18 +266,15 @@ def build_ledger_row_from_fill(
         return None
 
     ts = _parse_ts(order)
-    reg = lookup_entry_for_pair(oid, pair)
-    entry_px: Optional[float] = None
-    entry_source = "unknown"
-    if reg and reg.get("entry_price"):
-        entry_px = float(reg["entry_price"])
-        entry_source = "protective_registry"
-    if entry_px is None or entry_px <= 0:
-        entry_px, entry_source = _entry_from_ledger_buys(ledger, pair, ts)
-    if entry_px is None or entry_px <= 0:
-        sp = extract_stop_price_from_order(order)
-        if sp:
-            entry_px, entry_source = _infer_entry_from_stop(sp)
+    stop_px = extract_stop_price_from_order(order)
+    entry_px, entry_source = resolve_sl_fill_entry(
+        pair=str(pair),
+        fill_ts=ts,
+        fill_px=fill_px,
+        ledger=ledger,
+        sl_order_id=str(oid),
+        stop_px=float(stop_px) if stop_px else None,
+    )
 
     pnl = 0.0
     pnl_pct = 0.0

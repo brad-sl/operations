@@ -15,18 +15,17 @@ Related: `docs/OPS_TRIAGE_TASK_WORKFLOW.md` (lifecycle layers), skill `phase6-op
 
 ```
 Discover (ops_triage_discover no_agent / ops_engineer / human)
-    │
-    ▼
-Promote GH issue + registry row   (ops_triage_tasks.py promote)
-    │
+    │  **auto-promote medium/high** → registry (+ GH)
     ▼
 ops_issue_loop.py run   ◄── cron 3×/day (no_agent)
+    ├─ ingest-cron-errors   enabled Hermes jobs last_status=error → registry
     ├─ sync      open GH Trading Bot / P6-OPS → registry
     ├─ route     assignee profile + priority + skills (+ gh assign @me)
     ├─ ensure-kanban   idempotent card ops-issue-{N} on crypto-bot-project
     │                  default: NO --goal (Phase1 cost); --goal only rank≤1 max 12
     ├─ dispatch  hermes kanban dispatch (gateway workers)
-    └─ reconcile kanban done | GH closed → registry done + close peer
+    └─ reconcile kanban done | GH closed | **cron recovered (last_status=ok)**
+                     → registry done + close peer + kanban complete
     │
     ▼
 Kanban worker (crypto-engineer profile, single-shot unless --goal)

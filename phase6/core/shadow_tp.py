@@ -564,16 +564,12 @@ def execute_live_tp_exits(
     positions: Optional[Dict[str, Any]] = None,
     dry_run: bool = False,
 ) -> List[Dict[str, Any]]:
-    """Market-sell chosen TP signals. Cancels open stops on pair first."""
+    """Market-sell chosen TP signals via protected_market_exit (cancel→sell→SL)."""
     out: List[Dict[str, Any]] = []
     if not exchange or not signals:
         return out
 
-    try:
-        from phase6.core.sl_preflight import cancel_open_stops_for_pair, poll_available_after_cancel
-    except Exception:
-        cancel_open_stops_for_pair = None  # type: ignore
-        poll_available_after_cancel = None  # type: ignore
+    from phase6.core.protected_market_exit import protected_market_exit
 
     for s in signals:
         pair = s.pair
@@ -599,106 +595,66 @@ def execute_live_tp_exits(
             out.append(row)
             continue
 
-        try:
-            if cancel_open_stops_for_pair is not None:
-                cancel_open_stops_for_pair(exchange, pair)
-                if poll_available_after_cancel is not None:
-                    poll_available_after_cancel(exchange, pair, timeout=4.0)
-                else:
-                    time.sleep(0.8)
-        except Exception as ce:
-            logger.warning("[LIVE-TP] cancel stops %s: %s", pair, ce)
-
-        # Size from exchange available
-        qty = 0.0
-        try:
-            base = pair.split("-")[0]
-            if hasattr(exchange, "get_crypto_available"):
-                qty = float(exchange.get_crypto_available(base) or 0)
-            if qty <= 0 and hasattr(exchange, "get_available_balance"):
-                qty = float(exchange.get_available_balance(base) or 0)
-        except Exception as be:
-            row["success"] = False
-            row["error"] = f"balance:{be}"
-            out.append(row)
-            continue
-
-        if qty <= 0 and positions and isinstance(positions.get(pair), dict):
+        qty_hint = 0.0
+        if positions and isinstance(positions.get(pair), dict):
             try:
                 from phase6.core.position_qty import position_qty
 
-                qty = float(position_qty(positions[pair], 0.0))
+                qty_hint = float(position_qty(positions[pair], 0.0))
             except Exception:
                 try:
-                    qty = float(
+                    qty_hint = float(
                         positions[pair].get("amount")
                         or positions[pair].get("qty")
                         or positions[pair].get("quantity")
                         or 0
                     )
                 except (TypeError, ValueError):
-                    qty = 0.0
+                    qty_hint = 0.0
 
-        if qty <= 0:
+        pe = protected_market_exit(
+            exchange,
+            pair,
+            # full free bag (TP is whole-position exit of free size)
+            frac=1.0,
+            qty_full_hint=qty_hint,
+            entry_price=float(s.entry_px or 0),
+            mark_price=float(s.mark_px or 0),
+            reason=f"take_profit:{s.kind}:{s.detail}",
+            signal_source=f"live_tp_{s.kind}",
+            dry_run=False,
+            ledger=False,  # use TP-specific ledger below
+            reattach_sl=True,
+        )
+        row["protected_exit"] = True
+        row["cancelled_stops"] = pe.get("cancelled_stops")
+        row["used_hint_fallback"] = pe.get("used_hint_fallback")
+        if pe.get("skipped"):
             row["success"] = False
             row["skipped"] = True
-            row["skip_reason"] = "zero_qty"
+            row["skip_reason"] = pe.get("skip_reason") or "zero_qty"
             out.append(row)
             continue
-
-        try:
-            if hasattr(exchange, "quantize_size"):
-                qty = float(exchange.quantize_size(pair, qty))
-        except Exception:
-            pass
-
-        if qty <= 0:
+        if not pe.get("success"):
             row["success"] = False
-            row["skipped"] = True
-            row["skip_reason"] = "zero_after_quantize"
-            out.append(row)
-            continue
-
-        if not hasattr(exchange, "place_market_sell"):
-            row["success"] = False
-            row["error"] = "no_place_market_sell"
-            out.append(row)
-            continue
-
-        try:
-            result = exchange.place_market_sell(pair, qty) or {}
-        except Exception as se:
-            row["success"] = False
-            row["error"] = str(se)[:200]
-            out.append(row)
-            logger.error("[LIVE-TP] sell exception %s: %s", pair, se)
-            continue
-
-        ok = bool(result.get("success"))
-        oid = result.get("order_id")
-        row["success"] = ok
-        row["order_id"] = oid
-        row["size"] = qty
-        if not ok:
-            row["error"] = result.get("error")
+            row["error"] = pe.get("error")
+            if pe.get("sl_reattach_after_fail"):
+                row["sl_reattach_after_fail"] = pe["sl_reattach_after_fail"]
             out.append(row)
             logger.warning("[LIVE-TP] sell failed %s: %s", pair, row.get("error"))
             continue
 
-        exit_px = float(s.mark_px or 0)
-        filled = float(result.get("size") or qty)
-        if oid and hasattr(exchange, "get_order_fill_details"):
-            try:
-                time.sleep(0.6)
-                fill = exchange.get_order_fill_details(oid) or {}
-                if float(fill.get("average_filled_price") or 0) > 0:
-                    exit_px = float(fill["average_filled_price"])
-                if float(fill.get("filled_size") or 0) > 0:
-                    filled = float(fill["filled_size"])
-            except Exception:
-                pass
+        qty = float(pe.get("qty") or 0)
+        oid = pe.get("order_id")
+        exit_px = float(pe.get("exit_price") or s.mark_px or 0)
+        filled = float(pe.get("filled_qty") or qty)
+        row["success"] = True
+        row["order_id"] = oid
+        row["size"] = qty
         row["exit_price"] = exit_px
         row["filled_qty"] = filled
+        if pe.get("sl_reattach"):
+            row["sl_reattach"] = pe["sl_reattach"]
 
         _ledger_tp_sell(
             exchange,

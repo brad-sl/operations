@@ -567,6 +567,12 @@ class Phase6Runner:
                     apply_bear_profit_take_from_runner(self)
                 except Exception as _bpt_e:
                     logger.debug("bear_profit_take_shadow cycle: %s", _bpt_e)
+                try:
+                    from phase6.core.structure_bos_exit import apply_structure_bos_from_runner
+
+                    apply_structure_bos_from_runner(self)
+                except Exception as _bos_e:
+                    logger.debug("structure_bos_exit cycle: %s", _bos_e)
                 time.sleep(60)
             except KeyboardInterrupt:
                 logger.info("Shutdown requested")

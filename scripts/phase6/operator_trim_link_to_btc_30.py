@@ -172,8 +172,9 @@ def main() -> int:
     results = {"plan": plan, "steps": []}
     coord = getattr(runner, "stop_loss_coordinator", None)
 
-    # 1) Suspend LINK (+ BTC) stops so base is free to sell / re-size
-    pairs = ["LINK-USD", "BTC-USD"]
+    # 1) Suspend LINK stops (one-pair-at-a-time for operator trim) so base is free
+    #    protected_market_exit will handle cancel→poll→sell→reattach for LINK
+    pairs = ["LINK-USD"]
     if coord:
         try:
             sus = coord.suspend_protective_orders(pairs)
@@ -199,7 +200,7 @@ def main() -> int:
             cancel_open_stops_for_pair(ex, p)
         time.sleep(3)
 
-    # poll available LINK
+    # poll available LINK (protected will also resolve/poll inside)
     for _ in range(8):
         try:
             hv = ex.get_holdings_verified() or {}
@@ -220,12 +221,27 @@ def main() -> int:
     except Exception:
         sell_qty_q = round(sell_qty, 4)
 
-    log.info("SELL LINK qty=%s (~$%.2f)", sell_qty_q, sell_qty_q * link_px)
-    sell_res = ex.place_market_sell("LINK-USD", sell_qty_q)
+    # Wire to protected_market_exit SSOT (cancel→sell→reattach). Isolation + real data.
+    from phase6.core.protected_market_exit import protected_market_exit
+    log.info("SELL LINK (protected) qty=%s (~$%.2f)", sell_qty_q, sell_qty_q * link_px)
+    sell_res = protected_market_exit(
+        ex,
+        "LINK-USD",
+        qty=sell_qty_q,
+        qty_full_hint=max(link_amt, sell_qty_q),
+        entry_price=0.0,  # operator has no per-lot entry; protected falls back to mark_price for SL anchor
+        mark_price=link_px,
+        reason="operator_trim_link_to_btc_30pct",
+        signal_source="operator_trim",
+        dry_run=False,
+        ledger=False,  # keep custom operator ledger below (adds "operator", "usd", "notes")
+        reattach_sl=True,
+    )
     results["steps"].append({"sell_link": sell_res})
     print("SELL:", sell_res)
     if not sell_res.get("success"):
-        # try reattach before exit
+        # protected_market_exit already performed reattach on fail path (sl_reattach_after_fail)
+        # still attempt coord reattach for any other pairs (BTC) / safety
         if coord:
             try:
                 pos = runner.portfolio.get_enriched_positions() if runner.portfolio else {}
@@ -237,9 +253,9 @@ def main() -> int:
         return 1
 
     sell_oid = sell_res.get("order_id")
-    time.sleep(4)
-    sell_fill_px = link_px
-    sell_fill_qty = _f(sell_res.get("size"), sell_qty_q)
+    time.sleep(2)
+    sell_fill_px = _f(sell_res.get("exit_price"), link_px)
+    sell_fill_qty = _f(sell_res.get("filled_qty"), sell_qty_q)
     if sell_oid:
         try:
             fd = ex.get_order_fill_details(sell_oid) or {}

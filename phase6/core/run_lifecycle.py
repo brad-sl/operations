@@ -98,6 +98,14 @@ DEFAULTS_P2: Dict[str, Any] = {
     "live_min_trim_usd": 40.0,
     "live_max_trims_per_tick": 2,
     "ballast_pairs": ["PAXG-USD", "PAXG-USDC"],
+    # --- P0 2026-08-26: stop red shredder / sticky dual cascade ---
+    # No half-trim while mark < entry*(1+min_green). SL still owns downside.
+    "dual_peak_require_mark_ge_entry": True,
+    "dual_peak_min_green_pct": 0.0,
+    "extension_partial_require_mark_ge_entry": True,
+    # Max dual_peak live/shadow emits per lot until rearm (new peak after last dual)
+    "dual_peak_max_trims_per_lot": 1,
+    "dual_peak_rearm_on_new_peak": True,
 }
 
 
@@ -781,6 +789,11 @@ def evaluate_dual_peak_exits(
     min_peak = _f(c.get("min_peak_return"), 0.02)
     dual_frac = max(0.0, min(1.0, _f(c.get("dual_trim_frac"), 0.50)))
     ext_frac = max(0.0, min(1.0, _f(c.get("extension_partial_frac"), 0.33)))
+    min_green = _f(c.get("dual_peak_min_green_pct"), 0.0)
+    require_green_dual = bool(c.get("dual_peak_require_mark_ge_entry", True))
+    require_green_ext = bool(c.get("extension_partial_require_mark_ge_entry", True))
+    max_dual_trims = max(0, int(c.get("dual_peak_max_trims_per_lot") or 1))
+    rearm_on_new_peak = bool(c.get("dual_peak_rearm_on_new_peak", True))
 
     for lot in lots:
         if not lot.get("open", True):
@@ -807,6 +820,9 @@ def evaluate_dual_peak_exits(
         # skip if TP zone already owns exit
         if peak_ret >= arm - 1e-12 and off_peak < off_thr:
             continue
+
+        # P0: no dice while underwater vs entry (diminishing returns / shredder)
+        mark_ge_entry = cur_px >= entry_px * (1.0 + min_green) - 1e-12
 
         entry_sent = _f(lot.get("entry_sentiment"), _f(lot.get("entry_sent_peak"), 0.0))
         # peak sentiment if tracked
@@ -870,28 +886,50 @@ def evaluate_dual_peak_exits(
 
         is_live = mode == "live"
 
+        # Episode lock: dual_peak at most N times per lot unless new peak rearms
+        dual_trim_count = int(lot.get("dual_peak_trim_count") or 0)
+        if dual_trim_count <= 0 and str(lot.get("last_trim_kind") or "") == "dual_peak":
+            # legacy lots after cascade (BTC 2026-08-26) — treat as already spent
+            dual_trim_count = 1
+        dual_episode_blocked = False
+        if max_dual_trims > 0 and dual_trim_count >= max_dual_trims:
+            peak_at_last = _f(lot.get("peak_at_last_dual_peak"), 0.0)
+            if rearm_on_new_peak and lot_peak > 0 and peak_at_last > 0:
+                dual_episode_blocked = lot_peak <= peak_at_last + 1e-9
+            else:
+                # no rearm peak recorded → stay locked after first dual
+                dual_episode_blocked = True
+
         # Dual peak: price rolling AND sent fading → scale before dump
         if price_hit and sent_hit and peak_ret >= min_peak * 0.5:
-            events.append(
-                DualPeakEvent(
-                    pair=pair,
-                    kind="dual_peak",
-                    would_trim_usd=round(pos * dual_frac, 4),
-                    would_trim_frac=dual_frac,
-                    entry_price=entry_px,
-                    current_price=cur_px,
-                    peak_return=round(peak_ret, 4),
-                    off_peak_pct=round(off_peak, 4),
-                    entry_sentiment=entry_sent,
-                    current_sentiment=cur_sent,
-                    sent_fade=round(sent_fade, 4),
-                    phase_name=phase_name,
-                    reasons=reasons,
-                    mode=mode,
-                    shadow=(not is_live),
+            if dual_episode_blocked:
+                pass  # spent episode; wait new peak or SL
+            elif require_green_dual and not mark_ge_entry:
+                pass  # red bag → no half-trim (SL path owns downside)
+            else:
+                dp_reasons = list(reasons)
+                if mark_ge_entry:
+                    dp_reasons.append("mark_ge_entry")
+                events.append(
+                    DualPeakEvent(
+                        pair=pair,
+                        kind="dual_peak",
+                        would_trim_usd=round(pos * dual_frac, 4),
+                        would_trim_frac=dual_frac,
+                        entry_price=entry_px,
+                        current_price=cur_px,
+                        peak_return=round(peak_ret, 4),
+                        off_peak_pct=round(off_peak, 4),
+                        entry_sentiment=entry_sent,
+                        current_sentiment=cur_sent,
+                        sent_fade=round(sent_fade, 4),
+                        phase_name=phase_name,
+                        reasons=dp_reasons,
+                        mode=mode,
+                        shadow=(not is_live),
+                    )
                 )
-            )
-            continue
+                continue
 
         # Extension partial: structure late — take meat even if sent still hot
         ext_ok = phase >= PHASE_EXTENSION and peak_ret >= min_peak
@@ -899,25 +937,31 @@ def evaluate_dual_peak_exits(
             (is_live and c.get("extension_partial_live", True))
             or ((not is_live) and c.get("extension_partial_shadow", True))
         ):
-            events.append(
-                DualPeakEvent(
-                    pair=pair,
-                    kind="extension_partial",
-                    would_trim_usd=round(pos * ext_frac, 4),
-                    would_trim_frac=ext_frac,
-                    entry_price=entry_px,
-                    current_price=cur_px,
-                    peak_return=round(peak_ret, 4),
-                    off_peak_pct=round(off_peak, 4),
-                    entry_sentiment=entry_sent,
-                    current_sentiment=cur_sent,
-                    sent_fade=round(sent_fade, 4),
-                    phase_name=phase_name,
-                    reasons=reasons or [f"phase={phase_name}"],
-                    mode=mode,
-                    shadow=(not is_live),
+            if require_green_ext and not mark_ge_entry:
+                pass  # no extension dice while red
+            else:
+                ext_reasons = list(reasons) if reasons else [f"phase={phase_name}"]
+                if mark_ge_entry:
+                    ext_reasons.append("mark_ge_entry")
+                events.append(
+                    DualPeakEvent(
+                        pair=pair,
+                        kind="extension_partial",
+                        would_trim_usd=round(pos * ext_frac, 4),
+                        would_trim_frac=ext_frac,
+                        entry_price=entry_px,
+                        current_price=cur_px,
+                        peak_return=round(peak_ret, 4),
+                        off_peak_pct=round(off_peak, 4),
+                        entry_sentiment=entry_sent,
+                        current_sentiment=cur_sent,
+                        sent_fade=round(sent_fade, 4),
+                        phase_name=phase_name,
+                        reasons=ext_reasons,
+                        mode=mode,
+                        shadow=(not is_live),
+                    )
                 )
-            )
 
     return events
 
@@ -931,105 +975,20 @@ def reattach_sl_after_lifecycle_trim(
     config_dict: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
-    After a lifecycle partial market sell: cancel open stops for pair, wait for
-    free size, re-attach SL on remaining bag using lot entry as anchor.
+    After a lifecycle partial market sell: re-attach SL on remaining bag.
 
-    One pair at a time (caller already serializes trims). Does not bulk-race.
+    Thin wrapper → phase6.core.protected_market_exit.reattach_stop_after_exit
+    (single SSOT for the Coinbase stop-hold dance).
     """
-    out: Dict[str, Any] = {
-        "pair": pair,
-        "ok": False,
-        "action": "reattach",
-        "entry_price": entry_price,
-        "size": 0.0,
-    }
-    if exchange is None or not pair:
-        out["error"] = "no_exchange_or_pair"
-        return out
-    try:
-        import time as _time
+    from phase6.core.protected_market_exit import reattach_stop_after_exit
 
-        from phase6.core.config_loader import ConfigLoader
-        from phase6.core.sl_preflight import (
-            cancel_open_stops_for_pair,
-            poll_available_after_cancel,
-            resolve_sl_attach_size,
-        )
-        from phase6.core.stop_loss_manager import StopLossManager
-
-        cfg = config_dict
-        if not cfg:
-            try:
-                cfg = ConfigLoader()._config
-            except Exception:
-                cfg = json.loads(Path("config/trading_config_phase6.json").read_text())
-
-        # 1) Release size held by old stop
-        try:
-            released = cancel_open_stops_for_pair(exchange, pair)
-            out["cancelled"] = released
-        except Exception as ce:
-            out["cancel_error"] = str(ce)[:160]
-            released = None
-
-        try:
-            poll_available_after_cancel(exchange, pair, timeout=4.0)
-        except Exception:
-            _time.sleep(0.8)
-
-        # 2) Resolve remaining free size (prefer exchange balance)
-        hint = max(0.0, _f(remaining_qty_hint, 0.0))
-        size, meta = resolve_sl_attach_size(exchange, pair, hint if hint > 0 else 1e9)
-        out["resolve_meta"] = {k: meta.get(k) for k in list(meta or {})[:12]} if isinstance(meta, dict) else {}
-        if size <= 0 and hint > 0:
-            size = hint
-            try:
-                if hasattr(exchange, "quantize_size"):
-                    size = float(exchange.quantize_size(pair, size))
-            except Exception:
-                pass
-        out["size"] = float(size or 0.0)
-        if size <= 0:
-            out["error"] = "no_remaining_size"
-            out["ok"] = True  # nothing to protect — not a hard failure
-            out["action"] = "skip_empty"
-            return out
-
-        anchor = _f(entry_price, 0.0)
-        if anchor <= 0:
-            try:
-                anchor = _f(exchange.get_price(pair), 0.0)
-            except Exception:
-                anchor = 0.0
-        if anchor <= 0:
-            out["error"] = "no_entry_anchor"
-            return out
-        out["entry_price"] = anchor
-
-        slm = StopLossManager(exchange, cfg if isinstance(cfg, dict) else {}, mode="live")
-        ok = bool(
-            slm.attach_stop_loss(
-                pair,
-                anchor,
-                float(size),
-                fresh_buy=False,
-            )
-        )
-        out["ok"] = ok
-        if not ok:
-            out["error"] = "attach_stop_loss_returned_false"
-        else:
-            logger.info(
-                "[LIFECYCLE-EXIT] SL reattached %s size=%.8f anchor=%.6f",
-                pair,
-                size,
-                anchor,
-            )
-        return out
-    except Exception as e:
-        out["error"] = str(e)[:200]
-        logger.error("[LIFECYCLE-EXIT] SL reattach exception %s: %s", pair, e)
-        return out
+    return reattach_stop_after_exit(
+        exchange,
+        pair,
+        entry_price=entry_price,
+        remaining_qty_hint=remaining_qty_hint,
+        config_dict=config_dict,
+    )
 
 
 def apply_lifecycle_exits_live(
@@ -1176,76 +1135,67 @@ def apply_lifecycle_exits_live(
         qty_full = _f(qty_by_pair.get(pair), 0.0)
         if qty_full <= 0 and px > 0:
             qty_full = positions.get(pair, 0.0) / px
-        qty = qty_full * ev.would_trim_frac
-        try:
-            if hasattr(exchange, "quantize_size"):
-                qty = float(exchange.quantize_size(pair, qty))
-        except Exception:
-            qty = round(qty, 8)
-        if qty <= 0:
-            out["skipped"].append({"pair": pair, "reason": "zero_qty"})
-            continue
-        try:
-            result = exchange.place_market_sell(pair, qty) or {}
-        except Exception as se:
-            out["skipped"].append({"pair": pair, "error": str(se)[:200]})
-            logger.error("[LIFECYCLE-EXIT] sell exception %s: %s", pair, se)
-            continue
-        ok = bool(result.get("success"))
-        oid = result.get("order_id")
+
+        # Protected exit SSOT: cancel stops → poll free → sell → reattach SL.
+        # Coinbase locks base on stop-limits (BTC 2026-08-26 INSUFFICIENT_FUND class).
+        from phase6.core.protected_market_exit import protected_market_exit
+
+        reason = f"lifecycle_{ev.kind}:{'|'.join(ev.reasons or [])}"
+        pe = protected_market_exit(
+            exchange,
+            pair,
+            frac=float(ev.would_trim_frac or 0.0),
+            qty_full_hint=qty_full,
+            entry_price=ev.entry_price if ev.entry_price > 0 else px,
+            mark_price=px,
+            reason=reason,
+            signal_source=f"lifecycle_{ev.kind}",
+            dry_run=False,
+            ledger=True,
+            reattach_sl=True,
+            config_dict=cfg,
+        )
+        cancelled = int(pe.get("cancelled_stops") or 0)
+        free_qty = _f(pe.get("free_qty"), 0.0)
+        qty = _f(pe.get("qty"), 0.0)
         row = {
-            "ts": _utcnow(),
+            "ts": pe.get("ts") or _utcnow(),
             "pair": pair,
             "kind": ev.kind,
-            "success": ok,
-            "order_id": oid,
+            "success": bool(pe.get("success")),
+            "order_id": pe.get("order_id"),
             "qty": qty,
             "would_trim_frac": ev.would_trim_frac,
             "phase_name": ev.phase_name,
             "reasons": ev.reasons,
             "signal_source": f"lifecycle_{ev.kind}",
+            "cancelled_stops_pre_sell": cancelled,
+            "free_qty_pre_sell": free_qty,
+            "used_hint_fallback": pe.get("used_hint_fallback"),
+            "protected_exit": True,
         }
-        if not ok:
-            row["error"] = result.get("error")
+        if pe.get("skipped"):
+            row["reason"] = pe.get("skip_reason") or "skipped"
+            row["qty_full"] = qty_full
+            if pe.get("sl_reattach_after_skip"):
+                row["sl_reattach_after_skip"] = pe["sl_reattach_after_skip"]
             out["skipped"].append(row)
             continue
-        exit_px = px
-        filled = qty
-        if oid and hasattr(exchange, "get_order_fill_details"):
-            try:
-                import time as _time
-
-                _time.sleep(0.5)
-                fill = exchange.get_order_fill_details(oid) or {}
-                if _f(fill.get("average_filled_price")) > 0:
-                    exit_px = _f(fill["average_filled_price"])
-                if _f(fill.get("filled_size")) > 0:
-                    filled = _f(fill["filled_size"])
-            except Exception:
-                pass
+        if not pe.get("success"):
+            row["error"] = pe.get("error")
+            if pe.get("sl_reattach_after_fail"):
+                row["sl_reattach_after_fail"] = pe["sl_reattach_after_fail"]
+            out["skipped"].append(row)
+            continue
+        exit_px = _f(pe.get("exit_price"), px)
+        filled = _f(pe.get("filled_qty"), qty)
         row["exit_price"] = exit_px
         row["filled_qty"] = filled
-        # ledger
-        try:
-            from phase6.core.trade_ledger import TradeLedger
-
-            led = TradeLedger()
-            led.log_trade(
-                {
-                    "pair": pair,
-                    "side": "SELL",
-                    "action": "SELL",
-                    "qty": filled,
-                    "exit_price": exit_px,
-                    "order_id": oid,
-                    "reason": f"lifecycle_{ev.kind}:{'|'.join(ev.reasons)}",
-                    "signal_source": f"lifecycle_{ev.kind}",
-                    "success": True,
-                }
-            )
-        except Exception as le:
-            row["ledger_error"] = str(le)[:120]
-        # close/reduce entry lot
+        if pe.get("ledger_error"):
+            row["ledger_error"] = pe["ledger_error"]
+        if pe.get("sl_reattach"):
+            row["sl_reattach"] = pe["sl_reattach"]
+        # close/reduce entry lot (lifecycle-specific bookkeeping)
         entry_anchor = ev.entry_price
         try:
             all_lots = _load_lots(ENTRY_LOTS_PATH)
@@ -1260,44 +1210,32 @@ def apply_lifecycle_exits_live(
                         lot["partial_trim_frac"] = _f(lot.get("partial_trim_frac"), 0.0) + ev.would_trim_frac
                         lot["last_trim_kind"] = ev.kind
                         lot["last_trim_at"] = _utcnow()
+                        if ev.kind == "dual_peak":
+                            prev_n = int(lot.get("dual_peak_trim_count") or 0)
+                            lot["dual_peak_trim_count"] = prev_n + 1
+                            # lock episode to peak at fire (rearm only if peak rises later)
+                            lot["peak_at_last_dual_peak"] = max(
+                                _f(lot.get("peak_price"), 0.0),
+                                _f(ev.entry_price, 0.0) * (1.0 + _f(getattr(ev, "peak_return", 0), 0.0)),
+                                _f(lot.get("peak_at_last_dual_peak"), 0.0),
+                            )
+                            if _f(lot.get("peak_price"), 0.0) > 0:
+                                lot["peak_at_last_dual_peak"] = max(
+                                    _f(lot.get("peak_at_last_dual_peak"), 0.0),
+                                    _f(lot.get("peak_price"), 0.0),
+                                )
             ENTRY_LOTS_PATH.write_text(
                 json.dumps({"updated": _utcnow(), "lots": all_lots}, indent=2)
             )
         except Exception:
             pass
-        # SL reattach remaining bag (one pair at a time — no bulk race)
-        rem_hint = max(0.0, qty_full - filled)
-        if rem_hint > 1e-12 and ev.would_trim_frac < 0.99:
-            sl_info = reattach_sl_after_lifecycle_trim(
-                exchange,
-                pair,
-                entry_price=entry_anchor if entry_anchor > 0 else exit_px,
-                remaining_qty_hint=rem_hint,
-                config_dict=cfg,
-            )
-            row["sl_reattach"] = sl_info
-            if not sl_info.get("ok"):
-                logger.warning(
-                    "[LIFECYCLE-EXIT] SL reattach failed %s: %s",
-                    pair,
-                    sl_info.get("error") or sl_info,
-                )
-        elif ev.would_trim_frac >= 0.99:
-            # Full exit — cancel leftover protective orders for pair
-            try:
-                from phase6.core.sl_preflight import cancel_open_stops_for_pair
-
-                cancel_open_stops_for_pair(exchange, pair)
-                row["sl_reattach"] = {"ok": True, "action": "cancelled_full_exit"}
-            except Exception as ce:
-                row["sl_reattach"] = {"ok": False, "error": f"cancel_full: {ce}"[:160]}
         out["executed"].append(row)
         logger.info(
             "[LIFECYCLE-EXIT] LIVE %s %s qty=%.6f oid=%s sl=%s",
             ev.kind,
             pair,
             filled,
-            oid,
+            pe.get("order_id"),
             (row.get("sl_reattach") or {}).get("ok"),
         )
         try:

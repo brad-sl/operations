@@ -207,11 +207,11 @@ class OrderExecutor:
         """Execute a market sell. Accepts usd_amount (like execute_buy) and computes crypto size internally.
         P0-02.6: Critical sell path audit/fix.
         - size = usd_amount / price (full get_price prec)
-        - ALWAYS quantize with base_increment (Decimal ROUND_DOWN via public quantize_size) BEFORE calling place_market_sell
-        - Consistent for direct sells and rebalance sells (both delegate here)
-        - place_market_sell uses live meta base_increment as final guard
-        - Fixes any usd-as-size; reports fill size (actual quantized from exchange or computed)
-        - Higher prec reporting (round 8) to preserve small base sizes (e.g. BTC 1e-8 inc)
+        - ALWAYS quantize with base_increment (via exchange.quantize_size)
+        - For LIVE (P6-PE-CALLER-OE-SELL): delegates to protected_market_exit which unlocks
+          any stop-held base before rebalance sells (cancel+resolve+reattach). Quantize+return shape preserved.
+        - Shadow unchanged.
+        - No more direct place_market_sell in this path.
         """
         if usd_amount <= 0:
             return {"success": False, "error": "zero usd amount"}
@@ -232,33 +232,42 @@ class OrderExecutor:
         if self.mode == "live":
             if size <= 0:
                 return {"success": False, "error": "could not compute sell size (price=0)"}
-            # P0-02.6: size passed here is guaranteed quantized base (usd/price -> quantize_size) not raw usd
-            result = self.exchange.place_market_sell(pair, size)
-            if not result.get("success", False):
-                return {"success": False, "error": result.get("error", "Failed")}
-            order_id = result.get("order_id") or result.get("id")
-            # Fetch actual fill for exit_price (consistent with execute_buy for ledger/PnL)
-            fill = {"average_filled_price": 0.0, "filled_size": size}
-            if order_id and hasattr(self.exchange, "get_order_fill_details"):
-                try:
-                    fill = self.exchange.get_order_fill_details(order_id) or fill
-                except Exception:
-                    pass
-            exit_price = fill.get("average_filled_price") or 0.0
-            filled = fill.get("filled_size") or size
-            out = {
-                "success": True,
-                "order_id": order_id,
-                "size": round(filled, 8),
-                "qty": round(filled, 8),
-                "exit_price": round(exit_price, 4) if exit_price > 0 else None,
-                "actual_fill_used": bool(exit_price > 0),
-                "pair": pair,
-                "action": "SELL",
-                "side": "SELL",
-            }
-            self._record_to_ledger(out, signal_source="order_executor_sell")
-            return out
+            # P6-PE-CALLER-OE-SELL-20260826 + P0-02.6: route live sells (rebalance etc) via protected to unlock
+            # stop-held base. Compute/quantize logic above is preserved exactly.
+            try:
+                from phase6.core.protected_market_exit import protected_market_exit
+                pe = protected_market_exit(
+                    self.exchange,
+                    pair,
+                    qty=size,
+                    qty_full_hint=size,
+                    mark_price=price,
+                    reason="order_executor_sell",
+                    signal_source="order_executor_sell",
+                    ledger=True,
+                    reattach_sl=True,
+                )
+                if not pe.get("success", False):
+                    err = pe.get("error") or pe.get("cancel_error") or "protected_market_exit failed"
+                    return {"success": False, "error": str(err)[:200]}
+                filled = float(pe.get("filled_qty") or pe.get("qty") or size or 0)
+                exit_px = float(pe.get("exit_price") or 0.0)
+                out = {
+                    "success": True,
+                    "order_id": pe.get("order_id"),
+                    "size": round(filled, 8),
+                    "qty": round(filled, 8),
+                    "exit_price": round(exit_px, 4) if exit_px > 0 else None,
+                    "actual_fill_used": bool(exit_px > 0),
+                    "pair": pair,
+                    "action": "SELL",
+                    "side": "SELL",
+                }
+                # protected did the ledger + unlock + reattach; skip _record to avoid dup
+                return out
+            except Exception as pe_exc:
+                self.logger.error(f"[OE-SELL] protected exit exception for {pair}: {pe_exc}")
+                return {"success": False, "error": f"protected: {str(pe_exc)[:120]}"}
         
         # Shadow mode
         out = {

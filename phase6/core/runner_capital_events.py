@@ -49,6 +49,52 @@ TP_EXIT_REASONS = frozenset(
         "take_profit_exchange",
     }
 )
+# Bot strategy profit / lifecycle exits (dual_peak, extension_partial, etc.).
+# Same capital treatment as TP: NO cash hold, short cool-off only — never manual.
+LIFECYCLE_EXIT_PREFIXES = (
+    "lifecycle_",
+    "lifecycle_dual_peak",
+    "lifecycle_extension",
+    "lifecycle_exit",
+)
+
+
+def _reason_is_stop_exchange(reason: str) -> bool:
+    r = str(reason or "").lower()
+    return (
+        r in STOP_EXCHANGE_REASONS
+        or r == "stop_loss_exchange"
+        or "stop_loss" in r
+        or r.startswith("dust_sweep_after_sl")
+        or "dust_sweep_after_sl" in r
+    )
+
+
+def _reason_is_strategy_profit_exit(reason: str) -> bool:
+    """True for live TP + lifecycle trims — bot exits, not operator manual liquidations."""
+    r = str(reason or "").lower()
+    if not r:
+        return False
+    if r in TP_EXIT_REASONS or r.startswith("take_profit") or "take_profit" in r:
+        return True
+    if r.startswith("lifecycle_") or r.startswith("lifecycle"):
+        return True
+    if "lifecycle_dual_peak" in r or "lifecycle_extension" in r:
+        return True
+    # signal_source sometimes lands in reason/source field
+    if r.startswith("lifecycle_dual_peak") or r.startswith("lifecycle_extension_partial"):
+        return True
+    return False
+
+
+def _reason_is_lifecycle_exit(reason: str) -> bool:
+    r = str(reason or "").lower()
+    return bool(r) and (
+        r.startswith("lifecycle_")
+        or r.startswith("lifecycle")
+        or "lifecycle_dual_peak" in r
+        or "lifecycle_extension" in r
+    )
 
 
 def _cash_usd_from_runner(runner: Any) -> float:
@@ -279,8 +325,12 @@ def split_disposition_pairs_by_ledger(
 
     Returns (stop_pairs, tp_pairs, manual_pairs):
       - stop: exchange SL / dust after SL → SL cooldown policy
-      - tp: live take_profit_* → post-TP cool-off only (no cash hold / no 48h manual)
+      - tp: live take_profit_* OR lifecycle_* (dual_peak / extension_partial)
+            → post-TP cool-off only (no cash hold / no 48h manual)
       - manual: true operator liquidations → manual hold + longer cooldown
+
+    Lifecycle must never fall through to manual — that parks cash and blocks
+    redeploy after a successful profit-side trim (BTC 2026-08-26 class bug).
     """
     if not pairs_sold:
         return [], [], []
@@ -292,23 +342,11 @@ def split_disposition_pairs_by_ledger(
         if pair not in sold_set:
             continue
         reason = str(
-            t.get("reason") or t.get("exit_reason") or t.get("source") or ""
-        ).lower()
-        is_stop = (
-            reason in STOP_EXCHANGE_REASONS
-            or reason == "stop_loss_exchange"
-            or "stop_loss" in reason
-            or reason.startswith("dust_sweep_after_sl")
-            or "dust_sweep_after_sl" in reason
+            t.get("reason") or t.get("exit_reason") or t.get("source") or t.get("signal_source") or ""
         )
-        is_tp = (
-            reason in TP_EXIT_REASONS
-            or reason.startswith("take_profit")
-            or "take_profit" in reason
-        )
-        if is_stop:
+        if _reason_is_stop_exchange(reason):
             stop_pairs.add(pair)
-        elif is_tp:
+        elif _reason_is_strategy_profit_exit(reason):
             tp_pairs.add(pair)
     # Prefer stop over tp if both somehow present; manual = neither
     tp_pairs -= stop_pairs
@@ -329,6 +367,18 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
         event["pairs_exchange_stop"] = stop_pairs
         event["pairs_take_profit"] = tp_pairs
         event["pairs_manual_intent"] = manual_pairs
+        # Annotate lifecycle subset of tp_pairs for audit (same capital policy as TP)
+        life_pairs = []
+        try:
+            for t in _load_recent_ledger_sells(window, jsonl_path=ledger_path):
+                p = t.get("pair")
+                if p in tp_pairs and _reason_is_lifecycle_exit(
+                    str(t.get("reason") or t.get("exit_reason") or t.get("signal_source") or "")
+                ):
+                    life_pairs.append(p)
+            event["pairs_lifecycle_exit"] = sorted(set(life_pairs))
+        except Exception:
+            event["pairs_lifecycle_exit"] = []
 
         stop_hours = float(settings.get("stop_loss_exchange_block_rebuy_hours", 72.0))
         manual_hours = float(settings.get("manual_sell_block_rebuy_hours", 48.0))
@@ -419,7 +469,10 @@ def apply_manual_disposition(runner: Any, event: Dict[str, Any], settings: Dict[
         event["rebuy_blocked_pairs"] = list(pairs_sold)
         event["stop_loss_exchange_hold_cash"] = stop_hold
         if tp_pairs and not stop_pairs and not manual_pairs:
+            # Lifecycle dual_peak / extension_partial share this action (no cash hold).
             event["action"] = "take_profit_no_cash_hold"
+            if event.get("pairs_lifecycle_exit"):
+                event["action_detail"] = "lifecycle_or_tp_no_cash_hold"
         elif stop_pairs and manual_pairs:
             event["action"] = (
                 "split_stop_hold_and_manual"
@@ -621,11 +674,7 @@ def load_buy_block_status(
             if not pair:
                 continue
             reason = str(t.get("reason") or t.get("exit_reason") or t.get("source") or "").lower()
-            is_stop = (
-                reason in STOP_EXCHANGE_REASONS
-                or reason == "stop_loss_exchange"
-                or "stop_loss" in reason
-            )
+            is_stop = _reason_is_stop_exchange(reason)
             if not is_stop:
                 continue
             ts = _parse_trade_ts(str(t.get("timestamp", "")))
@@ -636,8 +685,9 @@ def load_buy_block_status(
     except Exception:
         pass
 
-    # 3) Live take-profit SELLs → shorter post-TP cool-off (default 24h)
+    # 3) Live take-profit + lifecycle strategy SELLs → shorter cool-off (default 24h)
     #    Prevents same-cycle / FOMO rebuy after banking a winner (LINK-class giveback loop).
+    #    Lifecycle dual_peak / extension_partial must use this path — NOT 48h manual hold.
     tp_hours = 24.0
     try:
         from phase6.core.shadow_tp import load_exit_automation
@@ -656,19 +706,33 @@ def load_buy_block_status(
                 pair = t.get("pair")
                 if not pair:
                     continue
-                reason = str(t.get("reason") or t.get("exit_reason") or t.get("source") or "").lower()
-                is_tp = (
-                    reason in TP_EXIT_REASONS
-                    or reason.startswith("take_profit")
-                    or "take_profit" in reason
+                reason = str(
+                    t.get("reason")
+                    or t.get("exit_reason")
+                    or t.get("source")
+                    or t.get("signal_source")
+                    or ""
                 )
-                if not is_tp:
+                if not _reason_is_strategy_profit_exit(reason):
+                    continue
+                # Don't double-count stops that also matched profit keywords
+                if _reason_is_stop_exchange(reason):
                     continue
                 ts = _parse_trade_ts(str(t.get("timestamp", "")))
                 if ts is None or ts < tp_cutoff:
                     continue
                 exp_ts = ts + tp_hours * 3600.0
-                _put(str(pair), exp_ts, "post_tp_rebuy_block", "ledger_take_profit")
+                block_reason = (
+                    "post_lifecycle_rebuy_block"
+                    if _reason_is_lifecycle_exit(reason)
+                    else "post_tp_rebuy_block"
+                )
+                src = (
+                    "ledger_lifecycle"
+                    if block_reason == "post_lifecycle_rebuy_block"
+                    else "ledger_take_profit"
+                )
+                _put(str(pair), exp_ts, block_reason, src)
         except Exception:
             pass
 
@@ -676,7 +740,11 @@ def load_buy_block_status(
     for pair, (exp_ts, reason, source) in best.items():
         left = max(0.0, (exp_ts - now) / 3600.0)
         # block_hours reflects the rule that created this block
-        bh = tp_hours if reason == "post_tp_rebuy_block" else hours_f
+        bh = (
+            tp_hours
+            if reason in ("post_tp_rebuy_block", "post_lifecycle_rebuy_block")
+            else hours_f
+        )
         out[pair] = {
             "blocked": True,
             "reason": reason,
@@ -788,7 +856,10 @@ def _apply_post_tp_structure_early_release(
     for pair, meta in list(blocks.items()):
         if not isinstance(meta, dict):
             continue
-        if str(meta.get("reason") or "") != "post_tp_rebuy_block":
+        if str(meta.get("reason") or "") not in (
+            "post_tp_rebuy_block",
+            "post_lifecycle_rebuy_block",
+        ):
             continue
         # elapsed since block started = block_hours - hours_remaining
         try:

@@ -6,6 +6,7 @@ import json
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -112,6 +113,16 @@ class _Ex:
     def get_order_fill_details(self, oid):
         return {"average_filled_price": self.price, "filled_size": self.avail}
 
+    # stubs so protected_market_exit cancel path does not AttributeError in dry runs
+    def get_open_stop_orders(self, pair):
+        return []
+
+    def get_open_orders(self, pair):
+        return []
+
+    def cancel_order(self, oid):
+        return True
+
 
 def test_sweep_residual_after_stop_dry_and_live_mock():
     ex = _Ex()
@@ -150,7 +161,7 @@ def test_sweep_residual_after_stop_dry_and_live_mock():
 def test_market_sell_zero_skip():
     ex = _Ex(avail=0.0)
     r = market_sell_full_available(ex, "LINK-USD", dry_run=False, settle_wait_s=0.0)
-    assert r.get("skipped") and r.get("skip_reason") == "zero_after_quantize"
+    assert r.get("skipped") and "zero" in str(r.get("skip_reason") or "").lower(), (r.get("skip_reason"), r)
     print("[SWEEP] zero residual skip OK")
 
 

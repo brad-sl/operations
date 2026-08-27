@@ -1,3 +1,157 @@
+## P6-STRUCTURE-BOS-EXIT-SHADOW-20260826 — DONE (shadow ship)
+
+**Type:** exit / market structure (shadow)  
+**Date:** 2026-08-26  
+**Role:** crypto-engineer  
+**Status:** **DONE** — shadow live on runner; **no sells**  
+**Priority:** P1  
+**auto_pickup:** false  
+**Handoff:** `handoffs/phase6/Handoff_P6-STRUCTURE-BOS-EXIT-SHADOW-20260826.md`
+
+### Plain English
+Encode the LINK chart read: after a real run, exit when price **breaks the last higher-low** (break of structure), not sticky daily labels + sentiment. Shadow only until enough episodes + Brad go.
+
+### Shipped
+- `phase6/core/structure_bos_exit.py` — swings, arm on MFE, BOS walk, shadow cycle
+- `config/structure_bos_exit.json` — mode=shadow hard path (live sells forbidden in module)
+- Runner hook `apply_structure_bos_from_runner`
+- Isolation `scripts/phase6/test_isolation_structure_bos_exit.py` PASS
+- CF `scripts/phase6/backtest_structure_bos_cf.py` → `reports/STRUCTURE_BOS_CF_LATEST.md`
+- Skill note on `phase6-run-lifecycle-deploy` / ignition-and-dual-peak.md
+
+### First CF snapshot (honest)
+1h Coinbase, trough→arm entries. LINK poster Aug11: BOS fired ~+4.7% vs entry.  
+Cross-pair: mean BOS often **below** mean hold-to-window-end (continuation bulls leave meat) — expected tradeoff; not a promote signal. Collect live shadow would-fires.
+
+### Not done / no-go
+- No live structure_bos market sells
+- No auto-promote
+- Need episode scoreboard vs trail TP + SL before live talk
+
+### Verify
+```
+PYTHONPATH=. python3 scripts/phase6/test_isolation_structure_bos_exit.py
+PYTHONPATH=. python3 scripts/phase6/backtest_structure_bos_cf.py
+python3 -c "import json;print(json.load(open('data/state/structure_bos_exit_status.json')).get('plain_english'))"
+```
+
+---
+
+## P6-DUAL-PEAK-NO-RED-EPISODE-20260826 — DONE
+
+**Type:** exit / signal hygiene (P0)  
+**Date:** 2026-08-26  
+**Role:** crypto-engineer  
+**Status:** **DONE** — shipped same session  
+**Priority:** P0 (stop dual-peak shredder on red bags)  
+**auto_pickup:** false  
+**Handoff:** `handoffs/phase6/Handoff_P6-DUAL-PEAK-NO-RED-EPISODE-20260826.md`
+
+### Plain English
+Live dual_peak was half-trimming BTC every cycle while **underwater** on sticky daily distribution + faded sent. Dicing a red bag = diminishing returns. P0: **no lifecycle half-trim while mark < entry**; **max 1 dual_peak per lot** until price makes a **new peak**.
+
+### Shipped
+- `phase6/core/run_lifecycle.py` `evaluate_dual_peak_exits` gates + lot counters on execute
+- Config `run_lifecycle.dual_peak_exit`: `dual_peak_require_mark_ge_entry`, `dual_peak_min_green_pct`, `extension_partial_require_mark_ge_entry`, `dual_peak_max_trims_per_lot=1`, `dual_peak_rearm_on_new_peak`
+- Live BTC lot seeded `dual_peak_trim_count=1` + `peak_at_last_dual_peak`
+- Isolation: `scripts/phase6/test_isolation_dual_peak_p0_gates.py` + p12 updated
+
+### Still open (P1 research — not this card)
+- Daily vs hourly structure for stall/failed-high
+- Sent-fade decay / reset after trim
+
+### Verify
+```
+PYTHONPATH=. python3 scripts/phase6/test_isolation_dual_peak_p0_gates.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_run_lifecycle_p12.py
+```
+
+---
+
+## P6-PROTECTED-MARKET-EXIT-SSOT-20260826 — DONE
+
+**Type:** exit / execution hardening (refactor)  
+**Date:** 2026-08-26  
+**Role:** crypto-engineer (default session)  
+**Status:** **DONE** — shipped same session  
+**Priority:** P1 (prevents missed TP / dual-peak; one place for Coinbase stop-hold dance)  
+**auto_pickup:** false  
+**Handoff:** `handoffs/phase6/Handoff_P6-PROTECTED-MARKET-EXIT-SSOT-20260826.md`  
+**Kanban:** `t_bcbca9c2` (crypto-bot-project) — complete
+
+### Plain English
+Open stops **lock** base size on Coinbase. Selling without cancel→poll either fails (`INSUFFICIENT_FUND`) or only nicks dust. That dance lived in multiple copies (lifecycle, live TP). One missed path = missed profit exit + naked bag risk.
+
+### Shipped
+- **New SSOT:** `phase6/core/protected_market_exit.py`
+  - `protected_market_exit` — cancel stops → poll free (lag fallback to qty_full) → market sell → reattach SL / full-exit cancel
+  - `reattach_stop_after_exit`, `cancel_stops_and_resolve_base`, `free_base_qty`
+- **Callers wired:**
+  - `run_lifecycle.apply_lifecycle_exits_live` → protected exit
+  - `run_lifecycle.reattach_sl_after_lifecycle_trim` → thin wrapper
+  - `shadow_tp.execute_live_tp_exits` → protected exit (TP ledger kept)
+- **Isolation:** `scripts/phase6/test_isolation_protected_market_exit.py`
+- Skill note: `phase6-sl-exits-and-dust` lifecycle-partial reference updated
+
+### Non-goals → follow-on OPEN
+- See **P6-PROTECTED-EXIT-CALLERS-20260826** (operator trim / dust / order_executor)
+
+### Verification (PASS 2026-08-26)
+```
+PYTHONPATH=. python3 scripts/phase6/test_isolation_protected_market_exit.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_run_lifecycle_p12.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_stop_exchange_disposition.py
+PYTHONPATH=. python3 phase6/core/test_isolation_live_tp_exit.py
+```
+
+### Related prior same-day
+- False lifecycle→manual tag + cash hold clear
+- Dual-peak pre-sell cancel + free lag fallback
+
+---
+
+## P6-PROTECTED-EXIT-CALLERS-20260826 — OPEN (follow-on)
+
+**Type:** exit / execution hardening (caller migration)  
+**Date:** 2026-08-26  
+**Role:** crypto-engineer  
+**Status:** **OPEN** — queued after SSOT `P6-PROTECTED-MARKET-EXIT-SSOT-20260826`  
+**Priority:** P2 (hygiene; live TP + lifecycle already on SSOT)  
+**auto_pickup:** false  
+**Parent SSOT:** `phase6/core/protected_market_exit.py`  
+**Handoff:** `handoffs/phase6/Handoff_P6-PROTECTED-EXIT-CALLERS-20260826.md`  
+**Kanban:** optrim=`t_26b3acee` · dust=`t_d1911c40` · oe-sell=`t_97ca075a` (crypto-bot-project, ready, crypto-engineer P2)
+
+### Plain English
+Profit exits (TP + lifecycle) already use the shared cancel→sell→reattach path. Three leftover sell paths still hand-roll Coinbase stop unlocks (or skip them). Wire them so the next operator trim / dust / rebalance sell cannot reintroduce dust fills or naked bags.
+
+### Children (do in any order; isolation per child)
+
+| ID | Path | Must do | Must not |
+|----|------|---------|----------|
+| **P6-PE-CALLER-OPTRIM-20260826** | `scripts/phase6/operator_trim_*.py` (esp. `operator_trim_link_to_btc_30.py`) | Replace ad-hoc `cancel_open_stops` + `place_market_sell` with `protected_market_exit` (frac/qty + reattach) | Live multi-pair race; leave book naked |
+| **P6-PE-CALLER-DUST-20260826** | `phase6/core/sl_dust_sweep.py` | Prefer `protected_market_exit` for residual sells; `cancel_stops=True` when parent SL may still lock size | Sweep preserve/excluded pairs; fake dust |
+| **P6-PE-CALLER-OE-SELL-20260826** | `phase6/core/order_executor.py` `execute_sell` | When selling base that may sit under a stop (rebalance legs), route through protected exit or call cancel/resolve first | Break USD→size quantize (P0-02.6); shadow ledger shape |
+
+### Success criteria
+- Each child: isolation test or extended `test_isolation_protected_market_exit.py` case PASS
+- No direct `place_market_sell` in those three without going through SSOT (grep gate)
+- MASTER child → DONE with commands; parent → DONE when all three done
+- Skill `phase6-sl-exits-and-dust` note updated
+
+### Verification template
+```bash
+cd /home/brad/projects/crypto-trading-bot
+rg -n "place_market_sell" scripts/phase6/operator_trim*.py phase6/core/sl_dust_sweep.py phase6/core/order_executor.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_protected_market_exit.py
+# + child-specific isolation if added
+```
+
+### Pickup
+Kanban board `crypto-bot-project`, assignee `crypto-engineer`, priority 2. Dispatcher can claim any child independently.
+
+---
+
 ## ANALYST-REGIME-BULL-KNOBS-20260824 — QUEUED (strategy)
 
 **Type:** test  
@@ -11316,6 +11470,35 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260826`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+## P6-BASKET-SEAT-GRADUATION-20260826 — DONE
+
+**Date:** 2026-08-26
+**Status:** DONE
+**What:** Seat→signal→fill→outcome graduation funnel on pick ledger (batting average SSOT).
+**Paths:** `phase6/core/basket_pick_metrics.py` (`refresh_graduation`); `data/state/basket_seat_graduation_latest.json`; `reports/BASKET_SEAT_GRADUATION_LATEST.md`; isolation `test_isolation_basket_seat_graduation.py`; cron via existing `phase6-basket-pick-metrics-refresh` @ 12:30 PT.
+**Baseline n=3:** RAVE filled_loss; ICP signaled no fill; PENGU blocked_no_fill. win|seat=0 until closed wins accrue. Prior ~0.25 is planning only until N≥12.
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260827** (opened 2026-08-27T00:00:46.287572)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260827`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

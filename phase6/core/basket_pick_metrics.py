@@ -25,9 +25,17 @@ STATE_DIR = PROJECT_ROOT / "data" / "state"
 LEDGER_PATH = STATE_DIR / "basket_pick_metrics.jsonl"
 LATEST_PATH = STATE_DIR / "basket_pick_metrics_latest.json"
 SUMMARY_PATH = STATE_DIR / "basket_pick_metrics_summary.json"
+GRAD_LATEST_PATH = STATE_DIR / "basket_seat_graduation_latest.json"
+GRAD_REPORT_PATH = PROJECT_ROOT / "reports" / "BASKET_SEAT_GRADUATION_LATEST.md"
+DECISION_CTX_PATH = STATE_DIR / "decision_context_log.jsonl"
+RUN_PHASE_AUDIT_PATH = STATE_DIR / "run_phase_deploy_audit.jsonl"
+TRADES_PATH = PROJECT_ROOT / "trades" / "phase6_trades.jsonl"
 
 UA = {"User-Agent": "phase6-basket-metrics/1.0"}
 HORIZONS_HOURS = (24, 72, 168, 336, 720)  # 1d 3d 7d 14d 30d
+# Graduation observation window after promote (days). After this, no-signal seats are "stale".
+GRAD_WINDOW_DAYS = 30
+MIN_FILL_USD = 15.0  # ignore dust / phantom buys
 
 
 def _utc_now() -> str:
@@ -96,6 +104,8 @@ class BasketPickRecord:
     marks: Dict[str, Any] = field(default_factory=dict)  # horizon_key -> mark
     status: str = "open"  # open | closed | superseded
     notes: List[str] = field(default_factory=list)
+    # Seat → signal → fill → outcome (filled by refresh_graduation)
+    graduation: Dict[str, Any] = field(default_factory=dict)
 
 
 def append_pick(record: BasketPickRecord, path: Path = LEDGER_PATH) -> Path:
@@ -191,9 +201,481 @@ def refresh_open_picks(path: Path = LEDGER_PATH) -> Dict[str, Any]:
             updated += 1
     if updated:
         rewrite_ledger(rows, path)
-    summary = summarize(rows)
+    grad = refresh_graduation(path=path)
+    summary = summarize(rows if not updated else load_ledger(path))
+    summary["graduation"] = grad.get("funnel") or {}
     SUMMARY_PATH.write_text(json.dumps(summary, indent=2) + "\n")
-    return {"updated": updated, "open": summary.get("open_picks"), "summary": summary}
+    return {
+        "updated": updated,
+        "open": summary.get("open_picks"),
+        "summary": summary,
+        "graduation": grad,
+    }
+
+
+def _parse_ts(ts: Any) -> Optional[datetime]:
+    if ts is None:
+        return None
+    try:
+        s = str(ts).replace("Z", "+00:00")
+        return datetime.fromisoformat(s)
+    except Exception:
+        return None
+
+
+def _iter_jsonl(path: Path):
+    if not path.exists():
+        return
+    with path.open(errors="ignore") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                yield json.loads(line)
+            except json.JSONDecodeError:
+                continue
+
+
+def _pair_norm(p: Any) -> str:
+    return str(p or "").strip().upper()
+
+
+def _scan_decision_signals(pair: str, t0: datetime) -> Dict[str, Any]:
+    """First post-promote BUY / ROTATE_IN evidence from decision_context_log."""
+    pair_u = _pair_norm(pair)
+    first_sig = None
+    max_score = None
+    max_tilt_usd = None
+    n_sig = 0
+    for row in _iter_jsonl(DECISION_CTX_PATH):
+        ts = _parse_ts(
+            row.get("timestamp")
+            or row.get("ts")
+            or row.get("decision_id")
+            or row.get("id")
+        )
+        # id like rebalance_20260826T160118Z_...
+        if ts is None:
+            rid = str(row.get("decision_id") or row.get("id") or "")
+            if "T" in rid:
+                try:
+                    chunk = rid.split("_")[1]  # 20260826T160118Z
+                    ts = datetime.strptime(chunk.replace("Z", ""), "%Y%m%dT%H%M%S").replace(
+                        tzinfo=timezone.utc
+                    )
+                except Exception:
+                    pass
+        if ts is None or ts < t0:
+            continue
+        hit = False
+        score = None
+        tilt_usd = None
+
+        # Live schema: proposals_summary=[{pair, side, score, source}, ...]
+        props = row.get("proposals_summary") or row.get("proposals") or []
+        for prop in props:
+            if not isinstance(prop, dict):
+                continue
+            if _pair_norm(prop.get("pair")) != pair_u:
+                continue
+            act = str(
+                prop.get("side") or prop.get("action") or prop.get("signal") or ""
+            ).upper()
+            if "ROTATE_IN" in act or act in ("BUY", "ADD", "ENTER"):
+                hit = True
+                try:
+                    score = float(prop.get("score")) if prop.get("score") is not None else score
+                except (TypeError, ValueError):
+                    pass
+
+        # Live schema: tilted_plan = { "PENGU-USD": 711.22, ... } target notionals
+        plan = row.get("tilted_plan") or row.get("plan") or {}
+        if isinstance(plan, dict) and plan and not any(
+            k in plan for k in ("actions", "trades")
+        ):
+            for pk, pv in plan.items():
+                if _pair_norm(pk) != pair_u:
+                    continue
+                try:
+                    u = float(pv)
+                except (TypeError, ValueError):
+                    continue
+                # Only count as buy signal if also ROTATE_IN / explicit, or large new target
+                # while we already hit from proposals — else require proposal hit.
+                if hit or u >= MIN_FILL_USD:
+                    # If only tilted without ROTATE_IN, treat as signal only when
+                    # pair appears with positive target and proposals said buy/hold-upgrade.
+                    if hit:
+                        tilt_usd = u
+                    elif u >= MIN_FILL_USD and score is not None:
+                        hit = True
+                        tilt_usd = u
+        else:
+            actions = []
+            if isinstance(plan, dict):
+                actions = plan.get("actions") or plan.get("trades") or []
+            if isinstance(plan, list):
+                actions = plan
+            for a in actions or []:
+                if not isinstance(a, dict):
+                    continue
+                if _pair_norm(a.get("pair") or a.get("product_id")) != pair_u:
+                    continue
+                side = str(a.get("side") or a.get("action") or "").upper()
+                if "BUY" in side or "ROTATE_IN" in side:
+                    hit = True
+                    try:
+                        u = a.get("usd") or a.get("notional_usd") or a.get("quote_size")
+                        if u is not None:
+                            tilt_usd = float(u)
+                    except (TypeError, ValueError):
+                        pass
+
+        # Also: if tilted_plan has pair USD and proposals_summary ROTATE_IN already set hit
+        if isinstance(plan, dict) and hit and tilt_usd is None:
+            raw = plan.get(pair) or plan.get(pair_u) or plan.get(pair_u.replace("-USD", "-USD"))
+            # try common key forms
+            for k, v in plan.items():
+                if _pair_norm(k) == pair_u:
+                    try:
+                        tilt_usd = float(v)
+                    except (TypeError, ValueError):
+                        pass
+                    break
+
+        if not hit:
+            continue
+        n_sig += 1
+        if first_sig is None:
+            first_sig = {
+                "ts": ts.isoformat(),
+                "score": score,
+                "tilt_usd": tilt_usd,
+                "source": "decision_context",
+            }
+        if score is not None:
+            max_score = score if max_score is None else max(max_score, score)
+        if tilt_usd is not None:
+            max_tilt_usd = tilt_usd if max_tilt_usd is None else max(max_tilt_usd, tilt_usd)
+    return {
+        "signaled": first_sig is not None,
+        "first_signal": first_sig,
+        "n_signal_cycles": n_sig,
+        "max_signal_score": max_score,
+        "max_tilt_usd": max_tilt_usd,
+    }
+
+
+def _scan_run_phase_blocks(pair: str, t0: datetime) -> Dict[str, Any]:
+    pair_u = _pair_norm(pair)
+    blocks: List[Dict[str, Any]] = []
+    for row in _iter_jsonl(RUN_PHASE_AUDIT_PATH):
+        ts = _parse_ts(row.get("ts"))
+        if ts is None or ts < t0:
+            continue
+        for r in row.get("results") or []:
+            if not isinstance(r, dict):
+                continue
+            if _pair_norm(r.get("pair")) != pair_u:
+                continue
+            if r.get("dropped") or r.get("blocked"):
+                snap = r.get("snapshot") or {}
+                blocks.append(
+                    {
+                        "ts": ts.isoformat(),
+                        "phase_name": r.get("phase_name") or snap.get("phase_name"),
+                        "original_usd": r.get("original_usd"),
+                        "blocked": bool(r.get("blocked")),
+                        "detail": str(snap.get("blocked_reason") or snap.get("reason") or "")[:120]
+                        or (
+                            f"phase={r.get('phase_name')};off_peak={snap.get('off_peak_pct')}"
+                        ),
+                    }
+                )
+    return {
+        "n_run_phase_blocks": len(blocks),
+        "first_block": blocks[0] if blocks else None,
+        "block_reasons": sorted(
+            {str(b.get("phase_name") or b.get("detail") or "?") for b in blocks}
+        )[:8],
+    }
+
+
+def _scan_fills(pair: str, t0: datetime) -> Dict[str, Any]:
+    """Live fills after promote from trades ledger."""
+    pair_u = _pair_norm(pair)
+    buys: List[Dict[str, Any]] = []
+    sells: List[Dict[str, Any]] = []
+    for row in _iter_jsonl(TRADES_PATH):
+        if _pair_norm(row.get("pair") or row.get("product_id")) != pair_u:
+            continue
+        ts = _parse_ts(row.get("timestamp") or row.get("ts"))
+        if ts is None or ts < t0:
+            continue
+        side = str(row.get("side") or "").upper()
+        try:
+            qty = float(row.get("qty") or row.get("size") or 0.0)
+        except (TypeError, ValueError):
+            qty = 0.0
+        px = row.get("entry_price") if "BUY" in side else row.get("exit_price")
+        try:
+            px_f = float(px or 0.0)
+        except (TypeError, ValueError):
+            px_f = 0.0
+        usd = qty * px_f if qty and px_f else None
+        if usd is None:
+            try:
+                usd = float(row.get("notional_usd") or row.get("usd") or 0.0) or None
+            except (TypeError, ValueError):
+                usd = None
+        if usd is not None and usd < MIN_FILL_USD and "BUY" in side:
+            continue  # dust
+        rec = {
+            "ts": ts.isoformat(),
+            "side": side,
+            "qty": qty,
+            "usd": round(usd, 2) if usd is not None else None,
+            "reason": row.get("reason") or row.get("exit_reason") or row.get("signal_source"),
+            "pnl": row.get("pnl"),
+            "pnl_pct": row.get("pnl_pct"),
+            "order_id": row.get("order_id"),
+        }
+        if "BUY" in side:
+            buys.append(rec)
+        elif "SELL" in side:
+            sells.append(rec)
+    buy_usd = sum(float(b["usd"] or 0) for b in buys)
+    sell_pnl = 0.0
+    n_pnl = 0
+    for s in sells:
+        if s.get("pnl") is not None:
+            try:
+                sell_pnl += float(s["pnl"])
+                n_pnl += 1
+            except (TypeError, ValueError):
+                pass
+    return {
+        "filled": len(buys) > 0,
+        "first_fill": buys[0] if buys else None,
+        "n_buys": len(buys),
+        "n_sells": len(sells),
+        "buy_usd_sum": round(buy_usd, 2),
+        "realized_pnl_sum": round(sell_pnl, 4) if n_pnl else None,
+        "sells": sells[-5:],  # tail for audit
+    }
+
+
+def _classify_stage(g: Dict[str, Any], age_days: float) -> str:
+    """
+    Stages (mutually exclusive label for scoreboard):
+      seated | signaled | blocked_no_fill | filled_open | filled_win | filled_loss | stale_no_signal
+    """
+    if g.get("filled"):
+        pnl = g.get("realized_pnl_sum")
+        n_sells = int(g.get("n_sells") or 0)
+        if n_sells <= 0 or pnl is None:
+            return "filled_open"
+        return "filled_win" if float(pnl) > 0 else "filled_loss"
+    if g.get("signaled"):
+        if int(g.get("n_run_phase_blocks") or 0) > 0:
+            return "blocked_no_fill"
+        return "signaled"
+    if age_days >= float(GRAD_WINDOW_DAYS):
+        return "stale_no_signal"
+    return "seated"
+
+
+def refresh_graduation(path: Path = LEDGER_PATH) -> Dict[str, Any]:
+    """
+    Attach seat→signal→fill→outcome graduation to each pick.
+
+    Does not place orders. Reads decision_context, run_phase audit, trades ledger.
+    """
+    rows = load_ledger(path)
+    now = datetime.now(timezone.utc)
+    changed = 0
+    per_pick: List[Dict[str, Any]] = []
+    for row in rows:
+        add = row.get("add_pair")
+        t0 = _parse_ts(row.get("promoted_at"))
+        if not add or t0 is None:
+            continue
+        age_days = (now - t0).total_seconds() / 86400.0
+        sig = _scan_decision_signals(add, t0)
+        blk = _scan_run_phase_blocks(add, t0)
+        fills = _scan_fills(add, t0)
+        g: Dict[str, Any] = {
+            "seated": True,
+            "promoted_at": row.get("promoted_at"),
+            "add_pair": add,
+            "remove_pair": row.get("remove_pair"),
+            "source": row.get("source"),
+            "age_days": round(age_days, 2),
+            **sig,
+            **blk,
+            **fills,
+        }
+        # hours to first signal / fill
+        if sig.get("first_signal") and sig["first_signal"].get("ts"):
+            t1 = _parse_ts(sig["first_signal"]["ts"])
+            if t1:
+                g["hours_to_first_signal"] = round((t1 - t0).total_seconds() / 3600.0, 2)
+        if fills.get("first_fill") and fills["first_fill"].get("ts"):
+            t2 = _parse_ts(fills["first_fill"]["ts"])
+            if t2:
+                g["hours_to_first_fill"] = round((t2 - t0).total_seconds() / 3600.0, 2)
+        g["stage"] = _classify_stage(g, age_days)
+        # paper MTM still useful when never filled
+        marks = row.get("marks") or {}
+        for hk in ("1d", "3d", "7d", "14d", "30d"):
+            m = marks.get(hk)
+            if isinstance(m, dict) and m.get("ret_pct") is not None:
+                g[f"paper_ret_{hk}_pct"] = m.get("ret_pct")
+                if m.get("excess_vs_remove_pct") is not None:
+                    g[f"paper_excess_{hk}_pct"] = m.get("excess_vs_remove_pct")
+        prev = row.get("graduation") or {}
+        # strip heavy sell tails from equality noise
+        slim_prev = {k: v for k, v in prev.items() if k != "sells"}
+        slim_g = {k: v for k, v in g.items() if k != "sells"}
+        if slim_prev != slim_g:
+            row["graduation"] = g
+            row["last_graduation_refresh"] = _utc_now()
+            changed += 1
+        per_pick.append(
+            {
+                "pick_id": row.get("pick_id"),
+                "add_pair": add,
+                "remove_pair": row.get("remove_pair"),
+                "stage": g["stage"],
+                "signaled": g.get("signaled"),
+                "filled": g.get("filled"),
+                "realized_pnl_sum": g.get("realized_pnl_sum"),
+                "n_run_phase_blocks": g.get("n_run_phase_blocks"),
+                "hours_to_first_signal": g.get("hours_to_first_signal"),
+                "hours_to_first_fill": g.get("hours_to_first_fill"),
+                "age_days": g.get("age_days"),
+                "paper_ret_7d_pct": g.get("paper_ret_7d_pct"),
+            }
+        )
+    if changed:
+        rewrite_ledger(rows, path)
+
+    n = len(per_pick) or 1
+    stages = {s: 0 for s in (
+        "seated", "signaled", "blocked_no_fill", "filled_open",
+        "filled_win", "filled_loss", "stale_no_signal",
+    )}
+    for p in per_pick:
+        stages[p["stage"]] = stages.get(p["stage"], 0) + 1
+    n_seated = len(per_pick)
+    n_sig = sum(1 for p in per_pick if p.get("signaled"))
+    n_fill = sum(1 for p in per_pick if p.get("filled"))
+    n_win = stages.get("filled_win", 0)
+    n_closed = n_win + stages.get("filled_loss", 0)
+
+    def _rate(a: int, b: int) -> Optional[float]:
+        return round(a / b, 3) if b else None
+
+    funnel = {
+        "n_seated": n_seated,
+        "n_signaled": n_sig,
+        "n_filled": n_fill,
+        "n_filled_win": n_win,
+        "n_filled_loss": stages.get("filled_loss", 0),
+        "n_blocked_no_fill": stages.get("blocked_no_fill", 0),
+        "n_filled_open": stages.get("filled_open", 0),
+        "n_stale_no_signal": stages.get("stale_no_signal", 0),
+        "rate_signal_given_seat": _rate(n_sig, n_seated),
+        "rate_fill_given_signal": _rate(n_fill, n_sig),
+        "rate_win_given_fill_closed": _rate(n_win, n_closed),
+        "rate_win_given_seat": _rate(n_win, n_seated),  # Brad's ~1/4 prior (full funnel)
+        "stages": stages,
+        "prior_note": (
+            "Guestimate prior ~0.25 win|seat is a planning bar only. "
+            "rate_win_given_seat needs closed fills; n small ⇒ noise."
+        ),
+    }
+    out = {
+        "ts": _utc_now(),
+        "window_days": GRAD_WINDOW_DAYS,
+        "funnel": funnel,
+        "picks": per_pick,
+        "updated": changed,
+        "plain_english": _graduation_plain(funnel),
+    }
+    GRAD_LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    GRAD_LATEST_PATH.write_text(json.dumps(out, indent=2, default=str) + "\n")
+    _write_graduation_report(out)
+    return out
+
+
+def _graduation_plain(f: Dict[str, Any]) -> str:
+    return (
+        f"Seats={f.get('n_seated')} → signaled={f.get('n_signaled')} "
+        f"({f.get('rate_signal_given_seat')}) → filled={f.get('n_filled')} "
+        f"({f.get('rate_fill_given_signal')}|sig) → wins={f.get('n_filled_win')} "
+        f"(win|seat={f.get('rate_win_given_seat')}; "
+        f"blocked_no_fill={f.get('n_blocked_no_fill')})"
+    )
+
+
+def _write_graduation_report(out: Dict[str, Any]) -> None:
+    f = out.get("funnel") or {}
+    lines = [
+        "# Basket seat graduation funnel",
+        "",
+        f"_Generated {out.get('ts')} · window {out.get('window_days')}d post-promote_",
+        "",
+        "## Plain English",
+        "",
+        str(out.get("plain_english") or ""),
+        "",
+        "## Rates (optimize these, not vibes)",
+        "",
+        "| Step | Rate | Count |",
+        "|------|------|-------|",
+        f"| Signal \\| seat | {f.get('rate_signal_given_seat')} | {f.get('n_signaled')}/{f.get('n_seated')} |",
+        f"| Fill \\| signal | {f.get('rate_fill_given_signal')} | {f.get('n_filled')}/{f.get('n_signaled')} |",
+        f"| Win \\| closed fill | {f.get('rate_win_given_fill_closed')} | {f.get('n_filled_win')}/"
+        f"{(f.get('n_filled_win') or 0) + (f.get('n_filled_loss') or 0)} |",
+        f"| **Win \\| seat (full funnel)** | **{f.get('rate_win_given_seat')}** | "
+        f"{f.get('n_filled_win')}/{f.get('n_seated')} |",
+        "",
+        "Prior guestimate ~**0.25** win|seat — replace with `rate_win_given_seat` when N≥12 closed episodes.",
+        "",
+        "## Per pick",
+        "",
+        "| Pick | Add | Stage | Sig | Fill | PnL$ | Block | Age d | Paper 7d% |",
+        "|------|-----|-------|-----|------|------|-------|-------|-----------|",
+    ]
+    for p in out.get("picks") or []:
+        lines.append(
+            f"| {p.get('pick_id')} | {p.get('add_pair')} | {p.get('stage')} | "
+            f"{'Y' if p.get('signaled') else 'n'} | {'Y' if p.get('filled') else 'n'} | "
+            f"{p.get('realized_pnl_sum')} | {p.get('n_run_phase_blocks')} | "
+            f"{p.get('age_days')} | {p.get('paper_ret_7d_pct')} |"
+        )
+    lines += [
+        "",
+        "## Stage meanings",
+        "",
+        "- `seated` — promoted; no buy signal yet",
+        "- `signaled` — ROTATE_IN/BUY plan seen; not filled (gates may still run)",
+        "- `blocked_no_fill` — signal + run-phase (or similar) drop; no live buy",
+        "- `filled_open` — bought; episode not fully realized",
+        "- `filled_win` / `filled_loss` — sells booked with net pnl",
+        "- `stale_no_signal` — past window, never signaled",
+        "",
+        "## Honesty",
+        "",
+        str(f.get("prior_note") or ""),
+        "",
+        "Paper MTM (marks) ≠ trade success. Optimize **fill|signal** vs **win|fill** separately.",
+        "",
+    ]
+    GRAD_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    GRAD_REPORT_PATH.write_text("\n".join(lines) + "\n")
 
 
 def summarize(rows: Optional[Sequence[Dict[str, Any]]] = None) -> Dict[str, Any]:
@@ -227,8 +709,10 @@ def summarize(rows: Optional[Sequence[Dict[str, Any]]] = None) -> Dict[str, Any]
             else None
         ),
         "methodology_note": (
-            "Success = add_pair mark-to-market vs promote baseline; "
-            "excess_vs_remove = add return minus removed pair return (counterfactual stay)."
+            "Paper success = add_pair MTM vs promote baseline; "
+            "excess_vs_remove = add return minus removed pair return. "
+            "Trade graduation = seat→signal→fill→win in graduation funnel "
+            "(see basket_seat_graduation_latest.json)."
         ),
     }
 

@@ -9,7 +9,8 @@ Checks (per new BUY since cursor / lookback):
   2. SL stop price is BELOW entry (~2–6% for crypto long; not above mark/entry)
   3. peak_lot bound for held pair; peak_r not wildly above mark_r (stale peak)
   4. No LIVE-TP trail fire within minutes of BUY while mark_r < arm (stale-peak pattern)
-  5. Cash hold not silently re-armed; LINK post-TP block still 24h-class
+  5. Cash hold: page only on NEW/increased arm (sticky same-$ is silent note)
+  6. Live dual-peak/extension failures: page once per fingerprint (6h dedupe)
 
 Usage:
   PYTHONPATH=. .venv/bin/python scripts/phase6/monitor_reentry_sl_tp.py
@@ -31,6 +32,7 @@ STATE = ROOT / "data" / "state"
 LEDGER = ROOT / "trades" / "phase6_trades.jsonl"
 CURSOR = STATE / "reentry_sl_tp_monitor_cursor.json"
 OUT = STATE / "reentry_sl_tp_monitor_latest.json"
+ALERT_SEEN = STATE / "reentry_sl_tp_monitor_alert_seen.json"
 LOG = ROOT / "logs" / "phase6_runner.log"
 
 # Trail arm default (exit_automation) — trail fire below this right after buy = bug smell
@@ -38,6 +40,10 @@ DEFAULT_ARM_PCT = 0.04
 STALE_PEAK_GAP = 0.08  # peak_r - mark_r
 FAST_TP_MINUTES = 10
 SL_GRACE_MINUTES = 15
+# Sticky cash hold is normal policy after disposition; only page on NEW/increased arm.
+CASH_HOLD_ALERT_EPS_USD = 1.0
+# Live dual-peak / extension failures: page once per fingerprint, then quiet.
+LIVE_EXIT_FAIL_DEDUPE_HOURS = 6.0
 
 
 def _utc_now() -> datetime:
@@ -151,6 +157,55 @@ def _cash_hold() -> float:
         return 0.0
 
 
+def _load_alert_seen() -> Dict[str, Any]:
+    if not ALERT_SEEN.exists():
+        return {}
+    try:
+        data = json.loads(ALERT_SEEN.read_text())
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_alert_seen(data: Dict[str, Any]) -> None:
+    ALERT_SEEN.parent.mkdir(parents=True, exist_ok=True)
+    ALERT_SEEN.write_text(json.dumps(data, indent=2) + "\n")
+
+
+def _should_page_cash_hold(hold: float, seen: Dict[str, Any]) -> Tuple[bool, str]:
+    """Return (page?, note_or_alert_text). Sticky same-hold is silent note only."""
+    prev = float(seen.get("cash_hold_usd") or 0.0)
+    if hold <= CASH_HOLD_ALERT_EPS_USD:
+        return False, ""
+    # New arm or material increase → one page; otherwise sticky policy note.
+    if hold > prev + CASH_HOLD_ALERT_EPS_USD:
+        return True, (
+            f"CASH_HOLD_ARMED ${hold:.2f} (was ${prev:.2f}; deploy blocked until Release)"
+        )
+    return False, (
+        f"CASH_HOLD_ACTIVE ${hold:.2f} (sticky policy after disposition — silent unless $ rises)"
+    )
+
+
+def _should_page_fingerprint(key: str, seen: Dict[str, Any], hours: float) -> bool:
+    raw = seen.get("fingerprints") or {}
+    if not isinstance(raw, dict):
+        raw = {}
+    last = _parse_ts(str(raw.get(key) or ""))
+    now = _utc_now()
+    if last is not None and (now - last).total_seconds() < hours * 3600.0:
+        return False
+    raw[key] = now.isoformat()
+    # prune old
+    keep: Dict[str, str] = {}
+    for k, v in raw.items():
+        dt = _parse_ts(str(v))
+        if dt is None or (now - dt).total_seconds() < max(hours, 24.0) * 3600.0 * 7:
+            keep[k] = str(v)
+    seen["fingerprints"] = keep
+    return True
+
+
 def _exchange_stops(pairs: List[str]) -> Dict[str, List[dict]]:
     if not pairs:
         return {}
@@ -229,10 +284,19 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
 
     alerts: List[str] = []
     notes: List[str] = []
+    alert_seen = _load_alert_seen()
 
     hold = _cash_hold()
-    if hold > 1.0:
-        alerts.append(f"CASH_HOLD_REARMED ${hold:.2f} (expected 0 after operator release)")
+    page_hold, hold_msg = _should_page_cash_hold(hold, alert_seen)
+    if hold_msg:
+        if page_hold:
+            alerts.append(hold_msg)
+        else:
+            notes.append(hold_msg)
+    # Always remember last observed hold so sticky same-$ stays silent next tick.
+    alert_seen["cash_hold_usd"] = float(hold)
+    alert_seen["cash_hold_updated_at"] = now.isoformat()
+    _save_alert_seen(alert_seen)
 
     # Blocks snapshot
     try:
@@ -492,6 +556,21 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
                     f"DUAL_PEAK_LIVE {er.get('kind')} {er.get('pair')} "
                     f"qty={er.get('filled_qty') or er.get('qty')} oid={er.get('order_id')}"
                 )
+            for sk in live_out.get("skipped") or []:
+                pair = str(sk.get("pair") or "?")
+                kind = str(sk.get("kind") or "dual_peak")
+                err = str(sk.get("error") or sk.get("reason") or "skipped")
+                # Compress common Coinbase preview failures
+                if "INSUFFICIENT_FUND" in err:
+                    err_short = "INSUFFICIENT_FUND (likely stop-locked size)"
+                else:
+                    err_short = err[:120]
+                fp = f"live_exit_fail:{pair}:{kind}:{err_short[:40]}"
+                msg = f"LIVE_EXIT_FAIL {kind} {pair} {err_short}"
+                if _should_page_fingerprint(fp, alert_seen, LIVE_EXIT_FAIL_DEDUPE_HOURS):
+                    alerts.append(msg)
+                else:
+                    notes.append(msg + " (deduped)")
             for dr in live_out.get("events") or []:
                 if not any(
                     (x.get("pair") == dr.get("pair") and x.get("kind") == dr.get("kind"))
@@ -501,6 +580,7 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
                         f"DUAL_PEAK_SIGNAL {dr.get('kind')} {dr.get('pair')} "
                         f"would_trim=${dr.get('would_trim_usd')} phase={dr.get('phase_name')}"
                     )
+            _save_alert_seen(alert_seen)
         else:
             dp_rows = run_dual_peak_exit_shadow(config_dict=_cfg2, notify=True)
             result["dual_peak_exit_shadow"] = dp_rows
@@ -542,6 +622,11 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
             result["notes"] = notes[:50]
     except Exception as _ie:
         result["ignition_scout_error"] = str(_ie)
+
+    # Recompute ok after late hooks (dual-peak / fade / scout) may append alerts.
+    result["alerts"] = alerts
+    result["notes"] = notes[:50]
+    result["ok"] = len(alerts) == 0
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, indent=2) + "\n")

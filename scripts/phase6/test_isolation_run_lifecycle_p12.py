@@ -110,15 +110,15 @@ def main() -> int:
             "entry_price": 11.60,
             "entry_sentiment": 0.89,
             "entry_sent_peak": 0.89,
-            "peak_price": 12.0,
+            "peak_price": 12.50,
             "usd": 1000,
         }
     ]
-    # price stall off peak + sent fade
+    # price stall off peak + sent fade — mark still GREEN vs entry (P0 no-red)
     events = evaluate_dual_peak_exits(
         lots=lots,
         current_sentiment={"LINK-USD": 0.50},
-        current_prices={"LINK-USD": 11.50},
+        current_prices={"LINK-USD": 11.90},
         positions_usd={"LINK-USD": 1000},
         candles_by_pair={"LINK-USD": link},
         cfg_p2=life["dual_peak_exit"],
@@ -195,6 +195,115 @@ def main() -> int:
                 print("sl_reattach_after_lifecycle_trim OK")
     except Exception as e:
         fails.append(f"sl_reattach exception: {e}")
+
+    # EXIT-H1b: live trim must cancel stops BEFORE sell (stop-lock → INSUFFICIENT_FUND)
+    try:
+        from unittest.mock import MagicMock, patch, call
+        from phase6.core.run_lifecycle import apply_lifecycle_exits_live, DualPeakEvent
+
+        cancel_calls = []
+        sell_calls = []
+
+        def _cancel(ex, pair):
+            cancel_calls.append(pair)
+            return 1
+
+        def _sell(pair, qty):
+            sell_calls.append((pair, qty, list(cancel_calls)))
+            return {"success": True, "order_id": "oid-test"}
+
+        ex = MagicMock()
+        ex.place_market_sell.side_effect = _sell
+        ex.quantize_size.side_effect = lambda p, q: float(q)
+        ex.get_crypto_available.return_value = 0.01
+        ex.get_order_fill_details.return_value = {
+            "average_filled_price": 80000.0,
+            "filled_size": 0.005,
+        }
+
+        fake_ev = DualPeakEvent(
+            pair="BTC-USD",
+            kind="dual_peak",
+            would_trim_frac=0.5,
+            would_trim_usd=400.0,
+            current_price=80000.0,
+            entry_price=78600.0,
+            peak_return=0.05,
+            off_peak_pct=0.03,
+            entry_sentiment=0.8,
+            current_sentiment=0.4,
+            sent_fade=0.4,
+            phase_name="extension",
+            reasons=["stall"],
+            mode="live",
+            shadow=False,
+        )
+
+        with patch(
+            "phase6.core.sl_preflight.cancel_open_stops_for_pair", side_effect=_cancel
+        ), patch(
+            "phase6.core.sl_preflight.poll_available_after_cancel", return_value=True
+        ), patch(
+            "phase6.core.run_lifecycle.evaluate_dual_peak_exits", return_value=[fake_ev]
+        ), patch(
+            "phase6.core.run_lifecycle.run_dual_peak_exit_shadow", return_value=[]
+        ), patch(
+            "phase6.core.run_lifecycle._load_lots",
+            return_value=[
+                {
+                    "pair": "BTC-USD",
+                    "open": True,
+                    "entry_price": 78600.0,
+                    "usd": 800,
+                }
+            ],
+        ), patch(
+            "phase6.core.protected_market_exit.reattach_stop_after_exit",
+            return_value={"ok": True, "size": 0.005, "action": "reattach"},
+        ), patch(
+            "phase6.core.trade_ledger.TradeLedger"
+        ) as TL, patch(
+            "phase6.core.run_lifecycle._notify_dual_peak"
+        ), patch(
+            "pathlib.Path.exists", return_value=False
+        ), patch(
+            "pathlib.Path.write_text"
+        ), patch(
+            "pathlib.Path.open", create=True
+        ):
+            TL.return_value.log_trade = MagicMock()
+            out = apply_lifecycle_exits_live(
+                config_dict={
+                    "run_lifecycle": {
+                        "dual_peak_exit": {
+                            "mode": "live",
+                            "enabled": True,
+                            "live_min_trim_usd": 40,
+                            "live_max_trims_per_tick": 2,
+                            "notify_telegram": False,
+                        }
+                    }
+                },
+                exchange=ex,
+                dry_run=False,
+                notify=False,
+            )
+            if not cancel_calls:
+                fails.append("live trim did not cancel stops before sell")
+            elif not sell_calls:
+                fails.append(f"live trim did not sell; out={out}")
+            elif not sell_calls[0][2]:
+                fails.append("sell happened before cancel stops")
+            elif not out.get("executed"):
+                fails.append(f"expected executed row, got {out}")
+            else:
+                row = out["executed"][0]
+                if not row.get("cancelled_stops_pre_sell"):
+                    fails.append(f"missing cancelled_stops_pre_sell: {row}")
+                else:
+                    print("pre_sell_cancel_stops OK")
+    except Exception as e:
+        fails.append(f"pre_sell_cancel exception: {e}")
 
     print("\n==== RESULTS ====")
     if fails:

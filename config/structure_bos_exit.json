@@ -1,0 +1,16 @@
+{
+  "enabled": true,
+  "mode": "shadow",
+  "granularity_sec": 3600,
+  "candle_limit": 240,
+  "swing_left": 2,
+  "swing_right": 2,
+  "arm_mfe_pct": 0.04,
+  "confirm_closes": 1,
+  "min_position_usd": 25.0,
+  "min_structure_low_gap_pct": 0.002,
+  "notify_telegram": false,
+  "notify_dedupe_hours": 12.0,
+  "ballast_pairs": ["PAXG-USD", "PAXG-USDC", "USDC-USD"],
+  "note": "Shadow only. Arm after +4% MFE; would-exit when close breaks last higher-low (swing structure). No live sells. P6-STRUCTURE-BOS-EXIT-SHADOW-20260826"
+}

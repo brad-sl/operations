@@ -290,7 +290,13 @@
       "ballast_pairs": [
         "PAXG-USD",
         "PAXG-USDC"
-      ]
+      ],
+      "dual_peak_require_mark_ge_entry": true,
+      "dual_peak_min_green_pct": 0.0,
+      "extension_partial_require_mark_ge_entry": true,
+      "dual_peak_max_trims_per_lot": 1,
+      "dual_peak_rearm_on_new_peak": true,
+      "note": " P0-20260826: no red half-trim; max 1 dual_peak/lot until new peak."
     }
   }
 }

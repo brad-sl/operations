@@ -21,6 +21,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from phase6.core.paths import PROJECT_ROOT
+from phase6.core.shadow_tp import is_tp_excluded_pair
+
+# protected_market_exit SSOT import at top so tests can patch("...sl_dust_sweep.protected_market_exit")
+from phase6.core.protected_market_exit import protected_market_exit
 
 logger = logging.getLogger(__name__)
 
@@ -184,86 +188,90 @@ def market_sell_full_available(
     reason: str = "dust_sweep_after_sl",
     parent_sl_order_id: Optional[str] = None,
     settle_wait_s: float = 2.0,
+    cancel_stops: bool = True,
 ) -> Dict[str, Any]:
-    """Market-sell all tradable base for pair. Polls briefly for hold release."""
-    if settle_wait_s > 0:
-        deadline = time.time() + settle_wait_s
-        while time.time() < deadline:
-            bal = read_residual_balance(exchange, pair)
-            if bal["qty"] > 0:
-                break
-            time.sleep(0.35)
+    """Market-sell all tradable base for pair through protected_market_exit SSOT.
 
-    bal = read_residual_balance(exchange, pair)
-    size = _quantize_size(exchange, pair, bal["qty"])
+    cancel_stops=True when hold may linger (e.g. post-SL residual).
+    Protected handles: cancel stops → poll free → quantize sell → market sell → reattach or full cancel.
+    """
     out: Dict[str, Any] = {
         "pair": pair,
         "reason": reason,
-        "requested_qty": bal["qty"],
-        "size": size,
-        "usd_est": bal["usd"],
-        "price": bal["price"],
+        "requested_qty": 0.0,
+        "size": 0.0,
+        "usd_est": 0.0,
+        "price": 0.0,
         "dry_run": dry_run,
         "parent_sl_order_id": parent_sl_order_id,
     }
-    if size <= 0:
+
+    # Wire through protected SSOT (the point of this task)
+    try:
+        pe = protected_market_exit(
+            exchange,
+            pair,
+            qty=None,  # full residual free after unlock
+            frac=None,
+            qty_full_hint=0.0,
+            entry_price=0.0,
+            mark_price=0.0,
+            reason=reason,
+            signal_source="sl_dust_sweep",
+            dry_run=dry_run,
+            ledger=False,  # we call _ledger_dust_sell below to carry parent_sl + custom fields
+            reattach_sl=True,
+            cancel_stops=bool(cancel_stops),
+        )
+    except Exception as pe_exc:
         out["success"] = False
-        out["skipped"] = True
-        out["skip_reason"] = "zero_after_quantize"
+        out["error"] = f"protected_market_exit error: {pe_exc}"
         return out
 
-    if dry_run:
-        out["success"] = True
-        out["skipped"] = False
-        return out
-
-    if not hasattr(exchange, "place_market_sell"):
-        out["success"] = False
-        out["error"] = "exchange missing place_market_sell"
-        return out
-
-    result = exchange.place_market_sell(pair, size) or {}
-    ok = bool(result.get("success"))
-    oid = result.get("order_id")
-    out["success"] = ok
-    out["order_id"] = oid
-    out["exchange_result"] = {k: result.get(k) for k in ("success", "order_id", "size", "error")}
-    if not ok:
-        out["error"] = result.get("error")
-        logger.warning("[DUST-SWEEP] sell failed %s: %s", pair, out.get("error"))
-        return out
-
-    exit_px = float(bal["price"] or 0.0)
-    filled = float(result.get("size") or size)
-    if oid and hasattr(exchange, "get_order_fill_details"):
-        try:
-            time.sleep(0.6)
-            fill = exchange.get_order_fill_details(oid) or {}
-            if float(fill.get("average_filled_price") or 0) > 0:
-                exit_px = float(fill["average_filled_price"])
-            if float(fill.get("filled_size") or 0) > 0:
-                filled = float(fill["filled_size"])
-        except Exception:
-            pass
-    out["exit_price"] = exit_px
+    # map protected result to legacy keys expected by callers + tests
+    out["success"] = bool(pe.get("success"))
+    out["skipped"] = bool(pe.get("skipped", False))
+    if pe.get("skip_reason"):
+        out["skip_reason"] = pe.get("skip_reason")
+    out["order_id"] = pe.get("order_id")
+    out["exit_price"] = pe.get("exit_price")
+    filled = float(pe.get("filled_qty") or pe.get("qty") or 0.0)
     out["filled_qty"] = filled
-    _ledger_dust_sell(
-        exchange,
-        pair=pair,
-        qty=filled,
-        exit_price=exit_px,
-        order_id=str(oid) if oid else None,
-        reason=reason,
-        parent_sl_order_id=parent_sl_order_id,
-    )
-    logger.info(
-        "[DUST-SWEEP] %s sold qty=%s usd~%.2f reason=%s oid=%s",
-        pair,
-        filled,
-        (filled * exit_px) if exit_px else bal["usd"],
-        reason,
-        (str(oid)[:8] if oid else None),
-    )
+    out["size"] = pe.get("qty") or filled
+    out["cancelled_stops"] = pe.get("cancelled_stops")
+    out["protected_exit"] = True
+    px = float(pe.get("exit_price") or 0.0)
+    out["usd_est"] = filled * px if px > 0 else 0.0
+    out["exchange_result"] = {
+        k: pe.get(k)
+        for k in ("success", "order_id", "size", "qty", "error")
+        if k in pe or k in ("size",)
+    }
+    if pe.get("error"):
+        out["error"] = pe.get("error")
+    if pe.get("used_hint_fallback"):
+        out["used_hint_fallback"] = True
+
+    if out.get("success") and not dry_run:
+        oid = pe.get("order_id")
+        exit_px = float(pe.get("exit_price") or 0.0)
+        _ledger_dust_sell(
+            exchange,
+            pair=pair,
+            qty=filled,
+            exit_price=exit_px,
+            order_id=str(oid) if oid else None,
+            reason=reason,
+            parent_sl_order_id=parent_sl_order_id,
+        )
+        logger.info(
+            "[DUST-SWEEP] %s sold qty=%s usd~%.2f reason=%s oid=%s (via protected)",
+            pair,
+            filled,
+            (filled * exit_px) if exit_px else 0.0,
+            reason,
+            (str(oid)[:8] if oid else None),
+        )
     return out
 
 
@@ -278,6 +286,8 @@ def sweep_residual_after_stop(
 ) -> Dict[str, Any]:
     """
     After a stop-loss fill is reconciled: if residual is small dust, market-sell it.
+    Wired through protected_market_exit; cancel_stops=True when hold may linger.
+    Honors preserve/excluded.
     """
     cfg = load_dust_sweep_config(config)
     base = {
@@ -287,6 +297,12 @@ def sweep_residual_after_stop(
         "parent_sl_order_id": parent_sl_order_id,
         "filled_qty": filled_qty,
     }
+    if is_tp_excluded_pair(pair):
+        base["success"] = False
+        base["skipped"] = True
+        base["skip_reason"] = "preserve_or_excluded"
+        logger.info("[DUST-SWEEP] skip residual %s: preserve_or_excluded", pair)
+        return base
     if not cfg["enabled"]:
         base["success"] = False
         base["skipped"] = True
@@ -326,6 +342,7 @@ def sweep_residual_after_stop(
         reason="dust_sweep_after_sl",
         parent_sl_order_id=parent_sl_order_id,
         settle_wait_s=1.5,
+        cancel_stops=True,  # hold may linger from parent SL
     )
     base.update(sell)
     base["skipped"] = False
@@ -426,23 +443,17 @@ def sweep_orphan_dust(
     results: List[Dict[str, Any]] = []
     for c in candidates:
         pair = c["pair"]
-        # Never dust-sweep Preserve ballast while armed
-        try:
-            from phase6.core.preserve_hold import should_protect_preserve_sleeve
-
-            if should_protect_preserve_sleeve(pair=pair):
-                results.append(
-                    {
-                        "pair": pair,
-                        "success": False,
-                        "skipped": True,
-                        "skip_reason": "preserve_sleeve_armed",
-                        "value_usd": c["value_usd"],
-                    }
-                )
-                continue
-        except Exception:
-            pass
+        if is_tp_excluded_pair(pair):
+            results.append(
+                {
+                    "pair": pair,
+                    "success": False,
+                    "skipped": True,
+                    "skip_reason": "preserve_or_excluded",
+                    "value_usd": c["value_usd"],
+                }
+            )
+            continue
         if skip_if_open_stop and pair_has_open_stop(exchange, pair):
             results.append(
                 {
@@ -513,6 +524,7 @@ def sweep_orphan_dust(
             reason="dust_sweep_orphan",
             parent_sl_order_id=None,
             settle_wait_s=0.5,
+            cancel_stops=True,  # defensive even for orphan (no open stop per gate)
         )
         sell["value_usd_snapshot"] = c["value_usd"]
         results.append(sell)

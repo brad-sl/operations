@@ -1,7 +1,7 @@
 agent-behavior
 agent-delegation
-agent-methodology
 agentic-architecture
+agent-methodology
 analyst-test-execute
 analyst-test-pickup
 analyst-test-strategy
@@ -10,8 +10,8 @@ apify-reddit-sentiment
 apple
 autonomous-ai-agents
 creative
-crypto-data-acquisition
 crypto_analyst
+crypto-data-acquisition
 data-science
 devops
 diagramming

@@ -396,6 +396,37 @@ npm run build --workspace web
 ```
 Verify: `hermes doctor` → ✓ web. Detail: `references/hermes-update-npm-engine-strict-mixed-state.md`.
 
+### Desktop SSH (Windows client → Linux host) — failure classes
+
+| Desktop message | Class | Playbook |
+|-----------------|-------|----------|
+| `paused while its managed update is in progress` | Update fence | `references/desktop-ssh-managed-update-pause.md` |
+| `Update Hermes on the remote host…` (`sshErrUpdateRequired`) | Ownership flags missing on remote `hermes serve` | same pause ref (ownership probe) |
+| Version probe OK, then `SSH operation … timed out` / half-open (~20s) | Serve bootstrap timeout | `references/desktop-ssh-serve-timeout-web-dist.md` |
+| Local WS session token reject | Local backend token | `references/desktop-session-token-ws-reject.md` |
+
+**Two update fences (pause class):**
+1. **Remote:** `~/.hermes/.hermes-update-in-progress` (+ optional `.update_launch_intent.*` / `.update_exit_code.*` / `.mutex`)
+2. **Windows userData:** `managed-ssh-update-recovery.json` under Electron `userData` (`%APPDATA%\Hermes\` or `%LOCALAPPDATA%\Hermes\`) — **not** the install tree under `Local\hermes\hermes-agent\`
+
+**Class rules for Brad's setup (Win Desktop SSH → this Linux box):**
+- Linux `apps/desktop/release` / `hermes desktop --build-only` / electron-builder does **not** fix the Windows client; aborting a stuck pack to clear the marker is correct when core is already current.
+- Quarantine incomplete `~/.hermes/hermes-agent/apps/desktop/release` so future `hermes update` skips Electron grind.
+- Clearing only the remote marker is **insufficient** if Windows still holds recovery for that connection id — rename the recovery JSON, full-quit Desktop, reconnect.
+- Do **not** re-click Desktop Update until both fences are clear (re-journals recovery and re-locks dials).
+- `update-required` (ownership flags) ≠ pause: probe `hermes serve --help` for `--ssh-session-token-file` / `--ssh-owner-nonce`.
+
+**Timeout-after-version class (post-pause):**
+- Desktop SSH **exec budget ~20s** for remote `hermes serve --isolated`.
+- Missing `hermes_cli/web_dist/` → cold Vite rebuild (~30s) → timeout even when SSH auth works.
+- Failed retries pile `hermes-update-mutex` + `serve --isolated` + `.connect.lock` → more timeouts until zombies cleared.
+- Ready signal is **`HERMES_BACKEND_READY`** (not dashboard-ready). Healthy probe ~5–8s after web_dist exists.
+- Token files must live under **`$HOME/.hermes/desktop-ssh/<32hex>/<16hex>.token`** (64-hex body); not `/tmp`, not profile `HERMES_HOME`.
+- Dashboard bind is **127.0.0.1:9119** (loopback); SSH profile uses **port 22** tunnels — do not tell Brad to open `:9119` from Windows for SSH mode.
+- Full-quit Desktop (tray) before cleanup; **one** reconnect after fix — spam Connect worsens mutex pile-up.
+
+Full playbooks: `references/desktop-ssh-managed-update-pause.md`, `references/desktop-ssh-serve-timeout-web-dist.md`. Related: `references/desktop-session-token-ws-reject.md`.
+
 ## Git-Enabled Operationalization and Resilience
 When hardening Hermes on legacy hardware or building migration/resilience, treat git (operations repo) as the durable source of truth for Hermes state.
 

@@ -339,10 +339,25 @@ This gives a dedicated, scheduled "free AI" monitor that keeps scripts alive and
 
 ## Hermes Web Dashboard (Control Panel) + host security (Phase A)
 
-### Default safe posture (preferred)
-- **User** unit `hermes-dashboard.service`: bind **`127.0.0.1:9119`** with normal auth (login redirect) — **no** `--insecure`.
+### Default safe posture
+| Mode | Bind | When |
+|------|------|------|
+| **Loopback + tunnel** | `127.0.0.1:9119` | SSH/Tailscale tunnel to localhost works |
+| **Tailscale-bind (Brad 2026-08-27+)** | `100.64.33.2:9119` only | Desktop **SSH client** broken; use Remote gateway URL |
+| **Forbidden default** | `0.0.0.0` + `--insecure` | Never casual — open admin without gate |
+
 - Drop-in: `~/.config/systemd/user/hermes-dashboard.service.d/phase-a-bind.conf`
-- Remote access: SSH/Tailscale **tunnel** to localhost — not open LAN insecure.
+- Remote URL: `http://100.64.33.2:9119` · basic auth on · **not** open LAN
+- Full playbook: `references/dashboard-tailscale-bind-and-basic-auth.md` · Phase A: `references/host-security-phase-a-balanced.md`
+
+### Basic auth (app ≠ OS)
+- Username often `brad` but **password is not** the Linux account password.
+- Stored as scrypt `password_hash` only; reset via `~/.hermes/scripts/reset_dashboard_basic_auth.py` (user types in SSH — never put password in chat).
+- Verify: `~/.hermes/scripts/verify_dashboard_basic_auth.py` (Hermes venv / `hermes config get`).
+- **Stable sessions:** set `dashboard.basic_auth.secret` + `HERMES_DASHBOARD_BASIC_AUTH_SECRET` in `.env` + unit `EnvironmentFile`; TTL prefer **604800** for remote Desktop. Missing secret → random per-process key → sudden logout / `session resume cancelled`.
+
+### Orphan `hermes dashboard` swarm
+Desktop SSH reconnects can leave dozens of `127.0.0.1:<random>` dashboards alongside the systemd Tailscale instance. Clean with **python PID scan** only — **`pkill -f 'hermes dashboard'` kills the agent shell** (cmdline contains those words). Then restart user unit; assert one listener on `100.64.33.2:9119`.
 
 ### Do NOT casually recommend
 ```bash
@@ -353,12 +368,11 @@ Only if Brad explicitly accepts that exposure.
 ### Dual unit trap (2026-08-08)
 | Unit | Typical | Risk |
 |------|---------|------|
-| `~/.config/systemd/user/hermes-dashboard.service` | `:9119` | OK if loopback + auth |
+| `~/.config/systemd/user/hermes-dashboard.service` | `:9119` Tailscale or loopback | OK if auth + not `0.0.0.0` |
 | **`/etc/systemd/system/hermes-dashboard.service`** | `0.0.0.0:8080 --insecure` | **High** — `Restart=always` respawns after kill |
 
 Finish (sudo once, **outside** gateway agent):  
-`bash ~/.hermes/scripts/phase_a_security_finish.sh`  
-Detail: `references/host-security-phase-a-balanced.md`
+`bash ~/.hermes/scripts/phase_a_security_finish.sh`
 
 ### Approvals UX (do not re-lock files)
 | Fact | Implication |
@@ -422,8 +436,8 @@ Verify: `hermes doctor` → ✓ web. Detail: `references/hermes-update-npm-engin
 - Failed retries pile `hermes-update-mutex` + `serve --isolated` + `.connect.lock` → more timeouts until zombies cleared.
 - Ready signal is **`HERMES_BACKEND_READY`** (not dashboard-ready). Healthy probe ~5–8s after web_dist exists.
 - Token files must live under **`$HOME/.hermes/desktop-ssh/<32hex>/<16hex>.token`** (64-hex body); not `/tmp`, not profile `HERMES_HOME`.
-- Dashboard bind is **127.0.0.1:9119** (loopback); SSH profile uses **port 22** tunnels — do not tell Brad to open `:9119` from Windows for SSH mode.
-- Full-quit Desktop (tray) before cleanup; **one** reconnect after fix — spam Connect worsens mutex pile-up.
+- **SSH mode** expects tunnel to local serve — do not open `:9119` from Windows *for SSH mode*. When Desktop SSH is broken, switch to **Remote gateway** on Tailscale-bind `http://100.64.33.2:9119` (see `references/dashboard-tailscale-bind-and-basic-auth.md`) instead of spamming Connect.
+- Full-quit Desktop (tray) before cleanup; **one** reconnect after fix — spam Connect worsens mutex pile-up **and** spawns orphan loopback `hermes dashboard` processes.
 
 Full playbooks: `references/desktop-ssh-managed-update-pause.md`, `references/desktop-ssh-serve-timeout-web-dist.md`. Related: `references/desktop-session-token-ws-reject.md`.
 

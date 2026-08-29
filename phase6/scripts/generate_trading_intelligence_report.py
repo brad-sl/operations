@@ -740,6 +740,15 @@ def main():
 
     # 48h post-deploy watch stays off TG unless you want it later (still available via backlog tools)
 
+    # Phase 2 stabilize scoreboard (persist + feed brief)
+    phase2_check = None
+    try:
+        from phase6.core.phase2_stabilize_check import compute_phase2_check
+
+        phase2_check = compute_phase2_check(persist=True)
+    except Exception:
+        phase2_check = None
+
     body = format_decision_brief(
         basket=basket,
         full_count=full_count,
@@ -752,6 +761,7 @@ def main():
         same_session_3d=same_session_3d,
         proposals=proposals,
         next_focus=str(new_evolution.get("evolution_note") or ""),
+        phase2_check=phase2_check,
     )
     print(body)
 

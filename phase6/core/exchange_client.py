@@ -338,11 +338,15 @@ class CoinbaseExchangeClient:
                         available = float(acc.get("available_balance", {}).get("value", 0.0))
                         hold = float(acc.get("hold", {}).get("value", 0.0))
                         return available + hold
+                # Currency absent on exchange = truly zero (not an API failure)
                 return 0.0
             except Exception as e:
+                # Do NOT return 0.0 on transport/API failure — that poisons live_state
+                # NAV (cash wipe → PAXG-only total → −96% period tiles). Callers must
+                # treat None as "unknown" and keep prior cash.
                 logger.error(f"Failed to fetch live balance: {e}")
-                return 0.0
-        return 0.0
+                return None  # type: ignore[return-value]
+        return None  # type: ignore[return-value]
 
     def get_key_permissions(self) -> Dict[str, Any]:
         """Delegate to real client permissions check (live only). Returns dict with can_view etc or error."""

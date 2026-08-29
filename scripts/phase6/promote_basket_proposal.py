@@ -73,6 +73,11 @@ def main() -> int:
         help="Block eject when held >= this unless --allow-residual-hold (default 40)",
     )
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--override-missfire-probation",
+        action="store_true",
+        help="Allow promote of ADD pairs blocked by miss-fire probation (ledger dig/fast hole)",
+    )
     args = ap.parse_args()
 
     if not args.from_proposed and not args.refresh and not (args.manual_add and args.manual_remove):
@@ -204,6 +209,41 @@ def main() -> int:
         if not add:
             print("REFUSE: missing add pair")
             return 5
+        # Miss-fire probation (launch → no explode → dig hole)
+        try:
+            from phase6.core.missfire_probation import evaluate_pair_missfire
+
+            mf = evaluate_pair_missfire(str(add), enforce=True)
+            sw["missfire_probation"] = mf.to_dict()
+            if mf.blocked and not args.override_missfire_probation:
+                print(
+                    f"REFUSE: miss-fire probation blocks ADD {add} "
+                    f"[{mf.class_}] {'; '.join(mf.reasons[:3])}. "
+                    f"Pass --override-missfire-probation to force (Brad only)."
+                )
+                return 6
+            if mf.blocked and args.override_missfire_probation:
+                print(
+                    f"WARN: overriding miss-fire probation for {add} "
+                    f"[{mf.class_}] {'; '.join(mf.reasons[:3])}"
+                )
+        except Exception as e:  # noqa: BLE001
+            print(f"NOTE: missfire_probation check skipped ({type(e).__name__}: {e})")
+
+        # First-fill tag (membership only; live BUY will be tryout-sized)
+        try:
+            from phase6.core.first_fill_probation import tag_promote_add
+
+            ff = tag_promote_add(str(add))
+            sw["first_fill_probation"] = ff
+            if ff.get("first_fill_probation"):
+                print(
+                    f"NOTE: ADD {add} starts under first-fill tryout "
+                    f"({', '.join(ff.get('reasons') or [])}). "
+                    f"Live BUY haircut via filter_trade_plan_first_fill."
+                )
+        except Exception as e:  # noqa: BLE001
+            print(f"NOTE: first_fill_probation tag skipped ({type(e).__name__}: {e})")
 
     tcfg = _load_json(TRADING_CONFIG_PHASE6)
     live_before = list((tcfg.get("global_settings") or {}).get("pairs") or [])

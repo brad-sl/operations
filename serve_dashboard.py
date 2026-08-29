@@ -188,6 +188,35 @@ def enrich_live_state(state: dict | None) -> dict | None:
             cash_sum = float(out.get("cash_usd") or 0) + float(out.get("usdc") or 0)
         hold_sum = sum(float(p.get("value_usd") or 0) for p in (out.get("trading_positions") or poss))
         total_usd = cash_sum + hold_sum
+    # Always prefer cash+holdings when both present — refuses PAXG-only totals
+    # left on disk after a cash-API wipe (header $84 / −96% class).
+    try:
+        cash_sum = 0.0
+        for b in out.get("balances") or []:
+            cur = str(b.get("currency") or "").upper()
+            if cur in ("USD", "USDC"):
+                cash_sum += float(b.get("balance") or b.get("available") or 0)
+        if not cash_sum and out.get("cash_usd") is not None:
+            cash_sum = float(out.get("cash_usd") or 0) + float(out.get("usdc") or 0)
+        for row in out.get("cash_positions") or []:
+            cash_sum = max(cash_sum, float(row.get("value_usd") or row.get("amount") or 0))
+        hold_sum = sum(
+            float(p.get("value_usd") or 0)
+            for p in (out.get("trading_positions") or poss or [])
+            if str(p.get("pair") or "").upper() not in ("USD", "USDC")
+        )
+        recomputed = cash_sum + hold_sum
+        if recomputed > 0 and (
+            not total_usd
+            or float(total_usd or 0) <= 0
+            or (cash_sum >= 50 and float(total_usd or 0) < cash_sum * 0.5)
+        ):
+            total_usd = recomputed
+            out["total_holdings_value"] = hold_sum
+            if cash_sum and out.get("cash_usd") is None:
+                out["cash_usd"] = cash_sum
+    except Exception:
+        pass
     out["total_usd"] = float(total_usd or 0)
     out["total_balance"] = out["total_usd"]
     if not out.get("active_positions"):
@@ -253,6 +282,68 @@ def get_sentiment_label(val):
     if v <= -0.015:
         return "Soft-", "slate-300"
     return "Neutral", "slate-500"
+
+
+# Trades panel: compact reason (1–2 words). Full ledger string stays on reason/exit_reason.
+_TRADE_REASON_SHORT: Dict[str, str] = {
+    "stop_loss_exchange": "SL",
+    "stop_loss": "SL",
+    "rotation_exchange": "ROT",
+    "rotation": "ROT",
+    "rebalance_buy": "Rebal",
+    "rebalance": "Rebal",
+    "take_profit_trail": "Trail TP",
+    "take_profit_fixed_tp": "TP",
+    "take_profit": "TP",
+    "lifecycle_dual_peak": "Dual peak",
+    "lifecycle_extension_partial": "Extension",
+    "lifecycle_extension": "Extension",
+    "lifecycle_protected_exit": "Protect",
+    "dust_sweep_after_sl": "Dust",
+    "dust_sweep_orphan": "Dust",
+    "dust_sweep": "Dust",
+    "preserve_arm_micro": "Preserve",
+    "preserve_arm": "Preserve",
+    "preserve_disarm": "Disarm",
+    "preserve_buy": "Preserve",
+    "preserve_trim": "Preserve",
+}
+
+
+def short_trade_reason(raw: Any) -> str:
+    """Map machine exit/buy reason → short Trades-column label."""
+    full = str(raw or "").strip()
+    if not full:
+        return ""
+    head = full.split(":", 1)[0].strip().lower()
+    if head in _TRADE_REASON_SHORT:
+        return _TRADE_REASON_SHORT[head]
+    if head.startswith("operator_trim"):
+        return "Trim"
+    if head.startswith("lifecycle_"):
+        bits = [b for b in head.replace("lifecycle_", "", 1).split("_") if b]
+        if not bits:
+            return "Lifecycle"
+        first = bits[0].capitalize()
+        if len(bits) == 1:
+            return first
+        return f"{first} {bits[1]}"
+    if head.startswith("dust"):
+        return "Dust"
+    token = head.split("_")[0] if head else full[:12]
+    return token[:12].capitalize() if token else ""
+
+
+def _annotate_trade_reason_short(t: Any) -> Any:
+    if not isinstance(t, dict):
+        return t
+    out = dict(t)
+    raw = out.get("reason") or out.get("exit_reason") or ""
+    label = short_trade_reason(raw)
+    if label:
+        out["reason_label"] = label
+        out["reason_short"] = label  # alias for UI
+    return out
 
 
 def get_rsi_label(val):
@@ -858,6 +949,11 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 key=lambda t: str(t.get("timestamp") or t.get("ts") or ""),
                 reverse=True,
             )
+            # Compact reason for Trades panel; full machine string stays in reason/exit_reason
+            try:
+                trades = [_annotate_trade_reason_short(t) for t in trades]
+            except Exception:
+                pass
             # Per-trader display TZ (storage stays UTC / Coinbase standard)
             try:
                 from phase6.core.trader_account_config import (
@@ -1317,6 +1413,29 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             st = load_live_state() or {}
             perf = st.get("performance_metrics") or {}
             total = float(st.get("total_usd") or st.get("total_balance") or 0)
+            # Refuse cash-API-zero cliffs as period end NAV (2026-08-28: $84 PAXG-only → −96%)
+            try:
+                from phase6.core.live_state_nav_guard import sanitize_current_total_for_kpis
+                from phase6.core.dashboard_serve_helpers import _total_usd_at_ts, _nearest_ts
+                import sqlite3 as _sqlite3
+
+                if DB_PATH.exists() and total > 0:
+                    _conn = _sqlite3.connect(
+                        f"file:{DB_PATH}?mode=ro", uri=True, timeout=1.0
+                    )
+                    try:
+                        _mx = _conn.execute("SELECT MAX(ts) FROM account_balances").fetchone()
+                        _last_ts = _mx[0] if _mx else None
+                        _last_nav = float(_total_usd_at_ts(_conn, _last_ts)) if _last_ts else 0.0
+                    finally:
+                        _conn.close()
+                    total_safe, s_meta = sanitize_current_total_for_kpis(
+                        total, _last_nav, external_flow_usd=0.0
+                    )
+                    if s_meta.get("sanitized"):
+                        total = total_safe
+            except Exception:
+                pass
             trading = st.get("trading_positions") or st.get("positions") or []
 
             # Short TTL cache: mobile refresh was hammering large DB → N/A tiles + starved balances.

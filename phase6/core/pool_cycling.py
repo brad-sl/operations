@@ -318,6 +318,20 @@ def propose_swaps(
         and s.score >= cfg.strong_min_score
         and s.pair not in active_set
     ]
+    # Miss-fire probation: drop ADD candidates that launched then dug a hole
+    try:
+        from phase6.core.missfire_probation import evaluate_pair_missfire, compute_pair_stats
+
+        _mf_stats = compute_pair_stats()
+        filtered: List = []
+        for s in add_candidates:
+            v = evaluate_pair_missfire(s.pair, stats_map=_mf_stats, enforce=True)
+            if v.blocked:
+                continue
+            filtered.append(s)
+        add_candidates = filtered
+    except Exception:
+        pass
     add_candidates.sort(key=lambda s: s.score, reverse=True)
 
     swaps: List[SwapProposal] = []

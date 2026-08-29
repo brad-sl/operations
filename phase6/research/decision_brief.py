@@ -111,12 +111,25 @@ def _bottom_line(
     sell_pairs: Sequence[str],
     trend_line: Optional[str],
     ss_recent: int,
+    phase2_ready: Optional[bool] = None,
+    phase2_health: Optional[str] = None,
 ) -> Tuple[str, str]:
     """Returns (label, one-sentence why)."""
+    health = str(phase2_health or "").lower().replace("-", "_")
+    soft = (
+        phase2_ready is False
+        or "soft_down" in health
+        or (trend_line is not None and ("soft" in trend_line.lower() or "down" in trend_line.lower()))
+    )
+
     if sell_pairs and not buy_pairs:
         label = "TRIM / DEFEND"
-    elif buy_pairs and stance_word == "DEPLOY":
+    elif soft and phase2_ready is False:
+        label = "HOLD — STABILIZE"
+    elif buy_pairs and stance_word == "DEPLOY" and not soft:
         label = "SELECTIVE BUY"
+    elif buy_pairs and stance_word == "DEPLOY" and soft:
+        label = "HOLD / TIGHT GATES"
     elif stance_word == "CASH-HEAVY":
         label = "HOLD CASH"
     elif ss_recent > 0:
@@ -125,8 +138,10 @@ def _bottom_line(
         label = "HOLD / MONITOR"
 
     why_bits: List[str] = []
+    if phase2_ready is False:
+        why_bits.append("Phase 2 exit bar not met — stabilize, no earn/scale")
     if stance_word == "DEPLOY":
-        why_bits.append("New buys allowed")
+        why_bits.append("New buys allowed" if not soft else "Regime allows buys but path is soft")
     elif stance_word == "CASH-HEAVY":
         why_bits.append("Cash posture on purpose")
     else:
@@ -135,7 +150,7 @@ def _bottom_line(
     why_bits.append(_promotion_plain(deploy_hint).split("—")[0].strip().rstrip("."))
     if trend_line and ("down" in trend_line.lower() or "soft" in trend_line.lower()):
         why_bits.append("recent path soft — keep gates tight")
-    if buy_pairs:
+    if buy_pairs and label in ("SELECTIVE BUY", "HOLD / TIGHT GATES"):
         why_bits.append(
             "signal interest: " + ", ".join(_short_pair(p) for p in buy_pairs[:4])
         )
@@ -158,6 +173,7 @@ def format_decision_brief(
     proposals: Optional[Sequence[Dict[str, Any]]] = None,
     next_focus: str = "",
     generated_at: Optional[datetime] = None,
+    phase2_check: Optional[Dict[str, Any]] = None,
 ) -> str:
     """
     Build Telegram body.
@@ -204,6 +220,12 @@ def format_decision_brief(
     ss_hist = same_session or {}
     ss_hist_n = int(ss_hist.get("count_2h") or 0)
 
+    p2 = dict(phase2_check or {})
+    p2_ready = p2.get("phase2_ready")
+    if p2_ready is not None:
+        p2_ready = bool(p2_ready)
+    p2_health = str((p2.get("tiles") or {}).get("health") or "")
+
     label, why = _bottom_line(
         stance_word=stance_word,
         deploy_hint=deploy_hint,
@@ -211,6 +233,8 @@ def format_decision_brief(
         sell_pairs=sell_pairs,
         trend_line=trend_line,
         ss_recent=ss_recent,
+        phase2_ready=p2_ready,
+        phase2_health=p2_health,
     )
 
     lines: List[str] = []
@@ -291,6 +315,17 @@ def format_decision_brief(
     if trend_line:
         lines.append(trend_line)
     lines.append("")
+
+    # --- Phase 2 stabilize (recovery path scoreboard) ---
+    try:
+        from phase6.core.phase2_stabilize_check import format_phase2_section
+
+        lines.append(format_phase2_section(phase2_check))
+        lines.append("")
+    except Exception:
+        lines.append("=== Phase 2 stabilize ===")
+        lines.append("• Scoreboard unavailable this cycle.")
+        lines.append("")
 
     # --- Wounds ---
     lines.append("=== Wounds / watch ===")

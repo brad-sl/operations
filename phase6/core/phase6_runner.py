@@ -987,11 +987,21 @@ class Phase6Runner:
             # Ensure price history is fresh before building snapshot (DASH-006 fix)
             self._update_price_history_and_calculate_rsi()
 
-            usd = self.exchange.get_account_balance("USD")
+            usd_raw = self.exchange.get_account_balance("USD")
+            usd_unknown = usd_raw is None
+            usd = float(usd_raw or 0) if not usd_unknown else 0.0
             try:
-                usdc = self.exchange.get_account_balance("USDC")
+                usdc_raw = self.exchange.get_account_balance("USDC")
+                usdc_unknown = usdc_raw is None
+                usdc = float(usdc_raw or 0) if not usdc_unknown else 0.0
             except Exception:
                 usdc = 0.0
+                usdc_unknown = True
+            if usd_unknown:
+                self.logger.warning(
+                    "[DASHBOARD] USD balance fetch returned None (API failure) — "
+                    "NAV guard will refuse cash wipe if prior exists"
+                )
 
             # Build price snapshot for enrichment (basket + preserve sleeve asset)
             price_snapshot = {}
@@ -1148,7 +1158,51 @@ class Phase6Runner:
             except Exception:
                 pass
 
-            total_usd = usd + usdc + total_holdings_value
+            raw_total = float(usd or 0) + float(usdc or 0) + float(total_holdings_value or 0)
+            total_usd = raw_total
+            try:
+                from phase6.core.live_state_nav_guard import guard_live_nav
+
+                prior_state = {}
+                if CACHE_PATH.exists():
+                    try:
+                        with open(CACHE_PATH, "r") as _pf:
+                            prior_state = json.load(_pf) or {}
+                    except Exception:
+                        prior_state = {}
+                prior_cash = prior_state.get("cash_usd")
+                if prior_cash is None:
+                    prior_cash = sum(
+                        float(b.get("balance") or 0)
+                        for b in (prior_state.get("balances") or [])
+                        if str(b.get("currency") or "").upper() in ("USD", "USDC")
+                    )
+                guarded_total, guarded_cash, guarded_hold, gmeta = guard_live_nav(
+                    new_total=raw_total,
+                    new_cash=float(usd or 0) + float(usdc or 0),
+                    new_holdings=float(total_holdings_value or 0),
+                    prior_total=prior_state.get("total_usd") or prior_state.get("total_balance"),
+                    prior_cash=prior_cash,
+                )
+                if gmeta.get("guarded"):
+                    self.logger.warning(
+                        "[DASHBOARD] NAV guard blocked cash/API cliff raw=$%.2f kept=$%.2f reason=%s",
+                        raw_total,
+                        guarded_total,
+                        gmeta.get("reason"),
+                    )
+                    # Restore USD cash from prior; leave usdc as fetched if any
+                    usd = float(prior_state.get("cash_usd") or guarded_cash or usd or 0)
+                    for b in prior_state.get("balances") or []:
+                        if str(b.get("currency") or "").upper() == "USD":
+                            usd = float(b.get("balance") or usd)
+                        if str(b.get("currency") or "").upper() == "USDC" and float(usdc or 0) <= 0:
+                            usdc = float(b.get("balance") or 0)
+                    if float(total_holdings_value or 0) <= 0 and guarded_hold > 0:
+                        total_holdings_value = guarded_hold
+                    total_usd = float(usd or 0) + float(usdc or 0) + float(total_holdings_value or 0)
+            except Exception as _nav_g:
+                self.logger.warning("[DASHBOARD] nav guard skipped: %s", _nav_g)
 
             # Recent activity from TradeLedger (newest-first)
             recent_trades = self.trade_ledger.get_recent_trades(6)

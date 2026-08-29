@@ -29,6 +29,28 @@
         .metric-label-wrap.is-open .metric-tip { display: block; pointer-events: auto; }
         .metric-label-wrap.justify-center .metric-tip { left: 50%; transform: translateX(-50%); }
         .metric-sub { font-size: 0.65rem; color: #64748b; margin-top: 0.15rem; line-height: 1.2; }
+        /* Trades: short reason + tap/click for full machine string (iPhone-friendly) */
+        .trade-reason-wrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; max-width: 5.5rem; }
+        .trade-reason-btn {
+            background: transparent; border: none; padding: 0; margin: 0; cursor: pointer;
+            font-size: 10px; line-height: 1.2; text-align: left;
+            max-width: 5.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            text-decoration: underline dotted; text-underline-offset: 2px;
+        }
+        .trade-reason-btn:focus-visible { outline: 1px solid #64748b; outline-offset: 2px; border-radius: 2px; }
+        .trade-reason-tip {
+            display: none; position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 70;
+            width: min(18rem, 85vw); max-width: 18rem; padding: 0.45rem 0.6rem;
+            font-size: 0.65rem; line-height: 1.35; font-weight: 400; text-align: left;
+            color: #e2e8f0; background: #1e293b; border: 1px solid #475569; border-radius: 0.5rem;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5); word-break: break-word; white-space: pre-wrap;
+            pointer-events: auto;
+        }
+        .trade-reason-wrap.is-open .trade-reason-tip { display: block; }
+        .trade-reason-tip::after {
+            content: ''; position: absolute; left: 12px; top: 100%;
+            border: 6px solid transparent; border-top-color: #475569;
+        }
     </style>
 </head>
 <body class="bg-slate-950 text-slate-200">
@@ -122,20 +144,20 @@
                     <div>Trend <span id="equity-slope" class="tabular-nums text-slate-200">--</span>/day</div>
                 </div>
             </div>
-            <div class="relative w-full h-40 md:h-48">
+            <div class="relative w-full h-44 md:h-52 pb-5">
                 <svg id="equity-trend-svg" viewBox="0 0 640 180" class="w-full h-full" preserveAspectRatio="none" role="img" aria-label="Deposit-adjusted equity trend">
+                    <g id="equity-week-grid"></g>
                     <line x1="40" y1="20" x2="40" y2="150" stroke="#334155" stroke-width="1"/>
                     <line x1="40" y1="150" x2="620" y2="150" stroke="#334155" stroke-width="1"/>
                     <line id="equity-baseline" x1="40" y1="85" x2="620" y2="85" stroke="#475569" stroke-width="1" stroke-dasharray="4 4" opacity="0.5"/>
-                    <polyline id="equity-path" fill="none" stroke="#38bdf8" stroke-width="2" points=""/>
+                    <polyline id="equity-path" fill="none" stroke="#38bdf8" stroke-width="3" points=""/>
                     <line id="equity-trend-line" x1="40" y1="85" x2="620" y2="85" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="6 4" opacity="0.9"/>
                 </svg>
                 <div class="absolute left-0 top-0 text-[10px] text-slate-500 pl-1" id="equity-y-max"></div>
-                <div class="absolute left-0 bottom-6 text-[10px] text-slate-500 pl-1" id="equity-y-min"></div>
-                <div class="absolute right-2 bottom-1 text-[10px] text-slate-500" id="equity-x-end"></div>
-                <div class="absolute left-10 bottom-1 text-[10px] text-slate-500" id="equity-x-start"></div>
+                <div class="absolute left-0 bottom-7 text-[10px] text-slate-500 pl-1" id="equity-y-min"></div>
+                <div id="equity-x-ticks" class="absolute left-0 right-0 bottom-0 h-5 pointer-events-none" aria-hidden="true"></div>
             </div>
-            <p class="text-[10px] text-slate-500 mt-2">Blue = deposit-adjusted equity index · Amber dashed = linear trend · Gray dashed = start (100)</p>
+            <p class="text-[10px] text-slate-500 mt-1">Blue = deposit-adjusted equity index · Amber dashed = linear trend · Gray dashed = start (100) · Verticals = week starts (Mon)</p>
         </div>
 
         <div class="mt-4 mb-8">
@@ -349,6 +371,27 @@
         }
         initMetricHelp();
 
+        // Trades panel: tap short reason → full machine string (works on iPhone; title= does not)
+        function initTradeReasonTaps() {
+            document.addEventListener('click', (e) => {
+                const btn = e.target && e.target.closest && e.target.closest('.trade-reason-btn');
+                if (btn) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const wrap = btn.closest('.trade-reason-wrap');
+                    if (!wrap) return;
+                    const wasOpen = wrap.classList.contains('is-open');
+                    document.querySelectorAll('.trade-reason-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+                    document.querySelectorAll('.metric-label-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+                    if (!wasOpen) wrap.classList.add('is-open');
+                    return;
+                }
+                // outside tap closes trade tips (metric help handler also closes metrics)
+                document.querySelectorAll('.trade-reason-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+            }, true);
+        }
+        initTradeReasonTaps();
+
         // Stale-while-revalidate: keep last good payloads so a slow/null poll never
         // blanks the UI to N/A for seconds/minutes (esp. /api/performance).
         const lastGood = {
@@ -430,6 +473,55 @@
             } catch (e) {
                 return d.toISOString();
             }
+        }
+
+        /** Compact Trades-panel reason (1–2 words). Full machine string stays on hover. */
+        function formatTradeReasonShort(raw) {
+            const full = String(raw || '').trim();
+            if (!full) return { short: '', full: '' };
+            const head = full.split(':')[0].trim().toLowerCase();
+            const map = {
+                stop_loss_exchange: 'SL',
+                stop_loss: 'SL',
+                rotation_exchange: 'ROT',
+                rotation: 'ROT',
+                rebalance_buy: 'Rebal',
+                rebalance: 'Rebal',
+                take_profit_trail: 'Trail TP',
+                take_profit_fixed_tp: 'TP',
+                take_profit: 'TP',
+                lifecycle_dual_peak: 'Dual peak',
+                lifecycle_extension_partial: 'Extension',
+                lifecycle_extension: 'Extension',
+                lifecycle_protected_exit: 'Protect',
+                dust_sweep_after_sl: 'Dust',
+                dust_sweep_orphan: 'Dust',
+                dust_sweep: 'Dust',
+                preserve_arm_micro: 'Preserve',
+                preserve_arm: 'Preserve',
+                preserve_disarm: 'Disarm',
+                preserve_buy: 'Preserve',
+                preserve_trim: 'Preserve',
+                operator_trim_link_to_btc_30pct: 'Trim',
+                operator_trim_link_30pct_to_cash: 'Trim',
+            };
+            if (map[head]) return { short: map[head], full };
+            if (head.startsWith('operator_trim')) return { short: 'Trim', full };
+            if (head.startsWith('lifecycle_')) {
+                // lifecycle_foo_bar → "Foo bar" (max ~2 tokens)
+                const bits = head.replace(/^lifecycle_/, '').split('_').filter(Boolean);
+                const nice = bits.slice(0, 2).map((w, i) =>
+                    i === 0 ? (w.charAt(0).toUpperCase() + w.slice(1)) : w
+                ).join(' ');
+                return { short: nice || 'Lifecycle', full };
+            }
+            if (head.startsWith('dust')) return { short: 'Dust', full };
+            // Unknown: first token only, still short
+            const token = head.split(/[_\s|]/)[0] || full.slice(0, 12);
+            const short = token.length <= 12
+                ? token.charAt(0).toUpperCase() + token.slice(1)
+                : token.slice(0, 10) + '…';
+            return { short, full };
         }
 
         function renderEquityTrend(eq, { forceNa = false, d30 = null, d7 = null } = {}) {
@@ -518,14 +610,109 @@
 
             const yMaxEl = document.getElementById('equity-y-max');
             const yMinEl = document.getElementById('equity-y-min');
-            const xStart = document.getElementById('equity-x-start');
-            const xEnd = document.getElementById('equity-x-end');
             if (yMaxEl) yMaxEl.textContent = ymax.toFixed(1);
             if (yMinEl) yMinEl.textContent = ymin.toFixed(1);
-            const t0 = (pts[0].t || '').slice(0, 10);
-            const t1 = (pts[pts.length - 1].t || '').slice(0, 10);
-            if (xStart) xStart.textContent = t0;
-            if (xEnd) xEnd.textContent = t1 + ' · ' + (eq.days || 30) + 'd';
+
+            // Week grid + date ticks (Mon starts; HTML labels so text isn't warped by preserveAspectRatio=none)
+            const weekGrid = document.getElementById('equity-week-grid');
+            const ticksEl = document.getElementById('equity-x-ticks');
+            if (weekGrid) {
+                while (weekGrid.firstChild) weekGrid.removeChild(weekGrid.firstChild);
+            }
+            if (ticksEl) ticksEl.innerHTML = '';
+
+            const weekTicks = [];
+            let lastWeekKey = null;
+            for (const p of pts) {
+                const d = parseUtcTs(p.t);
+                if (!d) continue;
+                // Monday-based week key in trader TZ when possible
+                let key;
+                try {
+                    const parts = new Intl.DateTimeFormat('en-US', {
+                        timeZone: DASH_TZ, year: 'numeric', month: '2-digit', day: '2-digit', weekday: 'short',
+                    }).formatToParts(d);
+                    const get = (t) => (parts.find(x => x.type === t) || {}).value;
+                    const wd = get('weekday'); // Sun Mon ...
+                    const y = get('year'), m = get('month'), day = get('day');
+                    // roll back to Monday
+                    const wdMap = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+                    const dow = wdMap[wd] != null ? wdMap[wd] : d.getUTCDay();
+                    const offset = dow === 0 ? 6 : dow - 1; // days since Monday
+                    const mon = new Date(d.getTime() - offset * 86400000);
+                    const monParts = new Intl.DateTimeFormat('en-US', {
+                        timeZone: DASH_TZ, year: 'numeric', month: '2-digit', day: '2-digit',
+                    }).formatToParts(mon);
+                    const gy = (monParts.find(x => x.type === 'year') || {}).value;
+                    const gm = (monParts.find(x => x.type === 'month') || {}).value;
+                    const gd = (monParts.find(x => x.type === 'day') || {}).value;
+                    key = `${gy}-${gm}-${gd}`;
+                } catch (e) {
+                    key = String(p.t || '').slice(0, 10);
+                }
+                if (key && key !== lastWeekKey) {
+                    weekTicks.push({ day: p.day, key, t: p.t });
+                    lastWeekKey = key;
+                }
+            }
+            // Always include first & last sample as anchors if missing
+            if (pts.length && weekTicks.length) {
+                const firstDay = pts[0].day;
+                const lastDay = pts[pts.length - 1].day;
+                if (weekTicks[0].day > firstDay + 0.01) {
+                    weekTicks.unshift({ day: firstDay, key: String(pts[0].t || '').slice(0, 10), t: pts[0].t });
+                }
+                const lastKey = String(pts[pts.length - 1].t || '').slice(0, 10);
+                if (weekTicks[weekTicks.length - 1].key !== lastKey) {
+                    weekTicks.push({ day: lastDay, key: lastKey, t: pts[pts.length - 1].t });
+                }
+            }
+
+            const ns = 'http://www.w3.org/2000/svg';
+            const plotLeftPct = (40 / 640) * 100;
+            const plotWidthPct = ((620 - 40) / 640) * 100;
+            const fmtTick = (raw) => {
+                const d = parseUtcTs(raw);
+                if (!d) return String(raw || '').slice(5, 10) || '';
+                try {
+                    return d.toLocaleDateString(DASH_LOCALE, { month: 'short', day: 'numeric', timeZone: DASH_TZ });
+                } catch (e) {
+                    return String(raw).slice(5, 10);
+                }
+            };
+
+            // Thin out labels if many weeks (keep ~5–7 labels max on phone)
+            let labelEvery = 1;
+            if (weekTicks.length > 7) labelEvery = 2;
+            if (weekTicks.length > 12) labelEvery = 3;
+
+            weekTicks.forEach((tk, i) => {
+                const x = xOf(tk.day);
+                if (weekGrid) {
+                    const line = document.createElementNS(ns, 'line');
+                    line.setAttribute('x1', x.toFixed(1));
+                    line.setAttribute('x2', x.toFixed(1));
+                    line.setAttribute('y1', '20');
+                    line.setAttribute('y2', '150');
+                    line.setAttribute('stroke', '#334155');
+                    line.setAttribute('stroke-width', '1');
+                    line.setAttribute('stroke-dasharray', '2 3');
+                    line.setAttribute('opacity', '0.85');
+                    weekGrid.appendChild(line);
+                }
+                if (ticksEl && (i === 0 || i === weekTicks.length - 1 || i % labelEvery === 0)) {
+                    const leftPct = plotLeftPct + (tk.day / xMax) * plotWidthPct;
+                    const span = document.createElement('span');
+                    span.className = 'absolute text-[9px] text-slate-500 tabular-nums -translate-x-1/2 whitespace-nowrap';
+                    span.style.left = leftPct.toFixed(2) + '%';
+                    span.style.bottom = '0';
+                    span.textContent = fmtTick(tk.t || tk.key);
+                    if (i === weekTicks.length - 1) {
+                        span.textContent = fmtTick(tk.t || tk.key) + ' · ' + (eq.days || 30) + 'd';
+                    }
+                    ticksEl.appendChild(span);
+                }
+            });
         }
 
         async function updateDashboard() {
@@ -1022,26 +1209,34 @@
                     const qty = t.qty ? parseFloat(t.qty).toFixed(4) : '';
                     const side = (t.side || '').toUpperCase();
                     const sideClass = side === 'BUY' ? 'text-emerald-400' : 'text-red-400';
-                    const reason = (t.reason || t.exit_reason || '')
-                        .replace('stop_loss_exchange', 'SL')
-                        .replace('rotation_exchange', 'ROT')
-                        .replace('rebalance_buy', 'rebal')
-                        .replace('preserve_arm_micro', 'preserve')
-                        .replace('preserve_arm', 'preserve')
-                        .replace('preserve_disarm', 'disarm')
-                        .replace('dust_sweep_after_sl', 'dust')
-                        .replace('dust_sweep_orphan', 'dust') || '';
-                    const reasonClass = (reason === 'preserve' || reason === 'disarm')
+                    const rawReason = String(t.reason_short || t.reason || t.exit_reason || '').trim();
+                    // Prefer API short label if present; else compact machine reason for the column
+                    const mapped = t.reason_label
+                        ? { short: String(t.reason_label), full: String(t.reason || t.exit_reason || t.reason_label) }
+                        : formatTradeReasonShort(rawReason);
+                    const reason = mapped.short;
+                    const reasonFull = mapped.full || rawReason;
+                    const reasonClass = (reason === 'Preserve' || reason === 'Disarm')
                         ? 'text-cyan-400/90'
                         : 'text-amber-400/90';
-                    const reasonBadge = reason ? `<span class="text-[10px] ${reasonClass}">${reason}</span>` : '';
+                    const safeFull = reasonFull
+                        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                    const safeShort = String(reason)
+                        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                    // Tap/click badge → full reason (iPhone); title kept for desktop hover fallback
+                    const reasonBadge = reason
+                        ? `<span class="trade-reason-wrap">
+                            <button type="button" class="trade-reason-btn ${reasonClass}" title="${safeFull}" aria-label="Show full exit reason">${safeShort}</button>
+                            <span class="trade-reason-tip" role="tooltip">${safeFull}</span>
+                           </span>`
+                        : '';
                     return `
-                    <div class="flex justify-between items-center text-xs bg-slate-800/30 p-2 rounded gap-2">
-                        <span class="font-medium">${t.pair || '??'}</span>
-                        <span class="${sideClass}">${side}</span>
+                    <div class="flex justify-between items-center text-xs bg-slate-800/30 p-2 rounded gap-2 min-w-0">
+                        <span class="font-medium shrink-0">${t.pair || '??'}</span>
+                        <span class="${sideClass} shrink-0">${side}</span>
                         ${reasonBadge}
-                        <span class="text-slate-400 tabular-nums">${qty}</span>
-                        <span class="text-slate-500" title="UTC ${t.timestamp || t.ts || ''} · shown ${DASH_TZ}">${timeStr}</span>
+                        <span class="text-slate-400 tabular-nums shrink-0">${qty}</span>
+                        <span class="text-slate-500 shrink-0" title="UTC ${t.timestamp || t.ts || ''} · shown ${DASH_TZ}">${timeStr}</span>
                     </div>`;
                 }).join('');
             } else if (tradesContainer && !tradesContainer.children.length) {

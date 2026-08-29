@@ -41,7 +41,15 @@
       "dd_threshold_pct": 0.08,
       "max_pairs": 5,
       "deploy_min_rsi": 30.0
-    }
+    },
+    "buy_block_pairs": [
+      "RAVE-USD",
+      "UNI-USD"
+    ],
+    "pair_buy_blocklist": [
+      "RAVE-USD",
+      "UNI-USD"
+    ]
   },
   "risk_management": {
     "max_daily_loss_pct": 0.02,
@@ -92,6 +100,22 @@
       "never_tighter_than_base_when_live_tp": true,
       "min_sl_frac_of_trail_arm": 0.85,
       "note": "When take_profit.mode=live, floor adaptive SL so it is not tighter than base and not much tighter than trail arm. One pure rule \u2014 no ATR/pair adapters. Isolation: scripts/phase6/test_isolation_sl_tp_symmetry.py. Docs: docs/research/SL_TP_SYMMETRY_FLOOR.md"
+    },
+    "buy_block_pairs": [
+      "RAVE-USD",
+      "UNI-USD"
+    ],
+    "first_fill_probation": {
+      "enabled": true,
+      "size_mult": 0.4,
+      "equity_frac_cap": 0.08,
+      "abs_cap_usd": 150.0,
+      "min_move_usd": 40.0,
+      "max_open_first_fill_seats": 2,
+      "min_holding_usd": 15.0,
+      "graduate_min_rt": 2,
+      "graduate_on_tp": true,
+      "note": "No-history / ungraduated ADDs: tryout size + max 2 concurrent first-fill seats. Not a hard block."
     }
   },
   "preserve_mode": {

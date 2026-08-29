@@ -153,6 +153,154 @@ def resolve_regime_cash(
     )
 
 
+def _normalize_pair_symbol(pair: str) -> str:
+    p = (pair or "").strip().upper().replace("_", "-")
+    if p and "-" not in p and p.endswith("USD") and not p.endswith("-USD"):
+        p = p[:-3] + "-USD"
+    return p
+
+
+def _add_block_pairs(out: Set[str], xs: Any) -> None:
+    if not xs:
+        return
+    if isinstance(xs, str):
+        xs = [xs]
+    try:
+        for x in xs:
+            n = _normalize_pair_symbol(str(x))
+            if n:
+                out.add(n)
+    except TypeError:
+        return
+
+
+def collect_buy_block_pairs(
+    policy: Optional[Dict[str, Any]] = None,
+    *,
+    trading_config: Optional[Dict[str, Any]] = None,
+) -> Set[str]:
+    """Union of deny lists: regime_cash_policy + trading_config + recovery overlay."""
+    out: Set[str] = set()
+    pol = policy if isinstance(policy, dict) else {}
+    _add_block_pairs(out, pol.get("buy_block_pairs"))
+    _add_block_pairs(out, pol.get("pair_buy_blocklist"))
+    _add_block_pairs(out, pol.get("new_buy_block_list"))
+
+    oo = pol.get("operator_override") if isinstance(pol.get("operator_override"), dict) else {}
+    rec = oo.get("recovery_soft_down_20260828") if isinstance(oo, dict) else None
+    if isinstance(rec, dict) and rec.get("enabled"):
+        _add_block_pairs(out, rec.get("block_new_buy_pairs"))
+
+    tc = trading_config
+    if tc is None:
+        try:
+            tc_path = PROJECT_ROOT / "config" / "trading_config_phase6.json"
+            if tc_path.exists():
+                tc = json.loads(tc_path.read_text(encoding="utf-8"))
+        except Exception:
+            tc = None
+    if isinstance(tc, dict):
+        for blob in (tc.get("global_settings") or {}, tc.get("risk_management") or {}):
+            if isinstance(blob, dict):
+                _add_block_pairs(out, blob.get("buy_block_pairs"))
+                _add_block_pairs(out, blob.get("pair_buy_blocklist"))
+                _add_block_pairs(out, blob.get("new_buy_block_list"))
+    return out
+
+
+def recovery_soft_down_blocks_pair(
+    pair: str,
+    *,
+    policy: Optional[Dict[str, Any]] = None,
+    is_new_pair: bool = False,
+    snap: Optional[RegimeCashSnapshot] = None,
+) -> Optional[str]:
+    """
+    Phase-1 recovery gate.
+    Explicit block_new_buy_pairs always deny.
+    When new_alt_policy=block_unless_allowlist and is_new_pair, deny non-allowlisted
+    alts while equity health is soft_down (or recovery phase 1 state present).
+    """
+    pol = policy if isinstance(policy, dict) else {}
+    oo = pol.get("operator_override") if isinstance(pol.get("operator_override"), dict) else {}
+    rec = oo.get("recovery_soft_down_20260828") if isinstance(oo, dict) else None
+    if not (isinstance(rec, dict) and rec.get("enabled")):
+        return None
+
+    p = _normalize_pair_symbol(pair)
+    blocked = {_normalize_pair_symbol(str(x)) for x in (rec.get("block_new_buy_pairs") or [])}
+    if p in blocked:
+        return f"recovery_soft_down block_list {p}"
+
+    if not is_new_pair:
+        return None
+
+    policy_mode = str(rec.get("new_alt_policy") or "")
+    if not policy_mode.startswith("block_unless_allowlist"):
+        return None
+
+    allow = {_normalize_pair_symbol(str(x)) for x in (rec.get("allowlist_pairs") or [])}
+    if not allow:
+        return None
+    if p in allow:
+        return None
+
+    # Apply allowlist when equity path is soft_down / recovery phase 1 / snap soft_down
+    health_hit = False
+    if snap is not None:
+        if str(getattr(snap, "regime", "") or "").lower() in (
+            "soft_down",
+            "soft_downtrend",
+            "declining",
+            "hard_down",
+            "bear",
+        ):
+            health_hit = True
+        if str(getattr(snap, "regime_layer", "") or "").lower() in (
+            "soft_down",
+            "soft_downtrend",
+            "declining",
+            "hard_down",
+        ):
+            health_hit = True
+
+    if not health_hit:
+        # Only live equity health — not recovery phase marker alone (that file
+        # stays on disk after path improves and must not blanket-block all alts).
+        want = {str(x).lower() for x in (rec.get("while_equity_health_in") or [])}
+        want |= {"soft_down", "soft_downtrend", "declining", "hard_down"}
+        for rel in (
+            "data/state/trend_repair_status.json",
+            "data/state/regime_cash_status.json",
+        ):
+            try:
+                tp = PROJECT_ROOT / rel
+                if not tp.exists():
+                    continue
+                raw = json.loads(tp.read_text(encoding="utf-8"))
+                if not isinstance(raw, dict):
+                    continue
+                states: List[str] = []
+                et = raw.get("equity_trend") if isinstance(raw.get("equity_trend"), dict) else {}
+                h = et.get("health") if isinstance(et, dict) else None
+                if isinstance(h, dict):
+                    states.append(str(h.get("state") or h.get("label") or "").lower())
+                elif h is not None:
+                    states.append(str(h).lower())
+                for key in ("regime", "regime_layer", "health_state", "equity_health"):
+                    if raw.get(key) is not None:
+                        states.append(str(raw.get(key)).lower())
+                if any(any(w in s for w in want if w) for s in states if s):
+                    health_hit = True
+                    break
+            except Exception:
+                continue
+
+    if health_hit:
+        return f"recovery_soft_down allowlist new_alt {p}"
+    return None
+
+
 def evaluate_buy_entry(
     pair: str,
     snap: RegimeCashSnapshot,
@@ -161,6 +309,7 @@ def evaluate_buy_entry(
     rsi: Optional[float],
     lockout_pairs: Optional[Set[str]] = None,
     is_new_pair: bool = False,
+    policy: Optional[Dict[str, Any]] = None,
 ) -> EntryDecision:
     reasons: List[str] = []
     lockout_pairs = lockout_pairs or set()
@@ -169,6 +318,37 @@ def evaluate_buy_entry(
     if not snap.allow_new_buys or snap.strategy_mode == "usdc_park":
         reasons.append(f"regime_cash_park mode={snap.strategy_mode} allow_new_buys={snap.allow_new_buys}")
         return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
+
+    # BUY_BLOCK_PAIRS_RECOVERY_SOFT_DOWN_20260828 — config deny lists must stop fills
+    try:
+        pol = policy if isinstance(policy, dict) else load_policy()
+    except Exception:
+        pol = {}
+    pair_n = _normalize_pair_symbol(pair)
+    blocks = collect_buy_block_pairs(pol if isinstance(pol, dict) else {})
+    if pair_n in blocks:
+        reasons.append(f"buy_block_pairs {pair_n}")
+        return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
+    rec_reason = recovery_soft_down_blocks_pair(
+        pair,
+        policy=pol if isinstance(pol, dict) else {},
+        is_new_pair=bool(is_new_pair),
+        snap=snap,
+    )
+    if rec_reason:
+        reasons.append(rec_reason)
+        return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
+
+    # Miss-fire probation — ledger launch→no-explode→hole (new seats + re-entry)
+    try:
+        from phase6.core.missfire_probation import evaluate_pair_missfire
+
+        mf = evaluate_pair_missfire(pair_n, enforce=True)
+        if mf.blocked:
+            reasons.append(f"missfire_probation {mf.class_}: {'; '.join(mf.reasons[:2])}")
+            return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
+    except Exception:
+        pass
 
     if eg.get("require_lockout_clear", True) and pair in lockout_pairs:
         reasons.append("lockout_active")
@@ -704,6 +884,7 @@ def filter_trade_plan_regime_cash(
     lockout_pairs: Optional[Set[str]] = None,
     held_pairs: Optional[Set[str]] = None,
     enforce: Optional[bool] = None,
+    policy: Optional[Dict[str, Any]] = None,
 ) -> Any:
     """
     Drop BUY actions that fail regime cash entry gates.
@@ -735,6 +916,7 @@ def filter_trade_plan_regime_cash(
             rsi=rsi_values.get(pair),
             lockout_pairs=lockout_pairs,
             is_new_pair=pair not in held_pairs,
+            policy=policy,
         )
         if dec.allowed:
             kept.append(a)
@@ -832,6 +1014,7 @@ def apply_to_runner_plan(
         rsi_values=rsi,
         lockout_pairs=lockout,
         held_pairs=held,
+        policy=pol,
     )
     # TG-02: hard prefer_exit → shadow (default) or live SELL legs
     try:

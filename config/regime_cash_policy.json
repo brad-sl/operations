@@ -66,25 +66,27 @@
     }
   },
   "hard_exit": {
+    "enabled": true,
+    "shadow_only": true,
+    "live_apply": false,
+    "operator_approve": true,
+    "notify_telegram": true,
+    "notify_dedupe_hours": 12,
+    "min_sell_usd": 25.0,
+    "max_pair_fraction": 1.0,
+    "cautious_flat": {
       "enabled": true,
-      "shadow_only": true,
-      "live_apply": false,
-      "operator_approve": true,
-      "notify_telegram": true,
-      "notify_dedupe_hours": 12,
+      "auto_apply_regimes": [
+        "flat"
+      ],
+      "min_hold_hours": 24.0,
+      "require_rsi_cross": true,
+      "min_mark_r": 0.0,
       "min_sell_usd": 25.0,
-      "max_pair_fraction": 1.0,
-      "cautious_flat": {
-        "enabled": true,
-        "auto_apply_regimes": ["flat"],
-        "min_hold_hours": 24.0,
-        "require_rsi_cross": true,
-        "min_mark_r": 0.0,
-        "min_sell_usd": 25.0,
-        "note": "Brad 2026-08-25 cautious path: in flat only, auto-merge hard SELLs when RSI crosses up through overbought after entry, mark green (r>=0), held >=24h. Bull/bear/transition stay operator loop. Quality filters also drop low-quality shadow proposals."
-      },
-      "note": "H3 cautious flat (2026-08-25): operator_approve remains true globally; flat may auto-apply when cautious_flat gates pass. Bull/bear never auto from this path. park_prefer_reduce NEVER auto."
+      "note": "Brad 2026-08-25 cautious path: in flat only, auto-merge hard SELLs when RSI crosses up through overbought after entry, mark green (r>=0), held >=24h. Bull/bear/transition stay operator loop. Quality filters also drop low-quality shadow proposals."
     },
+    "note": "H3 cautious flat (2026-08-25): operator_approve remains true globally; flat may auto-apply when cautious_flat gates pass. Bull/bear never auto from this path. park_prefer_reduce NEVER auto."
+  },
   "detector": {
     "lookback_days": 30,
     "bull_return_pct": 15.0,
@@ -105,7 +107,7 @@
       "min_cash_reserve_pct": 0.1,
       "entry": {
         "min_sentiment": -0.1,
-        "min_sentiment_new_pair": 0.15,
+        "min_sentiment_new_pair": 0.25,
         "max_rsi": 70.0,
         "require_lockout_clear": true
       },
@@ -230,5 +232,39 @@
       "opt_weekly": "phase6/research/run_analyst_opt_weekly.py",
       "note": "RC-06 COMPLETE: continuous scorecard\u2192knob_map\u2192cash policy suggestions (sweep)\u2192gated to leaderboard/proposals (cash_policy_suggestions.py). Weekly OPT chain updated. Promote only via gates; manual apply to policy JSON."
     }
-  }
+  },
+  "operator_override": {
+    "protect": true,
+    "recovery_soft_down_20260828": {
+      "enabled": true,
+      "reason": "Brad GO: soft_down gates new alts; leave book; path to profit Phase 1",
+      "as_of": "20260828T183930Z",
+      "block_new_buy_pairs": [
+        "UNI-USD",
+        "RAVE-USD"
+      ],
+      "while_equity_health_in": [
+        "soft_down",
+        "soft_downtrend",
+        "declining",
+        "hard_down"
+      ],
+      "new_alt_policy": "block_unless_allowlist",
+      "allowlist_pairs": [
+        "BTC-USD",
+        "BTC-USDC",
+        "PAXG-USD",
+        "PAXG-USDC",
+        "USDC-USD",
+        "USD-USD"
+      ],
+      "bull_rebalance_cap_usd_max": 75.0,
+      "do_not_clear_sl_72h": true,
+      "rollback": "set operator_override.recovery_soft_down_20260828.enabled=false"
+    }
+  },
+  "buy_block_pairs": [
+    "RAVE-USD",
+    "UNI-USD"
+  ]
 }

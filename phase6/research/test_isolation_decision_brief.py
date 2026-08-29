@@ -50,11 +50,25 @@ def main() -> int:
         same_session_3d={"count_2h": 0, "pairs_2h": []},
         proposals=[],
         next_focus="Run regime scorecard; keep shadow+drift before any live config promotion.",
+        phase2_check={
+            "schema": "phase2_stabilize_check_v1",
+            "tiles": {"d7": -6.5, "d14": -4.7, "d30": -5.5, "slope": -0.1, "health": "soft_down"},
+            "bars": {
+                "14D >= -2%": False,
+                "slope >= -0.03/d": False,
+                ">=1 clean TP/rotation green in last 7d": True,
+                "no UNI/RAVE reopen since Phase1": True,
+                "code wire PASS": True,
+            },
+            "phase2_ready": False,
+            "verdict": "NO-GO phase2 exit bar not met",
+        },
     )
     assert "BOTTOM LINE:" in body
     assert "=== Do now ===" in body
     assert "=== Book ===" in body
     assert "=== Stance" in body
+    assert "=== Phase 2 stabilize ===" in body
     assert "=== What's next ===" in body
     # No raw ops dump markers
     for banned in (

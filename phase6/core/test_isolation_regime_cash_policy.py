@@ -18,8 +18,23 @@ from phase6.core.regime_cash_policy import (
 )
 
 
+def _pol_no_recovery() -> dict:
+    """Isolation cases for pure regime gates must not inherit live recovery overlay."""
+    pol = json.loads(json.dumps(load_policy()))
+    oo = pol.get("operator_override")
+    if isinstance(oo, dict) and "recovery_soft_down_20260828" in oo:
+        oo["recovery_soft_down_20260828"] = {
+            **(oo.get("recovery_soft_down_20260828") or {}),
+            "enabled": False,
+        }
+    pol["buy_block_pairs"] = []
+    pol["pair_buy_blocklist"] = []
+    pol["new_buy_block_list"] = []
+    return pol
+
+
 def test_bear_park_blocks_buy():
-    pol = load_policy()
+    pol = _pol_no_recovery()
     snap = resolve_regime_cash(
         policy=pol,
         detection={"regime": "bear", "confidence": 1.0, "btc_return_pct": -15.0},
@@ -31,15 +46,15 @@ def test_bear_park_blocks_buy():
         sentiment=0.9,
         rsi=30.0,
         lockout_pairs=set(),
+        policy=pol,
     )
     assert dec.allowed is False
     assert any("park" in r or "allow_new_buys" in r for r in dec.reasons)
 
 
 def test_bull_entry_requires_rsi_and_sentiment():
-    pol = load_policy()
+    pol = _pol_no_recovery()
     # Force bull deploy without relying on knob merge for sentiment path
-    pol = json.loads(json.dumps(pol))
     pol["regimes"]["bull"]["strategy_mode"] = "deploy"
     pol["regimes"]["bull"]["allow_new_buys"] = True
     snap = resolve_regime_cash(
@@ -47,17 +62,16 @@ def test_bull_entry_requires_rsi_and_sentiment():
         detection={"regime": "bull", "confidence": 1.0, "btc_return_pct": 20.0},
     )
     # Overbought should fail
-    bad = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=85.0)
+    bad = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=85.0, policy=pol)
     assert bad.allowed is False
     assert any("rsi" in r for r in bad.reasons)
     # Good entry
-    good = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=50.0)
+    good = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=50.0, policy=pol)
     assert good.allowed is True
 
 
 def test_lockout_blocks_even_in_bull():
-    pol = load_policy()
-    pol = json.loads(json.dumps(pol))
+    pol = _pol_no_recovery()
     pol["regimes"]["bull"]["allow_new_buys"] = True
     pol["regimes"]["bull"]["strategy_mode"] = "deploy"
     snap = resolve_regime_cash(
@@ -70,6 +84,7 @@ def test_lockout_blocks_even_in_bull():
         sentiment=0.8,
         rsi=40.0,
         lockout_pairs={"OP-USD"},
+        policy=pol,
     )
     assert dec.allowed is False
     assert "lockout_active" in dec.reasons
@@ -77,7 +92,7 @@ def test_lockout_blocks_even_in_bull():
 
 def test_filter_plan_enforces_bear_park():
     """Park path: use bear (flat is option-B deploy as of 2026-07-18)."""
-    pol = load_policy()
+    pol = _pol_no_recovery()
     snap = resolve_regime_cash(
         policy=pol,
         detection={"regime": "bear", "confidence": 1.0, "btc_return_pct": -12.0},
@@ -97,6 +112,7 @@ def test_filter_plan_enforces_bear_park():
         lockout_pairs=set(),
         held_pairs=set(),
         enforce=True,
+        policy=pol,
     )
     actions = [a["action"] for a in plan.actions]
     assert "SELL" in actions
@@ -105,7 +121,7 @@ def test_filter_plan_enforces_bear_park():
 
 def test_flat_option_b_gated_deploy():
     """Flat thaw: allow gated buys; still block overbought RSI."""
-    pol = load_policy()
+    pol = _pol_no_recovery()
     snap = resolve_regime_cash(
         policy=pol,
         detection={"regime": "flat", "confidence": 1.0, "btc_return_pct": 2.0},
@@ -115,14 +131,14 @@ def test_flat_option_b_gated_deploy():
     assert float(snap.rebalance_cap_usd) > 0
     assert float(snap.rebalance_cap_usd) <= 100.0
 
-    ok = evaluate_buy_entry("SOL-USD", snap, sentiment=0.40, rsi=45.0)
+    ok = evaluate_buy_entry("SOL-USD", snap, sentiment=0.40, rsi=45.0, policy=pol)
     assert ok.allowed is True, ok.reasons
 
-    hot = evaluate_buy_entry("SOL-USD", snap, sentiment=0.40, rsi=70.0)
+    hot = evaluate_buy_entry("SOL-USD", snap, sentiment=0.40, rsi=70.0, policy=pol)
     assert hot.allowed is False
     assert any("rsi" in r for r in hot.reasons)
 
-    weak = evaluate_buy_entry("SOL-USD", snap, sentiment=0.05, rsi=40.0)
+    weak = evaluate_buy_entry("SOL-USD", snap, sentiment=0.05, rsi=40.0, policy=pol)
     assert weak.allowed is False
     assert any("sentiment" in r for r in weak.reasons)
 
@@ -141,6 +157,7 @@ def test_flat_option_b_gated_deploy():
         lockout_pairs=set(),
         held_pairs=set(),
         enforce=True,
+        policy=pol,
     )
     pairs = [(a["pair"], a["action"]) for a in plan.actions]
     assert ("BTC-USD", "SELL") in pairs
@@ -214,7 +231,7 @@ def test_hard_exit_shadow_only():
 
 def test_transition_allows_gated_deploy():
     """Brad 2026-08-24: upside transition is not a special park zone — flat-like deploy."""
-    pol = load_policy()
+    pol = _pol_no_recovery()
     snap = resolve_regime_cash(
         policy=pol,
         detection={"regime": "transition", "confidence": 1.0, "btc_return_pct": 11.0},
@@ -223,16 +240,16 @@ def test_transition_allows_gated_deploy():
     assert snap.allow_new_buys is True
     assert float(snap.rebalance_cap_usd) > 0
     # gates still bind (RSI too hot)
-    hot = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=80.0)
+    hot = evaluate_buy_entry("ETH-USD", snap, sentiment=0.5, rsi=80.0, policy=pol)
     assert hot.allowed is False
     # structure-ish ok path can clear entry gates
-    ok = evaluate_buy_entry("ETH-USD", snap, sentiment=0.35, rsi=50.0)
+    ok = evaluate_buy_entry("ETH-USD", snap, sentiment=0.35, rsi=50.0, policy=pol)
     assert ok.allowed is True, ok.reasons
 
 
 def test_soft_down_derisk_not_transition_deploy():
     """Downside residual must not inherit upside transition $75 deploy."""
-    pol = load_policy()
+    pol = _pol_no_recovery()
     # detector-style soft_down
     snap = resolve_regime_cash(
         policy=pol,
@@ -248,9 +265,9 @@ def test_soft_down_derisk_not_transition_deploy():
     assert snap.allow_new_buys is True
     assert 0 < float(snap.rebalance_cap_usd) <= 40.0
     # tighter than flat: RSI 52 fails soft_down max 50
-    mid = evaluate_buy_entry("ETH-USD", snap, sentiment=0.45, rsi=52.0)
+    mid = evaluate_buy_entry("ETH-USD", snap, sentiment=0.45, rsi=52.0, policy=pol)
     assert mid.allowed is False
-    ok = evaluate_buy_entry("ETH-USD", snap, sentiment=0.45, rsi=45.0)
+    ok = evaluate_buy_entry("ETH-USD", snap, sentiment=0.45, rsi=45.0, policy=pol)
     assert ok.allowed is True, ok.reasons
 
     # legacy mislabel: transition + negative ret → soft_down

@@ -40,11 +40,17 @@ def refresh() -> dict:
     entries = _avg_entries(ledger)
     price_mgr = PriceHistoryManager(persist_path=str(PRICE_HISTORY))
 
-    usd = float(ex.get_account_balance("USD") or 0)
+    # None = API failure (must not coerce to 0 — NAV cliff / −96% tiles)
+    _usd_raw = ex.get_account_balance("USD")
+    usd_unknown = _usd_raw is None
+    usd = float(_usd_raw or 0) if not usd_unknown else 0.0
     try:
-        usdc = float(ex.get_account_balance("USDC") or 0)
+        _usdc_raw = ex.get_account_balance("USDC")
+        usdc_unknown = _usdc_raw is None
+        usdc = float(_usdc_raw or 0) if not usdc_unknown else 0.0
     except Exception:
         usdc = 0.0
+        usdc_unknown = True
 
     holdings = {}
     if hasattr(ex, "get_holdings_verified"):
@@ -102,7 +108,61 @@ def refresh() -> dict:
     except Exception:
         pass
 
-    total_usd = usd + usdc + total_holdings
+    prior = {}
+    if PHASE6_LIVE_STATE.exists():
+        try:
+            prior = json.loads(PHASE6_LIVE_STATE.read_text())
+        except Exception:
+            prior = {}
+
+    raw_total = usd + usdc + total_holdings
+    try:
+        from phase6.core.live_state_nav_guard import guard_live_nav
+
+        total_usd, usd_safe, hold_safe, guard_meta = guard_live_nav(
+            new_total=raw_total,
+            new_cash=usd + usdc,
+            new_holdings=total_holdings,
+            prior_total=prior.get("total_usd") or prior.get("total_balance"),
+            prior_cash=(prior.get("cash_usd") if prior.get("cash_usd") is not None else None),
+        )
+        if guard_meta.get("guarded"):
+            # Restore cash from prior; keep freshly marked holdings when present
+            cash_prior = float(prior.get("cash_usd") or 0) + float(
+                next(
+                    (
+                        b.get("balance") or 0
+                        for b in (prior.get("balances") or [])
+                        if str(b.get("currency") or "").upper() == "USDC"
+                    ),
+                    0,
+                )
+                or 0
+            )
+            if cash_prior <= 0:
+                cash_prior = float(prior.get("cash_usd") or usd_safe or 0)
+            usd = float(prior.get("cash_usd") or usd_safe or usd)
+            # Prefer split USD from prior balances
+            for b in prior.get("balances") or []:
+                if str(b.get("currency") or "").upper() == "USD":
+                    usd = float(b.get("balance") or usd)
+            usdc = 0.0
+            for b in prior.get("balances") or []:
+                if str(b.get("currency") or "").upper() == "USDC":
+                    usdc = float(b.get("balance") or 0)
+            if total_holdings <= 0 and hold_safe > 0:
+                total_holdings = hold_safe
+            total_usd = usd + usdc + total_holdings
+            print(
+                f"[DASH-REFRESH] NAV guard blocked cash/API cliff "
+                f"raw_total=${raw_total:.2f} -> kept ${total_usd:.2f} ({guard_meta.get('reason')})"
+            )
+        else:
+            total_usd = raw_total
+    except Exception as _g_e:
+        print(f"[DASH-REFRESH] nav guard skipped: {_g_e}")
+        total_usd = raw_total
+
     state = {
         "balances": [
             {"currency": "USD", "balance": usd, "available": usd, "hold": 0},
@@ -124,12 +184,6 @@ def refresh() -> dict:
         },
     }
 
-    prior = {}
-    if PHASE6_LIVE_STATE.exists():
-        try:
-            prior = json.loads(PHASE6_LIVE_STATE.read_text())
-        except Exception:
-            pass
     for k in ("rsi", "performance_metrics", "arch4", "bought_indicators", "sold_indicators"):
         if k in prior:
             state[k] = prior[k]

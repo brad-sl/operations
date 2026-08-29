@@ -230,6 +230,16 @@ class RebalanceCoordinator:
                         except Exception as e:
                             logger.warning("[ADD-RISK] filter skipped: %s", e)
 
+                        # First-fill probation: no-history / ungraduated adds → tryout size + seat cap
+                        try:
+                            from phase6.core.first_fill_probation import (
+                                filter_trade_plan_first_fill,
+                            )
+
+                            plan = filter_trade_plan_first_fill(runner, plan)
+                        except Exception as e:
+                            logger.warning("[FIRST-FILL] filter skipped: %s", e)
+
                         # RSI-primary / sentiment-reinforce: hard ticket+pair caps + sent-only haircut
                         # (binds on Emergency Recovery; does not auto-sell existing book)
                         try:

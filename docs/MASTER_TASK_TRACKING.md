@@ -11528,3 +11528,42 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+## RECOVERY-SOFT-DOWN-20260828 (Brad GO)
+- Phase 1: gate NEW alts while soft_down; block UNI/RAVE reopen
+- Book leave-as-is (PAXG+BTC); TP live; 72h SL rebuy stays
+- State: data/state/recovery_path_soft_down_20260828.json
+- Backup: /home/brad/projects/crypto-trading-bot/data/state/recovery_bak_20260828T183930Z
+- Path: stop shovel → stabilize 14D → earn via TP → scale later
+
+## BUY-BLOCK-WIRE-20260828
+- Wired buy_block_pairs+recovery_soft_down into evaluate_buy_entry
+- Isolation PASS; terminal.backend local fixed
+- No live book changes
+
+## FIRST-FILL-PROBATION-20260828
+- No-history / ungraduated ADDs: tryout size (×0.40, abs cap $150, ≤8% eq) + max 2 concurrent first-fill seats
+- Wired: filter_trade_plan_first_fill in rebalance_coordinator (after add_risk); promote tag; config risk_management.first_fill_probation
+- Miss-fire still hard-blocks; first-fill does not auto-promote; book untouched
+- Isolation PASS; board data/state/first_fill_probation_latest.json
+- as_of 2026-08-28T20:54Z
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260829** (opened 2026-08-29T00:00:35.495274)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260829`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

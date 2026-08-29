@@ -338,6 +338,32 @@ def evaluate_membership_swap(
             remove=remove,
         )
 
+    # M4 — miss-fire probation (ledger: launch → no explode → dig hole)
+    try:
+        from phase6.core.missfire_probation import evaluate_pair_missfire
+
+        mf = evaluate_pair_missfire(add, enforce=True)
+        if mf.blocked:
+            reasons.extend([f"M4:{r}" for r in mf.reasons])
+            return MembershipSwapVerdict(
+                ok=False,
+                bag_ok=True,
+                inbound_ok=True,
+                outbound_ok=True,
+                delta_ok=True,
+                inbound_potential=inbound_potential if inbound_potential is not None else in_score,
+                outbound_potential=outbound_potential,
+                delta=delta,
+                layer_failed="M4",
+                reasons=reasons,
+                add=add,
+                remove=remove,
+                require_deploy_ready=REQUIRE_DEPLOY_READY_FOR_MEMBERSHIP,
+            )
+        reasons.append("M4:missfire_clear")
+    except Exception as e:  # noqa: BLE001 — never break membership on ledger glitch
+        reasons.append(f"M4:skip:{type(e).__name__}")
+
     reasons.append("membership_potential_ok")
     reasons.append("deploy_ready_not_required")
     return MembershipSwapVerdict(

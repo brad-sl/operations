@@ -62,7 +62,7 @@ agent:
       is AMAZING and we're gonna CRUSH IT together! This is gonna be LEGENDARY! ARE
       YOU READY?! LET'S DO THIS! 💪😤🚀
 terminal:
-  backend: ssh
+  backend: local
   modal_mode: auto
   cwd: .
   timeout: 180

@@ -9,9 +9,44 @@ version: 1.0.0
 ## Execution Preference
 **Strong user preference:** When possible, run commands directly using the `terminal` tool instead of telling the user to copy-paste and run them. Only give the user commands when absolutely required (e.g., long-running services like `hermes gateway start`).
 
+**Telegram delivery (Brad 2026-08-28):** Long fenced mega-scripts **split into multiple bubbles** and become unusable. Prefer: (1) fix agent shell and run yourself, (2) short ≤~15-line paste blocks, (3) a single host path script the user can `python3 path/to/script.py`. Never dump multi-hundred-line inline Python on Telegram as the primary plan.
+
 **Aggressive go-ahead:** If Brad says kick off / no need to wait for approval on a planned gate chain, **execute** end-to-end (e.g. venue probe → economics → MVP docs) without re-asking mid-stream. Still no silent live product enable or large capital moves beyond agreed probe micro-caps.
 
 **Plain English for gates/PRDs:** Lead with implications (Hold vs DeRisk, E1, venue A/B/C, G1–G3) — opaque shorthand without translation frustrates Brad.
+
+## Terminal backend (local vs SSH) — agent shell broken
+
+**Symptom:** Every `terminal` / host `execute_code` fails with:
+`ValueError: SSH environment requires ssh_host and ssh_user to be configured`
+
+**Cause (not Linux permissions):** `terminal.backend: ssh` in `~/.hermes/config.yaml` without `terminal.ssh_host` / `terminal.ssh_user` (or `TERMINAL_SSH_*` env). Agent tools try SSH; Brad's interactive shell on the box still works fine.
+
+**Same-host setup (Telegram gateway + trade host on one Linux box — Brad default):**
+```bash
+hermes config get terminal.backend
+hermes config set terminal.backend local
+# clear leftovers if present
+grep TERMINAL_SSH ~/.hermes/.env || true
+systemctl --user restart hermes-gateway
+# prove from a *new* agent turn: whoami; pwd; hermes config get terminal.backend
+```
+
+**True remote SSH backend** only when agent process ≠ trade host:
+```bash
+hermes config set terminal.backend ssh
+hermes config set terminal.ssh_host <host>
+hermes config set terminal.ssh_user <user>
+# passwordless key auth required
+```
+
+**Pitfalls:**
+- Desktop Windows SSH client ≠ gateway `terminal.backend` — different path.
+- Gateway restart drops in-flight tool state; re-check `pgrep -af phase6.core.phase6_runner` (runner may have been under gateway cgroup).
+- Cron probe saying "gateway not running" can be stale while `systemctl --user status hermes-gateway` is active — trust systemd/pgrep.
+- Do **not** invent "permissions" narratives when the error names missing `ssh_host`/`ssh_user`.
+
+Detail: `references/terminal-backend-local-vs-ssh.md`.
 
 ## Independent review crons (frontier pass)
 - One-shot `cronjob` + fresh session + stronger model for adversarial PRD review; write full report path + short exec brief to origin.

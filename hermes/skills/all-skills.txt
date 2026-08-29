@@ -38,6 +38,7 @@ reliable-service-hosting
 research
 smart-home
 social-media
+soft-down-recovery-implementer
 software-development
 trading-bot-operations
 yuanbao

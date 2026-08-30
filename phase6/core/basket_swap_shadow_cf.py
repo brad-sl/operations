@@ -45,6 +45,7 @@ CF_MD = PROJECT_ROOT / "reports" / "BASKET_SWAP_SHADOW_CF_LATEST.md"
 ARMS_MD = PROJECT_ROOT / "reports" / "BASKET_SELECT_ARMS_SHADOW_LATEST.md"
 BOARD_MD = PROJECT_ROOT / "reports" / "BASKET_SWAP_CONFIDENCE_BOARD_LATEST.md"
 BOARD_JSON = STATE_DIR / "basket_swap_confidence_board_latest.json"
+BRAD_DECISION_JSON = STATE_DIR / "basket_swap_brad_decision.json"
 DUAL_AGREE_DIR = ARMS_DIR / "dual_agree"
 DUAL_AGREE_JSONL = DUAL_AGREE_DIR / "proposals.jsonl"
 DUAL_AGREE_LATEST = STATE_DIR / "basket_dual_agree_latest.json"
@@ -888,6 +889,11 @@ def build_confidence_board(cf: Dict[str, Any]) -> Dict[str, Any]:
         if (a.get("sleeve_delta") or 0) > 0 and (a.get("ex3") or 0) > 0
     ][:3]
 
+    brad = _load_json(BRAD_DECISION_JSON) or {}
+    preferred = (brad.get("preferred_arm") or "").strip() or None
+    revisit = ((brad.get("collection_extension") or {}).get("revisit_date_pt") or "").strip()
+    brad_live = bool(brad.get("live_membership_swaps") or brad.get("live_apply"))
+
     if any_hc:
         pe = (
             f"High-confidence arm(s) present: "
@@ -911,6 +917,17 @@ def build_confidence_board(cf: Dict[str, Any]) -> Dict[str, Any]:
         )
         status = "keep_shadow_collecting"
 
+    if preferred and not brad_live:
+        pe = (
+            f"Brad preferred paper arm: **{preferred}** "
+            f"(not live membership). dual_agree continues"
+            + (f" through revisit {revisit}." if revisit else ".")
+            + " "
+            + pe
+        )
+        if status == "high_confidence_shadow":
+            status = "preferred_arm_shadow_collecting"
+
     board = {
         "as_of": as_of,
         "decide_baseline": decide_base,
@@ -928,6 +945,12 @@ def build_confidence_board(cf: Dict[str, Any]) -> Dict[str, Any]:
         "leaders_sleeve_and_3d": leaders,
         "plain_english": pe,
         "dual_agree_arms": list(DUAL_AGREE_ARMS),
+        "brad_decision": {
+            "preferred_arm": preferred,
+            "live_membership_swaps": brad_live,
+            "revisit_date_pt": revisit or None,
+            "path": str(BRAD_DECISION_JSON),
+        },
     }
 
     def _cell(n: Any, ex: Any, hit: Any) -> str:
@@ -944,6 +967,19 @@ def build_confidence_board(cf: Dict[str, Any]) -> Dict[str, Any]:
         "",
         pe,
         "",
+    ]
+    if preferred:
+        lines += [
+            "## Brad preferred arm (paper only)",
+            "",
+            f"- **Preferred:** `{preferred}`",
+            f"- **Live membership swaps:** **{'YES' if brad_live else 'NO'}**",
+            f"- **Revisit:** {revisit or 'n/a'}",
+            f"- Decision file: `{BRAD_DECISION_JSON}`",
+            f"- Write-up: `reports/BASKET_SWAP_BRAD_GO_2026-08-29.md`",
+            "",
+        ]
+    lines += [
         "## Decision point (when we stop saying “keep collecting”)",
         "",
         "**Promote-to-Brad-review (still not live)** when **any arm** hits all of:",
@@ -992,10 +1028,21 @@ def build_confidence_board(cf: Dict[str, Any]) -> Dict[str, Any]:
             f"- **`{a['arm']}`:** {'; '.join(bits)} → missing {a['missing'] or 'none'}."
         )
 
+    if preferred and not brad_live:
+        bottom = (
+            f"Bottom line: Brad paper-primary = `{preferred}`. "
+            "Continue dual_agree + CF collection"
+            + (f" through {revisit}." if revisit else ".")
+            + " **No live basket swaps** until explicit promote of a specific swap."
+        )
+    else:
+        bottom = (
+            "Bottom line: **decision point not reached** unless HC=yes above. "
+            "Continue shadow proposals + CF. **No live basket swaps.**"
+        )
     lines += [
         "",
-        "Bottom line: **decision point not reached** unless HC=yes above. "
-        "Continue shadow proposals + CF. **No live basket swaps.**",
+        bottom,
         "",
         f"Co-leader dual-agree log: `{DUAL_AGREE_JSONL}` "
         f"(arms: {', '.join(DUAL_AGREE_ARMS)}).",

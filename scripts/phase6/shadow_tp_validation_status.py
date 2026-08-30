@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Shadow TP 7d validation status — episode-aware, no live orders.
+"""Shadow TP validation reporter — HISTORICAL / READ-ONLY.
 
-Writes:
-  data/state/shadow_tp_validation_window.json
-  data/state/shadow_tp_validation_latest.json
-  reports/SHADOW_TP_VALIDATION_LATEST.md
+SSOT rules (Brad 2026-08-29):
+  Policy mode  → config/exit_automation.json only
+  Runtime book → data/state/shadow_tp_status.json  (writer: phase6/core/shadow_tp.py runner only)
+  This script  → reports/* + shadow_tp_validation_*.json ONLY
 
-Stdout: short Telegram body when --notify (always) or when --quiet-if-same and changed.
+NEVER writes:
+  - config/*
+  - data/state/shadow_tp_status.json
+  - any production trading settings
+
+Window completed 2026-08-28. Daily cron is paused/archived. Manual runs OK for forensics.
 """
 from __future__ import annotations
 
@@ -25,11 +30,18 @@ if str(ROOT) not in sys.path:
 WINDOW_PATH = ROOT / "data" / "state" / "shadow_tp_validation_window.json"
 LATEST_PATH = ROOT / "data" / "state" / "shadow_tp_validation_latest.json"
 EVENTS_PATH = ROOT / "data" / "state" / "shadow_tp_events.jsonl"
-STATUS_PATH = ROOT / "data" / "state" / "shadow_tp_status.json"
+STATUS_PATH = ROOT / "data" / "state" / "shadow_tp_status.json"  # READ ONLY
 REPORT_PATH = ROOT / "reports" / "SHADOW_TP_VALIDATION_LATEST.md"
-CFG_PATH = ROOT / "config" / "exit_automation.json"
+CFG_PATH = ROOT / "config" / "exit_automation.json"  # READ ONLY
 
 EPISODE_GAP = timedelta(minutes=30)
+
+# Paths this reporter is allowed to write (report surfaces only).
+_ALLOWED_WRITE_ROOTS = (
+    LATEST_PATH,
+    REPORT_PATH,
+    WINDOW_PATH,  # archive metadata only; never production knobs
+)
 
 
 def _now() -> datetime:
@@ -48,6 +60,40 @@ def _parse_ts(raw: Any) -> Optional[datetime]:
         return None
 
 
+def _assert_report_only_write(path: Path) -> None:
+    """Hard guard: refuse any write outside report/validation artifact paths."""
+    resolved = path.resolve()
+    allowed = {p.resolve() for p in _ALLOWED_WRITE_ROOTS}
+    if resolved not in allowed:
+        raise RuntimeError(
+            f"REFUSED write to {resolved} — validation reporter is report-only "
+            f"(allowed: {[str(p) for p in _ALLOWED_WRITE_ROOTS]})"
+        )
+    # Never under config/
+    if "config" in resolved.parts and resolved.parts[resolved.parts.index("config")] == "config":
+        # path contains a config segment as a directory component under project
+        try:
+            cfg_root = (ROOT / "config").resolve()
+            if str(resolved).startswith(str(cfg_root)):
+                raise RuntimeError(f"REFUSED config write: {resolved}")
+        except ValueError:
+            pass
+    if resolved.name == "shadow_tp_status.json":
+        raise RuntimeError("REFUSED runtime SSOT write: shadow_tp_status.json")
+
+
+def _write_report_json(path: Path, payload: Dict[str, Any]) -> None:
+    _assert_report_only_write(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8")
+
+
+def _write_report_text(path: Path, text: str) -> None:
+    _assert_report_only_write(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
+
+
 def load_window() -> Dict[str, Any]:
     if WINDOW_PATH.exists():
         try:
@@ -57,35 +103,48 @@ def load_window() -> Dict[str, Any]:
     return {}
 
 
-def ensure_window(start_fresh: bool = False) -> Dict[str, Any]:
-    w = load_window()
-    if start_fresh or not w.get("started_at"):
-        now = _now()
-        w = {
-            "schema": "shadow_tp_validation_window_v1",
-            "started_at": now.isoformat(),
-            "target_days": 7,
-            "target_end_at": (now + timedelta(days=7)).isoformat(),
-            "fixed_tp_pct": 0.06,
-            "live_orders": False,
-            "note": "Brad 2026-08-21: run shadow 1 week to validate +6% bank opportunity. No auto promote.",
-            "brad_intent": "shadow_week_then_review",
-        }
-        WINDOW_PATH.parent.mkdir(parents=True, exist_ok=True)
-        WINDOW_PATH.write_text(json.dumps(w, indent=2) + "\n", encoding="utf-8")
-        # Align promo clock to this window (honest days)
-        st: Dict[str, Any] = {}
-        if STATUS_PATH.exists():
-            try:
-                st = json.loads(STATUS_PATH.read_text(encoding="utf-8"))
-            except Exception:
-                st = {}
-        st["first_shadow_at"] = w["started_at"]
-        st["would_fire_count_total"] = 0
-        st["validation_window_reset_at"] = w["started_at"]
-        st["validation_window_note"] = "Reset for 7d Brad validation; raw pre-window totals void"
-        STATUS_PATH.write_text(json.dumps(st, indent=2) + "\n", encoding="utf-8")
-    return w
+def load_policy_tp() -> Dict[str, Any]:
+    """Read-only policy SSOT."""
+    if not CFG_PATH.exists():
+        return {}
+    try:
+        cfg = json.loads(CFG_PATH.read_text(encoding="utf-8"))
+        return cfg.get("take_profit") or {}
+    except Exception:
+        return {}
+
+
+def live_tp_active(tp: Dict[str, Any]) -> bool:
+    mode = str(tp.get("mode") or "off").lower().strip()
+    if mode != "live":
+        return False
+    return bool(tp.get("live_market_exit")) or bool(tp.get("live_attach_on_buy"))
+
+
+def archive_window_if_needed(window: Dict[str, Any]) -> Dict[str, Any]:
+    """Mark completed validation window as archived. Does not touch runtime SSOT."""
+    if not window:
+        return window
+    if window.get("archived"):
+        return window
+    end = _parse_ts(window.get("target_end_at"))
+    if end and _now() >= end:
+        window = dict(window)
+        window["archived"] = True
+        window["archived_at"] = _now().isoformat()
+        window["archive_note"] = (
+            "Trial window ended. Live TP policy is config/exit_automation.json — "
+            "not this file. Reporter must not write shadow_tp_status or config."
+        )
+        # Preserve historical intent; do not rewrite live_orders from frozen trial
+        # into a claim about current product state.
+        window["historical_trial_live_orders"] = window.get("live_orders", False)
+        window["note_current"] = (
+            "ARCHIVED. Do not treat live_orders here as product mode. "
+            "Read exit_automation.json take_profit.mode + live_market_exit."
+        )
+        _write_report_json(WINDOW_PATH, window)
+    return window
 
 
 def load_events_since(start: datetime) -> List[Dict[str, Any]]:
@@ -113,7 +172,6 @@ def episodes_from_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     for e in events:
         pair = str(e.get("pair") or e.get("product_id") or "?")
         kind = str(e.get("kind") or e.get("signal_kind") or e.get("type") or "would_fire")
-        # nested signal
         if "signal" in e and isinstance(e["signal"], dict):
             pair = str(e["signal"].get("pair") or pair)
             kind = str(e["signal"].get("kind") or kind)
@@ -145,45 +203,24 @@ def episodes_from_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 
 def open_book_snapshot() -> Dict[str, Any]:
+    """READ-ONLY runtime snapshot from shadow_tp_status.json. Never runs TP cycle."""
+    if not STATUS_PATH.exists():
+        return {"error": "shadow_tp_status.json missing", "n_signals": 0, "signals": [], "marks": []}
     try:
-        from phase6.core.shadow_tp import run_shadow_tp_cycle
-
-        live = json.loads((ROOT / "data/state/phase6_live_state.json").read_text(encoding="utf-8"))
-        held_usd: Dict[str, float] = {}
-        prices: Dict[str, float] = {}
-        positions: Dict[str, Any] = {}
-        for p in live.get("trading_positions") or live.get("positions") or []:
-            if not isinstance(p, dict):
-                continue
-            pair = p.get("pair") or p.get("product_id")
-            usd = float(p.get("value_usd") or p.get("usd_value") or p.get("usd") or 0)
-            px = float(p.get("current_price") or p.get("price") or 0)
-            entry = float(p.get("entry_price") or p.get("avg_entry") or p.get("cost_basis") or 0)
-            qty = float(p.get("quantity") or p.get("size") or p.get("qty") or 0)
-            if pair and usd >= 25 and px > 0:
-                held_usd[pair] = usd
-                prices[pair] = px
-                positions[pair] = {"entry_price": entry, "quantity": qty, "usd": usd}
-        res = run_shadow_tp_cycle(held_usd, prices, positions=positions)
-        sigs = []
-        for s in res.get("signals") or []:
-            if hasattr(s, "__dict__"):
-                s = dict(s.__dict__)
-            sigs.append(s)
-        marks = []
-        for m in res.get("marks") or []:
-            if hasattr(m, "__dict__"):
-                m = dict(m.__dict__)
-            marks.append(m)
-        return {
-            "mode": res.get("mode"),
-            "n_signals": res.get("n_signals"),
-            "signals": sigs,
-            "marks": marks,
-            "promotion_hint": res.get("promotion_hint"),
-        }
+        st = json.loads(STATUS_PATH.read_text(encoding="utf-8"))
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": str(e), "n_signals": 0, "signals": [], "marks": []}
+    return {
+        "mode": st.get("mode"),
+        "live_market_exit": st.get("live_market_exit"),
+        "live_attach_on_buy": st.get("live_attach_on_buy"),
+        "n_signals": st.get("n_signals") or 0,
+        "signals": st.get("signals") or [],
+        "marks": st.get("marks") or [],
+        "promotion_hint": st.get("promotion_hint"),
+        "as_of": st.get("as_of"),
+        "source": "shadow_tp_status.json (read-only)",
+    }
 
 
 def build_status(window: Dict[str, Any]) -> Dict[str, Any]:
@@ -202,27 +239,34 @@ def build_status(window: Dict[str, Any]) -> Dict[str, Any]:
         by_pair[ep["pair"]] += 1
         by_kind[ep["kind"]] += 1
 
-    cfg = {}
-    if CFG_PATH.exists():
-        try:
-            cfg = json.loads(CFG_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            pass
-    tp = cfg.get("take_profit") or {}
+    tp = load_policy_tp()
     open_book = open_book_snapshot()
+    live_on = live_tp_active(tp)
+    window_done = elapsed_days >= target_days and len(episodes) >= 5
 
-    ready = elapsed_days >= target_days and len(episodes) >= 5
     return {
         "schema": "shadow_tp_validation_latest_v1",
         "as_of": now.isoformat(),
+        "authority": {
+            "policy_ssot": "config/exit_automation.json",
+            "runtime_ssot": "data/state/shadow_tp_status.json",
+            "this_file": "report only — not product mode",
+            "writes_runtime": False,
+            "writes_config": False,
+        },
         "window": window,
+        "window_archived": bool(window.get("archived")),
         "elapsed_days": round(elapsed_days, 2),
         "remaining_days": round(remaining, 2),
         "target_days": target_days,
+        # Policy truth (never hardcode OFF)
         "mode": tp.get("mode"),
         "fixed_tp_pct": tp.get("fixed_tp_pct"),
         "trail": tp.get("trail"),
-        "live_orders": False,
+        "live_market_exit": bool(tp.get("live_market_exit")),
+        "live_attach_on_buy": bool(tp.get("live_attach_on_buy")),
+        "live_tp_active": live_on,
+        "brad_promoted_at": tp.get("brad_promoted_at"),
         "events_raw_in_window": len(events),
         "episodes_unique": len(episodes),
         "episodes_by_pair": dict(by_pair),
@@ -232,86 +276,119 @@ def build_status(window: Dict[str, Any]) -> Dict[str, Any]:
         "gates": {
             "days_met": elapsed_days >= target_days,
             "episodes_met": len(episodes) >= 5,
-            "path_study_design_shadow": True,
+            "window_complete": window_done,
             "auto_promote": False,
-            "ready_for_brad_review": ready,
+            # Historical trial gate only — NOT a live flip request when already live
+            "ready_for_brad_review": False if live_on else window_done,
+            "review_note": (
+                "Live TP already ON (policy SSOT). Historical window is closed — no review needed."
+                if live_on
+                else "Trial window metrics only; flip requires Brad OK + config write by operator."
+            ),
         },
-        "fingerprint": f"{len(episodes)}|{round(elapsed_days,1)}|{open_book.get('n_signals')}",
+        "fingerprint": f"{len(episodes)}|{round(elapsed_days,1)}|{open_book.get('n_signals')}|live={int(live_on)}",
     }
 
 
 def to_md(st: Dict[str, Any]) -> str:
     g = st.get("gates") or {}
     ob = st.get("open_book") or {}
+    live = st.get("live_tp_active")
     lines = [
-        f"# Shadow TP validation — {str(st.get('as_of'))[:10]}",
+        f"# Shadow TP validation — {str(st.get('as_of'))[:10]} (ARCHIVED reporter)",
         "",
-        f"**Day {st.get('elapsed_days')} / {st.get('target_days')}** · remaining ~{st.get('remaining_days')}d",
-        f"- mode=`{st.get('mode')}` · fixed_tp={st.get('fixed_tp_pct')} · live orders: **false**",
+        "**Authority:** policy = `config/exit_automation.json` · runtime = `shadow_tp_status.json` · this file = metrics only.",
+        "",
+        f"**Day {st.get('elapsed_days')} / {st.get('target_days')}** · remaining ~{st.get('remaining_days')}d · window_archived={st.get('window_archived')}",
+        f"- policy mode=`{st.get('mode')}` · live_market_exit={st.get('live_market_exit')} · **live_tp_active={live}**",
         f"- Unique episodes (≥30m): **{st.get('episodes_unique')}** (raw ticks {st.get('events_raw_in_window')})",
         f"- By pair: {st.get('episodes_by_pair')}",
         f"- By kind: {st.get('episodes_by_kind')}",
-        f"- Open would-fire now: **{ob.get('n_signals')}** · { [ (s.get('pair'), s.get('kind'), round(float(s.get('r') or 0)*100,1)) for s in (ob.get('signals') or []) ] }",
-        f"- Ready for Brad review: **{g.get('ready_for_brad_review')}** (days={g.get('days_met')}, episodes≥5={g.get('episodes_met')})",
+        f"- Open would-fire now: **{ob.get('n_signals')}** · source={ob.get('source')}",
+        f"- Review gate: **{g.get('ready_for_brad_review')}** — {g.get('review_note')}",
         "",
         "## Rule",
-        "No live TP. Review only after 7d + human OK.",
+        "Reporter never writes config or runtime SSOT. Daily cron paused post-promote.",
         "",
     ]
     return "\n".join(lines)
 
 
 def telegram_body(st: Dict[str, Any]) -> str:
+    """Forensic body only — does not claim authority on live mode incorrectly."""
     g = st.get("gates") or {}
     ob = st.get("open_book") or {}
-    sigs = ob.get("signals") or []
-    sig_bits = []
-    for s in sigs[:6]:
-        try:
-            r = float(s.get("r") or 0) * 100
-        except Exception:
-            r = 0
-        sig_bits.append(f"{s.get('pair')} {s.get('kind')} +{r:.1f}%")
-    ready = "YES — review now" if g.get("ready_for_brad_review") else "no (still collecting)"
+    live = st.get("live_tp_active")
+    live_s = "ON" if live else "OFF"
+    if st.get("window_archived") or live:
+        status = f"Live TP: {live_s} (policy SSOT) · trial window ARCHIVED — no action"
+    else:
+        ready = "YES — review" if g.get("ready_for_brad_review") else "collecting"
+        status = f"Live TP: {live_s} · trial: {ready}"
     return (
-        f"SHADOW TP validation day {st.get('elapsed_days')}/{st.get('target_days')}\n"
+        f"SHADOW TP metrics (report-only) day {st.get('elapsed_days')}/{st.get('target_days')}\n"
         f"Episodes (unique): {st.get('episodes_unique')} · open would-fire: {ob.get('n_signals')}\n"
         f"Pairs: {st.get('episodes_by_pair') or '—'}\n"
-        f"Now: {', '.join(sig_bits) if sig_bits else 'none'}\n"
-        f"Live TP: OFF · Ready for review: {ready}"
+        f"{status}"
     )
 
 
 def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--start-window", action="store_true", help="Reset/start 7d validation window")
-    ap.add_argument("--notify", action="store_true", help="Always print Telegram body to stdout")
+    ap = argparse.ArgumentParser(
+        description="Historical Shadow TP trial metrics. Report-only; never writes runtime/config."
+    )
+    ap.add_argument(
+        "--start-window",
+        action="store_true",
+        help="DISABLED post-promote. Refuses to reset or write runtime.",
+    )
+    ap.add_argument("--notify", action="store_true", help="Print Telegram body to stdout")
     ap.add_argument(
         "--quiet-if-same",
         action="store_true",
-        help="Print nothing if fingerprint unchanged (for silent cron)",
+        help="Print nothing if fingerprint unchanged",
     )
+    ap.add_argument(
+        "--write-reports",
+        action="store_true",
+        default=True,
+        help="Write validation_latest.json + MD (default on)",
+    )
+    ap.add_argument("--no-write-reports", action="store_true", help="Stdout only")
     args = ap.parse_args()
 
-    window = ensure_window(start_fresh=args.start_window)
-    st = build_status(window)
-    LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    prev_fp = None
-    if LATEST_PATH.exists():
-        try:
-            prev_fp = json.loads(LATEST_PATH.read_text(encoding="utf-8")).get("fingerprint")
-        except Exception:
-            pass
-    LATEST_PATH.write_text(json.dumps(st, indent=2, default=str) + "\n", encoding="utf-8")
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.write_text(to_md(st), encoding="utf-8")
+    if args.start_window:
+        print(
+            "REFUSED: --start-window disabled. Validation window is historical. "
+            "Do not reset first_shadow_at / shadow_tp_status from this reporter.",
+            file=sys.stderr,
+        )
+        return 2
 
-    changed = prev_fp != st.get("fingerprint")
-    if args.quiet_if_same and not changed and not st.get("gates", {}).get("ready_for_brad_review"):
+    window = load_window()
+    if not window.get("started_at"):
+        print("No validation window on disk — nothing to report (trial never started).", file=sys.stderr)
         return 0
-    if args.notify or changed or st.get("gates", {}).get("ready_for_brad_review"):
-        print(telegram_body(st))
-    elif not args.quiet_if_same:
+
+    window = archive_window_if_needed(window)
+    st = build_status(window)
+
+    if not args.no_write_reports:
+        prev_fp = None
+        if LATEST_PATH.exists():
+            try:
+                prev_fp = json.loads(LATEST_PATH.read_text(encoding="utf-8")).get("fingerprint")
+            except Exception:
+                pass
+        _write_report_json(LATEST_PATH, st)
+        _write_report_text(REPORT_PATH, to_md(st))
+        changed = prev_fp != st.get("fingerprint")
+    else:
+        changed = True
+
+    if args.quiet_if_same and not changed:
+        return 0
+    if args.notify or changed or not args.quiet_if_same:
         print(telegram_body(st))
     return 0
 

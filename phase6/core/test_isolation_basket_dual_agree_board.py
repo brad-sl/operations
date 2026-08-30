@@ -26,6 +26,7 @@ def test_dual_agree_and_board(tmp_path: Path) -> None:
     m.DUAL_AGREE_LATEST = tmp_path / "dual_agree_latest.json"
     m.BOARD_MD = tmp_path / "BOARD.md"
     m.BOARD_JSON = tmp_path / "board.json"
+    m.BRAD_DECISION_JSON = tmp_path / "brad_decision.json"  # absent → no preferred arm
     m.ARMS_DIR.mkdir(parents=True)
 
     day = datetime(2026, 8, 20, 12, 0, tzinfo=timezone.utc)
@@ -127,6 +128,24 @@ def test_dual_agree_and_board(tmp_path: Path) -> None:
     b2 = m.build_confidence_board(cf_hc)
     assert b2["any_arm_high_confidence"] is True
     assert b2["status"] == "high_confidence_shadow"
+
+    # preferred arm from Brad decision (still not live)
+    m.BRAD_DECISION_JSON.write_text(
+        json.dumps(
+            {
+                "preferred_arm": "risk_adj_mom",
+                "live_membership_swaps": False,
+                "live_apply": False,
+                "collection_extension": {"revisit_date_pt": "2026-09-28"},
+            }
+        )
+    )
+    b3 = m.build_confidence_board(cf_hc)
+    assert b3["any_arm_high_confidence"] is True
+    assert b3["status"] == "preferred_arm_shadow_collecting"
+    assert b3["brad_decision"]["preferred_arm"] == "risk_adj_mom"
+    assert "Brad preferred paper arm" in b3["plain_english"]
+    assert "risk_adj_mom" in m.BOARD_MD.read_text()
     print("  dual_agree + confidence board OK")
 
 

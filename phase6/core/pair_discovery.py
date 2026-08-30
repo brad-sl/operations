@@ -601,8 +601,10 @@ def run_discovery(cfg: Optional[DiscoveryConfig] = None, write: bool = True) -> 
         prequal_n=len(prequal),
         quality_n=sum(1 for q in quality if q.pass_gate),
         contenders=[asdict(c) for c in contenders],
-        prequal_top=[asdict(p) for p in prequal[:15]],
-        quality_ranked=[asdict(q) for q in quality[:15]],
+        # Full prequal window + full quality scored set (needed for retro why-not).
+        # Previously top-15 only — that hid most reject reasons.
+        prequal_top=[asdict(p) for p in prequal[: cfg.prequal_top_n]],
+        quality_ranked=[asdict(q) for q in quality],
         active_basket=list(active),
         sentiment_calls=sentiment_calls,
         note=(
@@ -617,17 +619,76 @@ def run_discovery(cfg: Optional[DiscoveryConfig] = None, write: bool = True) -> 
     if write:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         LATEST_JSON.write_text(json.dumps(asdict(report), indent=2) + "\n")
+        # Compact stage ledger for retro "why not" (names + scores + reject reasons).
+        # Keep bounded so jsonl stays greppable — not full universe.
+        quality_fail = [
+            {
+                "product_id": q.product_id,
+                "quality_score": q.quality_score,
+                "pass_gate": q.pass_gate,
+                "reason": q.reason,
+                "mom_3d": round(q.mom_3d, 6),
+                "vol_accel": round(q.vol_accel, 4),
+                "vol_expand": round(q.vol_expand, 4),
+                "prequal_energy": q.prequal_energy,
+            }
+            for q in quality
+            if not q.pass_gate
+        ][:25]
+        quality_pass = [
+            {
+                "product_id": q.product_id,
+                "quality_score": q.quality_score,
+                "reason": q.reason,
+                "mom_3d": round(q.mom_3d, 6),
+                "vol_accel": round(q.vol_accel, 4),
+                "prequal_energy": q.prequal_energy,
+            }
+            for q in quality
+            if q.pass_gate
+        ][:20]
+        prequal_slim = [
+            {
+                "product_id": p.product_id,
+                "energy": p.energy,
+                "rank_energy": p.rank_energy,
+                "ret_24h": round(p.ret_24h, 6),
+                "volume_quote_usd": round(p.volume_quote_usd, 2),
+            }
+            for p in prequal[: cfg.prequal_top_n]
+        ]
         with open(JSONL, "a") as f:
             f.write(
                 json.dumps(
                     {
                         "ts": report.timestamp,
+                        "schema": "pair_discovery_run_v2",
                         "universe_n": report.universe_n,
                         "prequal_n": report.prequal_n,
                         "quality_n": report.quality_n,
                         "contenders": [
                             c["product_id"] for c in report.contenders
                         ],
+                        "contenders_detail": [
+                            {
+                                "product_id": c["product_id"],
+                                "quality_score": c.get("quality_score"),
+                                "prequal_energy": c.get("prequal_energy"),
+                                "promote_eligible": c.get("promote_eligible"),
+                                "ret_24h": c.get("ret_24h"),
+                                "mom_3d": c.get("mom_3d"),
+                                "reasons": c.get("reasons") or [],
+                            }
+                            for c in report.contenders
+                        ],
+                        "prequal_top": prequal_slim,
+                        "quality_pass": quality_pass,
+                        "quality_fail": quality_fail,
+                        "active_basket": list(active),
+                        "cfg_min_quote_volume_24h_usd": cfg.min_quote_volume_24h_usd,
+                        "cfg_prequal_top_n": cfg.prequal_top_n,
+                        "cfg_min_quality_score": cfg.min_quality_score,
+                        "cfg_contender_top_n": cfg.contender_top_n,
                         "sentiment_calls": report.sentiment_calls,
                     }
                 )

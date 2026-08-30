@@ -281,7 +281,7 @@ Change trail arm/trail %; auto-promote; disable live TP.
 ## P6-VOL-RISK-SCALAR-SHADOW-20260822 — ACTIVE (Tier 1 shadow)
 
 **Type:** risk / sizing research (not Type:test auto_pickup)  
-**Status:** SHADOW ACTIVE — shipped 2026-08-22  
+**Status:** SHADOW ACTIVE — keep collecting (Brad 2026-08-29: not enough data for promote)  
 **auto_pickup:** false  
 **Priority:** P1 platform risk layer (pairs with add-risk + velocity)  
 **Live money / live size multiply:** **NO**
@@ -299,7 +299,8 @@ Vocabulary Brad was aiming at earlier this week: velocity/volume → **risk tole
 - State: `data/state/vol_risk_scalar_shadow_latest.json`, `vol_risk_scalar_shadow_history.jsonl`
 - Report: `reports/VOL_RISK_SCALAR_SHADOW_LATEST.md`
 - First print (2026-08-22): **s≈0.59** (s_vol≈0.79 high · s_vel≈0.74) — would cut; live unchanged
-- Cron: `phase6-vol-risk-scalar-shadow` 2×/day near velocity job
+- Cron: `phase6-vol-risk-scalar-shadow` 2×/day — **resumed 2026-08-29** after pause (`29cf4156e22f`)
+- Brad keep-alive: `data/state/vol_risk_scalar_brad_decision.json` (KEEP_COLLECTING; no live bind)
 
 ### Gates before any live multiply (Brad go)
 1. Multi-week history: cuts ahead of vol spikes  
@@ -311,7 +312,7 @@ Vocabulary Brad was aiming at earlier this week: velocity/volume → **risk tole
 Live GARCH library; strategy switching mean-rev/momentum off vol; trader-facing hard $ from scalar; auto de-lever open bags every bar.
 
 ### Next
-1. Collect history ≥2 weeks  
+1. Collect history (velocity cron paused — scalar may use last velocity snapshot for s_vel)  
 2. Tier 1b: shadow stop-width ∝ σ̂ vs live SL (WR)  
 3. Brad review → optional live multiply on **new buys/adds only**
 
@@ -478,16 +479,17 @@ Multi-pair breadth + cash-idle after rotation is a catchable process gap; small 
   - **2026-08-22 refresh:** HC=**NO**; leaders **risk_adj_mom** (sleeve ~+$427, 3d +7.2%) · **anti_pump** (~+$340, 3d +8.8%) · **dual_agree** (~+$146, 3d +4.7%)
   - **dual_agree** arm (Brad): same-day `anti_pump`∩`risk_adj_mom` remove→add → `data/state/basket_select_arms/dual_agree/proposals.jsonl` (ledger N=8 backfill); still shadow-only
   - Decision point unchanged: 7d N≥12 + excess>0 + hit≥45% + sleeve>$0; baseline still **modify_selector**
+  - **2026-08-29 Brad GO:** paper-primary arm = **`risk_adj_mom`** (HC: 7d N=20, +20.3%, hit 80%, sleeve +$441). `dual_agree` continues (N7 short). **No live membership swaps.** 30d revisit **2026-09-28** (`basket-swap-30d-revisit` cron `38987b457e6c`). Decision: `data/state/basket_swap_brad_decision.json` · write-up `reports/BASKET_SWAP_BRAD_GO_2026-08-29.md`. Board status `preferred_arm_shadow_collecting`.
 - **Related:** squeeze/regime track `P6-RESEARCH-SQUEEZE-REGIME-BREAKOUT-20260819` (coil→confirm + M2 tags)
 
 ### Next
 1. Paper would-fire logger for B4 (+ B1b secondary), orders=0  
-2. Keep shadow swap CF until an arm hits HC board (or modify/drop at N7≥12 red)  
+2. Keep shadow swap CF through **2026-09-28** revisit (preferred=`risk_adj_mom`; dual_agree collecting)  
 3. Path B stays separate from Path A cash re-risk  
 4. Squeeze S3/M2 paper companion (see squeeze MASTER card)
 
 ### Decision point (shadow-swap) — plain
-**Not reached.** No arm reliably picks winners yet. Continue collecting. Live promote blocked. Optional stats tests only after N7≥12 and sign-stable.
+**HC hit for risk_adj_mom + anti_pump.** Brad preferred paper arm = **risk_adj_mom**; dual_agree keeps collecting to 2026-09-28. **Live promote still blocked** until explicit promote of a specific swap (L1≠fills).
 
 ### Membership boundary (2026-08-19)
 **Optimize bag, not expand. Heightened potential required; deploy-ready NOT required.**  
@@ -1355,16 +1357,23 @@ Race fix (sibling DONE). Risk-knob changes. Telegram spam.
 **Refresh cron:** `phase6-basket-pick-metrics-refresh` daily (local)  
 **Orders:** none placed by promote — eligibility only  
 
-## P6-VOLUME-VELOCITY-SHADOW-20260821 — SHADOW ACTIVE
+## P6-VOLUME-VELOCITY-SHADOW-20260821 — NO-GO (BUST)
 
 **Type:** research / discovery funnel arm  
-**Status:** SHADOW ACTIVE (2026-08-21)  
-**Priority:** P2 (scout layer — not live membership)  
+**Status:** **NO-GO / BUST as seat-or-buy** — Brad 2026-08-29  
+**Priority:** closed research (scout-only rule confirmed)  
 **auto_pickup:** false  
-**blocked_on:** none for shadow; live promote → Brad OK + matured N  
+**blocked_on:** n/a — do not promote  
 
 ### Intent (Brad)
 RVOL / volume velocity identifies **early movers** for the **evaluation filter** as basket-swap *candidates* — not seats. Also track paper performance **even when never selected**. Hypothesis: **LQHV** (low-qualified high-velocity) may imply a different filter set than the legacy discovery funnel.
+
+### Brad decision 2026-08-29
+- Verdict: **bust** as seat/buy path  
+- Ever promote-eligible n=10 mean mark R **−5.8%** hit 30%; all open n=40 mean R **−4.4%** hit 25%  
+- Cron **paused** (`BUST phase6-volume-velocity-shadow` / `da86b4b8e222`)  
+- Standing rule confirmed: RVOL/turnover = scout→evaluate only (not seat/buy)  
+- Artifacts: `data/state/volume_velocity_brad_decision.json` · `reports/VOLUME_VELOCITY_NOGO_2026-08-29.md`
 
 ### Funnel role
 ```
@@ -1430,6 +1439,14 @@ Fixed-list basket rotation misses **emerging high-energy** upside. Spending sent
   - Flow: discover (0 sentiment) → pump brake → RSI warm top-5 merge → pool cycle shadow (max 1 swap, sticky BTC/ETH)
   - Telegram **only** on swap proposal or failure (quiet otherwise)
   - First live dry-run proposal: **ADA-USD → ICP-USD** (config **not** applied)
+- **Discovery retro board (2026-08-29)** — holy-grail instrumentation, not a buy path
+  - Core: `phase6/core/discovery_retro_board.py`
+  - CLI: `scripts/phase6/run_discovery_retro_board.py`
+  - Isolation: `scripts/phase6/test_isolation_discovery_retro_board.py` **PASS**
+  - Surfaces: `reports/DISCOVERY_RETRO_BOARD_LATEST.md` · `data/state/discovery_retro_board_latest.json`
+  - Cron: `phase6-discovery-retro-board-daily` @ **23:00 PT** (`run_discovery_retro_board.sh`, no_agent, local)
+  - First snapshot: true week-ahead explode hits **0**; T-7 contender forward mean **~−7%**; HNT-class = COINCIDENT
+  - Next research (no live bind): richer first_seen feature log; compression/vol-dry-up arms; beat liquid base rate before any seat path
 - Optional quality: spread/book, segment caps, meme denylist (PUMP ticker hygiene)
 - Brad OK required before any `--apply-config` basket mutation
 
@@ -11567,3 +11584,29 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260830** (opened 2026-08-30T00:00:25.685611)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260830`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+**CASH-20260830-001** — Cash policy suggestion: detector grid (score 5.1452)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-08-30T11:00:41.452374+00:00 | score=5.1452
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+

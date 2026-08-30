@@ -1,8 +1,19 @@
 # Exit automation — big picture (SSOT)
 
-**Last verified:** 2026-08-26  
+**Last verified:** 2026-08-29  
 **Goal:** Automated platform. End-users change **few settings**. The bot runs.  
 **Trust SOP:** `docs/sop/TRUST_FIRST_TRADING_ENGINE.md`
+
+### Status SSOT (do not dual-write)
+
+| Role | Path | Writer |
+|------|------|--------|
+| Policy (mode / trail / live flags) | `config/exit_automation.json` | Human / explicit promote only |
+| Runtime book (peaks, signals) | `data/state/shadow_tp_status.json` | `phase6/core/shadow_tp.py` runner only (`persist=True`) |
+| Live exit log | `data/state/shadow_tp_live_exits.jsonl` | executor |
+| Surfaces | Dashboard, briefs, `reports/*`, validation metrics | **Read only** — never write config or runtime SSOT |
+
+Historical trial artifacts (`shadow_tp_validation_*`) are **archived** (cron paused). They are not product mode.
 
 ---
 

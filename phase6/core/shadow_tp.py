@@ -778,7 +778,14 @@ def run_shadow_tp_cycle(
     prior_state: Optional[Dict[str, Any]] = None,
     exchange: Any = None,
     dry_run_live: bool = False,
+    persist: bool = True,
 ) -> Dict[str, Any]:
+    """Evaluate TP/trail signals.
+
+    persist=True (default): runner path may write data/state/shadow_tp_status.json.
+    persist=False: pure evaluation for reports/tests — NEVER writes runtime SSOT
+    or config. Callers that are not the live runner must pass persist=False.
+    """
     cfg = cfg or load_exit_automation()
     tp = _tp_cfg(cfg)
     mode = str(tp.get("mode") or "off").lower().strip()
@@ -806,10 +813,12 @@ def run_shadow_tp_cycle(
         "live_exits": [],
         "live_market_exit": bool(tp.get("live_market_exit")),
         "live_attach_on_buy": bool(tp.get("live_attach_on_buy")),
+        "persist": bool(persist),
     }
 
     if mode == "off":
-        _write_state(result)
+        if persist:
+            _write_state(result)
         return result
 
     if mode == "live" and not bool(tp.get("live_attach_on_buy")) and not bool(tp.get("live_market_exit")):
@@ -897,14 +906,16 @@ def run_shadow_tp_cycle(
     if result.get("first_shadow_at") is None and mode in ("shadow", "live"):
         result["first_shadow_at"] = _iso()
     if signals:
-        result["would_fire_count_total"] = int(result["would_fire_count_total"]) + len(signals)
-        append_events(signals, mode=mode)
+        # Counter + jsonl are runtime side effects — skip on report-only eval.
+        if persist:
+            result["would_fire_count_total"] = int(result["would_fire_count_total"]) + len(signals)
+            append_events(signals, mode=mode)
 
     # Live market exits: trail primary, fixed fallback
     if mode == "live" and bool(tp.get("live_market_exit")) and signals:
         chosen = select_live_exit_signals(signals)
         result["live_exit_candidates"] = [asdict(s) for s in chosen]
-        if chosen and exchange is not None:
+        if chosen and exchange is not None and persist:
             try:
                 result["live_exits"] = execute_live_tp_exits(
                     exchange,
@@ -996,19 +1007,22 @@ def run_shadow_tp_cycle(
                 )
             _telegram("\n".join(lines))
 
-    _write_state(result)
+    if persist:
+        _write_state(result)
     if signals:
         logger.info(
-            "[SHADOW-TP] mode=%s n=%s pairs=%s live_exits=%s",
+            "[SHADOW-TP] mode=%s n=%s pairs=%s live_exits=%s persist=%s",
             mode,
             len(signals),
             [s.pair for s in signals],
             len(result.get("live_exits") or []),
+            persist,
         )
     return result
 
 
 def _write_state(result: Dict[str, Any]) -> None:
+    """Runtime SSOT writer — only the live runner cycle may call this."""
     try:
         STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
         STATE_PATH.write_text(json.dumps(result, indent=2, default=str), encoding="utf-8")

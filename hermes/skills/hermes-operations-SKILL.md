@@ -148,11 +148,22 @@ Example (from session): Hourly RobustSmokeTest.py (system crontab `0 * * * *`) f
 
 **2026-08-13 — Linux crontab cutover (Phase 6):** User crontab is **comment-only**. SSOT `docs/HERMES_CRON_SSOT.md`. Do **not** add `refresh_sentiment`, `fetch_x`, Apify, or runner monitors back to `crontab -e`. New jobs → Hermes `cronjob` on the **default** gateway. `no_agent` scripts must `export PATH=$HOME/.local/bin:$PATH`. `hermes send` = stdin + `-t telegram` only. Dropped: `phase6_rebalance_monitor.sh` (obsolete flags).
 
+### Report crons must not be control planes (2026-08-29)
+
+Brad: **limited sources of truth**; dashboard/cron **surfaces** only.
+
+1. **`no_agent` reporters never write production settings** (`config/*`) or runner runtime SSOT owned by live loops.
+2. After a feature **promotes live**, **pause/archive** its pre-promote validation cron — do not leave “ready for review / Live OFF” bodies that contradict config.
+3. **Remove** completed one-shots (installers, one-off dumps, spent reminds) with `hermes cron remove <id>`; pause dead-profile jobs in place.
+4. Phase 6 keep/archive classes: repo `docs/HERMES_CRON_SSOT.md` + `reports/CRON_ARCHIVE_AND_SSOT_2026-08-29.md`. Exit dual-writer detail: skill `phase6-exit-automation` → `references/status-ssot-and-validation-archive-20260829.md`.
+5. If a report must evaluate live logic, pass **`persist=False`** (or read status JSON only) — never default-persist from cron.
+
 **Verification pattern after any cron change:**
 1. `crontab -l` — must show **no executable Phase 6 lines**
 2. Hermes cron list (via tool or terminal)
 3. `ps aux | grep -E 'phase|runner|smoke'` (or equivalent)
 4. Confirm no unintended overlap with trading paths.
+5. For reporters: confirm they cannot write `config/` or named runtime SSOT paths.
 
 See `references/cron-hygiene-redundancy-avoidance.md` for the full session transcript (smoke test removal), removal commands, example of updated script docstring, and the standing checklist.
 

@@ -39,6 +39,8 @@ Setting proper expectations up front prevents false confidence and future escala
 
 4. **Regime bull ≠ basket all BUY** — macro open ≠ pair trigger; copy/UI must not fuse them.
 
+4b. **House / size / reaction (Brad 2026-08-30)** — client copy must not imply we remove exchange fees or “outsmart whales.” Prefer: fees always exist; extreme tape → stand down; gates visible. SSOT discussion: `docs/discussions/MACRO_HOUSE_SIZE_REACTION_ONGOING.md`. FAQ: External § *Who gets paid when you trade*.
+
 5. **Soft internal budgets ≠ hard trader promises (Brad 2026-08-22)** —  
    `rebalance_cap_usd` is an internal soft budget on *some* deploy paths. ARCH-2 recovery / rotation can spend far more.  
    **Do not** show `cap $N` (or “up to $N this cycle”) on the Regime tile or trader copy.  

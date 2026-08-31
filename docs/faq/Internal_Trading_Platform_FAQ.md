@@ -136,4 +136,37 @@ Use External FAQ / education copy for client-facing explanations.
 
 ---
 
-*Last updated: 2026-08-16 — liquidation rotation redeploy policy + study; sentiment split*
+## Macro structure — house, size, reaction (staff)
+
+### Who gets paid on Coinbase flow?
+
+| Layer | Gets paid how |
+|-------|----------------|
+| **Exchange** | Maker/taker fees on notional — **PnL-agnostic** |
+| **Size / forced flow** | Moves thin books; retail reaction is often inventory sink |
+| **Small reactionary account** | Pays fees + spread + late prices |
+
+Client-safe copy: `docs/faq/External_Client_FAQ.md` § *Who gets paid when you trade*.  
+Living discussion: `docs/discussions/MACRO_HOUSE_SIZE_REACTION_ONGOING.md`.
+
+### Fee drag audit (operator book)
+
+Re-run: `python scripts/phase6/audit_fee_drag_and_entry_labels.py` then `python scripts/phase6/_finalize_fee_entry_audit.py`.
+
+Latest brief: `reports/FEE_DRAG_AND_ENTRY_LABEL_AUDIT.md`.
+
+**2026-08-30 snapshot (live portfolio ~$2.3k NAV):** ~**$139 fees / 30d** (~**6% of NAV**), ~**0.83% of notional**; verified fills were **MARKET + STOP_LIMIT only** (no LIMIT/maker path in that set). Median fee% ~**0.8%** → taker-like, not maker schedule.
+
+### Process vs heat entry labels
+
+Same audit labels 90d buys: heat rules are strict (few pure heat-chases). **process_in_elevated_tape** and **heat_reaction** showed worse crude exit PnL than plain process/ambiguous in the first cut — treat as directional (lot match imperfect). JSON: `reports/ENTRY_PROCESS_VS_HEAT_LABELS_90D.json`.
+
+### Product rules
+
+- Do **not** brand “outsmart whales.”  
+- Scout heat ≠ recommend (discovery TG local-only).  
+- Gate visibility: `docs/PRODUCT_EXPECTATION_HONESTY.md`.
+
+---
+
+*Last updated: 2026-08-30 — macro house/size FAQ + fee/entry audit pointers*

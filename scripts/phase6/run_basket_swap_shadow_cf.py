@@ -10,7 +10,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from phase6.core.basket_swap_shadow_cf import plain_english_summary, run_full  # noqa: E402
+from phase6.core.basket_swap_shadow_cf import (  # noqa: E402
+    plain_english_summary,
+    run_full,
+    serious_consider_message,
+)
 
 
 def main() -> int:
@@ -24,7 +28,17 @@ def main() -> int:
     p.add_argument(
         "--quiet-ok",
         action="store_true",
-        help="If decide=keep_shadow_collecting and no new proposals, print nothing (cron silent)",
+        help=(
+            "Cron mode: print nothing unless a *seriously consider* gate fires "
+            "(dual_agree and/or preferred arm + membership OK). "
+            "Baseline scout heat and routine arm dumps stay silent. "
+            "Full board always on disk."
+        ),
+    )
+    p.add_argument(
+        "--full-summary",
+        action="store_true",
+        help="Force full plain-English summary to stdout (manual/debug).",
     )
     args = p.parse_args()
 
@@ -38,19 +52,19 @@ def main() -> int:
             "by_arm_counts": cf.get("by_arm_counts"),
             "aggregate_by_arm": cf.get("aggregate_by_arm"),
             "new_proposals": (bundle.get("arms_prop") or {}).get("written") or [],
+            "serious_consider": serious_consider_message(bundle) is not None,
         }
         print(json.dumps(out, indent=2, default=str))
         return 0
 
-    text = plain_english_summary(bundle)
-    decide = (bundle.get("cf") or {}).get("decide") or {}
-    written = (bundle.get("arms_prop") or {}).get("written") or []
-    status = decide.get("status") or ""
-    if args.quiet_ok and status == "keep_shadow_collecting" and not written:
-        # still always write reports on disk; silent stdout for Hermes no_agent
+    if args.full_summary or not args.quiet_ok:
+        print(plain_english_summary(bundle))
         return 0
-    # Always surface modify_selector or new proposals or weekly-ish interest
-    print(text)
+
+    # quiet-ok: only Telegram-worthy serious-consider body
+    msg = serious_consider_message(bundle)
+    if msg:
+        print(msg)
     return 0
 
 

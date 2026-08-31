@@ -1,3 +1,48 @@
+## P6-RETURN-ENTROPY-SHADOW-20260830 — DONE (shadow + offline dig)
+
+**Type:** regime / soft-filter research (shadow)  
+**Date:** 2026-08-30  
+**Role:** crypto-engineer  
+**Status:** **DONE** — wired shadow-only; **no live hooks / no promote**  
+**Priority:** P2 (research)  
+**auto_pickup:** false  
+
+### Plain English
+Shannon-style **normalized rolling return entropy** as a concentration feature (structure vs noise histogram shape) — evaluate-only, same honesty bar as other offline digs. Not a direction oracle.
+
+### Shipped
+- `phase6/core/return_entropy_shadow.py` — H_norm math, labels, basket board (fixed return bins default)
+- `scripts/phase6/run_return_entropy_shadow.py` — CLI board
+- `scripts/phase6/test_isolation_return_entropy_shadow.py` — PASS
+- `phase6/research/return_entropy_filter_shadow.py` — pre-registered arms on real long daily OHLCV
+- Success metrics: `reports/RETURN_ENTROPY_SUCCESS_METRICS.md`
+- Artifacts: `reports/RETURN_ENTROPY_SHADOW_LATEST.md`, `RETURN_ENTROPY_FILTER_SHADOW_LATEST.md`
+
+### Pre-registered knobs
+- window 48h live / 30d dig; bins=10; structure&lt;0.35; noise&gt;0.70
+- fixed edges: hourly ±2.5%, daily ±8% (adaptive ±kσ abandoned — structure never fired)
+
+### First dig (honest)
+Arms: BH, LOW_H_ONLY, AVOID_HIGH_H, INVERSE_HIGH_H on BTC/ETH/SOL/LINK/AVAX long daily.  
+**No promote.** Thesis arms lose to BH on mean ΔBH; inverse control not worse in a way that supports “low H = trade.” Treat as `ATTENTION_ONLY` / unstable filter story until a different definition or Brad reopens.
+
+### Success metrics (gate)
+Mean abs return, ΔBH, max DD, turnover/N_rt, costs, inverse control, walk-forward — **not WR**. Promote only after long-tape fixed-param WF + Brad go.
+
+### Not done / no-go
+- No `evaluate_buy_entry` / runner / knobs wiring
+- No auto-promote / no cron unless asked
+- No claim Shannon/Two Sigma edge
+
+### Verify
+```
+PYTHONPATH=. python3 scripts/phase6/test_isolation_return_entropy_shadow.py
+PYTHONPATH=. python3 scripts/phase6/run_return_entropy_shadow.py --pair BTC-USD
+PYTHONPATH=. python3 phase6/research/return_entropy_filter_shadow.py
+```
+
+---
+
 ## P6-STRUCTURE-BOS-EXIT-SHADOW-20260826 — DONE (shadow ship)
 
 **Type:** exit / market structure (shadow)  
@@ -11610,3 +11655,23 @@ Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to co
 Source sweep: 2026-08-30T11:00:41.452374+00:00 | score=5.1452
 Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
 
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260831** (opened 2026-08-31T00:00:58.944195)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260831`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

@@ -1539,6 +1539,115 @@ def plain_english_summary(bundle: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def serious_consider_message(bundle: Dict[str, Any]) -> Optional[str]:
+    """
+    Telegram-worthy body only when stronger-than-baseline factors fire.
+
+    Brad 2026-08-30: discovery baseline Δ pings confuse; drop those.
+    Only surface when dual_agree hits and/or preferred arm nominates a
+    membership-gate-ok swap. Never implies live promote (live swaps stay OFF
+    until explicit Brad go on a specific pair).
+    """
+    brad: Dict[str, Any] = {}
+    if BRAD_DECISION_JSON.exists():
+        try:
+            brad = json.loads(BRAD_DECISION_JSON.read_text()) or {}
+        except Exception:
+            brad = {}
+    live_on = bool(brad.get("live_membership_swaps") or brad.get("live_apply"))
+    preferred = (brad.get("preferred_arm") or "risk_adj_mom").strip() or "risk_adj_mom"
+
+    dual = bundle.get("dual_agree") or {}
+    tr_raw = dual.get("this_run")
+    tr: Dict[str, Any] = tr_raw if isinstance(tr_raw, dict) else {}
+    new_da = list(dual.get("new_agreements") or [])
+    # Only ping dual when co-leaders actually agree (this run or newly ledgered)
+    dual_hit = bool(tr.get("agreed")) or bool(new_da)
+
+    # Preferred arm: only *new paper writes this run* that pass membership gate —
+    # not the standing nomination every tick (that would spam TG twice daily).
+    written = list(((bundle.get("arms_prop") or {}).get("written") or []))
+    pref_ok: List[Dict[str, Any]] = []
+    for w in written:
+        if (w.get("arm") or "") != preferred:
+            continue
+        mp = w.get("membership_potential") or {}
+        ok = bool(w.get("membership_potential_ok")) or bool(mp.get("ok"))
+        if ok:
+            pref_ok.append(w)
+
+    decide = ((bundle.get("cf") or {}).get("decide") or {})
+    status = str(decide.get("status") or "")
+    # Hard CF "change the selector" statuses — rare; still worth a ping
+    decide_hard = status in {
+        "modify_selector",
+        "promote_candidate",
+        "stop_baseline",
+        "arm_failed_gate",
+    }
+
+    if not dual_hit and not pref_ok and not decide_hard:
+        return None
+
+    factors: List[str] = []
+    lines = [
+        "👀 Seriously consider (paper review — not auto-promote)",
+        "Live membership swaps: "
+        + ("ON (still needs explicit pair go)" if live_on else "OFF"),
+        "",
+    ]
+
+    if dual_hit:
+        factors.append("dual_agree (anti_pump ∩ risk_adj_mom)")
+        if tr.get("agreed"):
+            lines.append(
+                f"• dual_agree this run: {tr.get('remove')} → {tr.get('add')}"
+            )
+        for w in new_da[:5]:
+            lines.append(
+                f"• dual_agree ledger: {w.get('remove')} → {w.get('add')}"
+            )
+
+    if pref_ok:
+        factors.append(f"preferred arm `{preferred}` new write + membership gate OK")
+        for s in pref_ok[:3]:
+            held = s.get("remove_held_usd")
+            held_s = f", remove held=${held:.0f}" if isinstance(held, (int, float)) else ""
+            lines.append(
+                f"• {preferred}: {s.get('remove')} → {s.get('add')} "
+                f"(add_score={s.get('add_score')}{held_s})"
+            )
+            reason = (s.get("reason") or "").strip()
+            if reason:
+                lines.append(f"  why: {reason[:180]}")
+
+    if decide_hard:
+        factors.append(f"CF gate status={status}")
+        pe = (decide.get("plain_english") or "").strip()
+        if pe:
+            lines.append(f"• CF: {pe[:220]}")
+
+    # Empty-seat / low-regret note when present on preferred write
+    for s in pref_ok[:1]:
+        held = s.get("remove_held_usd")
+        if isinstance(held, (int, float)) and held <= 1.0:
+            factors.append("empty/near-empty remove seat (low exit friction)")
+            break
+
+    lines.append("")
+    lines.append("Why this ping (not baseline scout heat):")
+    for f in factors:
+        lines.append(f"  – {f}")
+    lines.append("")
+    lines.append(
+        "Scout baseline hybrid proposals stay off Telegram. "
+        "Details: reports/BASKET_SELECT_ARMS_SHADOW_LATEST.md + "
+        "data/state/basket_dual_agree_latest.json"
+    )
+    lines.append("Anti-bleed: config untouched, no orders.")
+    return "\n".join(lines)
+
+
 def _fmt(x: Any, money: bool = False) -> str:
     if x is None:
         return "n/a"

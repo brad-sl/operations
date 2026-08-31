@@ -45,11 +45,11 @@ daily-dose 08:00 · intel TG 09:00/21:00 · deep maint 03:00 · OPT weekly Sun 0
 ### D — Shadow / research still active (own state only — **not** config writers)
 | Job | Why still on |
 |-----|----------------|
-| `phase6-discovery-pipeline-shadow` | Live product funnel (contenders / promote optics) |
+| `phase6-discovery-pipeline-shadow` | Funnel scout on disk only — **deliver=local**, no TG (Brad 2026-08-30) |
 | `phase6-discovery-retro-board-daily` | Lookback: gainers × frozen contenders + T-7 forward book (research only) |
 | `phase6-basket-pick-metrics-refresh` | Open promote pick still `status=open` |
 | `phase6-basket-seat-idle-refresh` | Soft idle flags; observe_only |
-| `phase6-basket-swap-cf-shadow` | Brad GO 2026-08-29: preferred=`risk_adj_mom`; dual_agree→2026-09-28 |
+| `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred=`risk_adj_mom` →2026-09-28 |
 | `phase6-vol-risk-scalar-shadow` | Keep collecting (not enough data for promote) |
 | `bear-ladder-promote-watch` | **Not** done — 1 bear day / 0 episodes (need real bear) |
 | free-sentiment 2× | Warm cache for X fallback (ops spine-adjacent) |

@@ -68,4 +68,26 @@ The platform uses **automated market context** (including public market and soci
 
 ---
 
-*Last updated: 2026-08-16 — after large sell / cash hold expectations*
+## Who gets paid when you trade
+
+### Who makes money in crypto trading — is it only “smart traders”?
+
+**No.** Several parties can get paid whether or not a single trade is a winner for you:
+
+1. **The exchange (the “house”)** — takes a fee on buys and sells. More trading usually means more fees, even if your results are flat or down.  
+2. **Larger / faster participants** — on thinner markets, big orders can move price. People who buy *after* a sharp public move often pay worse prices (they can become **exit liquidity** for someone who is already selling).  
+3. **You** — only if, *after* fees and slippage, your process has an edge over time. A green candle is not the same as a profitable process.
+
+This is normal market structure, not a secret conspiracy. The honest product stance is: **we cannot remove the house or large players.** We design rules to **reduce unnecessary trading**, avoid chasing heat when filters say no, and show **gates** when a signal is not actually deployable — so the platform does not train “react to every rip” behavior.
+
+### Does a “BUY” or a hot market name mean I should expect a quick win?
+
+**No.** Labels and market snapshots are **context under rules**, not a promise. Cash may sit, size may be limited, and some names are blocked after poor history or extreme moves. Missing a fast run-up can be the correct outcome when the rules say the setup is hostile.
+
+### Can the platform “follow whales” to beat the market?
+
+**We do not market whale-following as a way to outsmart the exchange or large traders.** Public “whale” chatter is often late and noisy. What *does* help is treating extreme one-sided tape as a reason to **slow down or stand down**, not as a siren to pile in. Any experimental tape tools stay research-only until proven and approved.
+
+---
+
+*Last updated: 2026-08-30 — who gets paid / house & size expectations*

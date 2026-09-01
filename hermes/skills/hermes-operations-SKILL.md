@@ -57,7 +57,17 @@ Detail: `references/terminal-backend-local-vs-ssh.md`.
 
 Profiles are separate Hermes homes (`~/.hermes/profiles/<name>/`). Each can pin its own `model.provider` + `model.default`.
 
-**Pattern:** Parent session uses fast default model + `delegate_task` for implementers; **deploy / code-review gate** runs as a one-shot in another profile:
+### Cheap multi-bot fleet (vs Grok Bot) — 2026-08-31
+
+When Brad wants a **full agent team** without flagship-everywhere cost:
+
+- Prefer **Hermes profiles + Desktop Bot Mode** (`hermes-bots` plugin) over a separate Grok Bot product.
+- Pin **leaf** marketing profiles to OpenRouter **Gemini Flash**; keep `default` on Composer; mid-tier only on orchestrator.
+- Biz SSOT: `~/projects/revenue-ops/docs/MASTER_REVENUE.md` + Kanban `revenue-ops`.
+- Playbook: `marketing-consultancy-team` → `references/revenue-ops-hermes-desk.md`.
+- **Do not** answer "Grok Bot too expensive" by setting global `delegation.model: grok-4.5` for SEO leaves.
+
+**Pattern (coding gates):** Parent session uses fast default model + `delegate_task` for implementers; **deploy / code-review gate** runs as a one-shot in another profile:
 
 ```bash
 hermes profile alias code-reviewer    # creates ~/.local/bin/code-reviewer → hermes -p code-reviewer
@@ -247,6 +257,25 @@ export SENTIMENT_REDDIT_APIFY_ENABLED=0   # or omit; code defaults to 0
 See also: `references/hermes-grok-build-cost-playbook.md`, `references/multi-vendor-cost-attribution-and-free-sentiment.md`. Older X-only throttle notes: `references/x-api-cost-control-sentiment-throttling.md` (superseded for cadence by 2×/day pre-rebalance).
 
 
+## Telegram "Provider authentication failed" (recurring)
+
+**Trigger:** User says the auth banner keeps happening / replies to that warning.
+
+**Class truth:** User-facing text is a **mask** from `_GATEWAY_AUTH_ERROR_RE` (matches incorrect/invalid API key **or bare `401`**). Not always OAuth death.
+
+**Checklist (2026-08-31 incident):**
+1. `hermes status` + `hermes -z 'reply exactly: ok' --provider xai-oauth` — if OK, primary OAuth is fine.
+2. Probe/disable **poisoned `XAI_API_KEY`** in `~/.hermes/.env` (REST often HTTP 400 Incorrect API key while OAuth works). Pool entry under `credential_pool.xai` can still fire.
+3. `hermes fallback list` — bare-string entries like `- claude-haiku-4.5` are **ignored**; need `{provider, model}` objects.
+4. Fix fallback via CLI only (patch tool **refuses** `config.yaml`):
+   ```bash
+   hermes config set fallback_providers '[{"provider":"openrouter","model":"google/gemini-2.5-flash"},{"provider":"anthropic","model":"claude-haiku-4-5"}]'
+   ```
+5. After `.env` change: Brad must `hermes gateway restart` in a **separate shell** (in-gateway agent cannot self-restart).
+6. Distinguish log classes: `APIConnectionError`/`ConnectError` = reachability (fallback should catch); `Incorrect API key` = real auth path.
+
+Detail: `references/provider-auth-failed-telegram-mask.md`.
+
 ## xAI model availability (SuperGrok OAuth)
 
 Probe access with a one-shot call — `~/.hermes/provider_models_cache.json` can lag behind live `/v1/models`:
@@ -259,11 +288,11 @@ hermes -z 'reply exactly: ok' -m grok-4.5 --provider xai-oauth
 - Refresh picker (interactive TTY): `hermes model --refresh`.
 - Invalid `XAI_API_KEY` on REST does not disprove OAuth access.
 
-See `references/xai-oauth-grok-model-probe-2026-07-08.md`.
+See `references/xai-oauth-grok-model-probe-2026-07-08.md` · `references/xai-api-key-vs-oauth-research-tools.md`.
 
 ## Model routing pack (default profile)
 
-No auto hard→flagship router. Layers: `model.default` = `grok-composer-2.5-fast` (volume chat); hard work = `/model grok-4.5` then demote; `delegation.model` = **`grok-build-0.1`** (Phase1 cost — not composer for multi-turn workers); `auxiliary.vision|compression|approval|titles` = OpenRouter `google/gemini-2.5-flash`; `fallback_providers` = outage only (e.g. Haiku), not quality. YAML: `references/model-routing-and-compaction-resilience.md`.
+No auto hard→flagship router. Layers: `model.default` = `grok-composer-2.5-fast` (volume chat); hard work = `/model grok-4.5` then demote; `delegation.model` = **`grok-build-0.1`** (Phase1 cost — not composer for multi-turn workers); `auxiliary.vision|compression|approval|titles` = OpenRouter `google/gemini-2.5-flash`; `fallback_providers` = **outage only**, each entry **must** be `{provider, model}` (bare model strings are silently ignored — verify with `hermes fallback list`). Prefer OpenRouter Flash then Anthropic Haiku. YAML + CLI set: `references/model-routing-and-compaction-resilience.md`.
 
 
 **OpenRouter Sonnet-class trap:** Main agent on `anthropic/claude-sonnet-*` via OpenRouter + high-iteration Kanban/tool loops → multi-hundred-$ days (user ~$500 Apr 2026; Apr 2–3 export ~99% Sonnet). Keep main/deleg on **xAI OAuth**; OpenRouter = **cheap aux only**. Prefer a hard **key daily limit** when `limit: null`. Never chase marketplace bot ROI screenshots by buying flagship models.

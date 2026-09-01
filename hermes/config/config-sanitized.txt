@@ -1,7 +1,10 @@
 model:
   default: grok-composer-2.5-fast
 fallback_providers:
-  - claude-haiku-4.5
+  - provider: openrouter
+    model: google/gemini-2.5-flash
+  - provider: anthropic
+    model: claude-haiku-4-5
 toolsets:
   - hermes-cli
 agent:
@@ -75,6 +78,3 @@ terminal:
   docker_forward_env: []
   singularity_image: docker://nikolaik/python-nodejs:python3.11-nodejs20
   modal_image: nikolaik/python-nodejs:python3.11-nodejs20
-  daytona_image: nikolaik/python-nodejs:python3.11-nodejs20
-  vercel_runtime: node24
-  container_cpu: 1

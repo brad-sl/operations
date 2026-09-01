@@ -345,3 +345,205 @@ External § *Who gets paid when you trade* — house / size / you; no whale-hero
 3. Better lot-matched round-trip after fees  
 4. GO/NO-GO whale-print shadow still **not** requested — default remains stand-down/structure
 
+### 2026-08-31 — Brad clarify: lag FOMO after size, not chase whales
+
+**Brad (post overnight fee/entry audit):**
+- Confirms leak framing: mostly **not** FOMO-by-label; leak is **late process on already-hot tape** + **taker on every turn**.
+- **Not interested** in chasing whales / whale-hero product.
+- Open question: whales (size) drive **post-move sentiment**, then market **reacts with lag (FOMO)** — is that lag **exploitable**?
+
+**Working split (do not collapse):**
+1. Chase the print (buy with size) → reaction game; declined.
+2. Use size→sentiment→retail lag as **structure signal** — three different trades:
+   - **A. Join second wave** (buy the FOMO leg) — often *becomes* exit liquidity; high adverse selection + fees.
+   - **B. Fade / exhaustion** after public heat (short or avoid longs) — research-only; needs definition of heat + horizon + costs.
+   - **C. Stand-down / participation filter** (don’t process-enter elevated tape) — aligns with overnight labels + product honesty; default high-EV use of the externality without needing to out-predict size.
+
+**Exploitability bar (unknown until measured):** edge after **round-trip taker (~1.6%+ on this book style)** + slippage, on **our horizon** (rebalance/seat, not HFT), out-of-sample, frozen rules. Academic order-flow papers ≠ free edge for retail CB spot process book.
+
+**Default until GO:** treat size/heat lag as **why gates exist** (C), not a promote path for A. B only if explicit shadow dig requested.
+
+### 2026-08-31 — Stand-down filter C exploitability dig
+
+**Ask:** Is C (stand-down / don’t process-enter elevated tape) exploitable on this book?
+
+**Artifacts:** `reports/STANDDOWN_FILTER_C_DIG.md` + `.json` · `scripts/phase6/dig_standdown_filter_c.py`  
+**Mode:** read-only CF · frozen defs · no live gate.
+
+#### Method (frozen)
+- Window: 90d buys · first same-pair SELL ≤21d · fees after (impute 0.8% if blank)
+- **C primary:** block process-hint buys when `r24≥5` (`elev_r24_5`)
+- Also tested: heat_strict / elev_r24_8 / elev_soft; arm “block all elevated”
+- Sanity: drop |return|>200% tape features; tighten process_hint (no bare reconcile/signal)
+
+#### Headline results (NAV ~$2,295)
+| Slice | n exits | WR | sum PnL aft fees | avg |
+|-------|---------|----|------------------|-----|
+| All matched buys | 161 | 13.7% | −$761 | −$4.73 |
+| Calm process | 90 | 15.6% | −$427 | −$4.75 |
+| Elevated process (r24≥5) | 8 | **0%** | **−$88.51** | **−$11.06** |
+
+**Primary C CF (process + r24≥5):** block 9 / exit 8 · avoided net **+$88.51 (~3.9% NAV)** · blocked WR **0%** · H1 n=3 avg −$4.46 · H2 n=5 avg −$15.02 (both red).  
+**All-elevated arm same def:** avoided ~**$149 (~6.5% NAV)**, still 0% WR on blocked.  
+**Strict heat:** N too small (inconclusive). **Soft elev:** larger N, milder Δ — weaker discrimination.
+
+#### Verdict
+- **Class:** `ATTENTION_ONLY_less_loss_path` — **not** HIT_10/20 abs.
+- **GO/NO-GO live gate:** **NO**
+- **Shadow-only candidate:** YES (optional log would-block at rebalance; no fill change) — Brad GO required to wire.
+- **Honest limit:** Calm process was **also red**. C is “hurt less on hot tape,” not “process works when calm.” Overall book still fee/turnover taxed.
+- **Not done:** capital-reuse path CF; maker entry path; longer OOS; cleaner signal_source on ledger.
+
+**Default product stance unchanged:** C as doctrine/bias; whale chase still off.
+
+### 2026-08-31 — C shadow logger shipped
+
+**Shipped (no live gate):**
+- `phase6/core/standdown_filter_c_shadow.py`
+- `scripts/phase6/run_standdown_filter_c_shadow.py` (`--quiet-ok` / `--telegram`)
+- Isolation: `phase6/core/test_isolation_standdown_filter_c_shadow.py` PASS
+- State: `data/state/standdown_filter_c_shadow_latest.json` + events jsonl
+- Report: `reports/STANDDOWN_FILTER_C_SHADOW_LATEST.md`
+
+**Behavior:** scans basket tape; logs `would_block_process` when `r24≥5`. Never orders, never config, never `evaluate_buy_entry`.
+
+**Money-print honesty:** dig + board = **less-loss stand-down**, not a printer. Calm process was also red on sample. Fees/churn still dominate. No method currently prints money on this book after fees.
+
+### 2026-08-31 — Fills / MARKET path dig
+
+**Ask:** Why MARKET-only fills? Live fee tier vs ~0.8% realized?
+
+**Artifacts:** `reports/FILLS_MARKET_PATH_DIG.md` + `.json` · `scripts/phase6/dig_fills_market_path.py`
+
+#### Code
+- BUY: `OrderExecutor.execute_buy` → `place_market_buy` → `market_market_ioc`
+- SELL: `protected_market_exit` → `place_market_sell` → market IOC
+- `config_loader` hardcodes `order_type="market"`; fee constants 0.25/0.40 **stale**
+- Live `CoinbaseExchangeClient.place_*`: market buy, market sell, stop_limit sell, bracket buy — **no `place_limit_buy`**
+- Legacy `place_limit_buy` exists on old wrapper only — not on Phase6 entry path
+- 90d verified: **MARKET 95 + STOP_LIMIT 80 + LIMIT 0**
+
+#### Live fee tier (transaction_summary)
+- **Intro 2** · taker **0.8%** · maker **0.4%** · vol ~$20.3k (band $10k–$25k)
+- Next **Advanced 1** @ $25k → taker 0.5% / maker 0.25%
+- Realized median **0.8% = tier taker** (matches)
+
+#### Verdict
+- MARKET-only = **by design**, not labeling bug
+- Live maker path: **NO** without design+shadow+Brad GO
+- Maker is cost reduction on buy leg only; not a printer
+- Do not churn to unlock Adv1
+- Still correct: no method currently prints money after fees
+
+### 2026-08-31 — Limit-first buy design (no implement)
+
+**Shock context:** MARKET-only was not a new regression — executor never had limit-first. March `COINBASE_FEE_RESEARCH.md` stated “we use limit orders → maker” as fact; that was aspiration. config fee constants looked like Advanced 1; live tier is **Intro 2** (0.8% taker / 0.4% maker).
+
+**Design SSOT:** `docs/design/LIMIT_FIRST_BUY_DESIGN.md`  
+**Fee research:** superseded banner → points at fills dig + design.
+
+#### Design summary
+- v1: post_only limit at bid, wait ~45s, **no** market fallback by default, no requotes
+- SL only on verified filled size; cancel/fill race handled
+- C elevated tape → abort (don’t maker-chase rips)
+- Phases A honesty → B client/tests → C shadow → D Brad GO pilot → E promote-or-not
+- EV class: cost reduction only (~0.4% buy leg ceiling); not alpha; RT still ~1.2% if exits taker
+
+**No live code / no flag on.** Open questions in design §13 for Brad.
+
+### 2026-08-31 — Limit-first Phase A/B shipped (flag OFF)
+
+Brad answers locked: unfilled=**skip**, universe=**full basket**, wait=**45s**, start **A/B**.
+
+**Shipped (no live limit fills):**
+- Fee tier snapshot → `data/state/fee_tier_snapshot_latest.json` (Intro 2 confirmed 0.8/0.4)
+- `place_limit_buy` + `get_order` + `get_best_bid_ask` on CoinbaseExchangeClient
+- `OrderExecutor` limit branch behind `entry_execution.limit_first.enabled` (config default **false**, mode **market_ioc**)
+- Isolation PASS: `phase6/core/test_isolation_limit_first_buy.py`
+- Design SSOT updated: `docs/design/LIMIT_FIRST_BUY_DESIGN.md`
+
+**Not done:** Phase C shadow board · Phase D live pilot · wiring elevated_tape into all buy callers.
+
+**EV class:** cost-cut engineering only — not alpha / not money printer.
+
+### 2026-08-31 — Limit-first Phase C shadow (no orders)
+
+Board + post-market-buy CF log shipped.
+- 72h first tick: N=2 market buys · notional ~$821 · fee Δ upper bound ~$3.28 (if all maker — **fill rate unknown**)
+- live_gate=OFF · place_orders=False · edge=ATTENTION_ONLY_cost_cut
+- Artifacts: `reports/LIMIT_FIRST_BUY_SHADOW_LATEST.md`, `data/state/limit_first_buy_shadow_*`
+- Cron: phase6-limit-first-buy-shadow (local, quiet-ok)
+- **Not** Phase D. Do not read Δ as saved money.
+
+### 2026-08-31 — Limit-first Phase D pilot LIVE (Brad GO)
+
+- Config: `mode=limit_first_v1` · `enabled=true` · post_only bid · 45s · **skip** unfilled · no market fallback
+- Caps: **3 buys/day** · **$300/day** (over-cap → market IOC legacy)
+- Kill: `data/state/limit_first_buy_KILL` or env `LIMIT_FIRST_BUY_KILL=1`
+- Live path fix: platform `TradeExecutor` now delegates to `OrderExecutor` when limit-first ON (was market-only hole)
+- Park/USDC convert: `force_market=True`
+- Elevated tape: abort via C shadow best-effort
+- Runner restarted PID with wire log `[P4-04] ... limit-first D`
+- Board: `reports/LIMIT_FIRST_BUY_PILOT_LATEST.md`
+- **Not alpha.** Cost-cut pilot. Phase E after ≥30 attempts or 14d + fill-rate/fee review.
+- Edge class remains `ATTENTION_ONLY_cost_cut` / `process_cost_reduction_candidate_not_alpha`
+
+### 2026-08-31 — Coinbase volume mix (institutional ~80%) — Brad clarification
+
+**Source class:** Coinbase-reported Consumer vs Institutional volume (not a third "whale" bucket).
+
+| Period | Consumer | Institutional | Inst share |
+|--------|----------|---------------|------------|
+| FY2025 | $239B | $982B | ~80.4% |
+| Q4 2025 | $59B | $237B | ~80% |
+| Q1 2026 | $36B | $166B | ~82% |
+| FY2023–FY2025 avg | — | — | ~81.9% (peak ~84% FY2023) |
+
+**Long arc:** Inst ~20% (Q1 2018) → ~56% (FY2019) → ~80%+ now. Stable split since ~2022–2023.
+
+**Whales:** Not broken out. Large organized flow mostly sits in **Institutional** (Prime / custody / block). Some HNW still in Consumer.
+
+**Revenue vs volume (critical for our stack):**
+- Consumer effective take rate ~**1.4%** (2025 figures) vs Institutional ~**5 bps**
+- Smaller retail slice → **most transaction revenue**
+- Our live path = Intro 2 **0.8% taker / 0.4% maker** = firmly in the *paying-for-the-party* cohort
+
+**Implications for Phase 6 (honest, not alpha claims):**
+1. **Whale/FOMO lag as long signal** — even weaker. Public "size move" lag is often *after* institutional flow already printed; retail FOMO is the residue. Confirms prior: C as **stand-down filter**, not chase.
+2. **Fee drag is structural** — we are on the high take-rate side of the venue. Cutting RT volume + maker-preferring entry (limit-first D pilot) is *house-tax mitigation*, not edge discovery.
+3. **Tier climb** — only real path toward inst-like bps is volume/Prime economics; not a bot feature. Don't pretend limit-first gets us to 5 bps.
+4. **No "print money" revision** — 80% inst volume does not create a retail printer; it explains why tape can look "smart" while our 0.8% legs still lose.
+
+**Does not change:** leave book as-is; C shadow only; limit-first D caps (3/$300); no whale-follow product.
+
+### 2026-08-31 — max_daily_loss + corr breaker contribution CF
+
+**Question:** Do we have data that these two missed/partial rails would have moved the needle?
+
+**Data:** `trades/phase6_trades.jsonl` realized SELL days (47d, May–Aug 2026) + rolling OHLCV corrs. Artifacts: `reports/MAX_DAILY_LOSS_CORR_BREAKER_CF.md` + `.json`. Script: `scripts/phase6/dig_max_daily_loss_corr_breaker_cf.py`.
+
+**max_daily_loss (cfg 2% of $1k = $20; live 2% ≈ $46):**
+- EOD fires: 4 days at $20, **1 day** at live-2% (2026-06-05 −$70). Never hit 5% NAV.
+- CF buy-block after breach: **3 buys / ~$30 notional** blocked; fantasy buy fee ~$0.24.
+- Pre-breach sell PnL on fire days **−$141** vs post **−$32** → damage mostly already locked (SL). Buy-block is pile-on brake, not loss eraser.
+- Class: `ATTENTION_ONLY_less_loss_path_weak`. Honesty wire-or-delete; not a P&L unlock.
+
+**Corr breaker (0.85 → 30% reduce):**
+- Market pairs fire **~100% of sample days** (BTC–ETH etc. routinely ≥0.85) → threshold hair-trigger if applied blindly.
+- Multi-pair co-loss days (2+ pairs each <−$2): **5**; fantasy 30% cut save only when loser-pair corr≥0.85: **~$21** (one day, XRP–SOL 0.853 on 2026-06-05).
+- Single-name worst days (LINK −36/−30, ICP −14) untouched by corr cut.
+- Class: `ATTENTION_ONLY_less_loss_path_sparse`. Keep shadow/LEGACY; do not promote.
+
+**Rank vs known levers:** fee drag ~$139/30d ≫ C stand-down ~$89/90d ≫ corr fantasy ~$21 ≫ daily-loss buy-block residual.
+
+**No live changes.**
+
+### 2026-08-31 — PARK max_daily_loss + corr breaker
+
+**Brad GO:** Park. Additional complexity for few returns (CF dig confirmed).
+
+- **Correlation circuit breaker:** dark / LEGACY. Do **not** wire to live runner. No promote path.
+- **max_daily_loss:** not a strategy project. Optional later honesty-only (wire buy-block on % live equity **or** delete theater knob). No promote / no flatten.
+- **Not** on critical path next to limit-first pilot evidence, C stand-down observe, fewer RTs, exit gates.
+- CF evidence: `reports/MAX_DAILY_LOSS_CORR_BREAKER_CF.md`
+

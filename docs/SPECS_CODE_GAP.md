@@ -1,10 +1,21 @@
 # Specs ↔ Code Gap Analysis (Phase 6 platform)
 
 **ID:** `P6-SPECS-CODE-GAP-20260807`  
-**Date:** 2026-08-07  
-**Status:** LIVING SNAPSHOT (not exhaustive line-by-line audit)  
+**Date:** 2026-08-07 · **addendum pointer:** 2026-08-31  
+**Status:** LIVING SNAPSHOT (not exhaustive line-by-line audit) — **§2 rows on global TP / park package / limit-first are stale; see addendum**  
 **Companion:** [`docs/SPECS_INDEX.md`](SPECS_INDEX.md)  
+**Phase 4/5/6 missed-functionality review (2026-08-31):** [`reports/PHASE_456_MISSED_FUNCTIONALITY_REVIEW_2026-08-31.md`](../reports/PHASE_456_MISSED_FUNCTIONALITY_REVIEW_2026-08-31.md)  
 **Not the same as:** [`docs/research/BACKTEST_LIVE_GAP_MATRIX.md`](research/BACKTEST_LIVE_GAP_MATRIX.md) (sim path A/B vs live knobs for ANALYST-OPT)
+
+### Addendum 2026-08-31 (do not trust §2 alone)
+
+| Topic | Aug-7 §2 said | Live 2026-08-31 |
+|-------|---------------|-----------------|
+| Global take-profit | Shadow | **`take_profit.mode=live`** (trail 4/2 +6% fb; promoted ~2026-08-23) |
+| Park package | OFF | Package file **enabled** / `a_plus_b_micro`; **trader_accounts default still off** |
+| Limit-first buys | (not listed) | **Phase D pilot ON** (caps 3/$300) |
+| `max_daily_loss` | (not flagged) | Config **loaded**; **no phase6/core enforcer** (legacy only). **PARKED 2026-08-31** (Brad) — CF weak; complexity > return. Honesty-only later optional. See `reports/MAX_DAILY_LOSS_CORR_BREAKER_CF.md` |
+| Correlation breaker | (not flagged) | Module exists; **not on live runner**. **PARKED 2026-08-31** (Brad) — dark/LEGACY; no promote. CF: `reports/MAX_DAILY_LOSS_CORR_BREAKER_CF.md` |
 
 ---
 

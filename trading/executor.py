@@ -35,6 +35,8 @@ class TradeExecutor:
         max_retries: int = 3,
         base_delay: float = 1.0,
         logger: Optional[logging.Logger] = None,
+        config_dict: Optional[Dict[str, Any]] = None,
+        order_executor: Optional[Any] = None,
     ):
         self.client = client
         self.stop_loss_coordinator = stop_loss_coordinator
@@ -42,6 +44,9 @@ class TradeExecutor:
         self.base_delay = base_delay
         self.logger = logger or logging.getLogger("trading.executor")
         self.shadow_mode = getattr(client, "shadow_mode", getattr(client, "mode", "shadow") == "shadow")
+        # Phase D: limit-first lives on OrderExecutor; wire when present
+        self.config_dict = config_dict if isinstance(config_dict, dict) else {}
+        self.order_executor = order_executor
 
     def _retry(self, func, *args, **kwargs) -> Dict[str, Any]:
         last_error = None
@@ -53,8 +58,54 @@ class TradeExecutor:
                 time.sleep(self.base_delay * (2 ** (attempt - 1)))
         return {"success": False, "error": str(last_error)}
 
-    def execute_buy(self, pair: str, usd_amount: float) -> Dict[str, Any]:
-        """Execute BUY with recovery logic for insufficient funds etc. Matches decompiled behavior."""
+    def _limit_first_live(self) -> bool:
+        try:
+            from phase6.core.limit_first_buy_pilot import merge_live_config
+            from phase6.core.runtime_knobs import limit_first_enabled
+
+            cfg = merge_live_config(self.config_dict)
+            return bool(limit_first_enabled(cfg))
+        except Exception:
+            return False
+
+    def execute_buy(
+        self,
+        pair: str,
+        usd_amount: float,
+        *,
+        force_market: bool = False,
+        elevated_tape: bool = False,
+    ) -> Dict[str, Any]:
+        """Execute BUY. Phase D: when limit-first ON, delegate to OrderExecutor path.
+
+        force_market: park/dust/urgent paths — skip limit.
+        """
+        # Limit-first pilot: full path (post_only, wait, skip, SL on filled) on OrderExecutor
+        if (
+            (not force_market)
+            and self.order_executor is not None
+            and self._limit_first_live()
+            and hasattr(self.order_executor, "execute_buy")
+        ):
+            try:
+                from phase6.core.limit_first_buy_pilot import merge_live_config
+
+                cfg = merge_live_config(self.config_dict)
+                self.logger.info(
+                    "[P4-04/D] BUY via OrderExecutor limit-first path %s $%.2f", pair, usd_amount
+                )
+                return self.order_executor.execute_buy(
+                    pair,
+                    usd_amount,
+                    config_dict=cfg,
+                    force_market=False,
+                    elevated_tape=elevated_tape,
+                )
+            except Exception as e:
+                self.logger.warning(
+                    "[P4-04/D] limit-first delegate failed (%s) — market fallback", e
+                )
+
         def _do():
             return self.client.place_market_buy(pair, usd_amount)
 

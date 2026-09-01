@@ -41,11 +41,11 @@ class TradingConfig:
     # Brad live ALWAYS runs with this=False until T1+ gates.
     MULTI_TENANT_ENABLED: bool = False
     
-    # Coinbase fee rates (Tier: Advanced 1 = 0.25% maker, 0.40% taker)
-    # Source: https://help.coinbase.com/en/exchange/trading-and-funding/exchange-fees
-    # Note: Actual rates are volume-tiered. Use API /fees endpoint for real-time rates.
-    COINBASE_MAKER_FEE_RATE: float = 0.0025  # 0.25% for maker orders (limit orders)
-    COINBASE_TAKER_FEE_RATE: float = 0.0040  # 0.40% for taker orders (market orders)
+    # STALE defaults (look like Advanced 1). Live book is often Intro 2 (0.4% maker / 0.8% taker).
+    # Prefer data/state/fee_tier_snapshot_latest.json from phase6.core.fee_tier_snapshot.
+    # Do NOT treat these constants as live truth for EV or audits (2026-08-31 fills dig).
+    COINBASE_MAKER_FEE_RATE: float = 0.0025  # STALE placeholder — use fee_tier_snapshot
+    COINBASE_TAKER_FEE_RATE: float = 0.0040  # STALE placeholder — use fee_tier_snapshot
 
 class ConfigLoader:
     """Loads and validates trading_config.json"""
@@ -100,6 +100,8 @@ class ConfigLoader:
             max_single_order_usd=rebal_cap,
             max_daily_loss_usd=max_daily_loss_usd,
             position_limits=pos_limits,
+            # Hardcoded market: Phase 6 path is market IOC until entry_execution.limit_first
+            # is explicitly enabled (default OFF). Not read from JSON today.
             order_type="market",
             sandbox_mode=sandbox,
             approval_required=gs.get("approval_required", False),

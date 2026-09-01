@@ -309,8 +309,12 @@ class Phase6Runner:
                     client=trading_client,
                     stop_loss_coordinator=getattr(self, "stop_loss_coordinator", None),
                     logger=logger,
+                    config_dict=self.config_dict,
+                    order_executor=self.order_executor,  # Phase D limit-first path
                 )
-                self.logger.info("[P4-04] Platform TradeExecutor initialized as default execution boundary")
+                self.logger.info(
+                    "[P4-04] Platform TradeExecutor initialized (OrderExecutor wired for limit-first D)"
+                )
             except Exception as e:
                 self.logger.warning(f"[P4-04] Failed to init TradeExecutor (falling back to OrderExecutor): {e}")
                 self.use_platform_executor = False

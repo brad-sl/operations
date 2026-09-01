@@ -167,9 +167,14 @@ def execute_usdc_park_cycle(
                 if getattr(runner, "use_platform_executor", False) and getattr(
                     runner, "trade_executor", None
                 ):
-                    convert_result = runner.trade_executor.execute_buy(product, convert_usd)
+                    # Park convert must stay market IOC (not limit-first pilot)
+                    convert_result = runner.trade_executor.execute_buy(
+                        product, convert_usd, force_market=True
+                    )
                 else:
-                    convert_result = runner.order_executor.execute_buy(product, convert_usd)
+                    convert_result = runner.order_executor.execute_buy(
+                        product, convert_usd, force_market=True
+                    )
             except Exception as e:
                 convert_result = {"success": False, "error": str(e)}
         else:

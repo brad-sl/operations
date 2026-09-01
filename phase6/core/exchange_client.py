@@ -434,6 +434,154 @@ class CoinbaseExchangeClient:
             logger.error(f"Live market buy failed: {e}")
             return {"success": False, "error": str(e)}
 
+    def get_best_bid_ask(self, product_id: str) -> Dict[str, Optional[float]]:
+        """Best bid/ask from product book when available; else last as both.
+
+        Used by limit-first pricing. Never places orders.
+        """
+        out: Dict[str, Optional[float]] = {"bid": None, "ask": None, "last": None}
+        try:
+            last = float(self.get_price(product_id) or 0) or None
+            out["last"] = last
+        except Exception:
+            last = None
+        if self.shadow_mode:
+            if last:
+                # Tiny synthetic spread for shadow pricing tests
+                out["bid"] = last * 0.9995
+                out["ask"] = last * 1.0005
+            return out
+        try:
+            if not self.real_client and not self.sdk_client:
+                self._ensure_live_client()
+            resp = None
+            if self.real_client is not None and hasattr(self.real_client, "_request"):
+                resp = self.real_client._request(
+                    "GET",
+                    f"/api/v3/brokerage/product_book?product_id={product_id}&limit=1",
+                    None,
+                )
+            if isinstance(resp, dict):
+                book = resp.get("pricebook") or resp.get("bids") and resp or resp
+                if isinstance(book, dict) and "pricebook" in resp:
+                    book = resp["pricebook"]
+                bids = (book or {}).get("bids") if isinstance(book, dict) else resp.get("bids")
+                asks = (book or {}).get("asks") if isinstance(book, dict) else resp.get("asks")
+                if bids and isinstance(bids, list) and bids:
+                    b0 = bids[0]
+                    out["bid"] = float(b0.get("price") if isinstance(b0, dict) else b0[0])
+                if asks and isinstance(asks, list) and asks:
+                    a0 = asks[0]
+                    out["ask"] = float(a0.get("price") if isinstance(a0, dict) else a0[0])
+        except Exception as e:
+            logger.debug("get_best_bid_ask book failed for %s: %s", product_id, e)
+        if out["bid"] is None and last:
+            out["bid"] = last
+        if out["ask"] is None and last:
+            out["ask"] = last
+        return out
+
+    def place_limit_buy(
+        self,
+        product_id: str,
+        base_size: float,
+        limit_price: float,
+        *,
+        post_only: bool = True,
+    ) -> Dict[str, Any]:
+        """Resting limit buy (GTC). Default post_only=True so we do not cross as taker.
+
+        Phase B: available on client; OrderExecutor only uses when limit_first enabled
+        (default OFF). Shadow logs intent without network.
+        """
+        if self.shadow_mode:
+            self._order_log.append(
+                {
+                    "type": "limit_buy",
+                    "pair": product_id,
+                    "base_size": base_size,
+                    "limit_price": limit_price,
+                    "post_only": post_only,
+                    "timestamp": time.time(),
+                }
+            )
+            return {
+                "success": True,
+                "order_id": "shadow_limit_buy",
+                "post_only": post_only,
+                "shadow": True,
+            }
+
+        if not self.real_client:
+            if not self._ensure_live_client():
+                return {"success": False, "error": "No live client"}
+
+        try:
+            base_str = self.quantize_size(product_id, base_size)
+            px_str = self.quantize_price(product_id, limit_price)
+            limit_cfg: Dict[str, Any] = {
+                "base_size": base_str,
+                "limit_price": px_str,
+            }
+            if post_only:
+                # Advanced Trade: post_only on limit_limit_gtc rejects if would take
+                limit_cfg["post_only"] = True
+            body = {
+                "client_order_id": secrets.token_hex(16),
+                "product_id": product_id,
+                "side": "BUY",
+                "order_configuration": {"limit_limit_gtc": limit_cfg},
+            }
+            resp = self.real_client._request("POST", "/api/v3/brokerage/orders", body)
+            if resp.get("success") is False or "error_response" in resp:
+                err = resp.get("error_response") or resp
+                return {"success": False, "error": str(err), "raw": resp, "post_only": post_only}
+            if "success_response" in resp or resp.get("success"):
+                oid = (resp.get("success_response") or {}).get("order_id") or resp.get("order_id")
+                return {
+                    "success": True,
+                    "order_id": oid,
+                    "post_only": post_only,
+                    "base_size": float(base_str),
+                    "limit_price": float(px_str),
+                    "raw": resp,
+                }
+            return {"success": False, "error": str(resp), "post_only": post_only}
+        except Exception as e:
+            logger.error(f"Live limit buy failed: {e}")
+            return {"success": False, "error": str(e), "post_only": post_only}
+
+    def get_order(self, order_id: str) -> Dict[str, Any]:
+        """Full order dict by id (status, fills). Shadow returns empty filled."""
+        if self.shadow_mode:
+            return {
+                "order_id": order_id,
+                "status": "OPEN",
+                "filled_size": "0",
+                "average_filled_price": "0",
+            }
+        try:
+            if not self.real_client and not self.sdk_client:
+                self._ensure_live_client()
+            if self.sdk_client is not None and hasattr(self.sdk_client, "get_order"):
+                resp = self.sdk_client.get_order(order_id)
+                if hasattr(resp, "to_dict"):
+                    resp = resp.to_dict()
+                if isinstance(resp, dict):
+                    return resp.get("order", resp) if "order" in resp else resp
+            if self.real_client is not None:
+                if hasattr(self.real_client, "get_order"):
+                    resp = self.real_client.get_order(order_id)
+                else:
+                    resp = self.real_client._request(
+                        "GET", f"/api/v3/brokerage/orders/historical/{order_id}", None
+                    )
+                if isinstance(resp, dict):
+                    return resp.get("order", resp)
+            return {}
+        except Exception as e:
+            logger.warning("get_order failed for %s: %s", order_id, e)
+            return {}
 
     def place_buy_with_bracket(self, product_id: str, usd_amount: float, 
                                tp_price: float = None, sl_price: float = None,
@@ -476,18 +624,25 @@ class CoinbaseExchangeClient:
     def get_order_fill_details(self, order_id: str) -> Dict[str, Any]:
         """Query order for actual fill price/size."""
         if self.shadow_mode:
-            return {"average_filled_price": 0.0, "filled_size": 0.0}
+            return {"average_filled_price": 0.0, "filled_size": 0.0, "status": "OPEN"}
         try:
-            if not self.real_client:
-                self._ensure_live_client()
-            resp = self.real_client.get_order(order_id) if hasattr(self.real_client, 'get_order') else {}
-            order = resp.get("order", resp)
+            order = self.get_order(order_id) or {}
+            if not order and self.real_client:
+                if not self.real_client:
+                    self._ensure_live_client()
+                resp = self.real_client.get_order(order_id) if hasattr(self.real_client, "get_order") else {}
+                order = resp.get("order", resp) if isinstance(resp, dict) else {}
             avg_price = float(order.get("average_filled_price") or order.get("filled_price") or 0)
             filled = float(order.get("filled_size") or order.get("size") or 0)
-            return {"average_filled_price": avg_price, "filled_size": filled, "status": order.get("status")}
+            return {
+                "average_filled_price": avg_price,
+                "filled_size": filled,
+                "status": order.get("status"),
+                "total_fees": order.get("total_fees"),
+            }
         except Exception as e:
             logger.warning(f"get_order_fill_details failed for {order_id}: {e}")
-            return {"average_filled_price": 0.0, "filled_size": 0.0}
+            return {"average_filled_price": 0.0, "filled_size": 0.0, "status": ""}
 
 
     def _order_to_dict(self, o: Any) -> Dict[str, Any]:

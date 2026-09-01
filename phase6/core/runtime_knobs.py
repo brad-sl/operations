@@ -162,6 +162,17 @@ def config_dict_from_runner(runner: Any) -> Dict[str, Any]:
     return _as_dict(getattr(runner, "config_dict", None))
 
 
+def limit_first_policy(config_dict: Optional[Mapping[str, Any]] = None):
+    """Limit-first buy policy. Default enabled=False (market IOC path)."""
+    from phase6.core.limit_first_buy import policy_from_config
+
+    return policy_from_config(_as_dict(config_dict))
+
+
+def limit_first_enabled(config_dict: Optional[Mapping[str, Any]] = None) -> bool:
+    return bool(limit_first_policy(config_dict).enabled)
+
+
 def create_allocator_from_config(
     strategy: str = "rotation",
     config_dict: Optional[Mapping[str, Any]] = None,

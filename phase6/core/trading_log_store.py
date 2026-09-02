@@ -106,6 +106,13 @@ def append_verified_fill(
     out.setdefault("trader_id", trader_id)
     out.setdefault("record_type", "verified_fill")
     out.setdefault("ingested_at", datetime.now(timezone.utc).isoformat())
+    # Stamp RSI+sent at ingest (BUY entry / SELL exit + lot join). Idempotent merge.
+    try:
+        from phase6.core.indicator_snapshot import stamp_trade_signal_fields
+
+        out = stamp_trade_signal_fields(out)
+    except Exception:
+        pass
 
     path = verified_fills_path(account_id, _month_key(ts))
     with open(path, "a", encoding="utf-8") as f:

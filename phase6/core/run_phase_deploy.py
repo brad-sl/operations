@@ -554,6 +554,56 @@ def apply_run_phase_to_actions(
             current_pair_usd=pos.get(pair, 0.0),
             cfg=c,
         )
+        # quality_tryout thaw A: week-1 tryout pairs already passed RSI≤55 + eng_sent floor.
+        # Late-run hard block would freeze the only allowed path during soft_down recovery.
+        # Brad GO C 2026-09-01: pass tryout allowlist through with full proposed size.
+        if gr.dropped or gr.final_usd <= 0:
+            try:
+                from phase6.core.regime_cash_policy import (
+                    _recovery_rec,
+                    recovery_quality_tryout_cfg,
+                )
+                import json as _json
+                from pathlib import Path as _Path
+
+                pol = {}
+                try:
+                    pol = _json.loads(
+                        _Path("config/regime_cash_policy.json").read_text(encoding="utf-8")
+                    )
+                except Exception:
+                    pol = {}
+                rec = _recovery_rec(pol) or {}
+                mode = str((rec or {}).get("new_alt_policy") or "")
+                if mode.startswith("quality_tryout"):
+                    qt = recovery_quality_tryout_cfg(rec if isinstance(rec, dict) else {})
+                    try_set = {
+                        str(x).upper().replace("_", "-")
+                        for x in (qt.get("tryout_pairs") or set())
+                    }
+                    pu = str(pair).upper().replace("_", "-")
+                    if pu in try_set:
+                        gr = RunPhaseGateResult(
+                            pair=pair,
+                            original_usd=proposed,
+                            final_usd=proposed,
+                            dropped=False,
+                            phase=gr.phase,
+                            phase_name=gr.phase_name,
+                            size_frac=1.0,
+                            blocked=False,
+                            snapshot=gr.snapshot,
+                            notes=list(gr.notes)
+                            + ["quality_tryout_late_run_pass", "brad_go_c_20260901"],
+                        )
+                        logger.info(
+                            "[RUN-PHASE] quality_tryout PASS BUY %s $%.2f (was phase=%s)",
+                            pair,
+                            proposed,
+                            snap.phase_name,
+                        )
+            except Exception as _qt_e:
+                logger.debug("[RUN-PHASE] quality_tryout pass check skipped: %s", _qt_e)
         results.append(gr)
         if gr.dropped or gr.final_usd <= 0:
             logger.info(

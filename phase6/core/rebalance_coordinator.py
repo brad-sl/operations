@@ -266,6 +266,71 @@ class RebalanceCoordinator:
                         except Exception as e:
                             logger.warning("[RUN-PHASE] filter skipped: %s", e)
 
+                        def _reapply_hard_buy_gates(plan_in, reason: str):
+                            """Full hard-gate stack — must run after ANY plan mutation (esp. ignition)."""
+                            p = plan_in
+                            try:
+                                from phase6.core.regime_cash_policy import apply_to_runner_plan
+
+                                p = apply_to_runner_plan(
+                                    runner,
+                                    p,
+                                    sentiment_scores=sentiment_scores,
+                                    rsi_values=getattr(runner, "rsi_values", {}) or {},
+                                )
+                            except Exception as e:
+                                logger.warning("[REGIME-CASH] re-apply (%s) skipped: %s", reason, e)
+                            try:
+                                p = filter_trade_plan_add_risk(runner, p)
+                            except Exception as e:
+                                logger.warning("[ADD-RISK] re-apply (%s) skipped: %s", reason, e)
+                            try:
+                                from phase6.core.first_fill_probation import (
+                                    filter_trade_plan_first_fill,
+                                )
+
+                                p = filter_trade_plan_first_fill(runner, p)
+                            except Exception as e:
+                                logger.warning("[FIRST-FILL] re-apply (%s) skipped: %s", reason, e)
+                            try:
+                                from phase6.core.rsi_primary_deploy import (
+                                    filter_trade_plan_rsi_primary_deploy,
+                                )
+
+                                p = filter_trade_plan_rsi_primary_deploy(
+                                    runner,
+                                    p,
+                                    sentiment_scores=sentiment_scores,
+                                    rsi_values=getattr(runner, "rsi_values", {}) or {},
+                                )
+                            except Exception as e:
+                                logger.warning("[RSI-PRIMARY] re-apply (%s) skipped: %s", reason, e)
+                            try:
+                                from phase6.core.run_phase_deploy import (
+                                    filter_trade_plan_run_phase_deploy,
+                                )
+
+                                p = filter_trade_plan_run_phase_deploy(runner, p)
+                            except Exception as e:
+                                logger.warning("[RUN-PHASE] re-apply (%s) skipped: %s", reason, e)
+                            # P0 basket + RSI/sent presence — last line before buffer/execute
+                            try:
+                                from phase6.core.buy_eligibility import (
+                                    filter_trade_plan_buy_eligibility,
+                                )
+
+                                p = filter_trade_plan_buy_eligibility(
+                                    p,
+                                    rsi_values=getattr(runner, "rsi_values", {}) or {},
+                                    sentiment_scores=sentiment_scores or {},
+                                    config_dict=getattr(runner, "config_dict", None),
+                                    require_signals=True,
+                                    enforce=True,
+                                )
+                            except Exception as e:
+                                logger.warning("[BUY-ELIG] (%s) skipped: %s", reason, e)
+                            return p
+
                         # P1 ignition scout: shadow board always; propose mode may append early BUY hints
                         try:
                             from phase6.core.run_lifecycle import (
@@ -297,28 +362,33 @@ class RebalanceCoordinator:
                             plan = apply_ignition_proposals_to_plan(
                                 runner, plan, config_dict=runner.config_dict
                             )
-                            # Re-apply hard gates if proposals added
-                            if any(
-                                a.get("ignition_scout")
-                                for a in (plan.actions or [])
-                                if isinstance(a, dict)
-                            ):
-                                from phase6.core.rsi_primary_deploy import (
-                                    filter_trade_plan_rsi_primary_deploy,
-                                )
-                                from phase6.core.run_phase_deploy import (
-                                    filter_trade_plan_run_phase_deploy,
-                                )
-
-                                plan = filter_trade_plan_rsi_primary_deploy(
-                                    runner,
-                                    plan,
-                                    sentiment_scores=sentiment_scores,
-                                    rsi_values=getattr(runner, "rsi_values", {}) or {},
-                                )
-                                plan = filter_trade_plan_run_phase_deploy(runner, plan)
+                            # ALWAYS re-apply full hard gates after ignition (even if no adds —
+                            # cheap safety; closes the OP-USD hole where only rsi/run-phase re-ran).
+                            plan = _reapply_hard_buy_gates(plan, "post_ignition")
                         except Exception as e:
                             logger.warning("[IGNITION-SCOUT] skipped: %s", e)
+                            # Still enforce basket/signal even if ignition path failed mid-way
+                            try:
+                                plan = _reapply_hard_buy_gates(plan, "post_ignition_except")
+                            except Exception:
+                                pass
+
+                        # Final pre-execute hard gate (belt + suspenders)
+                        try:
+                            from phase6.core.buy_eligibility import (
+                                filter_trade_plan_buy_eligibility,
+                            )
+
+                            plan = filter_trade_plan_buy_eligibility(
+                                plan,
+                                rsi_values=getattr(runner, "rsi_values", {}) or {},
+                                sentiment_scores=sentiment_scores or {},
+                                config_dict=getattr(runner, "config_dict", None),
+                                require_signals=True,
+                                enforce=True,
+                            )
+                        except Exception as e:
+                            logger.warning("[BUY-ELIG] pre-execute skipped: %s", e)
 
                         # Respect trade buffer: do not churn on pairs traded in the recent window.
                         # Prevents immediate rotation of newly entered positions on the daily rebalance.

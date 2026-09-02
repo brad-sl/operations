@@ -54,9 +54,40 @@ def _f(v: Any, default: float = 0.0) -> float:
     try:
         if v is None:
             return default
+        if isinstance(v, dict):
+            for k in ("rsi", "value", "RSI", "rsi_14"):
+                if k in v and v[k] is not None:
+                    return float(v[k])
+            return default
         return float(v)
     except (TypeError, ValueError):
         return default
+
+
+def _normalize_rsi_map(rsi_values: Optional[Dict[str, Any]]) -> Dict[str, float]:
+    """Flatten nested RSI cache ({'LINK-USD': {'rsi': 39.4}}) to floats."""
+    out: Dict[str, float] = {}
+    for k, v in (rsi_values or {}).items():
+        if v is None:
+            continue
+        if isinstance(v, dict):
+            got = None
+            for key in ("rsi", "value", "RSI", "rsi_14"):
+                if key in v and v[key] is not None:
+                    try:
+                        got = float(v[key])
+                    except (TypeError, ValueError):
+                        got = None
+                    break
+            if got is None:
+                continue
+            out[str(k)] = got
+        else:
+            try:
+                out[str(k)] = float(v)
+            except (TypeError, ValueError):
+                continue
+    return out
 
 
 def _utcnow() -> str:
@@ -496,10 +527,14 @@ def filter_trade_plan_rsi_primary_deploy(
             if str(a.get("action") or a.get("side") or "").upper() == "BUY"
         )
 
+    rsi_flat = _normalize_rsi_map(rsi_values if isinstance(rsi_values, dict) else {})
+    # Do NOT default missing RSI to 50 — that masks sent_only and false structure.
+    # Missing keys stay absent; apply_gates treats absence as no RSI.
+    sent_flat = {str(k): _f(v, 0.0) for k, v in (sentiment_scores or {}).items()}
     new_actions, results = apply_gates_to_actions(
         list(plan.actions),
-        rsi_by_pair={str(k): _f(v, 50.0) for k, v in (rsi_values or {}).items()},
-        sent_by_pair={str(k): _f(v, 0.0) for k, v in (sentiment_scores or {}).items()},
+        rsi_by_pair=rsi_flat,
+        sent_by_pair=sent_flat,
         equity_usd=eq,
         positions_usd=pos,
         rebalance_cap_usd=rebalance_cap_usd if rebalance_cap_usd is not None else None,
@@ -602,6 +637,34 @@ def record_entry_lot(
         save_entry_lots(lots2, path)
     except Exception as e:
         logger.debug("entry lot lifecycle enrich skipped: %s", e)
+    # Research SSOT: entry leg signal event at true buy time (not only reconcile lag)
+    try:
+        from phase6.core.indicator_snapshot import append_trade_signal_event
+
+        append_trade_signal_event(
+            {
+                "timestamp": row.get("ts"),
+                "pair": pair,
+                "side": "BUY",
+                "order_id": order_id,
+                "entry_rsi": row.get("entry_rsi"),
+                "entry_sentiment": row.get("entry_sentiment"),
+                "entry_drivers": row.get("drivers"),
+                "sentiment_only": row.get("sentiment_only"),
+                "sentiment_led": row.get("sentiment_led"),
+                "entry_price": row.get("entry_price"),
+                "signal_source": "entry_driver_lot",
+                "mode": "live",
+                "indicators_at_trade": {
+                    "rsi": row.get("entry_rsi"),
+                    "sentiment": row.get("entry_sentiment"),
+                    "leg": "entry",
+                    "source": "entry_driver_lot",
+                },
+            }
+        )
+    except Exception as e:
+        logger.debug("entry lot signal event skipped: %s", e)
     return row
 
 

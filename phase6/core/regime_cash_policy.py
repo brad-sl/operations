@@ -130,7 +130,7 @@ def resolve_regime_cash(
     entry = deepcopy(regimes.get(regime) or regimes.get("unknown") or {})
     entry = _merge_knob_map(regime, pol, entry)
 
-    return RegimeCashSnapshot(
+    snap = RegimeCashSnapshot(
         regime=regime,
         confidence=float(detection.get("confidence") or 0.0),
         btc_return_pct=detection.get("btc_return_pct"),
@@ -151,6 +151,8 @@ def resolve_regime_cash(
         layer_label=layer_label,
         shadow_stance=shadow_stance,
     )
+    # Recovery soft_down / quality_tryout: clamp bull deploy sleeve (default $75)
+    return apply_recovery_cap_to_snapshot(snap, policy=pol)
 
 
 def _normalize_pair_symbol(pair: str) -> str:
@@ -208,44 +210,21 @@ def collect_buy_block_pairs(
     return out
 
 
-def recovery_soft_down_blocks_pair(
-    pair: str,
-    *,
-    policy: Optional[Dict[str, Any]] = None,
-    is_new_pair: bool = False,
-    snap: Optional[RegimeCashSnapshot] = None,
-) -> Optional[str]:
-    """
-    Phase-1 recovery gate.
-    Explicit block_new_buy_pairs always deny.
-    When new_alt_policy=block_unless_allowlist and is_new_pair, deny non-allowlisted
-    alts while equity health is soft_down (or recovery phase 1 state present).
-    """
+def _recovery_rec(policy: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     pol = policy if isinstance(policy, dict) else {}
     oo = pol.get("operator_override") if isinstance(pol.get("operator_override"), dict) else {}
     rec = oo.get("recovery_soft_down_20260828") if isinstance(oo, dict) else None
-    if not (isinstance(rec, dict) and rec.get("enabled")):
-        return None
+    if isinstance(rec, dict) and rec.get("enabled"):
+        return rec
+    return None
 
-    p = _normalize_pair_symbol(pair)
-    blocked = {_normalize_pair_symbol(str(x)) for x in (rec.get("block_new_buy_pairs") or [])}
-    if p in blocked:
-        return f"recovery_soft_down block_list {p}"
 
-    if not is_new_pair:
-        return None
-
-    policy_mode = str(rec.get("new_alt_policy") or "")
-    if not policy_mode.startswith("block_unless_allowlist"):
-        return None
-
-    allow = {_normalize_pair_symbol(str(x)) for x in (rec.get("allowlist_pairs") or [])}
-    if not allow:
-        return None
-    if p in allow:
-        return None
-
-    # Apply allowlist when equity path is soft_down / recovery phase 1 / snap soft_down
+def _equity_health_hit_for_recovery(
+    rec: Dict[str, Any],
+    *,
+    snap: Optional[RegimeCashSnapshot] = None,
+) -> bool:
+    """True when soft_down/declining path should enforce recovery new-seat rules."""
     health_hit = False
     if snap is not None:
         if str(getattr(snap, "regime", "") or "").lower() in (
@@ -264,41 +243,236 @@ def recovery_soft_down_blocks_pair(
         ):
             health_hit = True
 
-    if not health_hit:
-        # Only live equity health — not recovery phase marker alone (that file
-        # stays on disk after path improves and must not blanket-block all alts).
-        want = {str(x).lower() for x in (rec.get("while_equity_health_in") or [])}
-        want |= {"soft_down", "soft_downtrend", "declining", "hard_down"}
-        for rel in (
-            "data/state/trend_repair_status.json",
-            "data/state/regime_cash_status.json",
-        ):
-            try:
-                tp = PROJECT_ROOT / rel
-                if not tp.exists():
-                    continue
-                raw = json.loads(tp.read_text(encoding="utf-8"))
-                if not isinstance(raw, dict):
-                    continue
-                states: List[str] = []
-                et = raw.get("equity_trend") if isinstance(raw.get("equity_trend"), dict) else {}
-                h = et.get("health") if isinstance(et, dict) else None
-                if isinstance(h, dict):
-                    states.append(str(h.get("state") or h.get("label") or "").lower())
-                elif h is not None:
-                    states.append(str(h).lower())
-                for key in ("regime", "regime_layer", "health_state", "equity_health"):
-                    if raw.get(key) is not None:
-                        states.append(str(raw.get(key)).lower())
-                if any(any(w in s for w in want if w) for s in states if s):
-                    health_hit = True
-                    break
-            except Exception:
-                continue
-
     if health_hit:
-        return f"recovery_soft_down allowlist new_alt {p}"
-    return None
+        return True
+
+    # Only live equity health — not recovery phase marker alone (that file
+    # stays on disk after path improves and must not blanket-block all alts).
+    want = {str(x).lower() for x in (rec.get("while_equity_health_in") or [])}
+    want |= {"soft_down", "soft_downtrend", "declining", "hard_down"}
+    for rel in (
+        "data/state/trend_repair_status.json",
+        "data/state/regime_cash_status.json",
+    ):
+        try:
+            tp = PROJECT_ROOT / rel
+            if not tp.exists():
+                continue
+            raw = json.loads(tp.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                continue
+            states: List[str] = []
+            et = raw.get("equity_trend") if isinstance(raw.get("equity_trend"), dict) else {}
+            h = et.get("health") if isinstance(et, dict) else None
+            if isinstance(h, dict):
+                states.append(str(h.get("state") or h.get("label") or "").lower())
+            elif h is not None:
+                states.append(str(h).lower())
+            for key in ("regime", "regime_layer", "health_state", "equity_health"):
+                if raw.get(key) is not None:
+                    states.append(str(raw.get(key)).lower())
+            if any(any(w in s for w in want if w) for s in states if s):
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def _norm_pair_set(xs: Any) -> Set[str]:
+    out: Set[str] = set()
+    _add_block_pairs(out, xs)
+    return out
+
+
+def recovery_quality_tryout_cfg(rec: Dict[str, Any]) -> Dict[str, Any]:
+    """Normalize quality_tryout knobs (Brad GO 2026-09-01 thaw A)."""
+    qt = rec.get("quality_tryout") if isinstance(rec.get("quality_tryout"), dict) else {}
+    return {
+        "tryout_pairs": _norm_pair_set(qt.get("tryout_pairs") or rec.get("tryout_pairs") or []),
+        "min_sentiment": float(qt.get("min_sentiment", rec.get("quality_min_sentiment", 0.30)) or 0.30),
+        "max_rsi": float(qt.get("max_rsi", rec.get("quality_max_rsi", 55.0)) or 55.0),
+        "min_rsi": float(qt.get("min_rsi", rec.get("quality_min_rsi", 0.0)) or 0.0),
+        "max_new_seats_per_day": int(
+            qt.get("max_new_seats_per_day", rec.get("max_new_seats_per_day", 1)) or 1
+        ),
+        "abs_cap_usd": float(qt.get("abs_cap_usd", rec.get("tryout_abs_cap_usd", 75.0)) or 75.0),
+    }
+
+
+def count_new_seat_buys_today(
+    *,
+    exclude_pairs: Optional[Set[str]] = None,
+    ledger_path: Optional[Path] = None,
+) -> int:
+    """Count non-dust BUY fills today (UTC) for empty-seat thaw rate limit.
+
+    Skips:
+      - exclude_pairs (ballast)
+      - rows tagged tryout_day_exempt / quality_tryout_exempt
+      - full-day wipe when data/state/quality_tryout_day_clear.json matches today (Brad GO)
+    """
+    # Operator day wipe (Brad GO C 2026-09-01: OP missfire not a tryout seat)
+    try:
+        clear_path = PROJECT_ROOT / "data" / "state" / "quality_tryout_day_clear.json"
+        if clear_path.exists():
+            clr = json.loads(clear_path.read_text(encoding="utf-8"))
+            today_s = datetime.now(timezone.utc).date().isoformat()
+            if clr.get("clear") and str(clr.get("date") or "") == today_s:
+                return 0
+    except Exception:
+        pass
+
+    path = ledger_path or (PROJECT_ROOT / "trades" / "phase6_trades.jsonl")
+    if not path.exists():
+        return 0
+    exclude = {_normalize_pair_symbol(x) for x in (exclude_pairs or set())}
+    today = datetime.now(timezone.utc).date()
+    n = 0
+    try:
+        with path.open(encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                side = str(row.get("side") or "").upper()
+                if side != "BUY":
+                    continue
+                if row.get("tryout_day_exempt") or row.get("quality_tryout_exempt"):
+                    continue
+                pair = _normalize_pair_symbol(str(row.get("pair") or ""))
+                if not pair or pair in exclude:
+                    continue
+                ts_raw = row.get("timestamp") or row.get("ts") or ""
+                try:
+                    ts = datetime.fromisoformat(str(ts_raw).replace("Z", "+00:00"))
+                    if ts.tzinfo is None:
+                        ts = ts.replace(tzinfo=timezone.utc)
+                except Exception:
+                    continue
+                if ts.date() != today:
+                    continue
+                # skip dust — only when we can form a notional; missing fields ≠ dust
+                try:
+                    notional = row.get("usd")
+                    if notional is None:
+                        notional = row.get("notional")
+                    if notional is None:
+                        notional = row.get("notional_usd")
+                    if notional is not None:
+                        if abs(float(notional)) < 5.0:
+                            continue
+                    else:
+                        qty = float(
+                            row.get("qty")
+                            or row.get("size")
+                            or row.get("quantity")
+                            or row.get("filled_size")
+                            or 0
+                        )
+                        px = float(
+                            row.get("entry_price")
+                            or row.get("price")
+                            or row.get("exit_price")
+                            or 0
+                        )
+                        if qty > 0 and px > 0 and abs(qty * px) < 5.0:
+                            continue
+                        # if still no size signal, count the BUY (conservative rate-limit)
+                except (TypeError, ValueError):
+                    pass
+                n += 1
+    except OSError:
+        return 0
+    return n
+
+
+def recovery_soft_down_blocks_pair(
+    pair: str,
+    *,
+    policy: Optional[Dict[str, Any]] = None,
+    is_new_pair: bool = False,
+    snap: Optional[RegimeCashSnapshot] = None,
+) -> Optional[str]:
+    """
+    Recovery gate (soft_down / declining equity path).
+
+    Explicit block_new_buy_pairs always deny.
+
+    Modes (new_alt_policy):
+      - block_unless_allowlist: only allowlist_pairs may open new seats
+      - quality_tryout: ballast allowlist OR quality tryout_pairs may open new seats
+        (sentiment/RSI floors applied in evaluate_buy_entry)
+    """
+    pol = policy if isinstance(policy, dict) else {}
+    rec = _recovery_rec(pol)
+    if not rec:
+        return None
+
+    p = _normalize_pair_symbol(pair)
+    blocked = _norm_pair_set(rec.get("block_new_buy_pairs"))
+    if p in blocked:
+        return f"recovery_soft_down block_list {p}"
+
+    if not is_new_pair:
+        return None
+
+    if not _equity_health_hit_for_recovery(rec, snap=snap):
+        return None
+
+    policy_mode = str(rec.get("new_alt_policy") or "")
+    allow = _norm_pair_set(rec.get("allowlist_pairs"))
+
+    # --- quality_tryout (Brad GO 2026-09-01): ballast + week-1 tryout set ---
+    if policy_mode.startswith("quality_tryout"):
+        qt = recovery_quality_tryout_cfg(rec)
+        eligible = set(allow) | set(qt["tryout_pairs"])
+        if p in eligible:
+            return None
+        return f"recovery_soft_down quality_tryout not_eligible {p}"
+
+    # --- legacy allowlist-only ---
+    if not policy_mode.startswith("block_unless_allowlist"):
+        return None
+
+    if not allow:
+        return None
+    if p in allow:
+        return None
+    return f"recovery_soft_down allowlist new_alt {p}"
+
+
+def apply_recovery_cap_to_snapshot(
+    snap: RegimeCashSnapshot,
+    *,
+    policy: Optional[Dict[str, Any]] = None,
+) -> RegimeCashSnapshot:
+    """Clamp rebalance_cap while recovery quality_tryout / soft_down path is active."""
+    pol = policy if isinstance(policy, dict) else load_policy()
+    rec = _recovery_rec(pol)
+    if not rec:
+        return snap
+    if not _equity_health_hit_for_recovery(rec, snap=snap):
+        return snap
+    cap_max = rec.get("bull_rebalance_cap_usd_max")
+    if cap_max is None:
+        return snap
+    try:
+        cap_f = float(cap_max)
+    except (TypeError, ValueError):
+        return snap
+    if cap_f < 0:
+        return snap
+    cur = float(snap.rebalance_cap_usd or 0.0)
+    if cur <= 0:
+        return snap
+    if cur <= cap_f:
+        return snap
+    snap.rebalance_cap_usd = cap_f
+    return snap
 
 
 def evaluate_buy_entry(
@@ -339,6 +513,27 @@ def evaluate_buy_entry(
         reasons.append(rec_reason)
         return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
 
+    # Quality tryout floors + max 1 new seat/day (while recovery health binds)
+    rec = _recovery_rec(pol if isinstance(pol, dict) else {})
+    qt_cfg: Optional[Dict[str, Any]] = None
+    on_tryout = False
+    if rec and bool(is_new_pair) and _equity_health_hit_for_recovery(rec, snap=snap):
+        mode = str(rec.get("new_alt_policy") or "")
+        if mode.startswith("quality_tryout"):
+            qt_cfg = recovery_quality_tryout_cfg(rec)
+            on_tryout = pair_n in set(qt_cfg["tryout_pairs"])
+            if on_tryout:
+                ballast = _norm_pair_set(rec.get("allowlist_pairs"))
+                already = count_new_seat_buys_today(exclude_pairs=ballast)
+                max_day = int(qt_cfg.get("max_new_seats_per_day") or 1)
+                if already >= max_day:
+                    reasons.append(
+                        f"recovery_soft_down quality_tryout max_new_seats_per_day {already}>={max_day}"
+                    )
+                    return EntryDecision(
+                        pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi
+                    )
+
     # Miss-fire probation — ledger launch→no-explode→hole (new seats + re-entry)
     try:
         from phase6.core.missfire_probation import evaluate_pair_missfire
@@ -355,21 +550,34 @@ def evaluate_buy_entry(
         return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
 
     min_s = float(eg.get("min_sentiment_new_pair" if is_new_pair else "min_sentiment") or -1.0)
+    max_rsi = float(eg.get("max_rsi") or 100.0)
+    min_rsi = 0.0
+    # Stricter quality bar for week-1 tryout names under recovery
+    if qt_cfg is not None and on_tryout:
+        min_s = max(min_s, float(qt_cfg["min_sentiment"]))
+        max_rsi = min(max_rsi, float(qt_cfg["max_rsi"]))
+        min_rsi = float(qt_cfg.get("min_rsi") or 0.0)
+
     if sentiment is None:
         reasons.append("sentiment_missing")
         return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
     if float(sentiment) < min_s:
         reasons.append(f"sentiment {sentiment:.3f} < min {min_s}")
 
-    max_rsi = float(eg.get("max_rsi") or 100.0)
     if rsi is None:
         reasons.append("rsi_missing")
-    elif float(rsi) > max_rsi:
-        reasons.append(f"rsi {rsi:.1f} > max_buy {max_rsi}")
+    else:
+        if float(rsi) > max_rsi:
+            reasons.append(f"rsi {rsi:.1f} > max_buy {max_rsi}")
+        if min_rsi > 0 and float(rsi) < min_rsi:
+            reasons.append(f"rsi {rsi:.1f} < min_buy {min_rsi}")
 
     allowed = len(reasons) == 0
     if allowed:
-        reasons.append("entry_ok")
+        if qt_cfg is not None and on_tryout:
+            reasons.append("entry_ok quality_tryout")
+        else:
+            reasons.append("entry_ok")
     return EntryDecision(pair=pair, allowed=allowed, reasons=reasons, sentiment=sentiment, rsi=rsi)
 
 
@@ -909,16 +1117,46 @@ def filter_trade_plan_regime_cash(
         if action != "BUY" or not pair:
             kept.append(a)
             continue
+        is_new = pair not in held_pairs
         dec = evaluate_buy_entry(
             pair,
             snap,
             sentiment=sentiment_scores.get(pair),
             rsi=rsi_values.get(pair),
             lockout_pairs=lockout_pairs,
-            is_new_pair=pair not in held_pairs,
+            is_new_pair=is_new,
             policy=policy,
         )
         if dec.allowed:
+            # Quality tryout: haircut notional to abs_cap / recovery rebalance sleeve
+            try:
+                pol_f = policy if isinstance(policy, dict) else load_policy()
+                rec_f = _recovery_rec(pol_f)
+                if (
+                    rec_f
+                    and is_new
+                    and _equity_health_hit_for_recovery(rec_f, snap=snap)
+                    and str(rec_f.get("new_alt_policy") or "").startswith("quality_tryout")
+                ):
+                    qt = recovery_quality_tryout_cfg(rec_f)
+                    pn = _normalize_pair_symbol(str(pair))
+                    if pn in set(qt["tryout_pairs"]):
+                        caps = [float(qt.get("abs_cap_usd") or 75.0)]
+                        if float(snap.rebalance_cap_usd or 0) > 0:
+                            caps.append(float(snap.rebalance_cap_usd))
+                        cap = min(caps)
+                        for key in ("usd", "usd_amount", "notional_usd", "size_usd"):
+                            if key in a and a[key] is not None:
+                                try:
+                                    prev = float(a[key])
+                                    if prev > cap:
+                                        a[key] = round(cap, 2)
+                                        a["quality_tryout_cap_usd"] = cap
+                                        a["quality_tryout"] = True
+                                except (TypeError, ValueError):
+                                    pass
+            except Exception:
+                pass
             kept.append(a)
         else:
             blocked.append({"pair": pair, "usd": a.get("usd") or a.get("usd_amount"), "reasons": dec.reasons})

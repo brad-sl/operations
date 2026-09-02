@@ -655,6 +655,19 @@ def apply_ignition_proposals_to_plan(
     actions = list(plan.actions or [])
     added = 0
     remaining_cash = cash
+    # P0 2026-09-01: live propose may only BUY trading-basket (or ballast) pairs.
+    # opportunity_pool remains OK for shadow board scoring, not for execution.
+    try:
+        from phase6.core.buy_eligibility import pair_in_live_buy_universe
+
+        def _live_ok(p: str) -> bool:
+            return pair_in_live_buy_universe(p, config_dict=cfg)
+
+    except Exception:
+
+        def _live_ok(p: str) -> bool:  # type: ignore[misc]
+            return True
+
     for row in board.get("top") or []:
         if added >= seats_left:
             break
@@ -663,7 +676,20 @@ def apply_ignition_proposals_to_plan(
         pair = row.get("pair")
         if not pair or pair in existing or pair in held:
             continue
+        if not _live_ok(str(pair)):
+            logger.info(
+                "[IGNITION-SCOUT] skip %s — not in trading basket/ballast (pool-only)",
+                pair,
+            )
+            continue
         if not row.get("structure_ok", True) and p1.get("require_structure_ok", True):
+            continue
+        # Require scout row to carry finite RSI + sentiment before proposing
+        if row.get("daily_rsi") is None and row.get("rsi") is None:
+            logger.info("[IGNITION-SCOUT] skip %s — missing RSI on scout row", pair)
+            continue
+        if row.get("sentiment") is None:
+            logger.info("[IGNITION-SCOUT] skip %s — missing sentiment on scout row", pair)
             continue
         usd = ignition_ticket_usd(
             equity_usd=eq,

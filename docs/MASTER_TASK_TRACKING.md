@@ -11695,3 +11695,53 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+## 2026-09-01 quality_tryout thaw A (Brad GO)
+- Problem: soft_down allowlist-only + BTC block-max froze account in bull regime
+- Change: `new_alt_policy=quality_tryout` week1 **ETH+LINK**; sent≥0.30; RSI≤55; max 1 new seat/day; cap $75
+- Keep: UNI/RAVE hard block; leave book; SOL excluded
+- Code: `regime_cash_policy.py` + isolation buy_block tests PASS
+- Artifact: `data/state/recovery_path_soft_down_quality_tryout_20260901.json`
+- Rollback: set policy `block_unless_allowlist` or `enabled=false` + restart runner
+
+### 2026-09-01 — trade signal stamp (RSI+sent buy/sell) GO
+- Goal: capture entry/exit RSI + sentiment + lag for attribution digs (sent vs RSI balance, ideal entry/exit, lag).
+- Choke points: `indicator_snapshot.stamp_trade_signal_fields` → `trade_ledger.log_trade`, `trading_log_store.append_verified_fill`, entry lot record → `data/state/trade_signal_events.jsonl`.
+- Fields: entry_rsi/entry_sentiment (BUY); exit_* + entry_* join + lag_hours_entry_to_exit + deltas (SELL).
+- Isolation: `scripts/phase6/test_isolation_trade_signal_stamp.py` PASS.
+- Honest: historical fills still lack tags — digs only valid on *new* stamped fills. No edge claim yet.
+- Rollback: revert stamp calls in trade_ledger / trading_log_store / rsi_primary_deploy record_entry_lot.
+
+
+## P0 BUY eligibility basket+signal (2026-09-01)
+- **Incident:** force rebalance bought OP-USD (~$413) via ignition scout from opportunity_pool; OP not in trading basket; regime quality_tryout never re-applied after ignition.
+- **Fix:** `buy_eligibility` hard gate (basket|ballast + finite RSI+sent for non-ballast); ignition propose basket-only; full gate re-apply post-ignition; execute choke.
+- **Test:** `scripts/phase6/test_isolation_buy_eligibility.py` PASS.
+- **Book:** OP left in place pending Brad go; tryout day seat may be consumed by OP fill.
+- Artifact: `data/state/p0_buy_eligibility_basket_signal_20260901.json`
+
+### 2026-09-01 Brad GO C — OP unwind + LINK E2E tryout
+- Sold OP missfire; cleared tryout day counter + cash hold.
+- P0 basket gate live; run_phase quality_tryout pass for LINK/ETH; RSI nest normalize.
+- LINK BUY filled ~$75 (6.7) rsi=39 sent=0.49 SL on; stamps on events.
+- OP remains blocked not_in_trading_basket.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260902** (opened 2026-09-02T01:30:03.833338)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260902`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

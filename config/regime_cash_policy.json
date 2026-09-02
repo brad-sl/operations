@@ -237,8 +237,9 @@
     "protect": true,
     "recovery_soft_down_20260828": {
       "enabled": true,
-      "reason": "Brad GO: soft_down gates new alts; leave book; path to profit Phase 1",
-      "as_of": "20260828T183930Z",
+      "reason": "Brad GO 2026-09-01: quality_tryout thaw A — week1 ETH+LINK; $75; max1 new seat/day; leave book; UNI/RAVE hard block",
+      "as_of": "20260901T183000Z",
+      "prior_as_of": "20260828T183930Z",
       "block_new_buy_pairs": [
         "UNI-USD",
         "RAVE-USD"
@@ -249,7 +250,7 @@
         "declining",
         "hard_down"
       ],
-      "new_alt_policy": "block_unless_allowlist",
+      "new_alt_policy": "quality_tryout",
       "allowlist_pairs": [
         "BTC-USD",
         "BTC-USDC",
@@ -258,9 +259,21 @@
         "USDC-USD",
         "USD-USD"
       ],
+      "quality_tryout": {
+        "tryout_pairs": [
+          "ETH-USD",
+          "LINK-USD"
+        ],
+        "min_sentiment": 0.30,
+        "max_rsi": 55.0,
+        "min_rsi": 0.0,
+        "max_new_seats_per_day": 1,
+        "abs_cap_usd": 75.0,
+        "note": "Week-1 majors tryout only. SOL excluded (ledger). Brad GO required to add pairs."
+      },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "set operator_override.recovery_soft_down_20260828.enabled=false"
+      "rollback": "set new_alt_policy=block_unless_allowlist OR enabled=false; restore allowlist-only"
     }
   },
   "buy_block_pairs": [

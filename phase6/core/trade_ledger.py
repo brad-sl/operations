@@ -114,13 +114,24 @@ class TradeLedger:
             trade["timestamp"] = _normalize_trade_timestamp(trade.get("timestamp"))
 
         pair = trade.get("pair") or trade.get("product_id")
-        if pair and "indicators_at_trade" not in trade:
-            try:
-                from phase6.core.indicator_snapshot import indicators_for_trade_pair
+        # Durable RSI+sent on BUY and SELL (entry/exit + lag). Research SSOT also
+        # written to data/state/trade_signal_events.jsonl for attribution digs.
+        try:
+            from phase6.core.indicator_snapshot import (
+                append_trade_signal_event,
+                stamp_trade_signal_fields,
+            )
 
-                trade["indicators_at_trade"] = indicators_for_trade_pair(str(pair))
-            except Exception:
-                pass
+            trade = stamp_trade_signal_fields(trade)
+            append_trade_signal_event(trade)
+        except Exception:
+            if pair and "indicators_at_trade" not in trade:
+                try:
+                    from phase6.core.indicator_snapshot import indicators_for_trade_pair
+
+                    trade["indicators_at_trade"] = indicators_for_trade_pair(str(pair))
+                except Exception:
+                    pass
 
         # Write full record (with possible influence_stack, regime, per-signal details) to JSONL
         with open(self.jsonl_path, "a") as f:
@@ -200,7 +211,14 @@ class TradeLedger:
             "sentiment_led",
             "entry_rsi",
             "entry_sentiment",
+            "exit_rsi",
+            "exit_sentiment",
+            "entry_order_id",
+            "entry_ts",
             "reason",
+            "exit_reason",
+            "pnl",
+            "pnl_pct",
         ):
             if result.get(k) is not None:
                 trade_record[k] = result.get(k)

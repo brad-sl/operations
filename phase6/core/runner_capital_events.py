@@ -84,6 +84,14 @@ def _reason_is_strategy_profit_exit(reason: str) -> bool:
     # signal_source sometimes lands in reason/source field
     if r.startswith("lifecycle_dual_peak") or r.startswith("lifecycle_extension_partial"):
         return True
+    # Operator missfire unwind (Brad GO C 2026-09-01): not a discretionary cash-park
+    if (
+        "operator_unwind" in r
+        or "quality_tryout_missfire" in r
+        or "missfire_unwind" in r
+        or r.startswith("operator_exit")
+    ):
+        return True
     return False
 
 

@@ -78,12 +78,13 @@ def test_lockout_blocks_even_in_bull():
         policy=pol,
         detection={"regime": "bull", "confidence": 1.0, "btc_return_pct": 20.0},
     )
+    # Use a synthetic pair so live missfire ledger cannot mask lockout.
     dec = evaluate_buy_entry(
-        "OP-USD",
+        "ZZZ-USD",
         snap,
         sentiment=0.8,
         rsi=40.0,
-        lockout_pairs={"OP-USD"},
+        lockout_pairs={"ZZZ-USD"},
         policy=pol,
     )
     assert dec.allowed is False

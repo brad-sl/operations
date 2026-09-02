@@ -1301,6 +1301,29 @@ class Phase6Runner:
         if not trade_plan or not getattr(trade_plan, "actions", None):
             self.logger.info("[ARCH-4] No actions in TradePlan")
             return 0, []
+        # P0 final choke: never execute BUY outside basket or without RSI+sent
+        try:
+            from phase6.core.buy_eligibility import filter_trade_plan_buy_eligibility
+            from phase6.core.sentiment_scorer import load_sentiment_scores
+
+            _sent = {}
+            try:
+                _sent = load_sentiment_scores(universe=getattr(self, "FIXED_UNIVERSE", None)) or {}
+            except Exception:
+                _sent = {}
+            trade_plan = filter_trade_plan_buy_eligibility(
+                trade_plan,
+                rsi_values=getattr(self, "rsi_values", {}) or {},
+                sentiment_scores=_sent,
+                config_dict=getattr(self, "config_dict", None),
+                require_signals=True,
+                enforce=True,
+            )
+        except Exception as _be:
+            self.logger.warning("[BUY-ELIG] execute choke skipped: %s", _be)
+        if not getattr(trade_plan, "actions", None):
+            self.logger.info("[ARCH-4] No actions left after buy-eligibility filter")
+            return 0, []
         exec_plan = []
         # Preserve RSI-primary entry tags for post-fill lot recording
         action_by_pair = {}

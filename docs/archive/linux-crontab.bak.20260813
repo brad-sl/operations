@@ -1,0 +1,24 @@
+# === X SENTIMENT COST CONTROL (2026-07-17) ===
+# Rebalance slots: 09:00 and 21:00 America/Los_Angeles
+# X API only via refresh_sentiment at 08:50 and 20:50 (10 min prior — enough for X fetch to finish, keep X primary vs Reddit).
+# Hermes sentiment-30min-refresh PAUSED (job 8612a817fe55).
+# fetch_x_sentiment 2h cron DISABLED (duplicate X calls).
+# Pre-rebalance runner may still refresh if cache stale; prefer warm cache from these two slots.
+*/15 * * * * cd /home/brad/projects/crypto-trading-bot && python3 scripts/phase6/monitor_phase6_runner.py >> logs/monitor.log 2>&1
+*/20 * * * * /home/brad/.hermes/scripts/phase6_rebalance_monitor.sh >> /home/brad/.hermes/logs/phase6_monitor.log 2>&1
+*/15 * * * * /home/brad/.hermes/scripts/backup-kanban-frequent.sh >> /home/brad/.hermes/logs/kanban-backup.log 2>&1
+# DISABLED (legacy) 0 * * * * cd /home/brad/projects/crypto-trading-bot && OPENBLAS_CORETYPE=GENERIC python3 run_sentiment_system.py >> sentiment_system.log 2>&1
+# */30 * * * * cd /home/brad/projects/crypto-trading-bot && ./run_sentiment.sh run_sentiment_system.py >> logs/sentiment_system.log 2>&1
+*/30 * * * * cd /home/brad/projects/crypto-trading-bot && python3 scripts/ops/ops_engineer.py >> logs/ops_engineer.log 2>&1
+0 9 * * 1 cd /home/brad/projects/crypto-trading-bot && python3 /tmp/fable5_reminder.py >> ~/.hermes/cron/fable5_reminder.log 2>&1
+# DISABLED Phase1 cost 2026-07-20: Reddit only via refresh_sentiment @ 08:50/20:50 PT (was 12×/day Apify)
+# 0 */2 * * * cd /home/brad/projects/crypto-trading-bot && OPENBLAS_CORETYPE=GENERIC python3 fetch_reddit_sentiment.py >> sentiment_cron.log 2>&1
+# DISABLED cost control 2026-07-17: X only pre-rebalance (see 08:50/20:50 refresh)
+# 0 */2 * * * cd /home/brad/projects/crypto-trading-bot && OPENBLAS_CORETYPE=GENERIC python3 fetch_x_sentiment.py >> sentiment_cron.log 2>&1
+# DISABLED cost control 2026-07-17 was */30 (4,34): now 10m before rebalance (X half-life / freshness) slots 09:00 & 21:00 PT
+# 4,34 * * * * cd /home/brad/projects/crypto-trading-bot && .venv/bin/python3 phase6/scripts/refresh_sentiment.py >> logs/sentiment_refresh_cron.log 2>&1
+# Phase2 free sentiment SHADOW (before X refresh; does not touch live cache)
+40 8,20 * * * cd /home/brad/projects/crypto-trading-bot && ./scripts/phase6/run_free_sentiment_shadow.sh >> logs/sentiment_free_shadow_cron.log 2>&1
+50 8,20 * * * cd /home/brad/projects/crypto-trading-bot && .venv/bin/python3 phase6/scripts/refresh_sentiment.py >> logs/sentiment_refresh_cron.log 2>&1
+
+# Phase6 intelligence: Hermes cron twice-daily-trading-intelligence-v2 (c16b620103dc) — not Linux crontab

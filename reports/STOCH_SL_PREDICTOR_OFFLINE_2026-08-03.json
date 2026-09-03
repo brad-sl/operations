@@ -1,0 +1,359 @@
+{
+  "trial_id": "ANALYST-STOCH-SL-PREDICTOR-20260803",
+  "phase": "offline",
+  "generated_at": "2026-08-03T17:52:52.494235+00:00",
+  "analysis": {
+    "window": {
+      "start": "2026-07-21T21:54:57.262723+00:00",
+      "end": "2026-08-03T17:52:52.370356+00:00"
+    },
+    "n_buys": 9,
+    "n_with_entry_stoch": 6,
+    "n_with_entry_rsi": 6,
+    "ind_source_counts": {
+      "indicators_at_trade": 6,
+      "missing": 3
+    },
+    "base_sl_rate_7d": 0.16666666666666666,
+    "base_sl_rate_14d": 0.3333333333333333,
+    "primary_7d_stoch30": {
+      "attr": "stoch_k",
+      "threshold": 30.0,
+      "horizon": "hit_sl_7d",
+      "low": {
+        "n": 3,
+        "sl_hits": 1,
+        "sl_rate": 0.3333333333333333,
+        "wilson_lo": 0.061490315276160515,
+        "wilson_hi": 0.7923450448735121
+      },
+      "high": {
+        "n": 3,
+        "sl_hits": 0,
+        "sl_rate": 0.0,
+        "wilson_lo": 0.0,
+        "wilson_hi": 0.5615060804490177
+      },
+      "lift_low_over_high": Infinity,
+      "rule": "stoch_k < 30.0 vs >=30.0"
+    },
+    "stoch20_7d": {
+      "attr": "stoch_k",
+      "threshold": 20.0,
+      "horizon": "hit_sl_7d",
+      "low": {
+        "n": 2,
+        "sl_hits": 0,
+        "sl_rate": 0.0,
+        "wilson_lo": 0.0,
+        "wilson_hi": 0.6576280471103807
+      },
+      "high": {
+        "n": 4,
+        "sl_hits": 1,
+        "sl_rate": 0.25,
+        "wilson_lo": 0.045586062644636216,
+        "wilson_hi": 0.6993639475573634
+      },
+      "lift_low_over_high": 0.0,
+      "rule": "stoch_k < 20.0 vs >=20.0"
+    },
+    "stoch30_3d": {
+      "attr": "stoch_k",
+      "threshold": 30.0,
+      "horizon": "hit_sl_3d",
+      "low": {
+        "n": 3,
+        "sl_hits": 0,
+        "sl_rate": 0.0,
+        "wilson_lo": 0.0,
+        "wilson_hi": 0.5615060804490177
+      },
+      "high": {
+        "n": 3,
+        "sl_hits": 0,
+        "sl_rate": 0.0,
+        "wilson_lo": 0.0,
+        "wilson_hi": 0.5615060804490177
+      },
+      "lift_low_over_high": null,
+      "rule": "stoch_k < 30.0 vs >=30.0"
+    },
+    "stoch30_14d": {
+      "attr": "stoch_k",
+      "threshold": 30.0,
+      "horizon": "hit_sl_14d",
+      "low": {
+        "n": 3,
+        "sl_hits": 1,
+        "sl_rate": 0.3333333333333333,
+        "wilson_lo": 0.061490315276160515,
+        "wilson_hi": 0.7923450448735121
+      },
+      "high": {
+        "n": 3,
+        "sl_hits": 1,
+        "sl_rate": 0.3333333333333333,
+        "wilson_lo": 0.061490315276160515,
+        "wilson_hi": 0.7923450448735121
+      },
+      "lift_low_over_high": 1.0,
+      "rule": "stoch_k < 30.0 vs >=30.0"
+    },
+    "rsi35_7d": {
+      "attr": "rsi",
+      "threshold": 35.0,
+      "horizon": "hit_sl_7d",
+      "low": {
+        "n": 2,
+        "sl_hits": 0,
+        "sl_rate": 0.0,
+        "wilson_lo": 0.0,
+        "wilson_hi": 0.6576280471103807
+      },
+      "high": {
+        "n": 4,
+        "sl_hits": 1,
+        "sl_rate": 0.25,
+        "wilson_lo": 0.045586062644636216,
+        "wilson_hi": 0.6993639475573634
+      },
+      "lift_low_over_high": 0.0,
+      "rule": "rsi < 35.0 vs >=35.0"
+    },
+    "rsi_controlled": {
+      "rsi_band": [
+        40.0,
+        60.0
+      ],
+      "stoch_thr": 30.0,
+      "horizon": "hit_sl_7d",
+      "n_mid_rsi": 4,
+      "low_stoch": {
+        "n": 1,
+        "sl_hits": 1,
+        "sl_rate": 1.0,
+        "wilson_lo": 0.20654329147389294,
+        "wilson_hi": 1.0
+      },
+      "high_stoch": {
+        "n": 3,
+        "sl_hits": 0,
+        "sl_rate": 0.0,
+        "wilson_lo": 0.0,
+        "wilson_hi": 0.5615060804490177
+      },
+      "lift": null,
+      "note": "Additive test: Stoch split inside RSI-neutral band only"
+    },
+    "trailing_exit": {
+      "n": 2,
+      "mean": 0.0,
+      "median": 0.0,
+      "pct_lt_thr": 1.0,
+      "threshold": 30.0,
+      "caveat": "Exit Stoch is trailing \u2014 expected low after adverse move; not proof of entry utility."
+    },
+    "entry_vs_exit": {
+      "sl_hits_with_entry_stoch": 2,
+      "entry_stoch_lt_thr": 1,
+      "entry_pct_lt_thr": 0.5,
+      "sl_hits_with_exit_stoch": 2,
+      "exit_stoch_lt_thr": 2,
+      "exit_pct_lt_thr": 1.0,
+      "threshold": 30.0,
+      "interpretation": "If exit_pct >> entry_pct, Stoch is mostly trailing the loss path. If entry_pct elevated vs non-SL baseline, possible leading signal."
+    },
+    "episodes": [
+      {
+        "pair": "SOL-USD",
+        "entry_ts": "2026-07-23T04:01:01.195490+00:00",
+        "entry_price": 77.52934672295268,
+        "reason": "rebalance_buy",
+        "rsi": 43.54,
+        "stoch_k": 24.9,
+        "stoch_d": 22.88,
+        "ind_source": "indicators_at_trade",
+        "ind_lag_s": 0.0,
+        "hit_sl_3d": false,
+        "hit_sl_7d": true,
+        "hit_sl_14d": true,
+        "hours_to_sl": 96.09625044916666,
+        "sl_ts": "2026-07-27T04:06:47.697107+00:00",
+        "exit_stoch_k": 0.0,
+        "exit_rsi": 37.71,
+        "next_event": null
+      },
+      {
+        "pair": "LINK-USD",
+        "entry_ts": "2026-07-23T16:00:26.721753+00:00",
+        "entry_price": 8.489,
+        "reason": "rebalance_buy",
+        "rsi": 42.93,
+        "stoch_k": 100.0,
+        "stoch_d": 62.64,
+        "ind_source": "indicators_at_trade",
+        "ind_lag_s": 0.0,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": true,
+        "hours_to_sl": 216.11960770583335,
+        "sl_ts": "2026-08-01T16:07:37.309494+00:00",
+        "exit_stoch_k": 0.0,
+        "exit_rsi": 21.6,
+        "next_event": null
+      },
+      {
+        "pair": "PAXG-USD",
+        "entry_ts": "2026-08-02T05:27:49.871742+00:00",
+        "entry_price": 4056.36,
+        "reason": "preserve_arm",
+        "rsi": null,
+        "stoch_k": null,
+        "stoch_d": null,
+        "ind_source": "missing",
+        "ind_lag_s": null,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      },
+      {
+        "pair": "PAXG-USD",
+        "entry_ts": "2026-08-02T06:47:26.078510+00:00",
+        "entry_price": 4056.06,
+        "reason": "preserve_arm",
+        "rsi": null,
+        "stoch_k": null,
+        "stoch_d": null,
+        "ind_source": "missing",
+        "ind_lag_s": null,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      },
+      {
+        "pair": "PAXG-USD",
+        "entry_ts": "2026-08-02T07:22:16.169581+00:00",
+        "entry_price": 4055.92,
+        "reason": "preserve_arm",
+        "rsi": null,
+        "stoch_k": null,
+        "stoch_d": null,
+        "ind_source": "missing",
+        "ind_lag_s": null,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      },
+      {
+        "pair": "BTC-USD",
+        "entry_ts": "2026-08-02T16:01:34.489501+00:00",
+        "entry_price": 63035.5,
+        "reason": "rebalance_buy",
+        "rsi": 44.67,
+        "stoch_k": 62.51,
+        "stoch_d": 83.28,
+        "ind_source": "indicators_at_trade",
+        "ind_lag_s": 0.0,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      },
+      {
+        "pair": "BTC-USD",
+        "entry_ts": "2026-08-02T16:06:23.292549+00:00",
+        "entry_price": 63022.7,
+        "reason": "rebalance_buy",
+        "rsi": 44.67,
+        "stoch_k": 62.51,
+        "stoch_d": 83.28,
+        "ind_source": "indicators_at_trade",
+        "ind_lag_s": 0.0,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      },
+      {
+        "pair": "BTC-USD",
+        "entry_ts": "2026-08-03T04:01:12.375019+00:00",
+        "entry_price": 62829.26,
+        "reason": "rebalance_buy",
+        "rsi": 27.89,
+        "stoch_k": 0.0,
+        "stoch_d": 0.0,
+        "ind_source": "indicators_at_trade",
+        "ind_lag_s": 0.0,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      },
+      {
+        "pair": "BTC-USD",
+        "entry_ts": "2026-08-03T04:06:12.807805+00:00",
+        "entry_price": 62835.05,
+        "reason": "rebalance_buy",
+        "rsi": 27.89,
+        "stoch_k": 0.0,
+        "stoch_d": 0.0,
+        "ind_source": "indicators_at_trade",
+        "ind_lag_s": 0.0,
+        "hit_sl_3d": false,
+        "hit_sl_7d": false,
+        "hit_sl_14d": false,
+        "hours_to_sl": null,
+        "sl_ts": null,
+        "exit_stoch_k": null,
+        "exit_rsi": null,
+        "next_event": null
+      }
+    ],
+    "recommendation": {
+      "enum": "extend_collect",
+      "plain_english": "Sample too small for utility call.",
+      "caveats": [
+        "thin labeled buys with entry Stoch (n=6) \u2014 do not ship live knobs",
+        "Need more buys with entry tags OR longer window after Stoch instrumentation.",
+        "Allocator stays plain RSI; no live SL change."
+      ],
+      "go_live_sl_change": false,
+      "go_allocator_change": false,
+      "go_shadow": false
+    }
+  },
+  "rules": {
+    "allocator_change": false,
+    "live_sl_change": false,
+    "real_data_only": true,
+    "requires_brad_go_for_live": true
+  }
+}

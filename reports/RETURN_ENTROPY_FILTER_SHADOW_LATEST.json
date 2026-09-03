@@ -1,0 +1,606 @@
+{
+  "ts": "2026-08-31T02:56:27.275298+00:00",
+  "plain_english": "No promote. Entropy filter is a concentration feature dig only. Judge on mean return, \u0394BH, max DD, turnover \u2014 not win rate. Best non-BH arm on this tape: INVERSE_HIGH_H mean_ret=0.387 \u0394BH=-0.464 class=ATTENTION_ONLY. Not a standard-opt candidate without long walk-forward + Brad go.",
+  "pre_registered": {
+    "window": 30,
+    "n_bins": 10,
+    "structure_max": 0.35,
+    "noise_min": 0.7,
+    "edge_mode": "fixed",
+    "fixed_lo": -0.08,
+    "fixed_hi": 0.08,
+    "fee_bps": 5.0,
+    "slip_bps": 2.0,
+    "max_hold_bars": 60
+  },
+  "pairs": [
+    {
+      "pair": "BTC-USD",
+      "short": "btc",
+      "n_bars": 2093,
+      "start": "2020-11-22",
+      "end": "2026-08-15",
+      "label_counts": {
+        "structure": 0,
+        "mid": 723,
+        "noise": 1340,
+        "insufficient": 30
+      },
+      "arms": [
+        {
+          "arm_id": "BH",
+          "total_return": 1.6406804748016075,
+          "final_equity": 2.6406804748016075,
+          "max_drawdown": -0.7667059828725817,
+          "n_trades": 1,
+          "n_round_trips": 1,
+          "wins": 1,
+          "losses": 0,
+          "win_rate": 1.0,
+          "mean_trade_ret": 1.6443813128928144,
+          "bars": 2063,
+          "description": "Buy & hold from first valid bar",
+          "delta_bh": 0.0
+        },
+        {
+          "arm_id": "LOW_H_ONLY",
+          "total_return": 0.0,
+          "final_equity": 1.0,
+          "max_drawdown": 0.0,
+          "n_trades": 0,
+          "n_round_trips": 0,
+          "wins": 0,
+          "losses": 0,
+          "win_rate": null,
+          "mean_trade_ret": null,
+          "bars": 2063,
+          "description": "Long only when H_norm < structure_max",
+          "delta_bh": -1.6406804748016075
+        },
+        {
+          "arm_id": "AVOID_HIGH_H",
+          "total_return": 0.17826500899706454,
+          "final_equity": 1.1782650089970645,
+          "max_drawdown": -0.43926803608557163,
+          "n_trades": 45,
+          "n_round_trips": 45,
+          "wins": 24,
+          "losses": 21,
+          "win_rate": 0.5333333333333333,
+          "mean_trade_ret": 0.010922753543274872,
+          "bars": 2063,
+          "description": "Long when H_norm <= noise_min; flat in noise",
+          "delta_bh": -1.462415465804543
+        },
+        {
+          "arm_id": "INVERSE_HIGH_H",
+          "total_return": 0.5822391832750768,
+          "final_equity": 1.5822391832750768,
+          "max_drawdown": -0.7460997748845704,
+          "n_trades": 54,
+          "n_round_trips": 54,
+          "wins": 27,
+          "losses": 27,
+          "win_rate": 0.5,
+          "mean_trade_ret": 0.029888816508113564,
+          "bars": 2063,
+          "description": "Long only when H_norm > noise_min (control)",
+          "delta_bh": -1.0584412915265307
+        }
+      ],
+      "bh_return": 1.6406804748016075
+    },
+    {
+      "pair": "ETH-USD",
+      "short": "eth",
+      "n_bars": 2093,
+      "start": "2020-11-22",
+      "end": "2026-08-15",
+      "label_counts": {
+        "structure": 0,
+        "mid": 282,
+        "noise": 1781,
+        "insufficient": 30
+      },
+      "arms": [
+        {
+          "arm_id": "BH",
+          "total_return": 1.9524433726593062,
+          "final_equity": 2.9524433726593062,
+          "max_drawdown": -0.7935036056443401,
+          "n_trades": 1,
+          "n_round_trips": 1,
+          "wins": 1,
+          "losses": 0,
+          "win_rate": 1.0,
+          "mean_trade_ret": 1.9565811375270874,
+          "bars": 2063,
+          "description": "Buy & hold from first valid bar",
+          "delta_bh": 0.0
+        },
+        {
+          "arm_id": "LOW_H_ONLY",
+          "total_return": 0.0,
+          "final_equity": 1.0,
+          "max_drawdown": 0.0,
+          "n_trades": 0,
+          "n_round_trips": 0,
+          "wins": 0,
+          "losses": 0,
+          "win_rate": null,
+          "mean_trade_ret": null,
+          "bars": 2063,
+          "description": "Long only when H_norm < structure_max",
+          "delta_bh": -1.9524433726593062
+        },
+        {
+          "arm_id": "AVOID_HIGH_H",
+          "total_return": 0.45267344698866574,
+          "final_equity": 1.4526734469886657,
+          "max_drawdown": -0.43501459276351506,
+          "n_trades": 18,
+          "n_round_trips": 18,
+          "wins": 12,
+          "losses": 6,
+          "win_rate": 0.6666666666666666,
+          "mean_trade_ret": 0.03198079066866382,
+          "bars": 2063,
+          "description": "Long when H_norm <= noise_min; flat in noise",
+          "delta_bh": -1.4997699256706405
+        },
+        {
+          "arm_id": "INVERSE_HIGH_H",
+          "total_return": 0.5496981787669082,
+          "final_equity": 1.5496981787669082,
+          "max_drawdown": -0.8738967399518641,
+          "n_trades": 40,
+          "n_round_trips": 40,
+          "wins": 21,
+          "losses": 19,
+          "win_rate": 0.525,
+          "mean_trade_ret": 0.06793190950295154,
+          "bars": 2063,
+          "description": "Long only when H_norm > noise_min (control)",
+          "delta_bh": -1.402745193892398
+        }
+      ],
+      "bh_return": 1.9524433726593062
+    },
+    {
+      "pair": "SOL-USD",
+      "short": "sol",
+      "n_bars": 1886,
+      "start": "2021-06-17",
+      "end": "2026-08-15",
+      "label_counts": {
+        "structure": 0,
+        "mid": 22,
+        "noise": 1834,
+        "insufficient": 30
+      },
+      "arms": [
+        {
+          "arm_id": "BH",
+          "total_return": 1.8151400003923182,
+          "final_equity": 2.815140000392318,
+          "max_drawdown": -0.962745833059595,
+          "n_trades": 1,
+          "n_round_trips": 1,
+          "wins": 1,
+          "losses": 0,
+          "win_rate": 1.0,
+          "mean_trade_ret": 1.8190853385144226,
+          "bars": 1856,
+          "description": "Buy & hold from first valid bar",
+          "delta_bh": 0.0
+        },
+        {
+          "arm_id": "LOW_H_ONLY",
+          "total_return": 0.0,
+          "final_equity": 1.0,
+          "max_drawdown": 0.0,
+          "n_trades": 0,
+          "n_round_trips": 0,
+          "wins": 0,
+          "losses": 0,
+          "win_rate": null,
+          "mean_trade_ret": null,
+          "bars": 1856,
+          "description": "Long only when H_norm < structure_max",
+          "delta_bh": -1.8151400003923182
+        },
+        {
+          "arm_id": "AVOID_HIGH_H",
+          "total_return": 0.036324535947644954,
+          "final_equity": 1.036324535947645,
+          "max_drawdown": -0.034146900423971505,
+          "n_trades": 2,
+          "n_round_trips": 2,
+          "wins": 1,
+          "losses": 1,
+          "win_rate": 0.5,
+          "mean_trade_ret": 0.019862531452934096,
+          "bars": 1856,
+          "description": "Long when H_norm <= noise_min; flat in noise",
+          "delta_bh": -1.7788154644446732
+        },
+        {
+          "arm_id": "INVERSE_HIGH_H",
+          "total_return": 2.124487586476111,
+          "final_equity": 3.124487586476111,
+          "max_drawdown": -0.9602792664940424,
+          "n_trades": 31,
+          "n_round_trips": 31,
+          "wins": 13,
+          "losses": 18,
+          "win_rate": 0.41935483870967744,
+          "mean_trade_ret": 0.24037495296390177,
+          "bars": 1856,
+          "description": "Long only when H_norm > noise_min (control)",
+          "delta_bh": 0.30934758608379287
+        }
+      ],
+      "bh_return": 1.8151400003923182
+    },
+    {
+      "pair": "LINK-USD",
+      "short": "link",
+      "n_bars": 2093,
+      "start": "2020-11-22",
+      "end": "2026-08-15",
+      "label_counts": {
+        "structure": 0,
+        "mid": 23,
+        "noise": 2040,
+        "insufficient": 30
+      },
+      "arms": [
+        {
+          "arm_id": "BH",
+          "total_return": -0.2552658666410472,
+          "final_equity": 0.7447341333589528,
+          "max_drawdown": -0.901929390689769,
+          "n_trades": 1,
+          "n_round_trips": 1,
+          "wins": 0,
+          "losses": 1,
+          "win_rate": 0.0,
+          "mean_trade_ret": -0.2542221430724986,
+          "bars": 2063,
+          "description": "Buy & hold from first valid bar",
+          "delta_bh": 0.0
+        },
+        {
+          "arm_id": "LOW_H_ONLY",
+          "total_return": 0.0,
+          "final_equity": 1.0,
+          "max_drawdown": 0.0,
+          "n_trades": 0,
+          "n_round_trips": 0,
+          "wins": 0,
+          "losses": 0,
+          "win_rate": null,
+          "mean_trade_ret": null,
+          "bars": 2063,
+          "description": "Long only when H_norm < structure_max",
+          "delta_bh": 0.2552658666410472
+        },
+        {
+          "arm_id": "AVOID_HIGH_H",
+          "total_return": 0.15805183958091362,
+          "final_equity": 1.1580518395809136,
+          "max_drawdown": -0.13770584928740248,
+          "n_trades": 4,
+          "n_round_trips": 4,
+          "wins": 2,
+          "losses": 2,
+          "win_rate": 0.5,
+          "mean_trade_ret": 0.043715361419680854,
+          "bars": 2063,
+          "description": "Long when H_norm <= noise_min; flat in noise",
+          "delta_bh": 0.41331770622196085
+        },
+        {
+          "arm_id": "INVERSE_HIGH_H",
+          "total_return": -0.4412034580720442,
+          "final_equity": 0.5587965419279558,
+          "max_drawdown": -0.9173947629098043,
+          "n_trades": 36,
+          "n_round_trips": 36,
+          "wins": 18,
+          "losses": 18,
+          "win_rate": 0.5,
+          "mean_trade_ret": 0.06261912760463963,
+          "bars": 2063,
+          "description": "Long only when H_norm > noise_min (control)",
+          "delta_bh": -0.18593759143099697
+        }
+      ],
+      "bh_return": -0.2552658666410472
+    },
+    {
+      "pair": "AVAX-USD",
+      "short": "avax",
+      "n_bars": 1781,
+      "start": "2021-09-30",
+      "end": "2026-08-15",
+      "label_counts": {
+        "structure": 0,
+        "mid": 49,
+        "noise": 1702,
+        "insufficient": 30
+      },
+      "arms": [
+        {
+          "arm_id": "BH",
+          "total_return": -0.8962899635085586,
+          "final_equity": 0.10371003649144138,
+          "max_drawdown": -0.9564638923793333,
+          "n_trades": 1,
+          "n_round_trips": 1,
+          "wins": 0,
+          "losses": 1,
+          "win_rate": 0.0,
+          "mean_trade_ret": -0.8961446168613022,
+          "bars": 1751,
+          "description": "Buy & hold from first valid bar",
+          "delta_bh": 0.0
+        },
+        {
+          "arm_id": "LOW_H_ONLY",
+          "total_return": 0.0,
+          "final_equity": 1.0,
+          "max_drawdown": 0.0,
+          "n_trades": 0,
+          "n_round_trips": 0,
+          "wins": 0,
+          "losses": 0,
+          "win_rate": null,
+          "mean_trade_ret": null,
+          "bars": 1751,
+          "description": "Long only when H_norm < structure_max",
+          "delta_bh": 0.8962899635085586
+        },
+        {
+          "arm_id": "AVOID_HIGH_H",
+          "total_return": -0.08379644179543466,
+          "final_equity": 0.9162035582045653,
+          "max_drawdown": -0.19349099678456594,
+          "n_trades": 5,
+          "n_round_trips": 5,
+          "wins": 3,
+          "losses": 2,
+          "win_rate": 0.6,
+          "mean_trade_ret": -0.013200502983871275,
+          "bars": 1751,
+          "description": "Long when H_norm <= noise_min; flat in noise",
+          "delta_bh": 0.812493521713124
+        },
+        {
+          "arm_id": "INVERSE_HIGH_H",
+          "total_return": -0.8793616185034021,
+          "final_equity": 0.12063838149659788,
+          "max_drawdown": -0.9490439744457905,
+          "n_trades": 32,
+          "n_round_trips": 32,
+          "wins": 13,
+          "losses": 19,
+          "win_rate": 0.40625,
+          "mean_trade_ret": 0.021982485038236858,
+          "bars": 1751,
+          "description": "Long only when H_norm > noise_min (control)",
+          "delta_bh": 0.016928345005156498
+        }
+      ],
+      "bh_return": -0.8962899635085586
+    }
+  ],
+  "arm_summary": [
+    {
+      "arm_id": "BH",
+      "mean_total_return": 0.8513416035407252,
+      "mean_delta_bh": 0.0,
+      "mean_max_dd": -0.8762697409291238,
+      "total_round_trips": 5,
+      "win_rate_secondary": 0.6,
+      "edge_class": "HIT_10_ABS",
+      "per_pair": [
+        {
+          "pair": "BTC-USD",
+          "total_return": 1.6406804748016075,
+          "delta_bh": 0.0,
+          "max_dd": -0.7667059828725817,
+          "n_rt": 1,
+          "wr": 1.0
+        },
+        {
+          "pair": "ETH-USD",
+          "total_return": 1.9524433726593062,
+          "delta_bh": 0.0,
+          "max_dd": -0.7935036056443401,
+          "n_rt": 1,
+          "wr": 1.0
+        },
+        {
+          "pair": "SOL-USD",
+          "total_return": 1.8151400003923182,
+          "delta_bh": 0.0,
+          "max_dd": -0.962745833059595,
+          "n_rt": 1,
+          "wr": 1.0
+        },
+        {
+          "pair": "LINK-USD",
+          "total_return": -0.2552658666410472,
+          "delta_bh": 0.0,
+          "max_dd": -0.901929390689769,
+          "n_rt": 1,
+          "wr": 0.0
+        },
+        {
+          "pair": "AVAX-USD",
+          "total_return": -0.8962899635085586,
+          "delta_bh": 0.0,
+          "max_dd": -0.9564638923793333,
+          "n_rt": 1,
+          "wr": 0.0
+        }
+      ]
+    },
+    {
+      "arm_id": "LOW_H_ONLY",
+      "mean_total_return": 0.0,
+      "mean_delta_bh": -0.8513416035407252,
+      "mean_max_dd": 0.0,
+      "total_round_trips": 0,
+      "win_rate_secondary": null,
+      "edge_class": "unstable_or_no_edge",
+      "per_pair": [
+        {
+          "pair": "BTC-USD",
+          "total_return": 0.0,
+          "delta_bh": -1.6406804748016075,
+          "max_dd": 0.0,
+          "n_rt": 0,
+          "wr": null
+        },
+        {
+          "pair": "ETH-USD",
+          "total_return": 0.0,
+          "delta_bh": -1.9524433726593062,
+          "max_dd": 0.0,
+          "n_rt": 0,
+          "wr": null
+        },
+        {
+          "pair": "SOL-USD",
+          "total_return": 0.0,
+          "delta_bh": -1.8151400003923182,
+          "max_dd": 0.0,
+          "n_rt": 0,
+          "wr": null
+        },
+        {
+          "pair": "LINK-USD",
+          "total_return": 0.0,
+          "delta_bh": 0.2552658666410472,
+          "max_dd": 0.0,
+          "n_rt": 0,
+          "wr": null
+        },
+        {
+          "pair": "AVAX-USD",
+          "total_return": 0.0,
+          "delta_bh": 0.8962899635085586,
+          "max_dd": 0.0,
+          "n_rt": 0,
+          "wr": null
+        }
+      ]
+    },
+    {
+      "arm_id": "AVOID_HIGH_H",
+      "mean_total_return": 0.14830367794377083,
+      "mean_delta_bh": -0.7030379255969544,
+      "mean_max_dd": -0.24792527506900536,
+      "total_round_trips": 74,
+      "win_rate_secondary": 0.5675675675675675,
+      "edge_class": "ATTENTION_ONLY",
+      "per_pair": [
+        {
+          "pair": "BTC-USD",
+          "total_return": 0.17826500899706454,
+          "delta_bh": -1.462415465804543,
+          "max_dd": -0.43926803608557163,
+          "n_rt": 45,
+          "wr": 0.5333333333333333
+        },
+        {
+          "pair": "ETH-USD",
+          "total_return": 0.45267344698866574,
+          "delta_bh": -1.4997699256706405,
+          "max_dd": -0.43501459276351506,
+          "n_rt": 18,
+          "wr": 0.6666666666666666
+        },
+        {
+          "pair": "SOL-USD",
+          "total_return": 0.036324535947644954,
+          "delta_bh": -1.7788154644446732,
+          "max_dd": -0.034146900423971505,
+          "n_rt": 2,
+          "wr": 0.5
+        },
+        {
+          "pair": "LINK-USD",
+          "total_return": 0.15805183958091362,
+          "delta_bh": 0.41331770622196085,
+          "max_dd": -0.13770584928740248,
+          "n_rt": 4,
+          "wr": 0.5
+        },
+        {
+          "pair": "AVAX-USD",
+          "total_return": -0.08379644179543466,
+          "delta_bh": 0.812493521713124,
+          "max_dd": -0.19349099678456594,
+          "n_rt": 5,
+          "wr": 0.6
+        }
+      ]
+    },
+    {
+      "arm_id": "INVERSE_HIGH_H",
+      "mean_total_return": 0.38717197438852996,
+      "mean_delta_bh": -0.4641696291521953,
+      "mean_max_dd": -0.8893429037372143,
+      "total_round_trips": 193,
+      "win_rate_secondary": 0.47668393782383417,
+      "edge_class": "ATTENTION_ONLY",
+      "per_pair": [
+        {
+          "pair": "BTC-USD",
+          "total_return": 0.5822391832750768,
+          "delta_bh": -1.0584412915265307,
+          "max_dd": -0.7460997748845704,
+          "n_rt": 54,
+          "wr": 0.5
+        },
+        {
+          "pair": "ETH-USD",
+          "total_return": 0.5496981787669082,
+          "delta_bh": -1.402745193892398,
+          "max_dd": -0.8738967399518641,
+          "n_rt": 40,
+          "wr": 0.525
+        },
+        {
+          "pair": "SOL-USD",
+          "total_return": 2.124487586476111,
+          "delta_bh": 0.30934758608379287,
+          "max_dd": -0.9602792664940424,
+          "n_rt": 31,
+          "wr": 0.41935483870967744
+        },
+        {
+          "pair": "LINK-USD",
+          "total_return": -0.4412034580720442,
+          "delta_bh": -0.18593759143099697,
+          "max_dd": -0.9173947629098043,
+          "n_rt": 36,
+          "wr": 0.5
+        },
+        {
+          "pair": "AVAX-USD",
+          "total_return": -0.8793616185034021,
+          "delta_bh": 0.016928345005156498,
+          "max_dd": -0.9490439744457905,
+          "n_rt": 32,
+          "wr": 0.40625
+        }
+      ]
+    }
+  ],
+  "decision": "shadow_only_no_promote",
+  "success_gate_note": "Promote path requires: long-tape fixed-param walk-forward, mean abs return \u2265 ~5% bar with costs, \u0394BH\u22650, DD not worse than BH in a way that fights the product, N_rt sufficient, inverse control worse, and explicit Brad go. WR alone is never enough."
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="200" viewBox="0 0 920 200" role="img" aria-label="ARCH Automation wordmark dark">
+  <g transform="translate(16,28)">
+    <rect width="144" height="144" rx="28" fill="#14B8A6"/>
+    <path d="M36 118 V72 C36 42 62 24 80 24 C98 24 124 42 124 72 V118"
+          fill="none" stroke="#0B1F2A" stroke-width="12" stroke-linecap="round"/>
+    <path d="M80 48 V118" fill="none" stroke="#0B1F2A" stroke-width="10" stroke-linecap="round"/>
+    <path d="M58 82 H102" fill="none" stroke="#0B1F2A" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <text x="196" y="98" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="64" font-weight="700" fill="#0B1F2A" letter-spacing="-1.5">ARCH</text>
+  <text x="430" y="98" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="64" font-weight="500" fill="#0F766E" letter-spacing="-0.5">Automation</text>
+  <text x="196" y="148" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="18" font-weight="500" fill="#1E293B" letter-spacing="2.2">COINBASE PORTFOLIO AUTOMATION SOFTWARE</text>
+</svg>

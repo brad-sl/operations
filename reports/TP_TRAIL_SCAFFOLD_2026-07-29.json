@@ -1,0 +1,39 @@
+{
+  "schema": "tp_trail_scaffold_v1",
+  "as_of": "2026-07-29T17:47:31.443613+00:00",
+  "live_config_writes": false,
+  "take_profit_pct_live": null,
+  "baseline_from_exit_asymmetry": {
+    "exit_wr": 0.2892,
+    "sum_pnl": 77.8945,
+    "sl_sum_pnl": -99.5046,
+    "rotation_sum_pnl": 177.3992,
+    "n": 83
+  },
+  "hypothesis": "Fixed TP 6% or trail after +4% to BE+fees would raise WR and cut giveback; must verify on bar paths before live attach.",
+  "blocked_on": "ohlcv_path_counterfactual_not_built",
+  "next_build": [
+    "For each buy\u2192exit, load pair OHLCV high watermark max r before exit",
+    "Counterfactual: exit at first touch of +tp OR trail stop",
+    "Compare path DD and expectancy vs baseline ledger"
+  ],
+  "candidates": [
+    {
+      "name": "fixed_tp_06",
+      "tp": 0.06,
+      "trail": null
+    },
+    {
+      "name": "trail_after_04_to_be",
+      "arm_at": 0.04,
+      "trail_to": 0.005
+    },
+    {
+      "name": "fixed_tp_08",
+      "tp": 0.08,
+      "trail": null
+    }
+  ],
+  "recommendation_enum": "design_shadow",
+  "note": "Scaffold only \u2014 do not set live take_profit_pct until path study + shadow."
+}

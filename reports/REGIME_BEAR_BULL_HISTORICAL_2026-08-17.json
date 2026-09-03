@@ -1,0 +1,267 @@
+{
+  "generated_at": "2026-08-17T20:28:07.902574+00:00",
+  "data": {
+    "path": "backtests/data/long/ohlcv_daily_btc.json",
+    "n_closes": 2093,
+    "series_start": "2020-12-22",
+    "series_end": "2026-08-15",
+    "span_calendar_days": 2062,
+    "lookback_days": 30,
+    "bands": {
+      "bull_pct": 15.0,
+      "bear_pct": -10.0,
+      "flat_abs_pct": 8.0
+    },
+    "usdc_apy_pct": 3.5
+  },
+  "regime_counts_full": {
+    "bull": 415,
+    "transition": 324,
+    "flat": 882,
+    "bear": 442
+  },
+  "regime_counts_last_90d": {
+    "flat": 58,
+    "transition": 3,
+    "bear": 30
+  },
+  "adequacy_90d": {
+    "bear_days": 30,
+    "bull_days": 0,
+    "bear_adequate": true,
+    "bull_adequate": false,
+    "note": "90 calendar days is adequate for a regime premise ONLY if it contains \u226520 labeled days of that regime. Otherwise use long tape (primary needs \u226545 labeled days)."
+  },
+  "bear": {
+    "n_labeled_days": 442,
+    "n_episodes": 59,
+    "episodes_sample": [
+      {
+        "start": "2021-04-25",
+        "end": "2021-04-25",
+        "days": 1,
+        "btc_compound_return_pct": -1.9329,
+        "btc_max_dd_pct": 1.9329,
+        "n": 1
+      },
+      {
+        "start": "2021-05-12",
+        "end": "2021-06-17",
+        "days": 37,
+        "btc_compound_return_pct": -32.8757,
+        "btc_max_dd_pct": 41.1449,
+        "n": 37
+      },
+      {
+        "start": "2021-06-19",
+        "end": "2021-06-19",
+        "days": 1,
+        "btc_compound_return_pct": -0.9961,
+        "btc_max_dd_pct": 0.9961,
+        "n": 1
+      },
+      {
+        "start": "2021-06-21",
+        "end": "2021-06-21",
+        "days": 1,
+        "btc_compound_return_pct": -11.1729,
+        "btc_max_dd_pct": 11.1729,
+        "n": 1
+      },
+      {
+        "start": "2021-06-23",
+        "end": "2021-06-23",
+        "days": 1,
+        "btc_compound_return_pct": 3.5342,
+        "btc_max_dd_pct": 0.0,
+        "n": 1
+      },
+      {
+        "start": "2021-06-25",
+        "end": "2021-06-26",
+        "days": 2,
+        "btc_compound_return_pct": -6.866,
+        "btc_max_dd_pct": 8.8299,
+        "n": 2
+      },
+      {
+        "start": "2021-07-02",
+        "end": "2021-07-03",
+        "days": 2,
+        "btc_compound_return_pct": 3.4791,
+        "btc_max_dd_pct": 0.0,
+        "n": 2
+      },
+      {
+        "start": "2021-07-13",
+        "end": "2021-07-20",
+        "days": 8,
+        "btc_compound_return_pct": -9.9572,
+        "btc_max_dd_pct": 9.9572,
+        "n": 8
+      }
+    ],
+    "paths": {
+      "full_park_usdc": {
+        "label": "full_park_usdc",
+        "n_days": 442,
+        "util": 0.0,
+        "total_return_pct": 4.2539,
+        "max_dd_pct": 0.0,
+        "end_equity_mult": 1.042539,
+        "insufficient": false
+      },
+      "tactical_util_0_25": {
+        "label": "tactical_util_0.25",
+        "n_days": 442,
+        "util": 0.25,
+        "total_return_pct": -59.9473,
+        "max_dd_pct": 60.1946,
+        "end_equity_mult": 0.400527,
+        "insufficient": false
+      },
+      "flat_like_util_0_65": {
+        "label": "flat_like_0.65",
+        "n_days": 442,
+        "util": 0.65,
+        "total_return_pct": -92.0176,
+        "max_dd_pct": 92.1433,
+        "end_equity_mult": 0.079824,
+        "insufficient": false
+      },
+      "full_btc": {
+        "label": "full_btc",
+        "n_days": 442,
+        "util": 1.0,
+        "total_return_pct": -98.2137,
+        "max_dd_pct": 98.2565,
+        "end_equity_mult": 0.017863,
+        "insufficient": false
+      }
+    },
+    "judgment": {
+      "class": "HIT_CRITERIA",
+      "primary_pass": true,
+      "enum": "propose_scoped_experiment",
+      "plain": "Bear premise HOLDS on 442d / 59 episodes: full park ret=4.2539% dd=0.0% vs tactical ret=-59.9473% dd=60.1946% vs BTC ret=-98.2137% dd=98.2565%."
+    },
+    "follow_on": "scoped_shadow"
+  },
+  "bull": {
+    "n_labeled_days": 415,
+    "n_episodes": 52,
+    "episodes_sample": [
+      {
+        "start": "2020-12-22",
+        "end": "2021-01-26",
+        "days": 36,
+        "btc_compound_return_pct": 43.0342,
+        "btc_max_dd_pct": 24.1219,
+        "n": 36
+      },
+      {
+        "start": "2021-01-28",
+        "end": "2021-01-30",
+        "days": 3,
+        "btc_compound_return_pct": 12.8539,
+        "btc_max_dd_pct": 0.0,
+        "n": 3
+      },
+      {
+        "start": "2021-02-03",
+        "end": "2021-02-03",
+        "days": 1,
+        "btc_compound_return_pct": 6.0984,
+        "btc_max_dd_pct": 0.0,
+        "n": 1
+      },
+      {
+        "start": "2021-02-08",
+        "end": "2021-03-18",
+        "days": 39,
+        "btc_compound_return_pct": 48.2965,
+        "btc_max_dd_pct": 21.3213,
+        "n": 39
+      },
+      {
+        "start": "2021-03-27",
+        "end": "2021-04-05",
+        "days": 10,
+        "btc_compound_return_pct": 7.355,
+        "btc_max_dd_pct": 3.1988,
+        "n": 10
+      },
+      {
+        "start": "2021-07-26",
+        "end": "2021-07-26",
+        "days": 1,
+        "btc_compound_return_pct": 5.1781,
+        "btc_max_dd_pct": 0.0,
+        "n": 1
+      },
+      {
+        "start": "2021-07-28",
+        "end": "2021-07-28",
+        "days": 1,
+        "btc_compound_return_pct": 1.4305,
+        "btc_max_dd_pct": 0.0,
+        "n": 1
+      },
+      {
+        "start": "2021-07-30",
+        "end": "2021-08-01",
+        "days": 3,
+        "btc_compound_return_pct": -0.4346,
+        "btc_max_dd_pct": 5.6171,
+        "n": 3
+      }
+    ],
+    "paths": {
+      "full_park_usdc": {
+        "label": "full_park_usdc",
+        "n_days": 415,
+        "util": 0.0,
+        "total_return_pct": 3.9889,
+        "max_dd_pct": 0.0,
+        "end_equity_mult": 1.039889,
+        "insufficient": false
+      },
+      "tight_util_0_65": {
+        "label": "tight_0.65",
+        "n_days": 415,
+        "util": 0.65,
+        "total_return_pct": 1005.0112,
+        "max_dd_pct": 15.9479,
+        "end_equity_mult": 11.050112,
+        "insufficient": false
+      },
+      "live_util_0_85": {
+        "label": "live_0.85",
+        "n_days": 415,
+        "util": 0.85,
+        "total_return_pct": 2098.3235,
+        "max_dd_pct": 20.6638,
+        "end_equity_mult": 21.983235,
+        "insufficient": false
+      },
+      "full_btc": {
+        "label": "full_btc",
+        "n_days": 415,
+        "util": 1.0,
+        "total_return_pct": 3538.8998,
+        "max_dd_pct": 24.1219,
+        "end_equity_mult": 36.388998,
+        "insufficient": false
+      }
+    },
+    "judgment": {
+      "class": "HIT_CRITERIA",
+      "primary_pass": true,
+      "enum": "propose_scoped_experiment",
+      "plain": "Bull high-util premise HOLDS on 415d / 52 eps: live0.85 ret=2098.3235% dd=20.6638% vs tight0.65 ret=1005.0112% dd=15.9479% vs USDC 3.9889% (BTC 3538.8998%)."
+    },
+    "follow_on": "scoped_shadow"
+  },
+  "live_writes": false,
+  "method": "BTC day returns on detector-labeled regime days; util blend with USDC daily. Proxy for park vs tactical deploy \u2014 not full multi-asset ARCH-4."
+}

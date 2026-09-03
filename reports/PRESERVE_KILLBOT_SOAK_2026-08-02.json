@@ -1,0 +1,149 @@
+{
+  "as_of": "2026-08-02T06:47:24.043726+00:00",
+  "steps": [
+    {
+      "set_enabled": true
+    },
+    {
+      "sigterm": 1301820,
+      "t": "2026-08-02T06:47:31.256609+00:00"
+    }
+  ],
+  "pass": true,
+  "arm": {
+    "ok": true,
+    "error": null,
+    "crypto_util_pct": 1.3674419426963185e-08,
+    "buy_usd": null,
+    "target_usd": 30.0
+  },
+  "arm_ok": true,
+  "arm_error": null,
+  "arm_steps": [
+    {
+      "buy": 30.0,
+      "resp": "{'success': True, 'order_id': 'eacee7ac-458b-4597-8eac-97b142379e4d'}"
+    },
+    {
+      "e1": {
+        "success": true,
+        "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+        "error": null,
+        "raw": {
+          "success": true,
+          "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+          "stop_price": 2757.98,
+          "limit_price": 2741.43
+        }
+      }
+    }
+  ],
+  "e1_order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+  "state": {
+    "version": 1,
+    "armed": true,
+    "profile": "hold",
+    "asset": "PAXG-USD",
+    "target_pct": null,
+    "arm_vwap": 4055.86,
+    "arm_qty": 0.00733,
+    "arm_ts": "2026-08-02T06:47:30.657195+00:00",
+    "e1_order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+    "e1_stop_price": 2757.9847999999997,
+    "e1_qty": 0.00718,
+    "adds_blocked": false,
+    "last_error": null,
+    "last_tick_ts": "2026-08-02T06:47:30.657217+00:00",
+    "last_action": "arm_soak",
+    "updated_at": "2026-08-02T06:47:30.657258+00:00",
+    "soak_micro": true
+  },
+  "verify_before_kill": {
+    "found": true,
+    "sample": [
+      {
+        "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+        "product_id": "PAXG-USD",
+        "status": "OPEN"
+      }
+    ],
+    "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381"
+  },
+  "runner_before": {
+    "pid": 1301820,
+    "cmd": "1301820 /home/brad/projects/crypto-trading-bot/.venv/bin/python -m phase6.core.phase6_runner --mode live --confirm-live"
+  },
+  "runner_dead": true,
+  "verify_while_bot_dead": {
+    "found": true,
+    "sample": [
+      {
+        "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+        "product_id": "PAXG-USD",
+        "status": "OPEN"
+      }
+    ],
+    "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381"
+  },
+  "protect_helper": true,
+  "restart_pid": 1373339,
+  "runner_after": {
+    "pid": 1373339,
+    "cmd": "1373339 /home/brad/projects/crypto-trading-bot/.venv/bin/python -m phase6.core.phase6_runner --mode live --confirm-live"
+  },
+  "restarted": true,
+  "verify_after_restart": {
+    "found": true,
+    "sample": [
+      {
+        "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+        "product_id": "PAXG-USD",
+        "status": "OPEN"
+      }
+    ],
+    "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381"
+  },
+  "disarm": {
+    "ok": true,
+    "steps": [
+      {
+        "cancel": "f60b1f32-25ac-4201-ab59-2865dd1a9381",
+        "ok": true
+      },
+      {
+        "sell": 0.00015,
+        "resp": "{'success': True, 'order_id': '0475c167-d6f7-49d8-acb2-8864d165c378', 'size': 0.00015}"
+      }
+    ],
+    "state": {
+      "version": 1,
+      "armed": false,
+      "profile": "hold",
+      "asset": "PAXG-USD",
+      "target_pct": 0.2,
+      "arm_vwap": null,
+      "arm_qty": null,
+      "arm_ts": null,
+      "e1_order_id": null,
+      "e1_stop_price": null,
+      "e1_qty": null,
+      "adds_blocked": false,
+      "last_error": null,
+      "last_tick_ts": "2026-08-02T06:48:02.079849+00:00",
+      "last_action": "disarm",
+      "updated_at": null
+    }
+  },
+  "paxg_left": 0.00704,
+  "verify_after_disarm": {
+    "found": false,
+    "sample": [
+      {
+        "order_id": "87c75e77-12b0-481a-906a-bbf0d38e4af8",
+        "product_id": "PAXG-USD",
+        "status": "OPEN"
+      }
+    ],
+    "order_id": "f60b1f32-25ac-4201-ab59-2865dd1a9381"
+  }
+}

@@ -1,0 +1,277 @@
+{
+  "report_id": "KELLY_SIZING_TEST_2026-07-21",
+  "trial_id": "ANALYST-KELLY-SIZING-TEST-20260721-TRIAL",
+  "master_id": "ANALYST-KELLY-SIZING-TEST-20260721",
+  "generated_at": "2026-07-21T22:41:03.830397+00:00",
+  "real_data_only": true,
+  "live_config_writes": false,
+  "knobs_baseline": {
+    "deploy_pct": 0.72,
+    "stop_loss_pct": 0.03,
+    "min_reserve_usd": 50.0,
+    "max_deployable_usd": 800.0,
+    "regime_flat_target_max_util_pct": 0.65,
+    "regimes_util": {
+      "bull": 0.85,
+      "flat": 0.65,
+      "bear": 0.25,
+      "transition": 0.45,
+      "unknown": 0.3
+    },
+    "adaptive_sl": true,
+    "sl_min_pct": 0.015,
+    "sl_max_pct": 0.05
+  },
+  "isolation_check": {
+    "article_f": 0.32500000000000007,
+    "article_half": 0.16250000000000003
+  },
+  "data_quality": {
+    "raw_nonzero_pnl_sells": 89,
+    "enriched_plausible": 70,
+    "dropped_enrich_fail": 16,
+    "dropped_abs_r_gt": 0.5,
+    "dropped_outlier_count": 3,
+    "max_abs_return_filter": 0.5,
+    "min_entry_notional_usd": 1.0,
+    "return_definition": "r = pnl / (qty*exit_price - pnl)  # implied entry notional",
+    "notes": [
+      "Some ledger rows have placeholder entry_price (e.g. 100/65000); implied notional identity used; |r|>50% dropped as cost-basis contamination.",
+      "Single-bet Kelly overstates safe f on multi-asset correlated books \u2014 applied multi_asset_haircut=0.5 on path risk fractions.",
+      "Sequential path replay is an offline proxy, not concurrent portfolio truth."
+    ]
+  },
+  "edge": {
+    "full_plausible": {
+      "label": "full_plausible",
+      "n": 70,
+      "n_wins": 30,
+      "n_losses": 40,
+      "p": 0.428571,
+      "b": 1.870122,
+      "mean_win_r": 0.077985,
+      "mean_loss_r": -0.041701,
+      "f_full": 0.123015,
+      "f_half": 0.061507,
+      "f_quarter": 0.030754,
+      "insufficient": false,
+      "reason": null,
+      "p_wilson_95": {
+        "low": 0.3194,
+        "high": 0.5452
+      },
+      "b_usd_avg_win_loss": 1.592283,
+      "sum_pnl_usd": 40.4708,
+      "insufficient_for_recommend": false,
+      "min_n_gate": 30
+    },
+    "since_2026_07_01": {
+      "label": "since_2026-07-01",
+      "n": 37,
+      "n_wins": 7,
+      "n_losses": 30,
+      "p": 0.189189,
+      "b": 1.148835,
+      "mean_win_r": 0.031926,
+      "mean_loss_r": -0.02779,
+      "f_full": 0.0,
+      "f_half": 0.0,
+      "f_quarter": 0.0,
+      "insufficient": false,
+      "reason": null,
+      "p_wilson_95": {
+        "low": 0.0948,
+        "high": 0.3421
+      },
+      "b_usd_avg_win_loss": 2.13396,
+      "sum_pnl_usd": -38.9463,
+      "insufficient_for_recommend": false,
+      "min_n_gate": 15
+    },
+    "pair_slices": [
+      {
+        "label": "pair:ADA-USD",
+        "n": 21,
+        "n_wins": 13,
+        "n_losses": 8,
+        "p": 0.619048,
+        "b": 2.804695,
+        "mean_win_r": 0.064922,
+        "mean_loss_r": -0.023147,
+        "f_full": 0.483221,
+        "f_half": 0.24161,
+        "f_quarter": 0.120805,
+        "insufficient": false,
+        "reason": null,
+        "p_wilson_95": {
+          "low": 0.4088,
+          "high": 0.7925
+        },
+        "b_usd_avg_win_loss": 1.162107,
+        "sum_pnl_usd": 7.1214,
+        "insufficient_for_recommend": false,
+        "min_n_gate": 15
+      }
+    ],
+    "f_full": 0.123014,
+    "f_half": 0.061507,
+    "f_quarter": 0.030753,
+    "f_half_effective_haircut": 0.030753,
+    "f_quarter_effective_haircut": 0.015377,
+    "f_full_effective_haircut": 0.061507,
+    "multi_asset_haircut": 0.5
+  },
+  "baseline_risk_lenses": {
+    "per_trade_risk_language": 0.01,
+    "book_simultaneous_sl_if_deployed": 0.0216,
+    "deploy_pct": 0.72,
+    "sl_pct": 0.03,
+    "path_baseline_f": 0.01
+  },
+  "production_live": {
+    "start_equity_usd": 748.18,
+    "end_equity_usd": 2583.42,
+    "total_return_pct_deposit_adj": -22.02,
+    "trade_count": 320,
+    "realized_pnl_usd": 479.61
+  },
+  "path_compare": {
+    "baseline_1pct_risk": {
+      "label": "baseline_1pct_risk",
+      "f_risk": 0.01,
+      "start_equity": 748.18,
+      "end_equity": 913.2681,
+      "growth_pct": 22.0653,
+      "max_dd_pct": 23.9809,
+      "n_steps": 70,
+      "sum_pnl": 165.0881,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "none": 70
+      },
+      "final_equity_vs_reserve": 863.2681
+    },
+    "full_kelly_capped": {
+      "label": "full_kelly_capped",
+      "f_risk": 0.06150696469588615,
+      "start_equity": 748.18,
+      "end_equity": 1082.3677,
+      "growth_pct": 44.6667,
+      "max_dd_pct": 39.5018,
+      "n_steps": 70,
+      "sum_pnl": 334.1877,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "regime_util_budget": 45,
+        "max_position_usd": 25
+      },
+      "final_equity_vs_reserve": 1032.3677
+    },
+    "half_kelly_capped": {
+      "label": "half_kelly_capped",
+      "f_risk": 0.030753482347943076,
+      "start_equity": 748.18,
+      "end_equity": 1082.3677,
+      "growth_pct": 44.6667,
+      "max_dd_pct": 39.5018,
+      "n_steps": 70,
+      "sum_pnl": 334.1877,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "regime_util_budget": 45,
+        "max_position_usd": 25
+      },
+      "final_equity_vs_reserve": 1032.3677
+    },
+    "quarter_kelly_capped": {
+      "label": "quarter_kelly_capped",
+      "f_risk": 0.015376741173971538,
+      "start_equity": 748.18,
+      "end_equity": 996.5699,
+      "growth_pct": 33.1992,
+      "max_dd_pct": 34.4854,
+      "n_steps": 70,
+      "sum_pnl": 248.3899,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "none": 70
+      },
+      "final_equity_vs_reserve": 946.5699
+    },
+    "half_kelly_no_multi_haircut": {
+      "label": "half_kelly_no_multi_haircut",
+      "f_risk": 0.06150696469588615,
+      "start_equity": 748.18,
+      "end_equity": 1082.3677,
+      "growth_pct": 44.6667,
+      "max_dd_pct": 39.5018,
+      "n_steps": 70,
+      "sum_pnl": 334.1877,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "regime_util_budget": 45,
+        "max_position_usd": 25
+      },
+      "final_equity_vs_reserve": 1032.3677
+    }
+  },
+  "example_half_kelly_clamp_at_end_equity": {
+    "position_usd": 387.51300000000015,
+    "raw_position_usd": 2648.3053789107703,
+    "f_requested": 0.030753482347943076,
+    "f_effective": 0.004500000000000001,
+    "binding_constraint": "regime_util_budget",
+    "details": {
+      "equity": 2583.42,
+      "cash_usd": 1291.71,
+      "already_deployed_usd": 1291.71,
+      "deploy_pct": 0.72,
+      "regime_target_max_util_pct": 0.65,
+      "min_reserve_usd": 50.0,
+      "caps": {
+        "raw": 2648.305379,
+        "deploy_pct_budget": 568.3524,
+        "regime_util_budget": 387.513,
+        "reserve_cash_room": 1241.71,
+        "max_position_usd": 800.0
+      }
+    }
+  },
+  "deploy_pct_map_from_half_eff": {
+    "candidate_deploy_pct": 0.95,
+    "live_deploy_pct": 0.72,
+    "interpretation": "Notional deploy_pct \u2248 f_risk/sl after haircut; distinct from risk fraction. Do not set live without Brad+gates."
+  },
+  "recommendation": {
+    "enum": "drop",
+    "go_shadow": false,
+    "reason": "recent window n=37 has non-positive Kelly (f_full=0.0, p=0.189189); full-sample f_full=0.1230 is unstable / regime-shifted. Path DD: half=39.5% vs baseline=24.0%.",
+    "scores": {
+      "baseline": 10.0749,
+      "half": 24.9158,
+      "quarter": 15.9565,
+      "half_dd": 39.5018,
+      "base_dd": 23.9809,
+      "quarter_dd": 34.4854,
+      "full_dd": 39.5018
+    }
+  },
+  "shadow": {
+    "status": "no_go",
+    "overlay_sketch": null
+  },
+  "honest_assessment": {
+    "sample_n": 70,
+    "p": 0.428571,
+    "b": 1.870122,
+    "p_ci_95": {
+      "low": 0.3194,
+      "high": 0.5452
+    },
+    "recent_july_edge_negative": true,
+    "estimation_error_trap": "Small n and contaminated basis make p,b unstable; half-Kelly still large if p overestimated \u2014 prefer quarter + hard caps.",
+    "notional_vs_risk": "Live runner sizes BUY as cash*weight*deploy_pct (notional), not loss-at-stop. Kelly f must map through /sl_pct then clamp \u2014 engineer follow-on if executor still conflates 1% notional with 1% risk.",
+    "correlation_gap": "Path model is sequential independent bets; live book is concurrent and correlated \u2014 haircut 0.5 is a blunt prior, not estimated \u03a3.",
+    "full_kelly_live": "REJECT \u2014 never recommend as live default."
+  }
+}

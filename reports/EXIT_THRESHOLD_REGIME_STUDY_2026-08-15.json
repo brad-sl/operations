@@ -1,0 +1,5426 @@
+{
+  "schema": "exit_threshold_regime_study_v1",
+  "as_of": "2026-08-15T18:26:02.115370+00:00",
+  "lookback_days": 120,
+  "sl_pct": 0.03,
+  "tp_grid": [
+    0.04,
+    0.05,
+    0.06,
+    0.08,
+    0.1,
+    0.12
+  ],
+  "rsi_grid": [
+    60.0,
+    65.0,
+    68.0,
+    70.0,
+    75.0,
+    80.0
+  ],
+  "fee_rt": 0.001,
+  "live_config_writes": false,
+  "n_rounds_matched": 116,
+  "n_legs_usable": 77,
+  "skipped": {
+    "no_ohlcv": 37,
+    "no_price": 2
+  },
+  "regime_thresholds": {
+    "bull_return_pct": 15.0,
+    "bear_return_pct": -10.0,
+    "flat_abs_pct": 8.0,
+    "lookback_days": 30
+  },
+  "recommendation_enum": "regime_dependent",
+  "winners": [
+    {
+      "regime": "all",
+      "n": 77,
+      "sl_sum_r": 0.939147,
+      "sl_mean_r": 0.012197,
+      "best_tp": "tp_05",
+      "best_tp_delta_sum_r": -0.495982,
+      "best_rsi": "rsi_60",
+      "best_rsi_delta_sum_r": 0.937253,
+      "best_overall": "rsi_60",
+      "call": "prefer_rsi_rsi_60"
+    },
+    {
+      "regime": "bear",
+      "n": 21,
+      "sl_sum_r": 1.850444,
+      "sl_mean_r": 0.088116,
+      "best_tp": "tp_12",
+      "best_tp_delta_sum_r": -2.051444,
+      "best_rsi": "rsi_60",
+      "best_rsi_delta_sum_r": 0.0,
+      "best_overall": "sl_only",
+      "call": "prefer_sl_ride"
+    },
+    {
+      "regime": "bull",
+      "n": 21,
+      "sl_sum_r": -0.043216,
+      "sl_mean_r": -0.002058,
+      "best_tp": "tp_06",
+      "best_tp_delta_sum_r": 0.582381,
+      "best_rsi": "rsi_65",
+      "best_rsi_delta_sum_r": 0.152198,
+      "best_overall": "tp_06",
+      "call": "prefer_tp_tp_06"
+    },
+    {
+      "regime": "flat",
+      "n": 35,
+      "sl_sum_r": -0.868081,
+      "sl_mean_r": -0.024802,
+      "best_tp": "tp_05",
+      "best_tp_delta_sum_r": 1.303081,
+      "best_rsi": "rsi_60",
+      "best_rsi_delta_sum_r": 0.825069,
+      "best_overall": "tp_05",
+      "call": "prefer_tp_tp_05"
+    }
+  ],
+  "by_regime": {
+    "all": {
+      "policies": {
+        "sl_only": {
+          "n": 77,
+          "sum_r": 0.939147,
+          "mean_r": 0.012197,
+          "wr": 0.1818,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 60,
+            "path_end": 17
+          }
+        },
+        "tp_04": {
+          "n": 77,
+          "sum_r": 0.382765,
+          "mean_r": 0.004971,
+          "wr": 0.5195,
+          "median_r": 0.039,
+          "exit_mix": {
+            "tp": 39,
+            "path_end": 1,
+            "sl": 37
+          },
+          "delta_sum_r_vs_sl": -0.556382,
+          "delta_mean_r_vs_sl": -0.007226
+        },
+        "tp_05": {
+          "n": 77,
+          "sum_r": 0.443165,
+          "mean_r": 0.005755,
+          "wr": 0.4675,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 41,
+            "path_end": 2,
+            "tp": 34
+          },
+          "delta_sum_r_vs_sl": -0.495982,
+          "delta_mean_r_vs_sl": -0.006442
+        },
+        "tp_06": {
+          "n": 77,
+          "sum_r": 0.333165,
+          "mean_r": 0.004327,
+          "wr": 0.4026,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 46,
+            "path_end": 2,
+            "tp": 29
+          },
+          "delta_sum_r_vs_sl": -0.605982,
+          "delta_mean_r_vs_sl": -0.00787
+        },
+        "tp_08": {
+          "n": 77,
+          "sum_r": 0.033165,
+          "mean_r": 0.000431,
+          "wr": 0.2987,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 54,
+            "path_end": 2,
+            "tp": 21
+          },
+          "delta_sum_r_vs_sl": -0.905982,
+          "delta_mean_r_vs_sl": -0.011766
+        },
+        "tp_10": {
+          "n": 77,
+          "sum_r": -0.001217,
+          "mean_r": -1.6e-05,
+          "wr": 0.2727,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 56,
+            "path_end": 5,
+            "tp": 16
+          },
+          "delta_sum_r_vs_sl": -0.940364,
+          "delta_mean_r_vs_sl": -0.012213
+        },
+        "tp_12": {
+          "n": 77,
+          "sum_r": -0.546463,
+          "mean_r": -0.007097,
+          "wr": 0.1948,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 60,
+            "path_end": 7,
+            "tp": 10
+          },
+          "delta_sum_r_vs_sl": -1.48561,
+          "delta_mean_r_vs_sl": -0.019294
+        },
+        "rsi_60": {
+          "n": 77,
+          "sum_r": 1.8764,
+          "mean_r": 0.024369,
+          "wr": 0.2727,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 54,
+            "path_end": 7,
+            "rsi": 16
+          },
+          "delta_sum_r_vs_sl": 0.937253,
+          "delta_mean_r_vs_sl": 0.012172
+        },
+        "rsi_65": {
+          "n": 77,
+          "sum_r": 1.822006,
+          "mean_r": 0.023662,
+          "wr": 0.2727,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 54,
+            "path_end": 8,
+            "rsi": 15
+          },
+          "delta_sum_r_vs_sl": 0.882859,
+          "delta_mean_r_vs_sl": 0.011465
+        },
+        "rsi_68": {
+          "n": 77,
+          "sum_r": 1.091345,
+          "mean_r": 0.014173,
+          "wr": 0.2078,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 57,
+            "path_end": 13,
+            "rsi": 7
+          },
+          "delta_sum_r_vs_sl": 0.152198,
+          "delta_mean_r_vs_sl": 0.001976
+        },
+        "rsi_70": {
+          "n": 77,
+          "sum_r": 0.944625,
+          "mean_r": 0.012268,
+          "wr": 0.2078,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 57,
+            "path_end": 14,
+            "rsi": 6
+          },
+          "delta_sum_r_vs_sl": 0.005478,
+          "delta_mean_r_vs_sl": 7.1e-05
+        },
+        "rsi_75": {
+          "n": 77,
+          "sum_r": 0.871182,
+          "mean_r": 0.011314,
+          "wr": 0.1948,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 59,
+            "path_end": 14,
+            "rsi": 4
+          },
+          "delta_sum_r_vs_sl": -0.067965,
+          "delta_mean_r_vs_sl": -0.000883
+        },
+        "rsi_80": {
+          "n": 77,
+          "sum_r": 0.871182,
+          "mean_r": 0.011314,
+          "wr": 0.1948,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 59,
+            "path_end": 14,
+            "rsi": 4
+          },
+          "delta_sum_r_vs_sl": -0.067965,
+          "delta_mean_r_vs_sl": -0.000883
+        },
+        "tp06_rsi68": {
+          "n": 77,
+          "sum_r": 0.174262,
+          "mean_r": 0.002263,
+          "wr": 0.4156,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 44,
+            "path_end": 2,
+            "tp": 25,
+            "rsi": 6
+          },
+          "delta_sum_r_vs_sl": -0.764885,
+          "delta_mean_r_vs_sl": -0.009934
+        }
+      },
+      "best_tp": "tp_05",
+      "best_rsi": "rsi_60",
+      "best_overall": "rsi_60",
+      "call": "prefer_rsi_rsi_60"
+    },
+    "bear": {
+      "policies": {
+        "sl_only": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          }
+        },
+        "tp_04": {
+          "n": 21,
+          "sum_r": -0.441,
+          "mean_r": -0.021,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.291444,
+          "delta_mean_r_vs_sl": -0.109116
+        },
+        "tp_05": {
+          "n": 21,
+          "sum_r": -0.411,
+          "mean_r": -0.019571,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.261444,
+          "delta_mean_r_vs_sl": -0.107687
+        },
+        "tp_06": {
+          "n": 21,
+          "sum_r": -0.381,
+          "mean_r": -0.018143,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.231444,
+          "delta_mean_r_vs_sl": -0.106259
+        },
+        "tp_08": {
+          "n": 21,
+          "sum_r": -0.321,
+          "mean_r": -0.015286,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.171444,
+          "delta_mean_r_vs_sl": -0.103402
+        },
+        "tp_10": {
+          "n": 21,
+          "sum_r": -0.261,
+          "mean_r": -0.012429,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.111444,
+          "delta_mean_r_vs_sl": -0.100545
+        },
+        "tp_12": {
+          "n": 21,
+          "sum_r": -0.201,
+          "mean_r": -0.009571,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.051444,
+          "delta_mean_r_vs_sl": -0.097687
+        },
+        "rsi_60": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_65": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_68": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_70": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_75": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_80": {
+          "n": 21,
+          "sum_r": 1.850444,
+          "mean_r": 0.088116,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "tp06_rsi68": {
+          "n": 21,
+          "sum_r": -0.381,
+          "mean_r": -0.018143,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 3,
+            "sl": 18
+          },
+          "delta_sum_r_vs_sl": -2.231444,
+          "delta_mean_r_vs_sl": -0.106259
+        }
+      },
+      "best_tp": "tp_12",
+      "best_rsi": "rsi_60",
+      "best_overall": "sl_only",
+      "call": "prefer_sl_ride"
+    },
+    "bull": {
+      "policies": {
+        "sl_only": {
+          "n": 21,
+          "sum_r": -0.043216,
+          "mean_r": -0.002058,
+          "wr": 0.3333,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 13,
+            "path_end": 8
+          }
+        },
+        "tp_04": {
+          "n": 21,
+          "sum_r": 0.438765,
+          "mean_r": 0.020894,
+          "wr": 0.7619,
+          "median_r": 0.039,
+          "exit_mix": {
+            "tp": 15,
+            "path_end": 1,
+            "sl": 5
+          },
+          "delta_sum_r_vs_sl": 0.481981,
+          "delta_mean_r_vs_sl": 0.022952
+        },
+        "tp_05": {
+          "n": 21,
+          "sum_r": 0.419165,
+          "mean_r": 0.01996,
+          "wr": 0.6667,
+          "median_r": 0.049,
+          "exit_mix": {
+            "sl": 7,
+            "path_end": 2,
+            "tp": 12
+          },
+          "delta_sum_r_vs_sl": 0.462381,
+          "delta_mean_r_vs_sl": 0.022018
+        },
+        "tp_06": {
+          "n": 21,
+          "sum_r": 0.539165,
+          "mean_r": 0.025675,
+          "wr": 0.6667,
+          "median_r": 0.059,
+          "exit_mix": {
+            "sl": 7,
+            "path_end": 2,
+            "tp": 12
+          },
+          "delta_sum_r_vs_sl": 0.582381,
+          "delta_mean_r_vs_sl": 0.027733
+        },
+        "tp_08": {
+          "n": 21,
+          "sum_r": 0.339165,
+          "mean_r": 0.016151,
+          "wr": 0.4762,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 11,
+            "path_end": 2,
+            "tp": 8
+          },
+          "delta_sum_r_vs_sl": 0.382381,
+          "delta_mean_r_vs_sl": 0.018209
+        },
+        "tp_10": {
+          "n": 21,
+          "sum_r": 0.304783,
+          "mean_r": 0.014513,
+          "wr": 0.4762,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 11,
+            "path_end": 5,
+            "tp": 5
+          },
+          "delta_sum_r_vs_sl": 0.347999,
+          "delta_mean_r_vs_sl": 0.016571
+        },
+        "tp_12": {
+          "n": 21,
+          "sum_r": 0.104783,
+          "mean_r": 0.00499,
+          "wr": 0.381,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 13,
+            "path_end": 5,
+            "tp": 3
+          },
+          "delta_sum_r_vs_sl": 0.147999,
+          "delta_mean_r_vs_sl": 0.007048
+        },
+        "rsi_60": {
+          "n": 21,
+          "sum_r": 0.068968,
+          "mean_r": 0.003284,
+          "wr": 0.4286,
+          "median_r": -0.00837,
+          "exit_mix": {
+            "sl": 10,
+            "path_end": 4,
+            "rsi": 7
+          },
+          "delta_sum_r_vs_sl": 0.112184,
+          "delta_mean_r_vs_sl": 0.005342
+        },
+        "rsi_65": {
+          "n": 21,
+          "sum_r": 0.108982,
+          "mean_r": 0.00519,
+          "wr": 0.4286,
+          "median_r": -0.00837,
+          "exit_mix": {
+            "sl": 10,
+            "path_end": 4,
+            "rsi": 7
+          },
+          "delta_sum_r_vs_sl": 0.152198,
+          "delta_mean_r_vs_sl": 0.007248
+        },
+        "rsi_68": {
+          "n": 21,
+          "sum_r": 0.108982,
+          "mean_r": 0.00519,
+          "wr": 0.4286,
+          "median_r": -0.00837,
+          "exit_mix": {
+            "sl": 10,
+            "path_end": 4,
+            "rsi": 7
+          },
+          "delta_sum_r_vs_sl": 0.152198,
+          "delta_mean_r_vs_sl": 0.007248
+        },
+        "rsi_70": {
+          "n": 21,
+          "sum_r": -0.037737,
+          "mean_r": -0.001797,
+          "wr": 0.4286,
+          "median_r": -0.00837,
+          "exit_mix": {
+            "sl": 10,
+            "path_end": 5,
+            "rsi": 6
+          },
+          "delta_sum_r_vs_sl": 0.005479,
+          "delta_mean_r_vs_sl": 0.000261
+        },
+        "rsi_75": {
+          "n": 21,
+          "sum_r": -0.11118,
+          "mean_r": -0.005294,
+          "wr": 0.381,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 12,
+            "path_end": 5,
+            "rsi": 4
+          },
+          "delta_sum_r_vs_sl": -0.067964,
+          "delta_mean_r_vs_sl": -0.003236
+        },
+        "rsi_80": {
+          "n": 21,
+          "sum_r": -0.11118,
+          "mean_r": -0.005294,
+          "wr": 0.381,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 12,
+            "path_end": 5,
+            "rsi": 4
+          },
+          "delta_sum_r_vs_sl": -0.067964,
+          "delta_mean_r_vs_sl": -0.003236
+        },
+        "tp06_rsi68": {
+          "n": 21,
+          "sum_r": 0.380262,
+          "mean_r": 0.018108,
+          "wr": 0.7143,
+          "median_r": 0.008765,
+          "exit_mix": {
+            "sl": 5,
+            "path_end": 2,
+            "tp": 8,
+            "rsi": 6
+          },
+          "delta_sum_r_vs_sl": 0.423478,
+          "delta_mean_r_vs_sl": 0.020166
+        }
+      },
+      "best_tp": "tp_06",
+      "best_rsi": "rsi_65",
+      "best_overall": "tp_06",
+      "call": "prefer_tp_tp_06"
+    },
+    "flat": {
+      "policies": {
+        "sl_only": {
+          "n": 35,
+          "sum_r": -0.868081,
+          "mean_r": -0.024802,
+          "wr": 0.1143,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 29,
+            "path_end": 6
+          }
+        },
+        "tp_04": {
+          "n": 35,
+          "sum_r": 0.385,
+          "mean_r": 0.011,
+          "wr": 0.6,
+          "median_r": 0.039,
+          "exit_mix": {
+            "tp": 21,
+            "sl": 14
+          },
+          "delta_sum_r_vs_sl": 1.253081,
+          "delta_mean_r_vs_sl": 0.035802
+        },
+        "tp_05": {
+          "n": 35,
+          "sum_r": 0.435,
+          "mean_r": 0.012429,
+          "wr": 0.5429,
+          "median_r": 0.049,
+          "exit_mix": {
+            "sl": 16,
+            "tp": 19
+          },
+          "delta_sum_r_vs_sl": 1.303081,
+          "delta_mean_r_vs_sl": 0.037231
+        },
+        "tp_06": {
+          "n": 35,
+          "sum_r": 0.175,
+          "mean_r": 0.005,
+          "wr": 0.4,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 21,
+            "tp": 14
+          },
+          "delta_sum_r_vs_sl": 1.043081,
+          "delta_mean_r_vs_sl": 0.029802
+        },
+        "tp_08": {
+          "n": 35,
+          "sum_r": 0.015,
+          "mean_r": 0.000429,
+          "wr": 0.2857,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 25,
+            "tp": 10
+          },
+          "delta_sum_r_vs_sl": 0.883081,
+          "delta_mean_r_vs_sl": 0.025231
+        },
+        "tp_10": {
+          "n": 35,
+          "sum_r": -0.045,
+          "mean_r": -0.001286,
+          "wr": 0.2286,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 27,
+            "tp": 8
+          },
+          "delta_sum_r_vs_sl": 0.823081,
+          "delta_mean_r_vs_sl": 0.023516
+        },
+        "tp_12": {
+          "n": 35,
+          "sum_r": -0.450247,
+          "mean_r": -0.012864,
+          "wr": 0.1143,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 29,
+            "path_end": 2,
+            "tp": 4
+          },
+          "delta_sum_r_vs_sl": 0.417834,
+          "delta_mean_r_vs_sl": 0.011938
+        },
+        "rsi_60": {
+          "n": 35,
+          "sum_r": -0.043012,
+          "mean_r": -0.001229,
+          "wr": 0.2571,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 26,
+            "rsi": 9
+          },
+          "delta_sum_r_vs_sl": 0.825069,
+          "delta_mean_r_vs_sl": 0.023573
+        },
+        "rsi_65": {
+          "n": 35,
+          "sum_r": -0.13742,
+          "mean_r": -0.003926,
+          "wr": 0.2571,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 26,
+            "rsi": 8,
+            "path_end": 1
+          },
+          "delta_sum_r_vs_sl": 0.730661,
+          "delta_mean_r_vs_sl": 0.020876
+        },
+        "rsi_68": {
+          "n": 35,
+          "sum_r": -0.868081,
+          "mean_r": -0.024802,
+          "wr": 0.1143,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 29,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_70": {
+          "n": 35,
+          "sum_r": -0.868081,
+          "mean_r": -0.024802,
+          "wr": 0.1143,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 29,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_75": {
+          "n": 35,
+          "sum_r": -0.868081,
+          "mean_r": -0.024802,
+          "wr": 0.1143,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 29,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "rsi_80": {
+          "n": 35,
+          "sum_r": -0.868081,
+          "mean_r": -0.024802,
+          "wr": 0.1143,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 29,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": 0.0,
+          "delta_mean_r_vs_sl": 0.0
+        },
+        "tp06_rsi68": {
+          "n": 35,
+          "sum_r": 0.175,
+          "mean_r": 0.005,
+          "wr": 0.4,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 21,
+            "tp": 14
+          },
+          "delta_sum_r_vs_sl": 1.043081,
+          "delta_mean_r_vs_sl": 0.029802
+        }
+      },
+      "best_tp": "tp_05",
+      "best_rsi": "rsi_60",
+      "best_overall": "tp_05",
+      "call": "prefer_tp_tp_05"
+    }
+  },
+  "sl_exit_legs_only": {
+    "all": {
+      "sl_only": {
+        "n": 47,
+        "sum_r": -0.004582,
+        "mean_r": -9.7e-05,
+        "wr": 0.1064,
+        "median_r": -0.031,
+        "exit_mix": {
+          "path_end": 7,
+          "sl": 40
+        }
+      },
+      "policies": {
+        "tp_04": {
+          "n": 47,
+          "sum_r": 0.223,
+          "mean_r": 0.004745,
+          "wr": 0.5106,
+          "median_r": 0.039,
+          "exit_mix": {
+            "tp": 24,
+            "sl": 23
+          },
+          "delta_sum_r_vs_sl": 0.227582
+        },
+        "tp_05": {
+          "n": 47,
+          "sum_r": 0.383,
+          "mean_r": 0.008149,
+          "wr": 0.4894,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 23,
+            "sl": 24
+          },
+          "delta_sum_r_vs_sl": 0.387582
+        },
+        "tp_06": {
+          "n": 47,
+          "sum_r": 0.163,
+          "mean_r": 0.003468,
+          "wr": 0.383,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 18,
+            "sl": 29
+          },
+          "delta_sum_r_vs_sl": 0.167582
+        },
+        "tp_08": {
+          "n": 47,
+          "sum_r": -0.247,
+          "mean_r": -0.005255,
+          "wr": 0.234,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 11,
+            "sl": 36
+          },
+          "delta_sum_r_vs_sl": -0.242418
+        },
+        "tp_10": {
+          "n": 47,
+          "sum_r": -0.363466,
+          "mean_r": -0.007733,
+          "wr": 0.1915,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 1,
+            "sl": 38,
+            "tp": 8
+          },
+          "delta_sum_r_vs_sl": -0.358884
+        },
+        "tp_12": {
+          "n": 47,
+          "sum_r": -0.768713,
+          "mean_r": -0.016356,
+          "wr": 0.1064,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 3,
+            "sl": 40,
+            "tp": 4
+          },
+          "delta_sum_r_vs_sl": -0.764131
+        },
+        "rsi_60": {
+          "n": 47,
+          "sum_r": 0.598273,
+          "mean_r": 0.012729,
+          "wr": 0.2128,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 8,
+            "sl": 37,
+            "path_end": 2
+          },
+          "delta_sum_r_vs_sl": 0.602855
+        },
+        "rsi_65": {
+          "n": 47,
+          "sum_r": 0.598273,
+          "mean_r": 0.012729,
+          "wr": 0.2128,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 8,
+            "sl": 37,
+            "path_end": 2
+          },
+          "delta_sum_r_vs_sl": 0.602855
+        },
+        "rsi_68": {
+          "n": 47,
+          "sum_r": -0.025866,
+          "mean_r": -0.00055,
+          "wr": 0.1064,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 40,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": -0.021284
+        },
+        "rsi_70": {
+          "n": 47,
+          "sum_r": -0.025866,
+          "mean_r": -0.00055,
+          "wr": 0.1064,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 40,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": -0.021284
+        },
+        "rsi_75": {
+          "n": 47,
+          "sum_r": -0.025866,
+          "mean_r": -0.00055,
+          "wr": 0.1064,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 40,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": -0.021284
+        },
+        "rsi_80": {
+          "n": 47,
+          "sum_r": -0.025866,
+          "mean_r": -0.00055,
+          "wr": 0.1064,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 40,
+            "path_end": 6
+          },
+          "delta_sum_r_vs_sl": -0.021284
+        },
+        "tp06_rsi68": {
+          "n": 47,
+          "sum_r": 0.105249,
+          "mean_r": 0.002239,
+          "wr": 0.383,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 29,
+            "tp": 17
+          },
+          "delta_sum_r_vs_sl": 0.109831
+        }
+      },
+      "best": "rsi_60"
+    },
+    "bear": {
+      "sl_only": {
+        "n": 13,
+        "sum_r": 0.869982,
+        "mean_r": 0.066922,
+        "wr": 0.1538,
+        "median_r": -0.031,
+        "exit_mix": {
+          "path_end": 2,
+          "sl": 11
+        }
+      },
+      "policies": {
+        "tp_04": {
+          "n": 13,
+          "sum_r": -0.263,
+          "mean_r": -0.020231,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -1.132982
+        },
+        "tp_05": {
+          "n": 13,
+          "sum_r": -0.243,
+          "mean_r": -0.018692,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -1.112982
+        },
+        "tp_06": {
+          "n": 13,
+          "sum_r": -0.223,
+          "mean_r": -0.017154,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -1.092982
+        },
+        "tp_08": {
+          "n": 13,
+          "sum_r": -0.183,
+          "mean_r": -0.014077,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -1.052982
+        },
+        "tp_10": {
+          "n": 13,
+          "sum_r": -0.143,
+          "mean_r": -0.011,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -1.012982
+        },
+        "tp_12": {
+          "n": 13,
+          "sum_r": -0.103,
+          "mean_r": -0.007923,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -0.972982
+        },
+        "rsi_60": {
+          "n": 13,
+          "sum_r": 0.869982,
+          "mean_r": 0.066922,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_65": {
+          "n": 13,
+          "sum_r": 0.869982,
+          "mean_r": 0.066922,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_68": {
+          "n": 13,
+          "sum_r": 0.869982,
+          "mean_r": 0.066922,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_70": {
+          "n": 13,
+          "sum_r": 0.869982,
+          "mean_r": 0.066922,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_75": {
+          "n": 13,
+          "sum_r": 0.869982,
+          "mean_r": 0.066922,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_80": {
+          "n": 13,
+          "sum_r": 0.869982,
+          "mean_r": 0.066922,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "tp06_rsi68": {
+          "n": 13,
+          "sum_r": -0.223,
+          "mean_r": -0.017154,
+          "wr": 0.1538,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 11
+          },
+          "delta_sum_r_vs_sl": -1.092982
+        }
+      },
+      "best": "sl_only"
+    },
+    "bull": {
+      "sl_only": {
+        "n": 7,
+        "sum_r": -0.163466,
+        "mean_r": -0.023352,
+        "wr": 0.1429,
+        "median_r": -0.031,
+        "exit_mix": {
+          "path_end": 1,
+          "sl": 6
+        }
+      },
+      "policies": {
+        "tp_04": {
+          "n": 7,
+          "sum_r": 0.133,
+          "mean_r": 0.019,
+          "wr": 0.7143,
+          "median_r": 0.039,
+          "exit_mix": {
+            "tp": 5,
+            "sl": 2
+          },
+          "delta_sum_r_vs_sl": 0.296466
+        },
+        "tp_05": {
+          "n": 7,
+          "sum_r": 0.183,
+          "mean_r": 0.026143,
+          "wr": 0.7143,
+          "median_r": 0.049,
+          "exit_mix": {
+            "tp": 5,
+            "sl": 2
+          },
+          "delta_sum_r_vs_sl": 0.346466
+        },
+        "tp_06": {
+          "n": 7,
+          "sum_r": 0.233,
+          "mean_r": 0.033286,
+          "wr": 0.7143,
+          "median_r": 0.059,
+          "exit_mix": {
+            "tp": 5,
+            "sl": 2
+          },
+          "delta_sum_r_vs_sl": 0.396466
+        },
+        "tp_08": {
+          "n": 7,
+          "sum_r": 0.003,
+          "mean_r": 0.000429,
+          "wr": 0.2857,
+          "median_r": -0.031,
+          "exit_mix": {
+            "tp": 2,
+            "sl": 5
+          },
+          "delta_sum_r_vs_sl": 0.166466
+        },
+        "tp_10": {
+          "n": 7,
+          "sum_r": -0.033466,
+          "mean_r": -0.004781,
+          "wr": 0.2857,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 1,
+            "sl": 5,
+            "tp": 1
+          },
+          "delta_sum_r_vs_sl": 0.13
+        },
+        "tp_12": {
+          "n": 7,
+          "sum_r": -0.163466,
+          "mean_r": -0.023352,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "path_end": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_60": {
+          "n": 7,
+          "sum_r": -0.184751,
+          "mean_r": -0.026393,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": -0.021285
+        },
+        "rsi_65": {
+          "n": 7,
+          "sum_r": -0.184751,
+          "mean_r": -0.026393,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": -0.021285
+        },
+        "rsi_68": {
+          "n": 7,
+          "sum_r": -0.184751,
+          "mean_r": -0.026393,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": -0.021285
+        },
+        "rsi_70": {
+          "n": 7,
+          "sum_r": -0.184751,
+          "mean_r": -0.026393,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": -0.021285
+        },
+        "rsi_75": {
+          "n": 7,
+          "sum_r": -0.184751,
+          "mean_r": -0.026393,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": -0.021285
+        },
+        "rsi_80": {
+          "n": 7,
+          "sum_r": -0.184751,
+          "mean_r": -0.026393,
+          "wr": 0.1429,
+          "median_r": -0.031,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 6
+          },
+          "delta_sum_r_vs_sl": -0.021285
+        },
+        "tp06_rsi68": {
+          "n": 7,
+          "sum_r": 0.175249,
+          "mean_r": 0.025036,
+          "wr": 0.7143,
+          "median_r": 0.059,
+          "exit_mix": {
+            "rsi": 1,
+            "sl": 2,
+            "tp": 4
+          },
+          "delta_sum_r_vs_sl": 0.338715
+        }
+      },
+      "best": "tp_06"
+    },
+    "flat": {
+      "sl_only": {
+        "n": 27,
+        "sum_r": -0.711098,
+        "mean_r": -0.026337,
+        "wr": 0.0741,
+        "median_r": -0.031,
+        "exit_mix": {
+          "sl": 23,
+          "path_end": 4
+        }
+      },
+      "policies": {
+        "tp_04": {
+          "n": 27,
+          "sum_r": 0.353,
+          "mean_r": 0.013074,
+          "wr": 0.6296,
+          "median_r": 0.039,
+          "exit_mix": {
+            "tp": 17,
+            "sl": 10
+          },
+          "delta_sum_r_vs_sl": 1.064098
+        },
+        "tp_05": {
+          "n": 27,
+          "sum_r": 0.443,
+          "mean_r": 0.016407,
+          "wr": 0.5926,
+          "median_r": 0.049,
+          "exit_mix": {
+            "sl": 11,
+            "tp": 16
+          },
+          "delta_sum_r_vs_sl": 1.154098
+        },
+        "tp_06": {
+          "n": 27,
+          "sum_r": 0.153,
+          "mean_r": 0.005667,
+          "wr": 0.4074,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 16,
+            "tp": 11
+          },
+          "delta_sum_r_vs_sl": 0.864098
+        },
+        "tp_08": {
+          "n": 27,
+          "sum_r": -0.067,
+          "mean_r": -0.002481,
+          "wr": 0.2593,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 20,
+            "tp": 7
+          },
+          "delta_sum_r_vs_sl": 0.644098
+        },
+        "tp_10": {
+          "n": 27,
+          "sum_r": -0.187,
+          "mean_r": -0.006926,
+          "wr": 0.1852,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 22,
+            "tp": 5
+          },
+          "delta_sum_r_vs_sl": 0.524098
+        },
+        "tp_12": {
+          "n": 27,
+          "sum_r": -0.502247,
+          "mean_r": -0.018602,
+          "wr": 0.0741,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 23,
+            "path_end": 2,
+            "tp": 2
+          },
+          "delta_sum_r_vs_sl": 0.208851
+        },
+        "rsi_60": {
+          "n": 27,
+          "sum_r": -0.086958,
+          "mean_r": -0.003221,
+          "wr": 0.2593,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 20,
+            "rsi": 7
+          },
+          "delta_sum_r_vs_sl": 0.62414
+        },
+        "rsi_65": {
+          "n": 27,
+          "sum_r": -0.086958,
+          "mean_r": -0.003221,
+          "wr": 0.2593,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 20,
+            "rsi": 7
+          },
+          "delta_sum_r_vs_sl": 0.62414
+        },
+        "rsi_68": {
+          "n": 27,
+          "sum_r": -0.711098,
+          "mean_r": -0.026337,
+          "wr": 0.0741,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 23,
+            "path_end": 4
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_70": {
+          "n": 27,
+          "sum_r": -0.711098,
+          "mean_r": -0.026337,
+          "wr": 0.0741,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 23,
+            "path_end": 4
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_75": {
+          "n": 27,
+          "sum_r": -0.711098,
+          "mean_r": -0.026337,
+          "wr": 0.0741,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 23,
+            "path_end": 4
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "rsi_80": {
+          "n": 27,
+          "sum_r": -0.711098,
+          "mean_r": -0.026337,
+          "wr": 0.0741,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 23,
+            "path_end": 4
+          },
+          "delta_sum_r_vs_sl": 0.0
+        },
+        "tp06_rsi68": {
+          "n": 27,
+          "sum_r": 0.153,
+          "mean_r": 0.005667,
+          "wr": 0.4074,
+          "median_r": -0.031,
+          "exit_mix": {
+            "sl": 16,
+            "tp": 11
+          },
+          "delta_sum_r_vs_sl": 0.864098
+        }
+      },
+      "best": "tp_05"
+    }
+  },
+  "legs_sample": [
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-04-20T23:29:35.425668+00:00",
+      "exit_ts": "2026-05-01T00:02:17.854358+00:00",
+      "entry_px": 85.3,
+      "exit_px": 83.13,
+      "realized_r": 0.02163,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 12,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 88.712
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 82.741
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-04-30T23:24:12.969876+00:00",
+      "exit_ts": "2026-05-01T16:24:16.857460+00:00",
+      "entry_px": 82.95,
+      "exit_px": 84.25,
+      "realized_r": 0.035394,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 64.498,
+      "bars": 2,
+      "sl_only_r": 0.008764918625678145,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "tp_05": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "tp_06": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "tp_08": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "tp_10": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "tp_12": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "rsi_60": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "rsi_65": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "rsi_68": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "rsi_70": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "rsi_75": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "rsi_80": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        },
+        "tp06_rsi68": {
+          "r": 0.008764918625678145,
+          "exit_reason": "path_end",
+          "days": 2,
+          "exit_px": 83.76
+        }
+      }
+    },
+    {
+      "pair": "DOGE-USD",
+      "entry_ts": "2026-04-20T23:29:50.209808+00:00",
+      "exit_ts": "2026-05-05T22:15:45.170118+00:00",
+      "entry_px": 0.09511,
+      "exit_px": 0.1156523757,
+      "realized_r": -0.03623,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 16,
+      "sl_only_r": 0.20623372936599732,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.0989144
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 7,
+          "exit_px": 0.09986550000000001
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 8,
+          "exit_px": 0.1008166
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 10,
+          "exit_px": 0.10271880000000001
+        },
+        "tp_10": {
+          "r": 0.099,
+          "exit_reason": "tp",
+          "days": 10,
+          "exit_px": 0.104621
+        },
+        "tp_12": {
+          "r": 0.119,
+          "exit_reason": "tp",
+          "days": 10,
+          "exit_px": 0.10652320000000001
+        },
+        "rsi_60": {
+          "r": 0.20623372936599732,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 0.11482
+        },
+        "rsi_65": {
+          "r": 0.20623372936599732,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 0.11482
+        },
+        "rsi_68": {
+          "r": 0.20623372936599732,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 0.11482
+        },
+        "rsi_70": {
+          "r": 0.20623372936599732,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 0.11482
+        },
+        "rsi_75": {
+          "r": 0.20623372936599732,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 0.11482
+        },
+        "rsi_80": {
+          "r": 0.20623372936599732,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 0.11482
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 8,
+          "exit_px": 0.1008166
+        }
+      }
+    },
+    {
+      "pair": "BTC-USD",
+      "entry_ts": "2026-04-20T23:27:34.493549+00:00",
+      "exit_ts": "2026-05-05T22:16:17.908136+00:00",
+      "entry_px": 75734.0,
+      "exit_px": 81351.64,
+      "realized_r": 0.251564,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 16,
+      "sl_only_r": 0.0673143634298994,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 78763.36
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 79520.7
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 15,
+          "exit_px": 80278.04000000001
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 16,
+          "exit_px": 81792.72
+        },
+        "tp_10": {
+          "r": 0.0673143634298994,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 80907.72
+        },
+        "tp_12": {
+          "r": 0.0673143634298994,
+          "exit_reason": "path_end",
+          "days": 16,
+          "exit_px": 80907.72
+        },
+        "rsi_60": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_65": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_68": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_70": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_75": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_80": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "tp06_rsi68": {
+          "r": 0.0007278897192806479,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        }
+      }
+    },
+    {
+      "pair": "ETH-USD",
+      "entry_ts": "2026-04-20T23:29:34.979207+00:00",
+      "exit_ts": "2026-05-05T22:16:48.127996+00:00",
+      "entry_px": 2310.57,
+      "exit_px": 2373.35,
+      "realized_r": 0.027171,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 16,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 2402.9928000000004
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 2241.2529
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 2241.2529
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 2241.2529
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 2241.2529
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 10,
+          "exit_px": 2241.2529
+        },
+        "rsi_60": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        },
+        "rsi_65": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        },
+        "rsi_68": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        },
+        "rsi_70": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        },
+        "rsi_75": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        },
+        "rsi_80": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        },
+        "tp06_rsi68": {
+          "r": 0.000826389159384827,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2314.79,
+          "rsi": 83.96927650528174
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-04-20T23:29:43.824121+00:00",
+      "exit_ts": "2026-05-05T22:17:05.454217+00:00",
+      "entry_px": 1.4232,
+      "exit_px": 1.4178,
+      "realized_r": 0.234587,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 16,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 9,
+          "exit_px": 1.380504
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-04-30T23:25:17.164154+00:00",
+      "exit_ts": "2026-05-05T22:17:38.281864+00:00",
+      "entry_px": 82.92,
+      "exit_px": 86.59,
+      "realized_r": 0.064151,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 64.498,
+      "bars": 6,
+      "sl_only_r": 0.039400385914134035,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 86.2368
+        },
+        "tp_05": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "tp_06": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "tp_08": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "tp_10": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "tp_12": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "rsi_60": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "rsi_65": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "rsi_68": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "rsi_70": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "rsi_75": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "rsi_80": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        },
+        "tp06_rsi68": {
+          "r": 0.039400385914134035,
+          "exit_reason": "path_end",
+          "days": 6,
+          "exit_px": 86.27
+        }
+      }
+    },
+    {
+      "pair": "DOGE-USD",
+      "entry_ts": "2026-04-30T23:24:13.181202+00:00",
+      "exit_ts": "2026-05-19T01:05:16.924023+00:00",
+      "entry_px": 0.10625935,
+      "exit_px": 0.1048483361,
+      "realized_r": -0.126264,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 64.498,
+      "bars": 20,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 2,
+          "exit_px": 0.110509724
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.1115723175
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.112634911
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 0.114760098
+        },
+        "tp_10": {
+          "r": 0.099,
+          "exit_reason": "tp",
+          "days": 7,
+          "exit_px": 0.116885285
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030715695
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.112634911
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-05-01T00:05:27.514677+00:00",
+      "exit_ts": "2026-05-19T01:05:41.263057+00:00",
+      "entry_px": 1.3705,
+      "exit_px": 1.3907,
+      "realized_r": 0.210989,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 70.65,
+      "bars": 19,
+      "sl_only_r": -0.008369573148485953,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 1.4253200000000001
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 1.4390250000000002
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 1.45273
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 10,
+          "exit_px": 1.4801400000000002
+        },
+        "tp_10": {
+          "r": 0.099,
+          "exit_reason": "tp",
+          "days": 14,
+          "exit_px": 1.5075500000000002
+        },
+        "tp_12": {
+          "r": 0.119,
+          "exit_reason": "tp",
+          "days": 14,
+          "exit_px": 1.53496
+        },
+        "rsi_60": {
+          "r": -0.008369573148485953,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 1.3604
+        },
+        "rsi_65": {
+          "r": -0.008369573148485953,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 1.3604
+        },
+        "rsi_68": {
+          "r": -0.008369573148485953,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 1.3604
+        },
+        "rsi_70": {
+          "r": -0.008369573148485953,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 1.3604
+        },
+        "rsi_75": {
+          "r": -0.008369573148485953,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 1.3604
+        },
+        "rsi_80": {
+          "r": -0.008369573148485953,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 1.3604
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 1.45273
+        }
+      }
+    },
+    {
+      "pair": "BTC-USD",
+      "entry_ts": "2026-04-20T23:27:58.398079+00:00",
+      "exit_ts": "2026-05-19T01:05:59.758196+00:00",
+      "entry_px": 75724.74,
+      "exit_px": 77064.37,
+      "realized_r": 0.185606,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 30,
+      "sl_only_r": 0.0127701364177677,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 78753.7296
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 79510.97700000001
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 15,
+          "exit_px": 80268.2244
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 16,
+          "exit_px": 81782.7192
+        },
+        "tp_10": {
+          "r": 0.0127701364177677,
+          "exit_reason": "path_end",
+          "days": 30,
+          "exit_px": 76767.48
+        },
+        "tp_12": {
+          "r": 0.0127701364177677,
+          "exit_reason": "path_end",
+          "days": 30,
+          "exit_px": 76767.48
+        },
+        "rsi_60": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_65": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_68": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_70": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_75": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_80": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "tp06_rsi68": {
+          "r": 0.0008503860165118471,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        }
+      }
+    },
+    {
+      "pair": "ETH-USD",
+      "entry_ts": "2026-05-01T00:05:27.052462+00:00",
+      "exit_ts": "2026-05-19T01:06:12.637320+00:00",
+      "entry_px": 2261.43,
+      "exit_px": 2133.3606971924237,
+      "realized_r": -0.056632,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 70.65,
+      "bars": 19,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 2351.8872
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 4,
+          "exit_px": 2374.5015
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 4,
+          "exit_px": 2397.1158
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 16,
+          "exit_px": 2193.5870999999997
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 16,
+          "exit_px": 2193.5870999999997
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 16,
+          "exit_px": 2193.5870999999997
+        },
+        "rsi_60": {
+          "r": 0.014083376447646016,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2295.54,
+          "rsi": 71.51821579024855
+        },
+        "rsi_65": {
+          "r": 0.014083376447646016,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2295.54,
+          "rsi": 71.51821579024855
+        },
+        "rsi_68": {
+          "r": 0.014083376447646016,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2295.54,
+          "rsi": 71.51821579024855
+        },
+        "rsi_70": {
+          "r": 0.014083376447646016,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2295.54,
+          "rsi": 71.51821579024855
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 16,
+          "exit_px": 2193.5870999999997
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 16,
+          "exit_px": 2193.5870999999997
+        },
+        "tp06_rsi68": {
+          "r": 0.014083376447646016,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 2295.54,
+          "rsi": 71.51821579024855
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-05-01T00:05:27.273931+00:00",
+      "exit_ts": "2026-05-19T01:06:26.802557+00:00",
+      "entry_px": 83.22,
+      "exit_px": 85.46,
+      "realized_r": 0.050264,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 70.65,
+      "bars": 19,
+      "sl_only_r": 0.011136505647680907,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 86.5488
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 87.381
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 88.2132
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 89.8776
+        },
+        "tp_10": {
+          "r": 0.099,
+          "exit_reason": "tp",
+          "days": 8,
+          "exit_px": 91.542
+        },
+        "tp_12": {
+          "r": 0.119,
+          "exit_reason": "tp",
+          "days": 9,
+          "exit_px": 93.2064
+        },
+        "rsi_60": {
+          "r": 0.11784162460946888,
+          "exit_reason": "rsi",
+          "days": 9,
+          "exit_px": 93.11,
+          "rsi": 61.890764781021986
+        },
+        "rsi_65": {
+          "r": 0.15785604422013938,
+          "exit_reason": "rsi",
+          "days": 10,
+          "exit_px": 96.44,
+          "rsi": 68.10091894949066
+        },
+        "rsi_68": {
+          "r": 0.15785604422013938,
+          "exit_reason": "rsi",
+          "days": 10,
+          "exit_px": 96.44,
+          "rsi": 68.10091894949066
+        },
+        "rsi_70": {
+          "r": 0.011136505647680907,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 84.23
+        },
+        "rsi_75": {
+          "r": 0.011136505647680907,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 84.23
+        },
+        "rsi_80": {
+          "r": 0.011136505647680907,
+          "exit_reason": "path_end",
+          "days": 19,
+          "exit_px": 84.23
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 88.2132
+        }
+      }
+    },
+    {
+      "pair": "BTC-USD",
+      "entry_ts": "2026-04-20T23:29:34.655124+00:00",
+      "exit_ts": "2026-05-20T00:48:42.502063+00:00",
+      "entry_px": 75694.63,
+      "exit_px": 74202.52,
+      "realized_r": 0.141577,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 67.73,
+      "bars": 31,
+      "sl_only_r": 0.02253350561327799,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 78722.4152
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 79479.36150000001
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 15,
+          "exit_px": 80236.30780000001
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 16,
+          "exit_px": 81750.20040000002
+        },
+        "tp_10": {
+          "r": 0.02253350561327799,
+          "exit_reason": "path_end",
+          "days": 31,
+          "exit_px": 77475.99
+        },
+        "tp_12": {
+          "r": 0.02253350561327799,
+          "exit_reason": "path_end",
+          "days": 31,
+          "exit_px": 77475.99
+        },
+        "rsi_60": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_65": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_68": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_70": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_75": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "rsi_80": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        },
+        "tp06_rsi68": {
+          "r": 0.0012489045788320243,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 75864.86,
+          "rsi": 88.58316010987122
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-05-12T23:08:11.392372+00:00",
+      "exit_ts": "2026-06-05T19:23:38.720013+00:00",
+      "entry_px": 94.64,
+      "exit_px": 60.41,
+      "realized_r": -0.257589,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 88.604,
+      "bars": 25,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 2,
+          "exit_px": 91.8008
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-05-12T23:01:49.949516+00:00",
+      "exit_ts": "2026-06-05T19:23:38.961603+00:00",
+      "entry_px": 1.4405976553004824,
+      "exit_px": 1.05,
+      "realized_r": -0.085684,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 88.604,
+      "bars": 25,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.4982215615125019
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.5126275380655065
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.5270335146185114
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.397379725641468
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.5270335146185114
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-05-12T23:08:11.717675+00:00",
+      "exit_ts": "2026-06-05T21:52:41.162614+00:00",
+      "entry_px": 1.4389995523723882,
+      "exit_px": 1.09,
+      "realized_r": -0.050853,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 88.604,
+      "bars": 25,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.4965595344672837
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.5109495299910076
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.5253395255147315
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 1.3958295658012165
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 1.5253395255147315
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-05-19T05:17:57.235347+00:00",
+      "exit_ts": "2026-06-12T16:00:09.907806+00:00",
+      "entry_px": 1.381599425947187,
+      "exit_px": 1.094,
+      "realized_r": -0.04737,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 83.854,
+      "bars": 25,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3401514431687716
+        }
+      }
+    },
+    {
+      "pair": "LINK-USD",
+      "entry_ts": "2026-06-20T10:02:00+00:00",
+      "exit_ts": "2026-06-20T20:51:37.668094+00:00",
+      "entry_px": 7.1,
+      "exit_px": 7.649,
+      "realized_r": 0.077324,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -17.183,
+      "bars": 1,
+      "sl_only_r": 0.1229436619718311,
+      "sl_only_reason": "path_end",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.3839999999999995
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.455
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.526
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.668
+        },
+        "tp_10": {
+          "r": 0.099,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.8100000000000005
+        },
+        "tp_12": {
+          "r": 0.119,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.952
+        },
+        "rsi_60": {
+          "r": 0.1229436619718311,
+          "exit_reason": "path_end",
+          "days": 1,
+          "exit_px": 7.98
+        },
+        "rsi_65": {
+          "r": 0.1229436619718311,
+          "exit_reason": "path_end",
+          "days": 1,
+          "exit_px": 7.98
+        },
+        "rsi_68": {
+          "r": 0.1229436619718311,
+          "exit_reason": "path_end",
+          "days": 1,
+          "exit_px": 7.98
+        },
+        "rsi_70": {
+          "r": 0.1229436619718311,
+          "exit_reason": "path_end",
+          "days": 1,
+          "exit_px": 7.98
+        },
+        "rsi_75": {
+          "r": 0.1229436619718311,
+          "exit_reason": "path_end",
+          "days": 1,
+          "exit_px": 7.98
+        },
+        "rsi_80": {
+          "r": 0.1229436619718311,
+          "exit_reason": "path_end",
+          "days": 1,
+          "exit_px": 7.98
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 7.526
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-05-20T00:23:08.646721+00:00",
+      "exit_ts": "2026-06-20T21:26:21.874327+00:00",
+      "entry_px": 83.91,
+      "exit_px": 70.0,
+      "realized_r": -0.139732,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": 2.124,
+      "bars": 32,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 2,
+          "exit_px": 87.2664
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.39269999999999
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-05-20T00:30:05.375571+00:00",
+      "exit_ts": "2026-06-23T16:51:26.601852+00:00",
+      "entry_px": 84.16902031907999,
+      "exit_px": 68.79,
+      "realized_r": -0.154602,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": 2.124,
+      "bars": 35,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 2,
+          "exit_px": 87.5357811318432
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 81.6439497095076
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-05-20T00:23:15.927310+00:00",
+      "exit_ts": "2026-06-23T16:51:29.220021+00:00",
+      "entry_px": 1.35117978,
+      "exit_px": 1.0984,
+      "realized_r": -0.043539,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": 2.124,
+      "bars": 35,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 1.3106443866
+        }
+      }
+    },
+    {
+      "pair": "ETH-USD",
+      "entry_ts": "2026-05-12T23:08:10.776310+00:00",
+      "exit_ts": "2026-06-25T21:54:38.173994+00:00",
+      "entry_px": 2281.8219520124376,
+      "exit_px": 1575.5774027143218,
+      "realized_r": -0.309509,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 88.604,
+      "bars": 45,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2213.3672934520646
+        }
+      }
+    },
+    {
+      "pair": "ETH-USD",
+      "entry_ts": "2026-05-20T00:23:01.154775+00:00",
+      "exit_ts": "2026-06-25T22:37:52.149500+00:00",
+      "entry_px": 2103.05,
+      "exit_px": 1520.44,
+      "realized_r": -0.277031,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": 2.124,
+      "bars": 37,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 2039.9585000000002
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-06-06T21:22:25.025848+00:00",
+      "exit_ts": "2026-07-04T01:05:49.927862+00:00",
+      "entry_px": 145.0,
+      "exit_px": 81.93,
+      "realized_r": 0.006882,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -23.942,
+      "bars": 29,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        }
+      }
+    },
+    {
+      "pair": "BTC-USD",
+      "entry_ts": "2026-05-12T23:08:10.460420+00:00",
+      "exit_ts": "2026-07-04T16:13:39.269357+00:00",
+      "entry_px": 80616.96,
+      "exit_px": 62751.92,
+      "realized_r": -0.034586,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 88.604,
+      "bars": 54,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "rsi_60": {
+          "r": -0.002640349623702075,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 80484.72,
+          "rsi": 72.54237517141853
+        },
+        "rsi_65": {
+          "r": -0.002640349623702075,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 80484.72,
+          "rsi": 72.54237517141853
+        },
+        "rsi_68": {
+          "r": -0.002640349623702075,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 80484.72,
+          "rsi": 72.54237517141853
+        },
+        "rsi_70": {
+          "r": -0.002640349623702075,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 80484.72,
+          "rsi": 72.54237517141853
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 5,
+          "exit_px": 78198.45120000001
+        },
+        "tp06_rsi68": {
+          "r": -0.002640349623702075,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 80484.72,
+          "rsi": 72.54237517141853
+        }
+      }
+    },
+    {
+      "pair": "BTC-USD",
+      "entry_ts": "2026-05-20T00:22:53.881490+00:00",
+      "exit_ts": "2026-07-04T23:02:18.478501+00:00",
+      "entry_px": 76481.98,
+      "exit_px": 63045.09,
+      "realized_r": -0.030076,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": 2.124,
+      "bars": 46,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 8,
+          "exit_px": 74187.52059999999
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-06-05T21:28:52.909707+00:00",
+      "exit_ts": "2026-07-05T23:02:18.367193+00:00",
+      "entry_px": 1.1149,
+      "exit_px": 1.1586,
+      "realized_r": 0.008882,
+      "reason": "rotation_exchange",
+      "is_sl_exit": false,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -25.057,
+      "bars": 31,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.081453
+        }
+      }
+    },
+    {
+      "pair": "BTC-USD",
+      "entry_ts": "2026-05-20T00:29:51.197651+00:00",
+      "exit_ts": "2026-07-06T22:37:39.576307+00:00",
+      "entry_px": 76615.17840480275,
+      "exit_px": 63372.62,
+      "realized_r": -0.025037,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": 2.124,
+      "bars": 48,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 4,
+          "exit_px": 74316.72305265866
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-06-06T21:23:28.420959+00:00",
+      "exit_ts": "2026-07-07T16:01:32.372682+00:00",
+      "entry_px": 145.0,
+      "exit_px": 80.13,
+      "realized_r": -0.015239,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -23.942,
+      "bars": 32,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 140.65
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-06-20T20:50:50.931127+00:00",
+      "exit_ts": "2026-07-08T04:01:42.705735+00:00",
+      "entry_px": 71.83468614,
+      "exit_px": 76.83,
+      "realized_r": -0.055795,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -17.183,
+      "bars": 19,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 69.6796455558
+        }
+      }
+    },
+    {
+      "pair": "AVAX-USD",
+      "entry_ts": "2026-06-30T00:45:08.464964+00:00",
+      "exit_ts": "2026-07-11T16:00:53.524158+00:00",
+      "entry_px": 6.719999966381832,
+      "exit_px": 6.51,
+      "realized_r": -0.03125,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -20.457,
+      "bars": 12,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 6.518399967390377
+        }
+      }
+    },
+    {
+      "pair": "DOGE-USD",
+      "entry_ts": "2026-04-30T23:25:17.366112+00:00",
+      "exit_ts": "2026-07-11T16:01:08.399892+00:00",
+      "entry_px": 0.10622876,
+      "exit_px": 0.0733322653989252,
+      "realized_r": -0.024837,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 64.498,
+      "bars": 73,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 2,
+          "exit_px": 0.1104779104
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.11154019800000001
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.11260248560000001
+        },
+        "tp_08": {
+          "r": 0.079,
+          "exit_reason": "tp",
+          "days": 6,
+          "exit_px": 0.11472706080000002
+        },
+        "tp_10": {
+          "r": 0.099,
+          "exit_reason": "tp",
+          "days": 7,
+          "exit_px": 0.11685163600000001
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 19,
+          "exit_px": 0.1030418972
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 5,
+          "exit_px": 0.11260248560000001
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-06-30T00:45:08.460362+00:00",
+      "exit_ts": "2026-07-11T16:01:09.860024+00:00",
+      "entry_px": 77.74500002329933,
+      "exit_px": 75.97,
+      "realized_r": -0.022831,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -20.457,
+      "bars": 12,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 75.41265002260035
+        }
+      }
+    },
+    {
+      "pair": "AVAX-USD",
+      "entry_ts": "2026-07-03T21:07:29.683936+00:00",
+      "exit_ts": "2026-07-12T04:00:46.946423+00:00",
+      "entry_px": 6.719998603823083,
+      "exit_px": 6.41,
+      "realized_r": -0.046131,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": -2.373,
+      "bars": 10,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 6.988798547976006
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 2,
+          "exit_px": 7.055998534014237
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.51839864570839
+        }
+      }
+    },
+    {
+      "pair": "DOGE-USD",
+      "entry_ts": "2026-05-12T23:08:12.103757+00:00",
+      "exit_ts": "2026-07-12T04:00:58.743718+00:00",
+      "entry_px": 0.11031,
+      "exit_px": 0.07293,
+      "realized_r": -0.030186,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bull",
+      "btc_ret_30d_pct": 88.604,
+      "bars": 62,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 0.11472240000000002
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 0.11582550000000001
+        },
+        "tp_06": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 0.11692860000000001
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 0.1070007
+        },
+        "tp06_rsi68": {
+          "r": 0.059,
+          "exit_reason": "tp",
+          "days": 3,
+          "exit_px": 0.11692860000000001
+        }
+      }
+    },
+    {
+      "pair": "DOGE-USD",
+      "entry_ts": "2026-06-06T21:22:25.026834+00:00",
+      "exit_ts": "2026-07-12T16:01:02.785165+00:00",
+      "entry_px": 0.12,
+      "exit_px": 0.07294,
+      "realized_r": -0.030053,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -23.942,
+      "bars": 37,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.11639999999999999
+        }
+      }
+    },
+    {
+      "pair": "SOL-USD",
+      "entry_ts": "2026-07-03T15:22:56.731486+00:00",
+      "exit_ts": "2026-07-12T16:01:03.992535+00:00",
+      "entry_px": 81.31029955971755,
+      "exit_px": 75.41,
+      "realized_r": -0.030034,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": -2.373,
+      "bars": 10,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "rsi_60": {
+          "r": 0.010925923844005331,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 82.28,
+          "rsi": 65.63161114128393
+        },
+        "rsi_65": {
+          "r": 0.010925923844005331,
+          "exit_reason": "rsi",
+          "days": 1,
+          "exit_px": 82.28,
+          "rsi": 65.63161114128393
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 78.87099057292602
+        }
+      }
+    },
+    {
+      "pair": "XRP-USD",
+      "entry_ts": "2026-06-05T21:52:40.921686+00:00",
+      "exit_ts": "2026-07-12T16:01:05.213675+00:00",
+      "entry_px": 1.1161535114073402,
+      "exit_px": 1.0735,
+      "realized_r": -0.030174,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -25.057,
+      "bars": 38,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 1.08266890606512
+        }
+      }
+    },
+    {
+      "pair": "ARB-USD",
+      "entry_ts": "2026-06-30T00:45:08.470504+00:00",
+      "exit_ts": "2026-07-13T16:01:11.792614+00:00",
+      "entry_px": 0.09283790492549582,
+      "exit_px": 0.0911,
+      "realized_r": -0.01872,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "bear",
+      "btc_ret_30d_pct": -20.457,
+      "bars": 14,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "tp_05": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 1,
+          "exit_px": 0.09005276777773094
+        }
+      }
+    },
+    {
+      "pair": "AVAX-USD",
+      "entry_ts": "2026-07-03T21:35:31.946676+00:00",
+      "exit_ts": "2026-07-13T16:01:12.978847+00:00",
+      "entry_px": 6.720036908185641,
+      "exit_px": 6.5,
+      "realized_r": -0.032738,
+      "reason": "stop_loss_exchange",
+      "is_sl_exit": true,
+      "regime_at_entry": "flat",
+      "btc_ret_30d_pct": -2.373,
+      "bars": 11,
+      "sl_only_r": -0.031,
+      "sl_only_reason": "sl",
+      "cf": {
+        "tp_04": {
+          "r": 0.039,
+          "exit_reason": "tp",
+          "days": 1,
+          "exit_px": 6.988838384513067
+        },
+        "tp_05": {
+          "r": 0.049,
+          "exit_reason": "tp",
+          "days": 2,
+          "exit_px": 7.056038753594923
+        },
+        "tp_06": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "tp_08": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "tp_10": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "tp_12": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "rsi_60": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "rsi_65": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "rsi_68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "rsi_70": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "rsi_75": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "rsi_80": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        },
+        "tp06_rsi68": {
+          "r": -0.031,
+          "exit_reason": "sl",
+          "days": 6,
+          "exit_px": 6.518435800940072
+        }
+      }
+    }
+  ],
+  "notes": [
+    "Daily OHLCV: TP touch optimistic; same-day SL+TP \u2192 SL wins.",
+    "RSI exit at daily close when RSI>=threshold (Wilder 14).",
+    "Baseline for deltas is simulated SL-only on the same path, not mixed rotation exits.",
+    "realized_r kept for audit; policy ranking uses path engines.",
+    "Prior sim 'ride it out' is the null; overturn only with meaningful delta + N gates.",
+    "No live take_profit or operator_approve change from this report alone."
+  ]
+}

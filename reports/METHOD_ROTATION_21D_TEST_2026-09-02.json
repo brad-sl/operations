@@ -1,0 +1,315 @@
+{
+  "schema_version": 1,
+  "report_id": "METHOD_ROTATION_21D_TEST_2026-09-02",
+  "generated_at": "2026-09-02T19:51:04.021877+00:00",
+  "trial_id": "ANALYST-METHOD-ROTATION-21D-20260902-TRIAL",
+  "master_id": "ANALYST-METHOD-ROTATION-21D-20260902",
+  "plan_id": "PLAN-METHOD-ROTATION-001",
+  "family": "method_rotation_21d",
+  "trial_kind": "offline_analysis",
+  "real_data_only": true,
+  "live_config_writes": false,
+  "hypothesis": "Scorecard rotation winner still beats production path on fresh window",
+  "success_criteria_frozen_before_scoring": true,
+  "success_criteria": {
+    "primary_window": "fresh_opt_window",
+    "fresh_opt_window": {
+      "start": "2026-05-01",
+      "end": "2026-09-02"
+    },
+    "min_n_trades": 15,
+    "must_beat_baseline_ret_pp": 0.0,
+    "must_beat_baseline_dd_pp": 0.0,
+    "require_both_ret_and_dd": true,
+    "sparse_is": "inconclusive_not_promote",
+    "live_promote_allowed": false,
+    "shadow_ok_if": "primary_pass_and_n_ok",
+    "cr_accept_only_if": "leaderboard delta + compare-production pass honesty classes; not bags-only",
+    "baseline_arm": "control_no_swap",
+    "candidate_arm": "defensive_rotation_21d"
+  },
+  "policy_fingerprint": {
+    "regime_cash_policy_sha256": "781f0f0112fad43ce09679da5c25f25358e4ef08eafe67c434d086363c9ee174",
+    "regime_knob_map_sha256": "f0d91ccfda82bc60b44dd150d9e15205efb2de7ad09af26bdea69231b1066073",
+    "note": "read-only; not modified"
+  },
+  "data": {
+    "ohlcv_data_end": "2026-09-02",
+    "ohlcv_extended_at": "2026-09-02T19:32:40.589919+00:00",
+    "pack_path": "phase6/research/scenarios/method_rotation_21d_20260902.json",
+    "leaderboard_run_id": "OPT-20260902-193848",
+    "leaderboard_generated_at": "2026-09-02T19:38:48.663421+00:00",
+    "prior_scorecard_generated_at": "2026-08-30T11:00:39.790400+00:00",
+    "isolation": {
+      "test_isolation_scenario_knob_parity": "PASS",
+      "command": "./run_backtest.sh phase6/research/test_isolation_scenario_knob_parity.py"
+    }
+  },
+  "arms": {
+    "defensive_rotation_21d": {
+      "window": "fresh_opt_window",
+      "metrics": {
+        "final_equity": 1192.47,
+        "total_return_pct": 19.25,
+        "max_drawdown_pct": 0.83,
+        "sharpe_ratio": 8.964,
+        "total_trades": 14,
+        "rebalance_count": 14,
+        "avg_pairs_held": 4.05,
+        "engine": "arch4",
+        "strategy": "rotation_catch_wave",
+        "avg_exposure_pct": 81.0,
+        "simulation_window": {
+          "start": "2026-05-01",
+          "end": "2026-09-02",
+          "bars_min": 125
+        }
+      }
+    },
+    "control_no_swap": {
+      "window": "fresh_opt_window",
+      "metrics": {
+        "final_equity": 1012.18,
+        "total_return_pct": 1.22,
+        "max_drawdown_pct": 0.0,
+        "sharpe_ratio": 10.747,
+        "total_trades": 1,
+        "rebalance_count": 1,
+        "avg_pairs_held": 0.18,
+        "engine": "arch4",
+        "strategy": "rebalance",
+        "avg_exposure_pct": 3.6,
+        "simulation_window": {
+          "start": "2026-05-01",
+          "end": "2026-09-02",
+          "bars_min": 125
+        }
+      },
+      "definition": "arch4 strategy=rebalance, 21d, cap100 \u2014 no rotation swaps"
+    },
+    "production_path": {
+      "source": "compare-production",
+      "production": {
+        "source": "production_live",
+        "pack_window": {
+          "start": "2025-04-20",
+          "end": "2026-09-02"
+        },
+        "production_bounds": {
+          "first_trade": "2026-04-20",
+          "last_trade": "2026-09-02"
+        },
+        "overlap_window": {
+          "start": "2026-04-20",
+          "end": "2026-09-02"
+        },
+        "coverage": "partial",
+        "metrics": {
+          "id": "production_live",
+          "label": "Production (live ledger)",
+          "engine": "live",
+          "initial_capital": 1000.0,
+          "total_return_pct": -58.78,
+          "realized_pnl_usd": 398.97,
+          "net_buy_usd": 1440.0,
+          "trade_count": 422,
+          "live_rebalances_executed": 59,
+          "end_equity_usd": 2283.99,
+          "sharpe_ratio": null,
+          "max_drawdown_pct": null,
+          "start_equity_usd": 866.87,
+          "net_external_flows_usd": 1926.65,
+          "total_return_pct_unadjusted": 163.48,
+          "deposit_adjusted": true
+        },
+        "notes": [
+          "return_pct is deposit-adjusted: (end \u2212 start \u2212 net external flows) / start; start NAV from DB snapshot at go-live when available.",
+          "Unadjusted NAV change since start: 163.48% (inflates when you add cash)."
+        ]
+      },
+      "production_since_go_live": {
+        "source": "production_live",
+        "pack_window": {
+          "start": "2026-04-20",
+          "end": "2026-09-02"
+        },
+        "production_bounds": {
+          "first_trade": "2026-04-20",
+          "last_trade": "2026-09-02"
+        },
+        "overlap_window": {
+          "start": "2026-04-20",
+          "end": "2026-09-02"
+        },
+        "coverage": "full",
+        "metrics": {
+          "id": "production_live",
+          "label": "Production (live ledger)",
+          "engine": "live",
+          "initial_capital": 1000.0,
+          "total_return_pct": -58.78,
+          "realized_pnl_usd": 398.97,
+          "net_buy_usd": 1440.0,
+          "trade_count": 422,
+          "live_rebalances_executed": 59,
+          "end_equity_usd": 2283.99,
+          "sharpe_ratio": null,
+          "max_drawdown_pct": null,
+          "start_equity_usd": 866.87,
+          "net_external_flows_usd": 1926.65,
+          "total_return_pct_unadjusted": 163.48,
+          "deposit_adjusted": true
+        },
+        "notes": [
+          "return_pct is deposit-adjusted: (end \u2212 start \u2212 net external flows) / start; start NAV from DB snapshot at go-live when available.",
+          "Unadjusted NAV change since start: 163.48% (inflates when you add cash)."
+        ]
+      },
+      "vs_production_candidate": {
+        "scenario_id": "defensive_rotation_21d",
+        "scenario_value": 19.25,
+        "production_value": -58.78,
+        "delta": 78.03,
+        "beats_production": true,
+        "primary_metric": "total_return_pct"
+      }
+    },
+    "context": {
+      "baseline_7d_fresh": {
+        "final_equity": 1143.32,
+        "total_return_pct": 14.33,
+        "max_drawdown_pct": 2.83,
+        "sharpe_ratio": 5.155,
+        "total_trades": 38,
+        "rebalance_count": 38,
+        "avg_pairs_held": 3.18,
+        "engine": "arch4",
+        "strategy": "rotation_catch_wave",
+        "avg_exposure_pct": 63.6,
+        "simulation_window": {
+          "start": "2026-05-01",
+          "end": "2026-09-02",
+          "bars_min": 125
+        }
+      },
+      "defensive_rotation_21d_prior_bull": {
+        "final_equity": 1054.99,
+        "total_return_pct": 5.5,
+        "max_drawdown_pct": 0.0,
+        "sharpe_ratio": 22.965,
+        "total_trades": 8,
+        "rebalance_count": 8,
+        "avg_pairs_held": 3.06,
+        "engine": "arch4",
+        "strategy": "rotation_catch_wave",
+        "avg_exposure_pct": 61.2,
+        "simulation_window": {
+          "start": "2025-10-01",
+          "end": "2025-12-31",
+          "bars_min": 92
+        }
+      },
+      "control_no_swap_prior_bull": {
+        "final_equity": 1004.58,
+        "total_return_pct": 0.46,
+        "max_drawdown_pct": 0.01,
+        "sharpe_ratio": 15.457,
+        "total_trades": 2,
+        "rebalance_count": 2,
+        "avg_pairs_held": 0.32,
+        "engine": "arch4",
+        "strategy": "rebalance",
+        "avg_exposure_pct": 6.3,
+        "simulation_window": {
+          "start": "2025-10-01",
+          "end": "2025-12-31",
+          "bars_min": 92
+        }
+      },
+      "defensive_rotation_21d_full_tape": {
+        "final_equity": 774.21,
+        "total_return_pct": -22.58,
+        "max_drawdown_pct": 34.57,
+        "sharpe_ratio": -2.865,
+        "total_trades": 95,
+        "rebalance_count": 95,
+        "avg_pairs_held": 3.89,
+        "engine": "arch4",
+        "strategy": "rotation_catch_wave",
+        "avg_exposure_pct": 77.8,
+        "simulation_window": {
+          "start": "2025-04-20",
+          "end": "2026-09-02",
+          "bars_min": 501
+        }
+      },
+      "control_no_swap_full_tape": {
+        "final_equity": 1004.67,
+        "total_return_pct": 0.47,
+        "max_drawdown_pct": 2.91,
+        "sharpe_ratio": 0.431,
+        "total_trades": 3,
+        "rebalance_count": 3,
+        "avg_pairs_held": 0.42,
+        "engine": "arch4",
+        "strategy": "rebalance",
+        "avg_exposure_pct": 8.4,
+        "simulation_window": {
+          "start": "2025-04-20",
+          "end": "2026-09-02",
+          "bars_min": 501
+        }
+      }
+    }
+  },
+  "leaderboard_ranking": [
+    "defensive_rotation_21d",
+    "baseline_7d_fresh",
+    "defensive_rotation_21d_prior_bull",
+    "control_no_swap",
+    "control_no_swap_full_tape",
+    "control_no_swap_prior_bull",
+    "defensive_rotation_21d_full_tape"
+  ],
+  "gates": {
+    "n_primary": 14,
+    "n_ok": false,
+    "delta_ret_pp": 18.03,
+    "beat_ret": true,
+    "delta_dd_pp_ctrl_minus_cand": -0.83,
+    "beat_dd": false,
+    "require_both_ret_and_dd": true,
+    "primary_pass": false
+  },
+  "honesty": {
+    "full_tape_candidate_red": true,
+    "control_underdeployed": true,
+    "control_n_trades": 1,
+    "vs_baseline_7d_fresh_ret_pp": 4.92,
+    "vs_baseline_7d_fresh_dd_pp": 2.0,
+    "production_compare_apples": false,
+    "production_note": "deposit-adjusted live return is not a fixed-$1000 ARCH-4 path; beats_production=True is weak evidence alone",
+    "prior_scorecard_recent_optimal": "usdc_hold",
+    "prior_scorecard_bull_winner": "defensive_rotation_21d",
+    "not_bags_only_on_fresh": true
+  },
+  "outcome": {
+    "class": "inconclusive_sparse_N",
+    "primary_pass": false,
+    "n_primary": 14,
+    "delta_ret_pp": 18.03,
+    "delta_dd_pp": -0.83
+  },
+  "recommendation": {
+    "enum": "continue_observe_only",
+    "shadow_go": false,
+    "live_promote": false,
+    "follow_on_suggestion": "extend|none \u2014 optional extend for n>=15 on same frozen arms; do not promote",
+    "plain_english": "NO GO on shadow/promote. Fresh window (2026-05-01..2026-09-02) candidate defensive_rotation_21d return=19.25% dd=0.83% n=14 vs control_no_swap return=1.22% dd=0.0% n=1. Fails frozen gates: n=14<15 (sparse) and DD not <= control (delta_dd=-0.83 pp). Ret edge vs control +18.03 pp is real on this slice but control is near-idle (exposure~=3.6%, n=1). Full-tape candidate is red (-22.58%, dd=34.57%). Prior scorecard bull still shows 21d winner; recent/flat optimal was usdc_hold. Enum: continue_observe_only. outcome: inconclusive_sparse_N."
+  },
+  "cr_guidance": {
+    "suggest": "REJECT promote/shadow",
+    "accept_only_if": "leaderboard delta + compare-production pass honesty classes; not bags-only",
+    "reason": "sparse N + failed DD gate + full-tape instability; production delta not apples-to-apples"
+  }
+}

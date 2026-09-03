@@ -1,0 +1,653 @@
+{
+  "as_of": "2026-08-31T17:29:51.774110+00:00",
+  "nav_usd": null,
+  "n_fills_loaded": 219,
+  "stats_30d": {
+    "days": 30,
+    "n": 54,
+    "total_fees": 138.8867,
+    "total_notional": 16765.82,
+    "fee_pct_of_notional": 0.8284,
+    "fee_pct_median": 0.8,
+    "fee_pct_p25": 0.8,
+    "fee_pct_p75": 0.8,
+    "fee_pct_mean": 0.8118,
+    "n_with_rate": 51,
+    "order_types": [
+      [
+        "MARKET",
+        41
+      ],
+      [
+        "STOP_LIMIT",
+        13
+      ]
+    ],
+    "liq_class": [
+      [
+        "taker_market",
+        41
+      ],
+      [
+        "taker_stop",
+        13
+      ]
+    ],
+    "sides": {
+      "SELL": 19,
+      "BUY": 35
+    },
+    "fees_by_side": {
+      "SELL": 59.1581,
+      "BUY": 79.7286
+    },
+    "fees_by_liq": {
+      "taker_stop": 38.1693,
+      "taker_market": 100.7174
+    },
+    "buy_fee_pct_median": 0.8,
+    "sell_fee_pct_median": 0.8,
+    "top_reasons": [
+      [
+        "rebalance_buy",
+        35
+      ],
+      [
+        "stop_loss_exchange",
+        13
+      ],
+      [
+        "rotation_exchange",
+        6
+      ]
+    ],
+    "top_fee_samples": [
+      {
+        "ts": "2026-08-16T16:01:01.024352+00:00",
+        "pair": "BTC-USD",
+        "side": "SELL",
+        "order_type": "MARKET",
+        "notional": 1994.46,
+        "fees": 15.9556,
+        "fee_pct": 0.8,
+        "reason": "rotation_exchange"
+      },
+      {
+        "ts": "2026-08-24T16:00:30.828124+00:00",
+        "pair": "LINK-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 1909.87,
+        "fees": 15.2789,
+        "fee_pct": 0.8,
+        "reason": "rebalance_buy"
+      },
+      {
+        "ts": "2026-08-21T18:30:08.645804+00:00",
+        "pair": "LINK-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 1016.25,
+        "fees": 12.195,
+        "fee_pct": 1.2,
+        "reason": "rebalance_buy"
+      },
+      {
+        "ts": "2026-08-01T18:31:10.228469+00:00",
+        "pair": "LINK-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 1132.74,
+        "fees": 9.0619,
+        "fee_pct": 0.8,
+        "reason": "stop_loss_exchange"
+      },
+      {
+        "ts": "2026-08-25T20:47:30.828514+00:00",
+        "pair": "LINK-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 1023.03,
+        "fees": 8.1842,
+        "fee_pct": 0.8,
+        "reason": "stop_loss_exchange"
+      },
+      {
+        "ts": "2026-08-23T18:04:41.899120+00:00",
+        "pair": "UNI-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 973.55,
+        "fees": 7.7884,
+        "fee_pct": 0.8,
+        "reason": "rebalance_buy"
+      },
+      {
+        "ts": "2026-08-24T00:45:11.274322+00:00",
+        "pair": "UNI-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 932.44,
+        "fees": 7.4595,
+        "fee_pct": 0.8,
+        "reason": "stop_loss_exchange"
+      },
+      {
+        "ts": "2026-08-04T04:00:51.417814+00:00",
+        "pair": "LINK-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 631.86,
+        "fees": 5.0549,
+        "fee_pct": 0.8,
+        "reason": "rebalance_buy"
+      }
+    ],
+    "limit_count": 0,
+    "market_count": 41,
+    "stop_count": 13
+  },
+  "stats_90d": {
+    "days": 90,
+    "n": 175,
+    "total_fees": 217.9019,
+    "total_notional": 25452.14,
+    "fee_pct_of_notional": 0.8561,
+    "fee_pct_median": 0.8,
+    "fee_pct_p25": 0.8,
+    "fee_pct_p75": 1.2,
+    "fee_pct_mean": 0.9,
+    "n_with_rate": 146,
+    "order_types": [
+      [
+        "MARKET",
+        95
+      ],
+      [
+        "STOP_LIMIT",
+        80
+      ]
+    ],
+    "liq_class": [
+      [
+        "taker_market",
+        95
+      ],
+      [
+        "taker_stop",
+        80
+      ]
+    ],
+    "sides": {
+      "SELL": 111,
+      "BUY": 64
+    },
+    "fees_by_side": {
+      "SELL": 111.2469,
+      "BUY": 106.655
+    },
+    "fees_by_liq": {
+      "taker_stop": 77.5288,
+      "taker_market": 140.3731
+    },
+    "buy_fee_pct_median": 0.8,
+    "sell_fee_pct_median": 0.8,
+    "top_reasons": [
+      [
+        "stop_loss_exchange",
+        80
+      ],
+      [
+        "rebalance_buy",
+        64
+      ],
+      [
+        "rotation_exchange",
+        31
+      ]
+    ],
+    "top_fee_samples": [
+      {
+        "ts": "2026-08-16T16:01:01.024352+00:00",
+        "pair": "BTC-USD",
+        "side": "SELL",
+        "order_type": "MARKET",
+        "notional": 1994.46,
+        "fees": 15.9556,
+        "fee_pct": 0.8,
+        "reason": "rotation_exchange"
+      },
+      {
+        "ts": "2026-08-24T16:00:30.828124+00:00",
+        "pair": "LINK-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 1909.87,
+        "fees": 15.2789,
+        "fee_pct": 0.8,
+        "reason": "rebalance_buy"
+      },
+      {
+        "ts": "2026-08-21T18:30:08.645804+00:00",
+        "pair": "LINK-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 1016.25,
+        "fees": 12.195,
+        "fee_pct": 1.2,
+        "reason": "rebalance_buy"
+      },
+      {
+        "ts": "2026-08-01T18:31:10.228469+00:00",
+        "pair": "LINK-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 1132.74,
+        "fees": 9.0619,
+        "fee_pct": 0.8,
+        "reason": "stop_loss_exchange"
+      },
+      {
+        "ts": "2026-08-25T20:47:30.828514+00:00",
+        "pair": "LINK-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 1023.03,
+        "fees": 8.1842,
+        "fee_pct": 0.8,
+        "reason": "stop_loss_exchange"
+      },
+      {
+        "ts": "2026-08-23T18:04:41.899120+00:00",
+        "pair": "UNI-USD",
+        "side": "BUY",
+        "order_type": "MARKET",
+        "notional": 973.55,
+        "fees": 7.7884,
+        "fee_pct": 0.8,
+        "reason": "rebalance_buy"
+      },
+      {
+        "ts": "2026-08-24T00:45:11.274322+00:00",
+        "pair": "UNI-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 932.44,
+        "fees": 7.4595,
+        "fee_pct": 0.8,
+        "reason": "stop_loss_exchange"
+      },
+      {
+        "ts": "2026-07-12T00:31:26.447792+00:00",
+        "pair": "OP-USD",
+        "side": "SELL",
+        "order_type": "STOP_LIMIT",
+        "notional": 507.96,
+        "fees": 6.0955,
+        "fee_pct": 1.2,
+        "reason": "stop_loss_exchange"
+      }
+    ],
+    "limit_count": 0,
+    "market_count": 95,
+    "stop_count": 80
+  },
+  "code_path": {
+    "buy_path": "OrderExecutor.execute_buy \u2192 exchange.place_market_buy \u2192 market_market_ioc (quote_size)",
+    "sell_path": "OrderExecutor.execute_sell \u2192 protected_market_exit \u2192 place_market_sell \u2192 market_market_ioc (base_size)",
+    "config_order_type_hardcoded": "config_loader.get_config \u2192 order_type=\"market\" (not read from JSON)",
+    "config_fee_constants": {
+      "COINBASE_MAKER_FEE_RATE": 0.0025,
+      "COINBASE_TAKER_FEE_RATE": 0.004,
+      "note": "Stated Advanced-1 style; not used by place_market_* body"
+    },
+    "execute_buy_calls_place_market_buy": true,
+    "place_limit_buy_on_exchange_client": false,
+    "place_limit_sell_on_exchange_client": false,
+    "place_market_buy_uses_ioc": true,
+    "protected_exit_is_market": true,
+    "strategy_doc_string": null,
+    "limit_buy_exists_legacy_wrapper": true,
+    "tp_attach_uses_limit_post_only": true,
+    "implication": "MARKET-only on verified entry/exit path is by design of current Phase6 executor, not a mysterious regression of a live maker path. Legacy place_limit_buy lives outside phase6/core/exchange_client.py and is not called by OrderExecutor.",
+    "config_json_order_type_field": null,
+    "exchange_client_place_methods": [
+      "place_market_buy",
+      "place_buy_with_bracket",
+      "place_stop_limit_sell",
+      "place_market_sell"
+    ]
+  },
+  "live_fee_tier": {
+    "attempted": true,
+    "ok": true,
+    "transaction_summary_keys": [
+      "total_volume",
+      "total_fees",
+      "fee_tier",
+      "margin_rate",
+      "goods_and_services_tax",
+      "advanced_trade_only_volume",
+      "advanced_trade_only_fees",
+      "coinbase_pro_volume",
+      "coinbase_pro_fees",
+      "total_balance",
+      "has_promo_fee",
+      "volume_breakdown",
+      "has_cost_plus_commission",
+      "fee_tier_without_promotion",
+      "next_fee_tier",
+      "next_tier_threshold"
+    ],
+    "fee_related": {
+      "total_volume": 20332.19713527856,
+      "total_fees": 167.4446588022281,
+      "fee_tier": {
+        "pricing_tier": "Intro 2",
+        "usd_from": "",
+        "usd_to": "",
+        "taker_fee_rate": "0.008",
+        "maker_fee_rate": "0.004",
+        "aop_from": "1000000",
+        "aop_to": "5000000",
+        "perps_vol_from": "",
+        "perps_vol_to": "",
+        "futures_vol_from": "",
+        "futures_vol_to": "",
+        "volume_types_and_range": [
+          {
+            "volume_types": [
+              "VOLUME_TYPE_SPOT",
+              "VOLUME_TYPE_US_DERIVATIVES"
+            ],
+            "vol_from": "10000",
+            "vol_to": "25000"
+          }
+        ]
+      },
+      "margin_rate": null,
+      "advanced_trade_only_volume": 20332.19713527856,
+      "advanced_trade_only_fees": 167.4446588022281,
+      "coinbase_pro_volume": 0,
+      "coinbase_pro_fees": 0,
+      "has_promo_fee": false,
+      "volume_breakdown": [
+        {
+          "volume_type": "VOLUME_TYPE_SPOT",
+          "volume": 20332.19713527856
+        },
+        {
+          "volume_type": "VOLUME_TYPE_US_DERIVATIVES",
+          "volume": 0
+        }
+      ],
+      "fee_tier_without_promotion": {
+        "pricing_tier": "",
+        "qualification_type": "FEE_TIER_QUALIFICATION_TYPE_COMBINED_VOLUME",
+        "current_value": "20332.19713527856",
+        "next_tier_threshold": "25000",
+        "current_tier": {
+          "pricing_tier": "Intro 2",
+          "usd_from": "",
+          "usd_to": "",
+          "taker_fee_rate": "0.008",
+          "maker_fee_rate": "0.004",
+          "aop_from": "1000000",
+          "aop_to": "5000000",
+          "perps_vol_from": "",
+          "perps_vol_to": "",
+          "futures_vol_from": "",
+          "futures_vol_to": "",
+          "volume_types_and_range": [
+            {
+              "volume_types": [
+                "VOLUME_TYPE_SPOT",
+                "VOLUME_TYPE_US_DERIVATIVES"
+              ],
+              "vol_from": "10000",
+              "vol_to": "25000"
+            }
+          ]
+        },
+        "next_tier": {
+          "pricing_tier": "Advanced 1",
+          "usd_from": "",
+          "usd_to": "",
+          "taker_fee_rate": "0.005",
+          "maker_fee_rate": "0.0025",
+          "aop_from": "5000000",
+          "aop_to": "15000000",
+          "perps_vol_from": "",
+          "perps_vol_to": "",
+          "futures_vol_from": "",
+          "futures_vol_to": "",
+          "volume_types_and_range": [
+            {
+              "volume_types": [
+                "VOLUME_TYPE_SPOT",
+                "VOLUME_TYPE_US_DERIVATIVES"
+              ],
+              "vol_from": "25000",
+              "vol_to": "75000"
+            }
+          ]
+        },
+        "current_tier_threshold": "10000"
+      },
+      "next_fee_tier": {
+        "pricing_tier": "Advanced 1",
+        "usd_from": "",
+        "usd_to": "",
+        "taker_fee_rate": "0.005",
+        "maker_fee_rate": "0.0025",
+        "aop_from": "5000000",
+        "aop_to": "15000000",
+        "perps_vol_from": "",
+        "perps_vol_to": "",
+        "futures_vol_from": "",
+        "futures_vol_to": "",
+        "volume_types_and_range": [
+          {
+            "volume_types": [
+              "VOLUME_TYPE_SPOT",
+              "VOLUME_TYPE_US_DERIVATIVES"
+            ],
+            "vol_from": "25000",
+            "vol_to": "75000"
+          }
+        ]
+      },
+      "next_tier_threshold": "25000"
+    },
+    "path": "/api/v3/brokerage/transaction_summary",
+    "tried": [
+      "/api/v3/brokerage/transaction_summary"
+    ]
+  },
+  "fee_gap": {
+    "reference_tiers": [
+      {
+        "name": "config_loader constants",
+        "maker_pct": 0.25,
+        "taker_pct": 0.4
+      },
+      {
+        "name": "if_realized_is_true_taker",
+        "maker_pct": null,
+        "taker_pct": 0.8
+      }
+    ],
+    "gap": {
+      "realized_median_fee_pct": 0.8,
+      "vs_config_taker_0_40": 0.4,
+      "vs_config_maker_0_25": 0.55,
+      "round_trip_taker_taker_est_pct": 1.6,
+      "round_trip_if_maker_entry_taker_exit_est": 1.05,
+      "note": "If median ~0.8% is true all-in commission/notional, it is ABOVE config_loader's 0.40% taker constant \u2014 either tier is worse than assumed, fee field includes extra, or notional denominator is partial. Live transaction_summary is ground truth."
+    },
+    "maker_buy_savings_upper_bound_30d": {
+      "assumption": "30d BUY fees if all buys were maker @0.4% instead of ~0.8%",
+      "buy_fees_30d": 79.7286,
+      "hypothetical_save_usd": 39.86,
+      "caveat": "Unfilled limits / late entry / adverse selection not modeled; not a promote case"
+    },
+    "live_tier_probe": {
+      "ok": true,
+      "fee_related": {
+        "total_volume": 20332.19713527856,
+        "total_fees": 167.4446588022281,
+        "fee_tier": {
+          "pricing_tier": "Intro 2",
+          "usd_from": "",
+          "usd_to": "",
+          "taker_fee_rate": "0.008",
+          "maker_fee_rate": "0.004",
+          "aop_from": "1000000",
+          "aop_to": "5000000",
+          "perps_vol_from": "",
+          "perps_vol_to": "",
+          "futures_vol_from": "",
+          "futures_vol_to": "",
+          "volume_types_and_range": [
+            {
+              "volume_types": [
+                "VOLUME_TYPE_SPOT",
+                "VOLUME_TYPE_US_DERIVATIVES"
+              ],
+              "vol_from": "10000",
+              "vol_to": "25000"
+            }
+          ]
+        },
+        "margin_rate": null,
+        "advanced_trade_only_volume": 20332.19713527856,
+        "advanced_trade_only_fees": 167.4446588022281,
+        "coinbase_pro_volume": 0,
+        "coinbase_pro_fees": 0,
+        "has_promo_fee": false,
+        "volume_breakdown": [
+          {
+            "volume_type": "VOLUME_TYPE_SPOT",
+            "volume": 20332.19713527856
+          },
+          {
+            "volume_type": "VOLUME_TYPE_US_DERIVATIVES",
+            "volume": 0
+          }
+        ],
+        "fee_tier_without_promotion": {
+          "pricing_tier": "",
+          "qualification_type": "FEE_TIER_QUALIFICATION_TYPE_COMBINED_VOLUME",
+          "current_value": "20332.19713527856",
+          "next_tier_threshold": "25000",
+          "current_tier": {
+            "pricing_tier": "Intro 2",
+            "usd_from": "",
+            "usd_to": "",
+            "taker_fee_rate": "0.008",
+            "maker_fee_rate": "0.004",
+            "aop_from": "1000000",
+            "aop_to": "5000000",
+            "perps_vol_from": "",
+            "perps_vol_to": "",
+            "futures_vol_from": "",
+            "futures_vol_to": "",
+            "volume_types_and_range": [
+              {
+                "volume_types": [
+                  "VOLUME_TYPE_SPOT",
+                  "VOLUME_TYPE_US_DERIVATIVES"
+                ],
+                "vol_from": "10000",
+                "vol_to": "25000"
+              }
+            ]
+          },
+          "next_tier": {
+            "pricing_tier": "Advanced 1",
+            "usd_from": "",
+            "usd_to": "",
+            "taker_fee_rate": "0.005",
+            "maker_fee_rate": "0.0025",
+            "aop_from": "5000000",
+            "aop_to": "15000000",
+            "perps_vol_from": "",
+            "perps_vol_to": "",
+            "futures_vol_from": "",
+            "futures_vol_to": "",
+            "volume_types_and_range": [
+              {
+                "volume_types": [
+                  "VOLUME_TYPE_SPOT",
+                  "VOLUME_TYPE_US_DERIVATIVES"
+                ],
+                "vol_from": "25000",
+                "vol_to": "75000"
+              }
+            ]
+          },
+          "current_tier_threshold": "10000"
+        },
+        "next_fee_tier": {
+          "pricing_tier": "Advanced 1",
+          "usd_from": "",
+          "usd_to": "",
+          "taker_fee_rate": "0.005",
+          "maker_fee_rate": "0.0025",
+          "aop_from": "5000000",
+          "aop_to": "15000000",
+          "perps_vol_from": "",
+          "perps_vol_to": "",
+          "futures_vol_from": "",
+          "futures_vol_to": "",
+          "volume_types_and_range": [
+            {
+              "volume_types": [
+                "VOLUME_TYPE_SPOT",
+                "VOLUME_TYPE_US_DERIVATIVES"
+              ],
+              "vol_from": "25000",
+              "vol_to": "75000"
+            }
+          ]
+        },
+        "next_tier_threshold": "25000"
+      },
+      "error": null
+    },
+    "live_confirmed": {
+      "pricing_tier": "Intro 2",
+      "taker_fee_pct": 0.8,
+      "maker_fee_pct": 0.4,
+      "volume_30d_ish": 20332.19713527856,
+      "next_tier": "Advanced 1",
+      "next_taker_pct": 0.5,
+      "next_maker_pct": 0.25,
+      "next_threshold_usd": "25000",
+      "config_loader_stale": true,
+      "config_claimed_taker_pct": 0.4,
+      "realized_matches_live_taker": true
+    },
+    "volume_tier_up_to_adv1_upper_bound_30d": {
+      "assumption": "If all 30d fees scaled from 0.8% \u2192 Adv1 taker 0.5% (still all taker)",
+      "hypothetical_save_usd": 52.08,
+      "note": "Requires ~$25k 30d volume; churning to unlock tier is usually negative EV at 0.8%"
+    }
+  },
+  "verdict": {
+    "live_maker_path": "NO \u2014 do not wire live maker without design + shadow + Brad GO",
+    "why_market_only": "OrderExecutor and ExchangeClient only implement market IOC for entries/exits; config hardcodes order_type=market; no place_limit_buy on live client. Not a fill-label bug.",
+    "fee_read": "Live Coinbase tier **Intro 2**: taker **0.8%** / maker **0.4%**. Realized median **0.8%** matches taker exactly. config_loader constants (0.25/0.40) are **stale** (those are closer to next tier Advanced 1: 0.25/0.5). Round-trip taker/taker \u2248 **1.6%**.",
+    "bottom_line": "MARKET-only is intentional code path, not a bug. Account is Intro 2 (0.8% taker). No place_limit_buy on live client \u2014 maker path = new eng. Even maker entries only cut buy leg 0.8\u21920.4; exits still taker (market/stop). Do not churn volume just to reach Advanced 1. Highest EV: fewer round-trips + C stand-down; maker path is gated design work, not a money printer.",
+    "limit_fills_90d": 0,
+    "money_print": false,
+    "edge_class": "process_cost_reduction_candidate_not_alpha"
+  },
+  "caveats": [
+    "liquidity maker/taker flag often absent \u2014 class from order_type heuristic",
+    "fee/notional can mis-state if filled_value incomplete",
+    "live tier probe may fail if keys/env not available in this shell",
+    "maker savings upper bound is not a promote case",
+    "no live changes in this dig"
+  ]
+}

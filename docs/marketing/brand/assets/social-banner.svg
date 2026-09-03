@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="500" viewBox="0 0 1500 500" role="img" aria-label="ARCH Automation banner">
+  <rect width="1500" height="500" fill="#0B1F2A"/>
+  <circle cx="1250" cy="80" r="220" fill="#14B8A6" opacity="0.08"/>
+  <circle cx="200" cy="420" r="180" fill="#14B8A6" opacity="0.06"/>
+  <g transform="translate(120,140) scale(1.4)">
+    <rect width="144" height="144" rx="28" fill="#14B8A6"/>
+    <path d="M36 118 V72 C36 42 62 24 80 24 C98 24 124 42 124 72 V118"
+          fill="none" stroke="#0B1F2A" stroke-width="12" stroke-linecap="round"/>
+    <path d="M80 48 V118" fill="none" stroke="#0B1F2A" stroke-width="10" stroke-linecap="round"/>
+    <path d="M58 82 H102" fill="none" stroke="#0B1F2A" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <text x="380" y="240" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="84" font-weight="700" fill="#F4F7F9">ARCH Automation</text>
+  <text x="380" y="310" font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" font-size="28" font-weight="500" fill="#14B8A6" letter-spacing="1.5">Your Coinbase. Your capital. Rules-based automation.</text>
+</svg>

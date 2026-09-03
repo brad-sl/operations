@@ -1,0 +1,13 @@
+{
+  "trial_id": "ANALYST-REGIME-BULL-KNOBS-20260824-TRIAL",
+  "master_id": "ANALYST-REGIME-BULL-KNOBS-20260824",
+  "outcome": {
+    "class": "process_incomplete",
+    "primary_pass": false,
+    "n_primary": 0,
+    "enum": "abort",
+    "plain_english": "Auto-pickup shell never ran bull knobs offline arms; overdue RUNNING with empty reports. Capacity unstick 2026-09-02."
+  },
+  "closed_at": "2026-09-02T18:30:00+00:00",
+  "live_promote_allowed": false
+}

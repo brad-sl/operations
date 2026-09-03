@@ -1,0 +1,122 @@
+{
+  "pilot_id": "BON-STAFF-PRIORITY-20260818",
+  "n": 3,
+  "notes": {
+    "candidate_A": "Parent authored after leaf A search-loop thrash + stop (process finding).",
+    "candidate_B": "Leaf sa-1 completed.",
+    "candidate_C": "Leaf sa-2 completed.",
+    "baseline": "Parent single-shot written before gens finished (contamination risk noted; B/C still distinct primaries)."
+  },
+  "margin_min": 1.5,
+  "safety_floors": {
+    "live_safety": 14.0,
+    "evidence_honesty": 12.0
+  },
+  "ranking": [
+    {
+      "candidate_id": "C",
+      "primary": "P6-SCALE-GAP-06-PERF-API-SOAK-20260816",
+      "secondary": "P6-SCALE-GAP-04-HARD-EXIT-EVIDENCE-CLOCK-20260816",
+      "angle": "evidence_clock",
+      "effort": "S",
+      "scores": {
+        "fleet_bang": 14,
+        "feasibility_7d": 18,
+        "live_safety": 18,
+        "evidence_honesty": 18,
+        "low_drag": 18
+      },
+      "evidence": {
+        "fleet_bang": "L4 trust at N accounts real but below L3 loss expectancy lever.",
+        "feasibility_7d": "NEEDS_VALIDATE + existing kpi_truth harness; S effort this week.",
+        "live_safety": "ISO/soak only; no live flips.",
+        "evidence_honesty": "Cited GAP-04 n=0 staged decisions; watch-not-build secondary.",
+        "low_drag": "Smallest effort class; clear pass/kill."
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 17.2
+    },
+    {
+      "candidate_id": "B",
+      "primary": "P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816",
+      "secondary": "P6-LIQ-REDEPLOY-SHADOW-20260816",
+      "angle": "less_loss",
+      "effort": "M",
+      "scores": {
+        "fleet_bang": 18,
+        "feasibility_7d": 15,
+        "live_safety": 18,
+        "evidence_honesty": 18,
+        "low_drag": 16
+      },
+      "evidence": {
+        "fleet_bang": "L3 manufactured-loss after GAP-02 shipped; map default priority.",
+        "feasibility_7d": "Ledger offline doable if episode N exists; else inconclusive allowed.",
+        "live_safety": "No promote; must-not list complete; liq secondary collect-only.",
+        "evidence_honesty": "Frozen min_n/enums; OPT_EX idle; liq NO-GO acknowledged.",
+        "low_drag": "Single M primary; secondary is habit not new build."
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 17.0
+    },
+    {
+      "candidate_id": "BASELINE",
+      "primary": "P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816",
+      "secondary": "P6-SCALE-GAP-06-PERF-API-SOAK-20260816",
+      "angle": "single_shot_parent",
+      "effort": "M",
+      "scores": {
+        "fleet_bang": 17,
+        "feasibility_7d": 15,
+        "live_safety": 18,
+        "evidence_honesty": 17,
+        "low_drag": 15
+      },
+      "evidence": {
+        "fleet_bang": "Same L3 primary as B; secondary is L4 not pure collect.",
+        "feasibility_7d": "M primary + optional soak \u2014 dual track this week.",
+        "live_safety": "Strong must-not list.",
+        "evidence_honesty": "Solid; slightly less specific than B/C on secondary constraints.",
+        "low_drag": "Bundles two workstreams; higher drag than C-alone or B+collect."
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 16.4
+    },
+    {
+      "candidate_id": "A",
+      "primary": "P6-SCALE-GAP-03-CAP-SCOPE-MATRIX-20260816",
+      "secondary": "P6-SCALE-GAP-08-PROMO-FIREDRILL-20260816",
+      "angle": "fleet_scale",
+      "effort": "M",
+      "scores": {
+        "fleet_bang": 17,
+        "feasibility_7d": 14,
+        "live_safety": 18,
+        "evidence_honesty": 17,
+        "low_drag": 14
+      },
+      "evidence": {
+        "fleet_bang": "Cap scope leak multiplies across tenants; L2 before clone option B.",
+        "feasibility_7d": "Offline CF+ISO real but M; OHLCV arms heavier than soak.",
+        "live_safety": "Explicit no live cap rewrite; Brad gate stated.",
+        "evidence_honesty": "Frozen enums + inconclusive path; OPT_EX idle respected.",
+        "low_drag": "M + optional fire-drill adds second track."
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 16.0
+    }
+  ],
+  "eligible_order": [
+    "C",
+    "B",
+    "BASELINE",
+    "A"
+  ],
+  "winner_id": null,
+  "margin": 0.2,
+  "decision": "escalate"
+}

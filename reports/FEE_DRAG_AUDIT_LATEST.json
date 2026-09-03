@@ -1,0 +1,1244 @@
+{
+  "as_of": "2026-08-31T07:26:07.248928+00:00",
+  "nav_usd_snapshot": 2294.7668684138303,
+  "method": {
+    "fills": "Deduped trades/phase6_exchange_fills.jsonl + verified_fills_*.jsonl by order_id",
+    "maker_taker": "Heuristic from order_type only (these rows lack explicit liquidity flag). LIMIT\u2192maker_limit; STOP*\u2192taker_stop; MARKET\u2192taker.",
+    "fees": "order.total_fees / ledger fees (USD)",
+    "entry_labels": {
+      "heat_reaction": "24h ret\u226512% OR (24h\u22658% & RSI\u226570) OR 6h ret\u22658% at buy time",
+      "process": "signal/reason hints rebalance|rsi|runner|... AND 24h ret<5%",
+      "process_in_elevated_tape": "process machinery but tape already up",
+      "ambiguous": "else"
+    },
+    "caveats": [
+      "Maker/taker is order_type heuristic, not exchange liquidity tag",
+      "next_sell_pnl is first SELL after BUY in phase6.db \u2014 imperfect lot match",
+      "Read-only audit; no orders"
+    ]
+  },
+  "fee_drag": {
+    "30d": {
+      "n_fills": 54,
+      "total_fees_usd": 138.8867,
+      "total_notional_usd": 16765.82,
+      "fee_pct_of_notional": 0.8284,
+      "n_with_notional": 54,
+      "by_liq_count": {
+        "taker_stop": 13,
+        "taker": 41
+      },
+      "fees_by_liq": {
+        "taker_stop": 38.1693,
+        "taker": 100.7174
+      },
+      "notional_by_liq": {
+        "taker_stop": 4853.64,
+        "taker": 11912.18
+      },
+      "by_side": {
+        "SELL": 19,
+        "BUY": 35
+      },
+      "fees_by_side": {
+        "SELL": 59.1581,
+        "BUY": 79.7286
+      },
+      "fee_pct_median": 0.8,
+      "fee_pct_p25": 0.8,
+      "fee_pct_p75": 0.8,
+      "top_pairs_by_fee": [
+        [
+          "LINK-USD",
+          56.4387,
+          9,
+          6546.72
+        ],
+        [
+          "BTC-USD",
+          34.603,
+          10,
+          4325.38
+        ],
+        [
+          "UNI-USD",
+          21.4854,
+          9,
+          2685.67
+        ],
+        [
+          "ICP-USD",
+          13.0377,
+          4,
+          1629.72
+        ],
+        [
+          "RAVE-USD",
+          7.76,
+          6,
+          883.1
+        ],
+        [
+          "SOL-USD",
+          2.6206,
+          7,
+          327.58
+        ],
+        [
+          "OP-USD",
+          1.4739,
+          2,
+          184.24
+        ],
+        [
+          "PAXG-USD",
+          1.4673,
+          6,
+          183.41
+        ],
+        [
+          "ADA-USD",
+          0.0,
+          1,
+          0.0
+        ]
+      ],
+      "by_month": {
+        "2026-08": {
+          "fees": 138.8867,
+          "n": 54,
+          "notional": 16765.8211
+        }
+      },
+      "top_reasons": [
+        [
+          "rebalance_buy",
+          35
+        ],
+        [
+          "stop_loss_exchange",
+          13
+        ],
+        [
+          "rotation_exchange",
+          6
+        ]
+      ],
+      "order_types": [
+        [
+          "MARKET",
+          41
+        ],
+        [
+          "STOP_LIMIT",
+          13
+        ]
+      ],
+      "fills_per_day": 1.8
+    },
+    "90d": {
+      "n_fills": 175,
+      "total_fees_usd": 217.9019,
+      "total_notional_usd": 25452.14,
+      "fee_pct_of_notional": 0.8561,
+      "n_with_notional": 175,
+      "by_liq_count": {
+        "taker_stop": 80,
+        "taker": 95
+      },
+      "fees_by_liq": {
+        "taker_stop": 77.5288,
+        "taker": 140.3731
+      },
+      "notional_by_liq": {
+        "taker_stop": 8661.26,
+        "taker": 16790.89
+      },
+      "by_side": {
+        "SELL": 111,
+        "BUY": 64
+      },
+      "fees_by_side": {
+        "SELL": 111.2469,
+        "BUY": 106.655
+      },
+      "fee_pct_median": 0.8,
+      "fee_pct_p25": 0.8,
+      "fee_pct_p75": 1.2,
+      "top_pairs_by_fee": [
+        [
+          "LINK-USD",
+          65.0378,
+          17,
+          7608.69
+        ],
+        [
+          "BTC-USD",
+          38.361,
+          16,
+          4741.02
+        ],
+        [
+          "UNI-USD",
+          25.0331,
+          12,
+          3129.13
+        ],
+        [
+          "OP-USD",
+          20.8807,
+          20,
+          2259.49
+        ],
+        [
+          "SOL-USD",
+          18.8174,
+          24,
+          2127.74
+        ],
+        [
+          "ICP-USD",
+          13.0377,
+          4,
+          1629.72
+        ],
+        [
+          "ADA-USD",
+          9.0632,
+          32,
+          1025.39
+        ],
+        [
+          "RAVE-USD",
+          7.76,
+          6,
+          883.1
+        ],
+        [
+          "XRP-USD",
+          7.1177,
+          13,
+          696.77
+        ],
+        [
+          "ARB-USD",
+          3.5139,
+          6,
+          351.08
+        ],
+        [
+          "AVAX-USD",
+          2.6524,
+          10,
+          221.05
+        ],
+        [
+          "DOGE-USD",
+          2.5814,
+          6,
+          273.26
+        ]
+      ],
+      "by_month": {
+        "2026-06": {
+          "fees": 26.3562,
+          "n": 43,
+          "notional": 3080.2403
+        },
+        "2026-07": {
+          "fees": 52.659,
+          "n": 78,
+          "notional": 5606.0815
+        },
+        "2026-08": {
+          "fees": 138.8867,
+          "n": 54,
+          "notional": 16765.8211
+        }
+      },
+      "top_reasons": [
+        [
+          "stop_loss_exchange",
+          80
+        ],
+        [
+          "rebalance_buy",
+          64
+        ],
+        [
+          "rotation_exchange",
+          31
+        ]
+      ],
+      "order_types": [
+        [
+          "MARKET",
+          95
+        ],
+        [
+          "STOP_LIMIT",
+          80
+        ]
+      ],
+      "fills_per_day": 1.94
+    },
+    "all_available": {
+      "n_fills": 219,
+      "total_fees_usd": 278.468,
+      "total_notional_usd": 30499.31,
+      "fee_pct_of_notional": 0.913,
+      "n_with_notional": 219,
+      "by_liq_count": {
+        "taker_stop": 81,
+        "taker": 138
+      },
+      "fees_by_liq": {
+        "taker_stop": 79.6277,
+        "taker": 198.8402
+      },
+      "notional_by_liq": {
+        "taker_stop": 8836.17,
+        "taker": 21663.14
+      },
+      "by_side": {
+        "SELL": 126,
+        "BUY": 93
+      },
+      "fees_by_side": {
+        "SELL": 137.3909,
+        "BUY": 141.0771
+      },
+      "fee_pct_median": 0.8,
+      "fee_pct_p25": 0.8,
+      "fee_pct_p75": 1.2,
+      "top_pairs_by_fee": [
+        [
+          "LINK-USD",
+          65.0378,
+          17,
+          7608.69
+        ],
+        [
+          "BTC-USD",
+          50.9205,
+          25,
+          5787.64
+        ],
+        [
+          "SOL-USD",
+          32.792,
+          35,
+          3292.29
+        ],
+        [
+          "UNI-USD",
+          25.0331,
+          12,
+          3129.13
+        ],
+        [
+          "OP-USD",
+          20.8807,
+          20,
+          2259.49
+        ],
+        [
+          "XRP-USD",
+          20.2606,
+          21,
+          1792.01
+        ],
+        [
+          "ICP-USD",
+          13.0377,
+          4,
+          1629.72
+        ],
+        [
+          "ETH-USD",
+          12.609,
+          10,
+          1158.18
+        ],
+        [
+          "DOGE-USD",
+          11.4064,
+          12,
+          1008.68
+        ],
+        [
+          "ADA-USD",
+          11.0966,
+          35,
+          1194.84
+        ],
+        [
+          "RAVE-USD",
+          7.76,
+          6,
+          883.1
+        ],
+        [
+          "ARB-USD",
+          3.5139,
+          6,
+          351.08
+        ]
+      ],
+      "by_month": {
+        "2026-04": {
+          "fees": 11.7699,
+          "n": 12,
+          "notional": 980.8287
+        },
+        "2026-05": {
+          "fees": 48.7961,
+          "n": 32,
+          "notional": 4066.3424
+        },
+        "2026-06": {
+          "fees": 26.3562,
+          "n": 43,
+          "notional": 3080.2403
+        },
+        "2026-07": {
+          "fees": 52.659,
+          "n": 78,
+          "notional": 5606.0815
+        },
+        "2026-08": {
+          "fees": 138.8867,
+          "n": 54,
+          "notional": 16765.8211
+        }
+      },
+      "top_reasons": [
+        [
+          "rebalance_buy",
+          93
+        ],
+        [
+          "stop_loss_exchange",
+          81
+        ],
+        [
+          "rotation_exchange",
+          45
+        ]
+      ],
+      "order_types": [
+        [
+          "MARKET",
+          138
+        ],
+        [
+          "STOP_LIMIT",
+          81
+        ]
+      ],
+      "fills_per_day": 1.66
+    }
+  },
+  "entry_labels_90d": {
+    "n_buys": 198,
+    "counts": {
+      "ambiguous": 70,
+      "heat_reaction": 2,
+      "process": 121,
+      "process_in_elevated_tape": 5
+    },
+    "outcome_by_label_crude": {
+      "ambiguous": {
+        "n_with_exit": 57,
+        "win_rate": 0.404,
+        "sum_pnl": 81.08,
+        "avg_pnl": 1.42
+      },
+      "heat_reaction": {
+        "n_with_exit": 2,
+        "win_rate": 0.0,
+        "sum_pnl": -24.59,
+        "avg_pnl": -12.29
+      },
+      "process": {
+        "n_with_exit": 111,
+        "win_rate": 0.378,
+        "sum_pnl": -24.95,
+        "avg_pnl": -0.22
+      },
+      "process_in_elevated_tape": {
+        "n_with_exit": 5,
+        "win_rate": 0.0,
+        "sum_pnl": -108.25,
+        "avg_pnl": -21.65
+      }
+    },
+    "sample_newest_40": [
+      {
+        "pair": "ICP-USD",
+        "qty": 169.6514,
+        "price": 2.423444180478322,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-28.csv",
+        "ts": "2026-08-29T04:00:44.735378+00:00",
+        "r24_pct": 0.29,
+        "r6_pct": 3.01,
+        "rsi": 72.4,
+        "sentiment": -0.09,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -1.273484,
+        "next_sell_pnl_pct": -0.003097,
+        "next_sell_ts": "2026-08-29T04:06:56.919664+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "ICP-USD",
+        "qty": 171.4894,
+        "price": 2.4232713867446036,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-27.csv",
+        "ts": "2026-08-28T04:02:49.668512+00:00",
+        "r24_pct": 1.04,
+        "r6_pct": -1.32,
+        "rsi": 37.2,
+        "sentiment": -0.09,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -14.109459,
+        "next_sell_pnl_pct": -0.034645,
+        "next_sell_ts": "2026-08-28T16:12:38.944655+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 164.59,
+        "price": 11.603782489823198,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-24.csv",
+        "ts": "2026-08-24T16:00:30.645689+00:00",
+        "r24_pct": 0.8,
+        "r6_pct": -0.05,
+        "rsi": 45.7,
+        "sentiment": 0.894,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 114.117624,
+        "next_sell_pnl_pct": 0.125555,
+        "next_sell_ts": "2026-08-25T16:06:16.390404+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "UNI-USD",
+        "qty": 212.907222,
+        "price": 4.572646655630122,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-23.csv",
+        "ts": "2026-08-23T18:04:41.712136+00:00",
+        "r24_pct": 7.31,
+        "r6_pct": 5.64,
+        "rsi": 61.2,
+        "sentiment": 0.359,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -21.287068,
+        "next_sell_pnl_pct": -0.02232,
+        "next_sell_ts": "2026-08-23T18:05:12.079191+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00435579,
+        "price": 77180.0,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-23.csv",
+        "ts": "2026-08-23T16:00:56.295906+00:00",
+        "r24_pct": 0.18,
+        "r6_pct": 0.76,
+        "rsi": 51.6,
+        "sentiment": 0.2,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": null,
+        "next_sell_reason": null
+      },
+      {
+        "pair": "UNI-USD",
+        "qty": 73.562549,
+        "price": 4.570062553939476,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-23.csv",
+        "ts": "2026-08-23T16:00:35.121552+00:00",
+        "r24_pct": 8.62,
+        "r6_pct": 8.46,
+        "rsi": 64.2,
+        "sentiment": 0.244,
+        "label": "heat_reaction",
+        "heat_why": [
+          "r6=8.5%>=8"
+        ],
+        "next_sell_pnl": -21.287068,
+        "next_sell_pnl_pct": -0.02232,
+        "next_sell_ts": "2026-08-23T18:05:12.079191+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "RAVE-USD",
+        "qty": 1223.3,
+        "price": 0.2769155726314069,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-22.csv",
+        "ts": "2026-08-23T04:00:57.885340+00:00",
+        "r24_pct": -15.34,
+        "r6_pct": -0.31,
+        "rsi": 30.6,
+        "sentiment": 0.581,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -11.811637,
+        "next_sell_pnl_pct": -0.034565,
+        "next_sell_ts": "2026-08-23T04:07:01.401224+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 87.39,
+        "price": 11.628868177136972,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-21.csv",
+        "ts": "2026-08-21T18:30:08.465572+00:00",
+        "r24_pct": 8.97,
+        "r6_pct": 3.07,
+        "rsi": 59.9,
+        "sentiment": 0.047,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 114.117624,
+        "next_sell_pnl_pct": 0.125555,
+        "next_sell_ts": "2026-08-25T16:06:16.390404+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00166328,
+        "price": 63008.0994708648,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-14.csv",
+        "ts": "2026-08-15T04:06:42.844049+00:00",
+        "r24_pct": -0.49,
+        "r6_pct": 0.21,
+        "rsi": 53.7,
+        "sentiment": 0.943,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00656314,
+        "price": 62999.22686544855,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-14.csv",
+        "ts": "2026-08-15T04:01:04.525618+00:00",
+        "r24_pct": -0.42,
+        "r6_pct": 0.19,
+        "rsi": 53.7,
+        "sentiment": 0.943,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "UNI-USD",
+        "qty": 4.95004,
+        "price": 3.2346,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-14.csv",
+        "ts": "2026-08-14T16:06:07.200210+00:00",
+        "r24_pct": -6.56,
+        "r6_pct": -5.6,
+        "rsi": 37.1,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -1.796031,
+        "next_sell_pnl_pct": -0.023617,
+        "next_sell_ts": "2026-08-19T16:07:07.961267+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "UNI-USD",
+        "qty": 16.633207,
+        "price": 3.2318480521525403,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-14.csv",
+        "ts": "2026-08-14T16:00:44.360722+00:00",
+        "r24_pct": -6.7,
+        "r6_pct": -5.63,
+        "rsi": 37.1,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -1.796031,
+        "next_sell_pnl_pct": -0.023617,
+        "next_sell_ts": "2026-08-19T16:07:07.961267+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00373426,
+        "price": 63378.01,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-12.csv",
+        "ts": "2026-08-12T16:06:13.951430+00:00",
+        "r24_pct": -0.25,
+        "r6_pct": -1.03,
+        "rsi": 32.1,
+        "sentiment": 0.638,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00313624,
+        "price": 63394.19,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-12.csv",
+        "ts": "2026-08-12T16:00:39.467198+00:00",
+        "r24_pct": -0.3,
+        "r6_pct": -1.07,
+        "rsi": 32.1,
+        "sentiment": 0.638,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "RAVE-USD",
+        "qty": 166.3,
+        "price": 0.3137,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-11.csv",
+        "ts": "2026-08-12T04:06:28.774044+00:00",
+        "r24_pct": -0.73,
+        "r6_pct": 1.52,
+        "rsi": 46.9,
+        "sentiment": 0.442,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -0.97043,
+        "next_sell_pnl_pct": -0.016911,
+        "next_sell_ts": "2026-08-12T04:06:57.150049+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "RAVE-USD",
+        "qty": 183.1,
+        "price": 0.3134,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-11.csv",
+        "ts": "2026-08-12T04:00:59.196776+00:00",
+        "r24_pct": -0.65,
+        "r6_pct": 1.72,
+        "rsi": 46.9,
+        "sentiment": 0.442,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -0.97043,
+        "next_sell_pnl_pct": -0.016911,
+        "next_sell_ts": "2026-08-12T04:06:57.150049+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 7.62,
+        "price": 8.287,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-08.csv",
+        "ts": "2026-08-09T04:06:18.464966+00:00",
+        "r24_pct": 0.38,
+        "r6_pct": -0.58,
+        "rsi": 38.6,
+        "sentiment": 0.423,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 114.117624,
+        "next_sell_pnl_pct": 0.125555,
+        "next_sell_ts": "2026-08-25T16:06:16.390404+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "UNI-USD",
+        "qty": 17.393798,
+        "price": 3.9957,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-08.csv",
+        "ts": "2026-08-08T16:06:07.460000+00:00",
+        "r24_pct": -0.19,
+        "r6_pct": 0.07,
+        "rsi": 51.4,
+        "sentiment": 0.483,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -6.310901,
+        "next_sell_pnl_pct": -0.041697,
+        "next_sell_ts": "2026-08-11T12:00:24.982533+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "UNI-USD",
+        "qty": 21.28832,
+        "price": 3.990004662603719,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-08.csv",
+        "ts": "2026-08-08T16:00:35.406981+00:00",
+        "r24_pct": -0.04,
+        "r6_pct": -0.07,
+        "rsi": 53.8,
+        "sentiment": 0.483,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -6.310901,
+        "next_sell_pnl_pct": -0.041697,
+        "next_sell_ts": "2026-08-11T12:00:24.982533+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 10.18,
+        "price": 8.339986247544203,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-08.csv",
+        "ts": "2026-08-08T16:00:14.766274+00:00",
+        "r24_pct": 0.84,
+        "r6_pct": 0.57,
+        "rsi": 52.9,
+        "sentiment": 0.432,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 114.117624,
+        "next_sell_pnl_pct": 0.125555,
+        "next_sell_ts": "2026-08-25T16:06:16.390404+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "OP-USD",
+        "qty": 1063.37,
+        "price": 0.088,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-07.csv",
+        "ts": "2026-08-08T04:01:23.269749+00:00",
+        "r24_pct": -1.14,
+        "r6_pct": 0.58,
+        "rsi": 43.9,
+        "sentiment": 0.941,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -1.56315,
+        "next_sell_pnl_pct": -0.016949,
+        "next_sell_ts": "2026-08-09T04:06:51.282558+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "SOL-USD",
+        "qty": 0.50505172,
+        "price": 74.03989365437982,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-05.csv",
+        "ts": "2026-08-05T16:06:06.034437+00:00",
+        "r24_pct": 0.28,
+        "r6_pct": 0.01,
+        "rsi": 49.3,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 1.587526,
+        "next_sell_pnl_pct": 0.009729,
+        "next_sell_ts": "2026-08-08T04:06:07.217090+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "SOL-USD",
+        "qty": 0.38942048,
+        "price": 73.92845151074386,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-05.csv",
+        "ts": "2026-08-05T16:00:55.624728+00:00",
+        "r24_pct": -0.05,
+        "r6_pct": -0.07,
+        "rsi": 49.3,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 1.587526,
+        "next_sell_pnl_pct": 0.009729,
+        "next_sell_ts": "2026-08-08T04:06:07.217090+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "SOL-USD",
+        "qty": 0.30020256,
+        "price": 73.68467553382911,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-04.csv",
+        "ts": "2026-08-05T04:06:17.070914+00:00",
+        "r24_pct": 0.12,
+        "r6_pct": -0.42,
+        "rsi": 44.7,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 1.587526,
+        "next_sell_pnl_pct": 0.009729,
+        "next_sell_ts": "2026-08-08T04:06:07.217090+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "SOL-USD",
+        "qty": 0.23141616,
+        "price": 73.72,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-04.csv",
+        "ts": "2026-08-05T04:01:19.252254+00:00",
+        "r24_pct": 0.12,
+        "r6_pct": -0.45,
+        "rsi": 44.7,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 1.587526,
+        "next_sell_pnl_pct": 0.009729,
+        "next_sell_ts": "2026-08-08T04:06:07.217090+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 7.02,
+        "price": 8.176,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-04.csv",
+        "ts": "2026-08-04T16:16:34.577191+00:00",
+        "r24_pct": -0.9,
+        "r6_pct": 0.28,
+        "rsi": 47.1,
+        "sentiment": 0.357,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -10.446829,
+        "next_sell_pnl_pct": -0.016375,
+        "next_sell_ts": "2026-08-04T16:17:03.714424+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "SOL-USD",
+        "qty": 0.77782334,
+        "price": 73.85889918528235,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-04.csv",
+        "ts": "2026-08-04T16:16:13.854425+00:00",
+        "r24_pct": 0.31,
+        "r6_pct": 0.85,
+        "rsi": 54.8,
+        "sentiment": 0.683,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 1.587526,
+        "next_sell_pnl_pct": 0.009729,
+        "next_sell_ts": "2026-08-08T04:06:07.217090+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 77.15,
+        "price": 8.19,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-03.csv",
+        "ts": "2026-08-04T04:00:51.225734+00:00",
+        "r24_pct": -0.6,
+        "r6_pct": -0.12,
+        "rsi": 51.5,
+        "sentiment": 0.585,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -10.446829,
+        "next_sell_pnl_pct": -0.016375,
+        "next_sell_ts": "2026-08-04T16:17:03.714424+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00103555,
+        "price": 62835.05,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-02.csv",
+        "ts": "2026-08-03T04:06:12.807805+00:00",
+        "r24_pct": -1.03,
+        "r6_pct": -1.28,
+        "rsi": 27.9,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00155309,
+        "price": 62829.26,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-02.csv",
+        "ts": "2026-08-03T04:01:12.375019+00:00",
+        "r24_pct": -0.92,
+        "r6_pct": -1.11,
+        "rsi": 27.9,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00464562,
+        "price": 63022.7,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-02.csv",
+        "ts": "2026-08-02T16:06:23.292549+00:00",
+        "r24_pct": 0.18,
+        "r6_pct": -0.24,
+        "rsi": 44.7,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "BTC-USD",
+        "qty": 0.00928921,
+        "price": 63035.5,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-02.csv",
+        "ts": "2026-08-02T16:01:34.489501+00:00",
+        "r24_pct": 0.14,
+        "r6_pct": -0.24,
+        "rsi": 44.7,
+        "sentiment": 1.0,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 2.183961,
+        "next_sell_pnl_pct": 0.001096,
+        "next_sell_ts": "2026-08-16T16:01:00.817302+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "PAXG-USD",
+        "qty": 0.01834,
+        "price": 4055.92,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-02.csv",
+        "ts": "2026-08-02T07:22:16.169581+00:00",
+        "r24_pct": null,
+        "r6_pct": null,
+        "rsi": null,
+        "sentiment": null,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": null,
+        "next_sell_reason": null
+      },
+      {
+        "pair": "PAXG-USD",
+        "qty": 0.00733,
+        "price": 4056.06,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-01.csv",
+        "ts": "2026-08-02T06:47:26.078510+00:00",
+        "r24_pct": null,
+        "r6_pct": null,
+        "rsi": null,
+        "sentiment": null,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -4.9e-05,
+        "next_sell_pnl_pct": -8.1e-05,
+        "next_sell_ts": "2026-08-02T06:48:02.019497+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "PAXG-USD",
+        "qty": 0.00611,
+        "price": 4056.36,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-08-01.csv",
+        "ts": "2026-08-02T05:27:49.871742+00:00",
+        "r24_pct": null,
+        "r6_pct": null,
+        "rsi": null,
+        "sentiment": null,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": 0.0,
+        "next_sell_pnl_pct": 0.0,
+        "next_sell_ts": "2026-08-02T05:27:58.256282+00:00",
+        "next_sell_reason": "rotation_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 42.59,
+        "price": 8.489,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-07-23.csv",
+        "ts": "2026-07-23T16:00:26.721753+00:00",
+        "r24_pct": -2.19,
+        "r6_pct": -1.44,
+        "rsi": 38.0,
+        "sentiment": 0.366,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -35.582756,
+        "next_sell_pnl_pct": -0.030456,
+        "next_sell_ts": "2026-08-01T16:07:37.309494+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "SOL-USD",
+        "qty": 6.97420099,
+        "price": 77.52934672295268,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-07-22.csv",
+        "ts": "2026-07-23T04:01:01.195490+00:00",
+        "r24_pct": -0.3,
+        "r6_pct": -0.5,
+        "rsi": 43.5,
+        "sentiment": 0.752,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -17.968828,
+        "next_sell_pnl_pct": -0.059522,
+        "next_sell_ts": "2026-07-27T04:06:47.697107+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "OP-USD",
+        "qty": 2856.04,
+        "price": 0.095,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-07-19.csv",
+        "ts": "2026-07-20T04:00:58.533928+00:00",
+        "r24_pct": -2.58,
+        "r6_pct": 0.0,
+        "rsi": 17.9,
+        "sentiment": 0.535,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -1.5e-05,
+        "next_sell_pnl_pct": -0.015873,
+        "next_sell_ts": "2026-07-20T04:01:42.788337+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 6.49,
+        "price": 8.352,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-07-19.csv",
+        "ts": "2026-07-19T16:00:49.607607+00:00",
+        "r24_pct": 1.21,
+        "r6_pct": 0.0,
+        "rsi": 54.0,
+        "sentiment": 0.681,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -35.582756,
+        "next_sell_pnl_pct": -0.030456,
+        "next_sell_ts": "2026-08-01T16:07:37.309494+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      },
+      {
+        "pair": "LINK-USD",
+        "qty": 10.02,
+        "price": 8.352,
+        "signal_source": "coinbase_fill_reconcile",
+        "reason": "",
+        "source_file": "phase6_trades_2026-07-19.csv",
+        "ts": "2026-07-19T12:00:14.063452+00:00",
+        "r24_pct": 1.21,
+        "r6_pct": 0.0,
+        "rsi": 54.0,
+        "sentiment": 0.391,
+        "label": "ambiguous",
+        "heat_why": [],
+        "next_sell_pnl": -35.582756,
+        "next_sell_pnl_pct": -0.030456,
+        "next_sell_ts": "2026-08-01T16:07:37.309494+00:00",
+        "next_sell_reason": "stop_loss_exchange"
+      }
+    ],
+    "outcome_note": "Matched first verified SELL on same pair within 21d after BUY; imperfect lots."
+  },
+  "fee_vs_nav": {
+    "nav_usd": 2294.7668684138303,
+    "fees_30d_pct_nav": 6.052,
+    "fees_90d_pct_nav": 9.496,
+    "note": "Fees / current NAV snapshot \u2014 path-dependent; not annualized return."
+  }
+}

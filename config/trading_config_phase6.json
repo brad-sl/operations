@@ -12,7 +12,7 @@
       "LINK-USD",
       "UNI-USD",
       "ARB-USD",
-      "ICP-USD"
+      "ADA-USD"
     ],
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 150.0,

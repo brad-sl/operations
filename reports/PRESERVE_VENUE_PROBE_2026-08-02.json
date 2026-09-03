@@ -1,0 +1,348 @@
+{
+  "as_of": "2026-08-02T05:27:48Z",
+  "product": "PAXG-USD",
+  "execute": true,
+  "max_buy_usd": 25.0,
+  "steps": [
+    {
+      "id": "T1_metadata",
+      "ok": true,
+      "meta": {
+        "price_increment": 0.01,
+        "base_increment": 1e-05
+      },
+      "price": 4056.185
+    },
+    {
+      "id": "T0_buy",
+      "usd": 25.0,
+      "target_qty": 0.00616,
+      "response": {
+        "success": true,
+        "order_id": "85224e75-2fc0-46be-9beb-ee7c640dacfb"
+      }
+    },
+    {
+      "id": "place_S1",
+      "tag": "S1",
+      "qty": 0.00164,
+      "stop": 3569.44,
+      "limit": 3548.02,
+      "client_order_id": "preserve-probe-S1-1785648472-2591",
+      "success": true,
+      "order_id": "6a8e484b-342f-450b-b474-234ddded799e",
+      "raw": {
+        "success": true,
+        "order_id": "6a8e484b-342f-450b-b474-234ddded799e",
+        "stop_price": 3569.44,
+        "limit_price": 3548.02
+      }
+    },
+    {
+      "id": "place_S2",
+      "tag": "S2",
+      "qty": 0.00192,
+      "stop": 3326.07,
+      "limit": 3306.11,
+      "client_order_id": "preserve-probe-S2-1785648473-3896",
+      "success": true,
+      "order_id": "21544b3b-e4bc-46e2-a295-1257b0cb65ca",
+      "raw": {
+        "success": true,
+        "order_id": "21544b3b-e4bc-46e2-a295-1257b0cb65ca",
+        "stop_price": 3326.07,
+        "limit_price": 3306.11
+      }
+    },
+    {
+      "id": "place_S3",
+      "tag": "S3",
+      "qty": 0.00181,
+      "stop": 2758.2,
+      "limit": 2741.65,
+      "client_order_id": "preserve-probe-S3-1785648475-5155",
+      "success": true,
+      "order_id": "697c5b36-be4e-4d6d-9def-e055f6ed3672",
+      "raw": {
+        "success": true,
+        "order_id": "697c5b36-be4e-4d6d-9def-e055f6ed3672",
+        "stop_price": 2758.2,
+        "limit_price": 2741.65
+      }
+    }
+  ],
+  "order_ids": [
+    "6a8e484b-342f-450b-b474-234ddded799e",
+    "21544b3b-e4bc-46e2-a295-1257b0cb65ca",
+    "697c5b36-be4e-4d6d-9def-e055f6ed3672"
+  ],
+  "venue_probe_result": "A",
+  "errors": [],
+  "cleanup": {
+    "cancels": [
+      {
+        "order_id": "6a8e484b-342f-450b-b474-234ddded799e",
+        "resp": true
+      },
+      {
+        "order_id": "21544b3b-e4bc-46e2-a295-1257b0cb65ca",
+        "resp": true
+      },
+      {
+        "order_id": "697c5b36-be4e-4d6d-9def-e055f6ed3672",
+        "resp": true
+      }
+    ],
+    "paxg_left_before_sell": 0.00611,
+    "sell": {
+      "success": true,
+      "order_id": "8483cd74-1803-433e-8a87-6b33bfee034e",
+      "size": 0.00611
+    }
+  },
+  "metadata": {
+    "price_increment": 0.01,
+    "base_increment": 1e-05
+  },
+  "price": 4056.185,
+  "paxg_available_before": 0.0,
+  "paxg_available_after_buy": 0.00611,
+  "T2_single_stop": true,
+  "T4_two_concurrent": true,
+  "T5_three_concurrent": true,
+  "open_orders_snapshot": [
+    {
+      "order_id": "6a8e484b-342f-450b-b474-234ddded799e",
+      "product_id": "PAXG-USD",
+      "user_id": "f891fb3e-44ad-596c-8cca-2d9f248edbca",
+      "order_configuration": {
+        "stop_limit_stop_limit_gtc": {
+          "base_size": "0.00164",
+          "limit_price": "3548.02",
+          "stop_price": "3569.44",
+          "stop_direction": "STOP_DIRECTION_STOP_DOWN",
+          "reduce_only": false
+        }
+      },
+      "side": "SELL",
+      "client_order_id": "405e470c5938f9a87d63508883e5c1c7",
+      "status": "OPEN",
+      "time_in_force": "GOOD_UNTIL_CANCELLED",
+      "created_time": "2026-08-02T05:27:52.844136Z",
+      "completion_percentage": "0",
+      "filled_size": "0",
+      "average_filled_price": "0",
+      "fee": "",
+      "number_of_fills": "0",
+      "filled_value": "0",
+      "pending_cancel": false,
+      "size_in_quote": false,
+      "total_fees": "0",
+      "size_inclusive_of_fees": false,
+      "total_value_after_fees": "5.7722027776",
+      "trigger_status": "STOP_PENDING",
+      "order_type": "STOP_LIMIT",
+      "reject_reason": "REJECT_REASON_UNSPECIFIED",
+      "settled": false,
+      "product_type": "SPOT",
+      "reject_message": "",
+      "cancel_message": "",
+      "order_placement_source": "RETAIL_ADVANCED",
+      "outstanding_hold_amount": "0.00164",
+      "is_liquidation": false,
+      "last_fill_time": null,
+      "edit_history": [],
+      "leverage": "",
+      "margin_type": "UNKNOWN_MARGIN_TYPE",
+      "retail_portfolio_id": "3176ac3f-deca-4fca-9c67-87ba91f96558",
+      "originating_order_id": "",
+      "attached_order_id": "",
+      "attached_order_configuration": null,
+      "current_pending_replace": null,
+      "commission_detail_total": {
+        "total_commission": "0",
+        "gst_commission": "0",
+        "withholding_commission": "0",
+        "client_commission": "0",
+        "venue_commission": "",
+        "regulatory_commission": "",
+        "clearing_commission": ""
+      }
+    },
+    {
+      "order_id": "d64d55f9-9420-4272-afea-d86192445f79",
+      "product_id": "ADA-USD",
+      "user_id": "f891fb3e-44ad-596c-8cca-2d9f248edbca",
+      "order_configuration": {
+        "stop_limit_stop_limit_gtc": {
+          "base_size": "0.00017534",
+          "limit_price": "0.1598",
+          "stop_price": "0.1606",
+          "stop_direction": "STOP_DIRECTION_STOP_DOWN",
+          "reduce_only": false
+        }
+      },
+      "side": "SELL",
+      "client_order_id": "1ec57a3dcfb15bdb2269b510cead8413",
+      "status": "OPEN",
+      "time_in_force": "GOOD_UNTIL_CANCELLED",
+      "created_time": "2026-08-02T04:06:57.710664Z",
+      "completion_percentage": "0",
+      "filled_size": "0",
+      "average_filled_price": "0",
+      "fee": "",
+      "number_of_fills": "0",
+      "filled_value": "0",
+      "pending_cancel": false,
+      "size_in_quote": false,
+      "total_fees": "0",
+      "size_inclusive_of_fees": false,
+      "total_value_after_fees": "0.000027795177344",
+      "trigger_status": "STOP_PENDING",
+      "order_type": "STOP_LIMIT",
+      "reject_reason": "REJECT_REASON_UNSPECIFIED",
+      "settled": false,
+      "product_type": "SPOT",
+      "reject_message": "",
+      "cancel_message": "",
+      "order_placement_source": "RETAIL_ADVANCED",
+      "outstanding_hold_amount": "0.00017534",
+      "is_liquidation": false,
+      "last_fill_time": null,
+      "edit_history": [],
+      "leverage": "",
+      "margin_type": "UNKNOWN_MARGIN_TYPE",
+      "retail_portfolio_id": "3176ac3f-deca-4fca-9c67-87ba91f96558",
+      "originating_order_id": "",
+      "attached_order_id": "",
+      "attached_order_configuration": null,
+      "current_pending_replace": null,
+      "commission_detail_total": {
+        "total_commission": "0",
+        "gst_commission": "0",
+        "withholding_commission": "0",
+        "client_commission": "0",
+        "venue_commission": "",
+        "regulatory_commission": "",
+        "clearing_commission": ""
+      }
+    },
+    {
+      "order_id": "21544b3b-e4bc-46e2-a295-1257b0cb65ca",
+      "product_id": "PAXG-USD",
+      "user_id": "f891fb3e-44ad-596c-8cca-2d9f248edbca",
+      "order_configuration": {
+        "stop_limit_stop_limit_gtc": {
+          "base_size": "0.00192",
+          "limit_price": "3306.11",
+          "stop_price": "3326.07",
+          "stop_direction": "STOP_DIRECTION_STOP_DOWN",
+          "reduce_only": false
+        }
+      },
+      "side": "SELL",
+      "client_order_id": "d8617e72b656413358fe70319289f72c",
+      "status": "OPEN",
+      "time_in_force": "GOOD_UNTIL_CANCELLED",
+      "created_time": "2026-08-02T05:27:54.101665Z",
+      "completion_percentage": "0",
+      "filled_size": "0",
+      "average_filled_price": "0",
+      "fee": "",
+      "number_of_fills": "0",
+      "filled_value": "0",
+      "pending_cancel": false,
+      "size_in_quote": false,
+      "total_fees": "0",
+      "size_inclusive_of_fees": false,
+      "total_value_after_fees": "6.2969493504",
+      "trigger_status": "STOP_PENDING",
+      "order_type": "STOP_LIMIT",
+      "reject_reason": "REJECT_REASON_UNSPECIFIED",
+      "settled": false,
+      "product_type": "SPOT",
+      "reject_message": "",
+      "cancel_message": "",
+      "order_placement_source": "RETAIL_ADVANCED",
+      "outstanding_hold_amount": "0.00192",
+      "is_liquidation": false,
+      "last_fill_time": null,
+      "edit_history": [],
+      "leverage": "",
+      "margin_type": "UNKNOWN_MARGIN_TYPE",
+      "retail_portfolio_id": "3176ac3f-deca-4fca-9c67-87ba91f96558",
+      "originating_order_id": "",
+      "attached_order_id": "",
+      "attached_order_configuration": null,
+      "current_pending_replace": null,
+      "commission_detail_total": {
+        "total_commission": "0",
+        "gst_commission": "0",
+        "withholding_commission": "0",
+        "client_commission": "0",
+        "venue_commission": "",
+        "regulatory_commission": "",
+        "clearing_commission": ""
+      }
+    },
+    {
+      "order_id": "697c5b36-be4e-4d6d-9def-e055f6ed3672",
+      "product_id": "PAXG-USD",
+      "user_id": "f891fb3e-44ad-596c-8cca-2d9f248edbca",
+      "order_configuration": {
+        "stop_limit_stop_limit_gtc": {
+          "base_size": "0.00181",
+          "limit_price": "2741.65",
+          "stop_price": "2758.2",
+          "stop_direction": "STOP_DIRECTION_STOP_DOWN",
+          "reduce_only": false
+        }
+      },
+      "side": "SELL",
+      "client_order_id": "285cb8067c648c1f84bdeec2d5d33c40",
+      "status": "OPEN",
+      "time_in_force": "GOOD_UNTIL_CANCELLED",
+      "created_time": "2026-08-02T05:27:55.353496Z",
+      "completion_percentage": "0",
+      "filled_size": "0",
+      "average_filled_price": "0",
+      "fee": "",
+      "number_of_fills": "0",
+      "filled_value": "0",
+      "pending_cancel": false,
+      "size_in_quote": false,
+      "total_fees": "0",
+      "size_inclusive_of_fees": false,
+      "total_value_after_fees": "4.922687408",
+      "trigger_status": "STOP_PENDING",
+      "order_type": "STOP_LIMIT",
+      "reject_reason": "REJECT_REASON_UNSPECIFIED",
+      "settled": false,
+      "product_type": "SPOT",
+      "reject_message": "",
+      "cancel_message": "",
+      "order_placement_source": "RETAIL_ADVANCED",
+      "outstanding_hold_amount": "0.00181",
+      "is_liquidation": false,
+      "last_fill_time": null,
+      "edit_history": [],
+      "leverage": "",
+      "margin_type": "UNKNOWN_MARGIN_TYPE",
+      "retail_portfolio_id": "3176ac3f-deca-4fca-9c67-87ba91f96558",
+      "originating_order_id": "",
+      "attached_order_id": "",
+      "attached_order_configuration": null,
+      "current_pending_replace": null,
+      "commission_detail_total": {
+        "total_commission": "0",
+        "gst_commission": "0",
+        "withholding_commission": "0",
+        "client_commission": "0",
+        "venue_commission": "",
+        "regulatory_commission": "",
+        "clearing_commission": ""
+      }
+    }
+  ],
+  "open_paxg_stop_count": 3
+}

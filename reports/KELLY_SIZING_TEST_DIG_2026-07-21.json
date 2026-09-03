@@ -1,0 +1,1057 @@
+{
+  "generated_at": "2026-07-21T23:56:01.926217+00:00",
+  "trial_id": "ANALYST-KELLY-SIZING-TEST-20260721-TRIAL",
+  "n_plausible": 70,
+  "start_equity": 748.18,
+  "edge_full_sample": {
+    "n": 70,
+    "n_wins": 30,
+    "n_losses": 40,
+    "p": 0.428571,
+    "b": 1.870122,
+    "mean_win_r": 0.077985,
+    "mean_loss_r": -0.041701,
+    "f_full": 0.123015,
+    "f_half": 0.061507,
+    "f_quarter": 0.030754,
+    "insufficient": false,
+    "reason": null
+  },
+  "walk_forward": {
+    "ok": true,
+    "n_train": 35,
+    "n_test": 35,
+    "train_ts": [
+      "2026-05-01T00:02:17.854358Z",
+      "2026-07-04T01:05:49.927862Z"
+    ],
+    "test_ts": [
+      "2026-07-04T16:13:39.269357Z",
+      "2026-07-21T06:37:24.277277Z"
+    ],
+    "edge_train": {
+      "n": 35,
+      "n_wins": 24,
+      "n_losses": 11,
+      "p": 0.685714,
+      "b": 1.141499,
+      "mean_win_r": 0.088457,
+      "mean_loss_r": -0.077492,
+      "f_full": 0.410387,
+      "f_half": 0.205194,
+      "f_quarter": 0.102597,
+      "insufficient": false,
+      "reason": null
+    },
+    "edge_test": {
+      "n": 35,
+      "n_wins": 6,
+      "n_losses": 29,
+      "p": 0.171429,
+      "b": 1.283576,
+      "mean_win_r": 0.0361,
+      "mean_loss_r": -0.028125,
+      "f_full": 0.0,
+      "f_half": 0.0,
+      "f_quarter": 0.0,
+      "insufficient": false,
+      "reason": null
+    },
+    "f_full_train": 0.410387,
+    "f_full_test": 0.0,
+    "paths_test_sized_from_train_loose": {
+      "baseline_1pct_risk": {
+        "label": "baseline_1pct_risk",
+        "f_risk": 0.01,
+        "start_equity": 748.18,
+        "end_equity": 611.4863,
+        "growth_pct": -18.2702,
+        "max_dd_pct": 23.6949,
+        "n_steps": 35,
+        "sum_pnl": -136.6937,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "none": 35
+        },
+        "final_equity_vs_reserve": 561.4863,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": -30.1176,
+          "lam_1.0": -41.9651,
+          "lam_2.0": -65.66
+        }
+      },
+      "quarter_kelly": {
+        "label": "quarter_kelly",
+        "f_risk": 0.051298375,
+        "start_equity": 748.18,
+        "end_equity": 426.3919,
+        "growth_pct": -43.0094,
+        "max_dd_pct": 52.2434,
+        "n_steps": 35,
+        "sum_pnl": -321.7881,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "reserve_cash_room": 35
+        },
+        "final_equity_vs_reserve": 376.3919,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": -69.1311,
+          "lam_1.0": -95.2528,
+          "lam_2.0": -147.4962
+        }
+      },
+      "half_kelly": {
+        "label": "half_kelly",
+        "f_risk": 0.10259675,
+        "start_equity": 748.18,
+        "end_equity": 426.3919,
+        "growth_pct": -43.0094,
+        "max_dd_pct": 52.2434,
+        "n_steps": 35,
+        "sum_pnl": -321.7881,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "reserve_cash_room": 35
+        },
+        "final_equity_vs_reserve": 376.3919,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": -69.1311,
+          "lam_1.0": -95.2528,
+          "lam_2.0": -147.4962
+        }
+      },
+      "full_kelly": {
+        "label": "full_kelly",
+        "f_risk": 0.2051935,
+        "start_equity": 748.18,
+        "end_equity": 426.3919,
+        "growth_pct": -43.0094,
+        "max_dd_pct": 52.2434,
+        "n_steps": 35,
+        "sum_pnl": -321.7881,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "reserve_cash_room": 35
+        },
+        "final_equity_vs_reserve": 376.3919,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": -69.1311,
+          "lam_1.0": -95.2528,
+          "lam_2.0": -147.4962
+        }
+      }
+    },
+    "paths_test_sized_from_train_live_envelopes": {
+      "baseline_1pct_risk": {
+        "label": "baseline_1pct_risk",
+        "f_risk": 0.01,
+        "start_equity": 748.18,
+        "end_equity": 611.4863,
+        "growth_pct": -18.2702,
+        "max_dd_pct": 23.6949,
+        "n_steps": 35,
+        "sum_pnl": -136.6937,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "none": 35
+        },
+        "final_equity_vs_reserve": 561.4863,
+        "haircut": 0.5,
+        "loose_envelopes": false,
+        "scores": {
+          "lam_0.5": -30.1176,
+          "lam_1.0": -41.9651,
+          "lam_2.0": -65.66
+        }
+      },
+      "quarter_kelly": {
+        "label": "quarter_kelly",
+        "f_risk": 0.051298375,
+        "start_equity": 748.18,
+        "end_equity": 502.8817,
+        "growth_pct": -32.786,
+        "max_dd_pct": 41.1512,
+        "n_steps": 35,
+        "sum_pnl": -245.2983,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "regime_util_budget": 35
+        },
+        "final_equity_vs_reserve": 452.8817,
+        "haircut": 0.5,
+        "loose_envelopes": false,
+        "scores": {
+          "lam_0.5": -53.3616,
+          "lam_1.0": -73.9372,
+          "lam_2.0": -115.0884
+        }
+      },
+      "half_kelly": {
+        "label": "half_kelly",
+        "f_risk": 0.10259675,
+        "start_equity": 748.18,
+        "end_equity": 502.8817,
+        "growth_pct": -32.786,
+        "max_dd_pct": 41.1512,
+        "n_steps": 35,
+        "sum_pnl": -245.2983,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "regime_util_budget": 35
+        },
+        "final_equity_vs_reserve": 452.8817,
+        "haircut": 0.5,
+        "loose_envelopes": false,
+        "scores": {
+          "lam_0.5": -53.3616,
+          "lam_1.0": -73.9372,
+          "lam_2.0": -115.0884
+        }
+      },
+      "full_kelly": {
+        "label": "full_kelly",
+        "f_risk": 0.2051935,
+        "start_equity": 748.18,
+        "end_equity": 502.8817,
+        "growth_pct": -32.786,
+        "max_dd_pct": 41.1512,
+        "n_steps": 35,
+        "sum_pnl": -245.2983,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "regime_util_budget": 35
+        },
+        "final_equity_vs_reserve": 452.8817,
+        "haircut": 0.5,
+        "loose_envelopes": false,
+        "scores": {
+          "lam_0.5": -53.3616,
+          "lam_1.0": -73.9372,
+          "lam_2.0": -115.0884
+        }
+      }
+    },
+    "paths_test_oracle_fit_on_test_loose_DIAGNOSTIC": {
+      "baseline_1pct_risk": {
+        "label": "baseline_1pct_risk",
+        "f_risk": 0.01,
+        "start_equity": 748.18,
+        "end_equity": 611.4863,
+        "growth_pct": -18.2702,
+        "max_dd_pct": 23.6949,
+        "n_steps": 35,
+        "sum_pnl": -136.6937,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "none": 35
+        },
+        "final_equity_vs_reserve": 561.4863,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": -30.1176,
+          "lam_1.0": -41.9651,
+          "lam_2.0": -65.66
+        }
+      },
+      "quarter_kelly": {
+        "label": "quarter_kelly",
+        "f_risk": 0.0,
+        "start_equity": 748.18,
+        "end_equity": 748.18,
+        "growth_pct": 0.0,
+        "max_dd_pct": 0.0,
+        "n_steps": 35,
+        "sum_pnl": 0.0,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "none": 35
+        },
+        "final_equity_vs_reserve": 698.18,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": 0.0,
+          "lam_1.0": 0.0,
+          "lam_2.0": 0.0
+        }
+      },
+      "half_kelly": {
+        "label": "half_kelly",
+        "f_risk": 0.0,
+        "start_equity": 748.18,
+        "end_equity": 748.18,
+        "growth_pct": 0.0,
+        "max_dd_pct": 0.0,
+        "n_steps": 35,
+        "sum_pnl": 0.0,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "none": 35
+        },
+        "final_equity_vs_reserve": 698.18,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": 0.0,
+          "lam_1.0": 0.0,
+          "lam_2.0": 0.0
+        }
+      },
+      "full_kelly": {
+        "label": "full_kelly",
+        "f_risk": 0.0,
+        "start_equity": 748.18,
+        "end_equity": 748.18,
+        "growth_pct": 0.0,
+        "max_dd_pct": 0.0,
+        "n_steps": 35,
+        "sum_pnl": 0.0,
+        "near_reserve_or_ruin": false,
+        "binding_counts": {
+          "none": 35
+        },
+        "final_equity_vs_reserve": 698.18,
+        "haircut": 0.5,
+        "loose_envelopes": true,
+        "scores": {
+          "lam_0.5": 0.0,
+          "lam_1.0": 0.0,
+          "lam_2.0": 0.0
+        }
+      }
+    }
+  },
+  "time_slices": {
+    "pre_2026-07": {
+      "n": 33,
+      "edge": {
+        "n": 33,
+        "n_wins": 23,
+        "n_losses": 10,
+        "p": 0.69697,
+        "b": 1.102731,
+        "mean_win_r": 0.092003,
+        "mean_loss_r": -0.083432,
+        "f_full": 0.42217,
+        "f_half": 0.211085,
+        "f_quarter": 0.105542,
+        "insufficient": false,
+        "reason": null
+      }
+    },
+    "from_2026-07": {
+      "n": 37,
+      "edge": {
+        "n": 37,
+        "n_wins": 7,
+        "n_losses": 30,
+        "p": 0.189189,
+        "b": 1.148835,
+        "mean_win_r": 0.031926,
+        "mean_loss_r": -0.02779,
+        "f_full": 0.0,
+        "f_half": 0.0,
+        "f_quarter": 0.0,
+        "insufficient": false,
+        "reason": null
+      }
+    },
+    "full": {
+      "n": 70,
+      "edge": {
+        "n": 70,
+        "n_wins": 30,
+        "n_losses": 40,
+        "p": 0.428571,
+        "b": 1.870122,
+        "mean_win_r": 0.077985,
+        "mean_loss_r": -0.041701,
+        "f_full": 0.123015,
+        "f_half": 0.061507,
+        "f_quarter": 0.030754,
+        "insufficient": false,
+        "reason": null
+      }
+    }
+  },
+  "haircut_grid_meta": {
+    "note": "nested paths under haircut_*; loose vs live_env",
+    "haircuts": [
+      1.0,
+      0.5,
+      0.33
+    ]
+  },
+  "haircut_grid": {
+    "haircut_1.0": {
+      "loose": {
+        "baseline_1pct_risk": {
+          "label": "baseline_1pct_risk",
+          "f_risk": 0.01,
+          "start_equity": 748.18,
+          "end_equity": 913.2681,
+          "growth_pct": 22.0653,
+          "max_dd_pct": 23.9809,
+          "n_steps": 70,
+          "sum_pnl": 165.0881,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 863.2681,
+          "haircut": 1.0,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 10.0749,
+            "lam_1.0": -1.9156,
+            "lam_2.0": -25.8965
+          }
+        },
+        "quarter_kelly": {
+          "label": "quarter_kelly",
+          "f_risk": 0.03075375,
+          "start_equity": 748.18,
+          "end_equity": 1149.8642,
+          "growth_pct": 53.6882,
+          "max_dd_pct": 55.1471,
+          "n_steps": 70,
+          "sum_pnl": 401.6842,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "reserve_cash_room": 70
+          },
+          "final_equity_vs_reserve": 1099.8642,
+          "haircut": 1.0,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 26.1147,
+            "lam_1.0": -1.4589,
+            "lam_2.0": -56.606
+          }
+        },
+        "half_kelly": {
+          "label": "half_kelly",
+          "f_risk": 0.0615075,
+          "start_equity": 748.18,
+          "end_equity": 1149.8642,
+          "growth_pct": 53.6882,
+          "max_dd_pct": 55.1471,
+          "n_steps": 70,
+          "sum_pnl": 401.6842,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "reserve_cash_room": 70
+          },
+          "final_equity_vs_reserve": 1099.8642,
+          "haircut": 1.0,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 26.1147,
+            "lam_1.0": -1.4589,
+            "lam_2.0": -56.606
+          }
+        },
+        "full_kelly": {
+          "label": "full_kelly",
+          "f_risk": 0.123015,
+          "start_equity": 748.18,
+          "end_equity": 1149.8642,
+          "growth_pct": 53.6882,
+          "max_dd_pct": 55.1471,
+          "n_steps": 70,
+          "sum_pnl": 401.6842,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "reserve_cash_room": 70
+          },
+          "final_equity_vs_reserve": 1099.8642,
+          "haircut": 1.0,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 26.1147,
+            "lam_1.0": -1.4589,
+            "lam_2.0": -56.606
+          }
+        }
+      },
+      "live_env": {
+        "baseline_1pct_risk": {
+          "label": "baseline_1pct_risk",
+          "f_risk": 0.01,
+          "start_equity": 748.18,
+          "end_equity": 913.2681,
+          "growth_pct": 22.0653,
+          "max_dd_pct": 23.9809,
+          "n_steps": 70,
+          "sum_pnl": 165.0881,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 863.2681,
+          "haircut": 1.0,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 10.0749,
+            "lam_1.0": -1.9156,
+            "lam_2.0": -25.8965
+          }
+        },
+        "quarter_kelly": {
+          "label": "quarter_kelly",
+          "f_risk": 0.03075375,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 1.0,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        },
+        "half_kelly": {
+          "label": "half_kelly",
+          "f_risk": 0.0615075,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 1.0,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        },
+        "full_kelly": {
+          "label": "full_kelly",
+          "f_risk": 0.123015,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 1.0,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        }
+      }
+    },
+    "haircut_0.5": {
+      "loose": {
+        "baseline_1pct_risk": {
+          "label": "baseline_1pct_risk",
+          "f_risk": 0.01,
+          "start_equity": 748.18,
+          "end_equity": 913.2681,
+          "growth_pct": 22.0653,
+          "max_dd_pct": 23.9809,
+          "n_steps": 70,
+          "sum_pnl": 165.0881,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 863.2681,
+          "haircut": 0.5,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 10.0749,
+            "lam_1.0": -1.9156,
+            "lam_2.0": -25.8965
+          }
+        },
+        "quarter_kelly": {
+          "label": "quarter_kelly",
+          "f_risk": 0.015376875,
+          "start_equity": 748.18,
+          "end_equity": 996.5719,
+          "growth_pct": 33.1995,
+          "max_dd_pct": 34.4856,
+          "n_steps": 70,
+          "sum_pnl": 248.3919,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 946.5719,
+          "haircut": 0.5,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 15.9567,
+            "lam_1.0": -1.2861,
+            "lam_2.0": -35.7717
+          }
+        },
+        "half_kelly": {
+          "label": "half_kelly",
+          "f_risk": 0.03075375,
+          "start_equity": 748.18,
+          "end_equity": 1149.8642,
+          "growth_pct": 53.6882,
+          "max_dd_pct": 55.1471,
+          "n_steps": 70,
+          "sum_pnl": 401.6842,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "reserve_cash_room": 70
+          },
+          "final_equity_vs_reserve": 1099.8642,
+          "haircut": 0.5,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 26.1147,
+            "lam_1.0": -1.4589,
+            "lam_2.0": -56.606
+          }
+        },
+        "full_kelly": {
+          "label": "full_kelly",
+          "f_risk": 0.0615075,
+          "start_equity": 748.18,
+          "end_equity": 1149.8642,
+          "growth_pct": 53.6882,
+          "max_dd_pct": 55.1471,
+          "n_steps": 70,
+          "sum_pnl": 401.6842,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "reserve_cash_room": 70
+          },
+          "final_equity_vs_reserve": 1099.8642,
+          "haircut": 0.5,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 26.1147,
+            "lam_1.0": -1.4589,
+            "lam_2.0": -56.606
+          }
+        }
+      },
+      "live_env": {
+        "baseline_1pct_risk": {
+          "label": "baseline_1pct_risk",
+          "f_risk": 0.01,
+          "start_equity": 748.18,
+          "end_equity": 913.2681,
+          "growth_pct": 22.0653,
+          "max_dd_pct": 23.9809,
+          "n_steps": 70,
+          "sum_pnl": 165.0881,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 863.2681,
+          "haircut": 0.5,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 10.0749,
+            "lam_1.0": -1.9156,
+            "lam_2.0": -25.8965
+          }
+        },
+        "quarter_kelly": {
+          "label": "quarter_kelly",
+          "f_risk": 0.015376875,
+          "start_equity": 748.18,
+          "end_equity": 996.5719,
+          "growth_pct": 33.1995,
+          "max_dd_pct": 34.4856,
+          "n_steps": 70,
+          "sum_pnl": 248.3919,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 946.5719,
+          "haircut": 0.5,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 15.9567,
+            "lam_1.0": -1.2861,
+            "lam_2.0": -35.7717
+          }
+        },
+        "half_kelly": {
+          "label": "half_kelly",
+          "f_risk": 0.03075375,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 0.5,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        },
+        "full_kelly": {
+          "label": "full_kelly",
+          "f_risk": 0.0615075,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 0.5,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        }
+      }
+    },
+    "haircut_0.33": {
+      "loose": {
+        "baseline_1pct_risk": {
+          "label": "baseline_1pct_risk",
+          "f_risk": 0.01,
+          "start_equity": 748.18,
+          "end_equity": 913.2681,
+          "growth_pct": 22.0653,
+          "max_dd_pct": 23.9809,
+          "n_steps": 70,
+          "sum_pnl": 165.0881,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 863.2681,
+          "haircut": 0.33,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 10.0749,
+            "lam_1.0": -1.9156,
+            "lam_2.0": -25.8965
+          }
+        },
+        "quarter_kelly": {
+          "label": "quarter_kelly",
+          "f_risk": 0.010148737500000001,
+          "start_equity": 748.18,
+          "end_equity": 915.6462,
+          "growth_pct": 22.3831,
+          "max_dd_pct": 24.2921,
+          "n_steps": 70,
+          "sum_pnl": 167.4662,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 865.6462,
+          "haircut": 0.33,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 10.237,
+            "lam_1.0": -1.909,
+            "lam_2.0": -26.2011
+          }
+        },
+        "half_kelly": {
+          "label": "half_kelly",
+          "f_risk": 0.020297475000000002,
+          "start_equity": 748.18,
+          "end_equity": 1066.5109,
+          "growth_pct": 42.5474,
+          "max_dd_pct": 42.8676,
+          "n_steps": 70,
+          "sum_pnl": 318.3309,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 1016.5109,
+          "haircut": 0.33,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 21.1136,
+            "lam_1.0": -0.3202,
+            "lam_2.0": -43.1878
+          }
+        },
+        "full_kelly": {
+          "label": "full_kelly",
+          "f_risk": 0.040594950000000005,
+          "start_equity": 748.18,
+          "end_equity": 1149.8642,
+          "growth_pct": 53.6882,
+          "max_dd_pct": 55.1471,
+          "n_steps": 70,
+          "sum_pnl": 401.6842,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "reserve_cash_room": 70
+          },
+          "final_equity_vs_reserve": 1099.8642,
+          "haircut": 0.33,
+          "loose_envelopes": true,
+          "scores": {
+            "lam_0.5": 26.1147,
+            "lam_1.0": -1.4589,
+            "lam_2.0": -56.606
+          }
+        }
+      },
+      "live_env": {
+        "baseline_1pct_risk": {
+          "label": "baseline_1pct_risk",
+          "f_risk": 0.01,
+          "start_equity": 748.18,
+          "end_equity": 913.2681,
+          "growth_pct": 22.0653,
+          "max_dd_pct": 23.9809,
+          "n_steps": 70,
+          "sum_pnl": 165.0881,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 863.2681,
+          "haircut": 0.33,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 10.0749,
+            "lam_1.0": -1.9156,
+            "lam_2.0": -25.8965
+          }
+        },
+        "quarter_kelly": {
+          "label": "quarter_kelly",
+          "f_risk": 0.010148737500000001,
+          "start_equity": 748.18,
+          "end_equity": 915.6462,
+          "growth_pct": 22.3831,
+          "max_dd_pct": 24.2921,
+          "n_steps": 70,
+          "sum_pnl": 167.4662,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "none": 70
+          },
+          "final_equity_vs_reserve": 865.6462,
+          "haircut": 0.33,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 10.237,
+            "lam_1.0": -1.909,
+            "lam_2.0": -26.2011
+          }
+        },
+        "half_kelly": {
+          "label": "half_kelly",
+          "f_risk": 0.020297475000000002,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 0.33,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        },
+        "full_kelly": {
+          "label": "full_kelly",
+          "f_risk": 0.040594950000000005,
+          "start_equity": 748.18,
+          "end_equity": 1082.3677,
+          "growth_pct": 44.6667,
+          "max_dd_pct": 39.5018,
+          "n_steps": 70,
+          "sum_pnl": 334.1877,
+          "near_reserve_or_ruin": false,
+          "binding_counts": {
+            "regime_util_budget": 45,
+            "max_position_usd": 25
+          },
+          "final_equity_vs_reserve": 1032.3677,
+          "haircut": 0.33,
+          "loose_envelopes": false,
+          "scores": {
+            "lam_0.5": 24.9158,
+            "lam_1.0": 5.1649,
+            "lam_2.0": -34.3369
+          }
+        }
+      }
+    }
+  },
+  "full_sample_loose_separation": {
+    "baseline_1pct_risk": {
+      "label": "baseline_1pct_risk",
+      "f_risk": 0.01,
+      "start_equity": 748.18,
+      "end_equity": 913.2681,
+      "growth_pct": 22.0653,
+      "max_dd_pct": 23.9809,
+      "n_steps": 70,
+      "sum_pnl": 165.0881,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "none": 70
+      },
+      "final_equity_vs_reserve": 863.2681,
+      "haircut": 0.5,
+      "loose_envelopes": true,
+      "scores": {
+        "lam_0.5": 10.0749,
+        "lam_1.0": -1.9156,
+        "lam_2.0": -25.8965
+      }
+    },
+    "quarter_kelly": {
+      "label": "quarter_kelly",
+      "f_risk": 0.015376875,
+      "start_equity": 748.18,
+      "end_equity": 996.5719,
+      "growth_pct": 33.1995,
+      "max_dd_pct": 34.4856,
+      "n_steps": 70,
+      "sum_pnl": 248.3919,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "none": 70
+      },
+      "final_equity_vs_reserve": 946.5719,
+      "haircut": 0.5,
+      "loose_envelopes": true,
+      "scores": {
+        "lam_0.5": 15.9567,
+        "lam_1.0": -1.2861,
+        "lam_2.0": -35.7717
+      }
+    },
+    "half_kelly": {
+      "label": "half_kelly",
+      "f_risk": 0.03075375,
+      "start_equity": 748.18,
+      "end_equity": 1149.8642,
+      "growth_pct": 53.6882,
+      "max_dd_pct": 55.1471,
+      "n_steps": 70,
+      "sum_pnl": 401.6842,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "reserve_cash_room": 70
+      },
+      "final_equity_vs_reserve": 1099.8642,
+      "haircut": 0.5,
+      "loose_envelopes": true,
+      "scores": {
+        "lam_0.5": 26.1147,
+        "lam_1.0": -1.4589,
+        "lam_2.0": -56.606
+      }
+    },
+    "full_kelly": {
+      "label": "full_kelly",
+      "f_risk": 0.0615075,
+      "start_equity": 748.18,
+      "end_equity": 1149.8642,
+      "growth_pct": 53.6882,
+      "max_dd_pct": 55.1471,
+      "n_steps": 70,
+      "sum_pnl": 401.6842,
+      "near_reserve_or_ruin": false,
+      "binding_counts": {
+        "reserve_cash_room": 70
+      },
+      "final_equity_vs_reserve": 1099.8642,
+      "haircut": 0.5,
+      "loose_envelopes": true,
+      "scores": {
+        "lam_0.5": 26.1147,
+        "lam_1.0": -1.4589,
+        "lam_2.0": -56.606
+      }
+    }
+  },
+  "verdict": {
+    "enum": "drop",
+    "go_shadow": false,
+    "headline": "No opportunity to promote Kelly sizing \u2014 out-of-sample edge failed.",
+    "bullets": [
+      "Train-period Kelly full fraction was 0.410; test-period edge Kelly was 0.000.",
+      "On the later half of trades, measured edge was zero/negative \u2014 any size from early wins would have been betting a cold streak.",
+      "Classic trap: early good results \u2192 large Kelly \u2192 later losses get amplified if you had sized up.",
+      "Even with loose caps, half and full paths still look almost identical \u2014 edge on test is too weak for Kelly fraction to matter.",
+      "Score growth\u22120.5\u00d7DD on test (loose): base=-30.1176, quarter=-69.1311, half=-69.1311, full=-69.1311",
+      "Score growth\u22121.0\u00d7DD on test (loose): base=-41.9651, quarter=-95.2528, half=-95.2528, full=-95.2528",
+      "Score growth\u22122.0\u00d7DD on test (loose): base=-65.66, quarter=-147.4962, half=-147.4962, full=-147.4962",
+      "With live-like envelopes on test: half growth=-32.786 DD=41.1512 vs baseline growth=-18.2702 DD=23.6949.",
+      "July+ slice: n=37, win rate p=0.189189, Kelly full=0.0 (if \u22640, recent book should not size up)."
+    ],
+    "what_this_means": "The first report\u2019s high Half-Kelly growth used the same trades to both estimate luck and size the bets (like grading a test with the answer key). When we only use early trades to set size and later trades to judge, Kelly does not beat careful small sizing. Do not turn on a Kelly shadow."
+  },
+  "live_writes": false
+}

@@ -1,0 +1,172 @@
+{
+  "as_of": "2026-08-08T07:27:49.067971+00:00",
+  "gold_proxy": "GC=F (COMEX gold futures front continuous \u2014 common USD gold proxy)",
+  "sources": [
+    "Yahoo Finance PAXG-USD daily",
+    "Yahoo Finance GC=F daily"
+  ],
+  "method_notes": [
+    "True LBMA loco London spot is not free here; GC=F is the standard liquid USD gold proxy. It is extremely tightly linked to spot but is futures, not vault gold."
+  ],
+  "plain_english": {
+    "bottom_line": "PAXG moves **moderately** with the gold price proxy we used (daily return correlation **0.785**, beta **0.793**). Daily lag test peaks at **same calendar day** (corr 0.785). That is still effectively **near real-time on a day timescale**, not a multi-week lag.",
+    "premium_discount": "Over the sample, the average PAXG\u2212gold level gap was about **0.22%** of gold (stdev **0.81%**). Share of days within 0.5% / 1% / 2%: 57% / 83% / 97%. Latest gap: **-0.09%** (PAXG vs proxy).",
+    "what_this_means_for_traders": "For Smart Park, treat PAXG as **gold exposure on the exchange**, not magic crypto alpha. It should feel like gold day-to-day. Short gaps open when: gold market is closed and crypto is open, PAXG is thin on Coinbase, or people rush into on-chain gold in a crypto panic (premium) or dump it (discount). Arbitrage (mint/redeem via Paxos when available) usually pulls it back \u2014 that process is hours to days for institutions, not weeks, under normal conditions.",
+    "lag_summary": "Daily lag test peaks at **same calendar day** (corr 0.785). That is still effectively **near real-time on a day timescale**, not a multi-week lag.",
+    "closeness_word": "moderately"
+  },
+  "stats": {
+    "tracking": {
+      "n_days": 719,
+      "start": "2024-08-08",
+      "end": "2026-08-08",
+      "corr_levels": 0.9991303632191585,
+      "corr_log_returns": 0.7849869353169318,
+      "beta_paxg_on_gold": 0.7931129942572513,
+      "tracking_error_daily_vol": 0.008349367124108524,
+      "tracking_error_ann_vol_approx": 0.1325420940910183,
+      "mean_abs_daily_return_gap": 0.0053798611656951986,
+      "ratio_norm_mean": 1.0044734717051016,
+      "ratio_norm_std": 0.008080700184648293,
+      "ratio_norm_min": 0.96811718519514,
+      "ratio_norm_max": 1.0467087578960634,
+      "level_spread_mean_usd": 7.987298235939673,
+      "level_spread_std_usd": 33.856748759505166,
+      "level_spread_mean_pct_of_gold": 0.21739207715788128,
+      "level_spread_std_pct": 0.806220095875875,
+      "pct_days_abs_spread_under_0_5pct": 56.60639777468707,
+      "pct_days_abs_spread_under_1pct": 83.17107093184978,
+      "pct_days_abs_spread_under_2pct": 96.94019471488178
+    },
+    "lag0_return_corr": 0.7849869353169318,
+    "best_lag": {
+      "lag_days": 0,
+      "corr": 0.7849869353169318,
+      "interpretation": "same calendar day"
+    },
+    "lag_table": [
+      {
+        "lag_days": -10,
+        "corr_paxg_vs_gold_shifted": -0.038431418770645154,
+        "interpretation": "PAXG leads by ~10 trading day(s)"
+      },
+      {
+        "lag_days": -9,
+        "corr_paxg_vs_gold_shifted": -0.009223948121850336,
+        "interpretation": "PAXG leads by ~9 trading day(s)"
+      },
+      {
+        "lag_days": -8,
+        "corr_paxg_vs_gold_shifted": -0.056391296340597905,
+        "interpretation": "PAXG leads by ~8 trading day(s)"
+      },
+      {
+        "lag_days": -7,
+        "corr_paxg_vs_gold_shifted": 0.009550539381697962,
+        "interpretation": "PAXG leads by ~7 trading day(s)"
+      },
+      {
+        "lag_days": -6,
+        "corr_paxg_vs_gold_shifted": 0.000989631516456398,
+        "interpretation": "PAXG leads by ~6 trading day(s)"
+      },
+      {
+        "lag_days": -5,
+        "corr_paxg_vs_gold_shifted": -0.004160890995271539,
+        "interpretation": "PAXG leads by ~5 trading day(s)"
+      },
+      {
+        "lag_days": -4,
+        "corr_paxg_vs_gold_shifted": 0.023472376063797592,
+        "interpretation": "PAXG leads by ~4 trading day(s)"
+      },
+      {
+        "lag_days": -3,
+        "corr_paxg_vs_gold_shifted": -0.021136899469306542,
+        "interpretation": "PAXG leads by ~3 trading day(s)"
+      },
+      {
+        "lag_days": -2,
+        "corr_paxg_vs_gold_shifted": -0.10915915767399183,
+        "interpretation": "PAXG leads by ~2 trading day(s)"
+      },
+      {
+        "lag_days": -1,
+        "corr_paxg_vs_gold_shifted": 0.1480365788102895,
+        "interpretation": "PAXG leads by ~1 trading day(s)"
+      },
+      {
+        "lag_days": 0,
+        "corr_paxg_vs_gold_shifted": 0.7849869353169318,
+        "interpretation": "same calendar day"
+      },
+      {
+        "lag_days": 1,
+        "corr_paxg_vs_gold_shifted": -0.013451040593572347,
+        "interpretation": "gold leads by ~1 trading day(s)"
+      },
+      {
+        "lag_days": 2,
+        "corr_paxg_vs_gold_shifted": -0.014088930772322875,
+        "interpretation": "gold leads by ~2 trading day(s)"
+      },
+      {
+        "lag_days": 3,
+        "corr_paxg_vs_gold_shifted": 0.008749485429644469,
+        "interpretation": "gold leads by ~3 trading day(s)"
+      },
+      {
+        "lag_days": 4,
+        "corr_paxg_vs_gold_shifted": -0.053832404368520693,
+        "interpretation": "gold leads by ~4 trading day(s)"
+      },
+      {
+        "lag_days": 5,
+        "corr_paxg_vs_gold_shifted": 0.004434589195926801,
+        "interpretation": "gold leads by ~5 trading day(s)"
+      },
+      {
+        "lag_days": 6,
+        "corr_paxg_vs_gold_shifted": 0.08639214836608354,
+        "interpretation": "gold leads by ~6 trading day(s)"
+      },
+      {
+        "lag_days": 7,
+        "corr_paxg_vs_gold_shifted": -0.03253605346168129,
+        "interpretation": "gold leads by ~7 trading day(s)"
+      },
+      {
+        "lag_days": 8,
+        "corr_paxg_vs_gold_shifted": -0.06967269963408995,
+        "interpretation": "gold leads by ~8 trading day(s)"
+      },
+      {
+        "lag_days": 9,
+        "corr_paxg_vs_gold_shifted": -0.05143719002539267,
+        "interpretation": "gold leads by ~9 trading day(s)"
+      },
+      {
+        "lag_days": 10,
+        "corr_paxg_vs_gold_shifted": -0.014399868990616786,
+        "interpretation": "gold leads by ~10 trading day(s)"
+      }
+    ],
+    "rolling_60d_corr": {
+      "mean": 0.7864632077389977,
+      "min": 0.5680445073440755,
+      "max": 0.9075064713604228,
+      "last": 0.7281160348100704
+    },
+    "weekend": {
+      "paxg_mean_abs_ret_mon": 0.010291939618468143,
+      "paxg_mean_abs_ret_all": 0.00821614550972261,
+      "note": "PAXG can move on weekends when London gold is closed; Monday may catch up."
+    },
+    "last_prices": {
+      "PAXG": 4336.9599609375,
+      "GOLD_proxy": 4340.7001953125,
+      "spread_usd": -3.740234375,
+      "spread_pct": -0.08616661383430424
+    }
+  }
+}

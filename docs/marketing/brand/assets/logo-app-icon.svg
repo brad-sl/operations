@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="ARCH Automation app icon">
+  <rect width="512" height="512" rx="96" fill="#0B1F2A"/>
+  <path d="M96 400 V240 C96 132 188 72 256 72 C324 72 416 132 416 240 V400"
+        fill="none" stroke="#14B8A6" stroke-width="36" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M256 168 V400" fill="none" stroke="#14B8A6" stroke-width="28" stroke-linecap="round"/>
+  <path d="M188 268 H324" fill="none" stroke="#14B8A6" stroke-width="22" stroke-linecap="round"/>
+  <path d="M128 400 H384" fill="none" stroke="#14B8A6" stroke-width="20" stroke-linecap="round" opacity="0.85"/>
+</svg>

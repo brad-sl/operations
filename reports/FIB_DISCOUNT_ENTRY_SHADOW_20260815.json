@@ -1,0 +1,3843 @@
+{
+  "generated_at": "2026-08-15T18:07:36.130173+00:00",
+  "hypothesis": "Fib discount as add-on to regime+RSI, not replacement",
+  "knobs": {
+    "swing_L": 20,
+    "fib_lo": 0.5,
+    "fib_hi": 0.786,
+    "flat_max_rsi": 55.0,
+    "bull_max_rsi": 70.0,
+    "sl_pct": 0.03,
+    "pairs": [
+      "btc",
+      "eth",
+      "sol",
+      "link",
+      "avax"
+    ]
+  },
+  "windows": [
+    {
+      "window": "last_14d",
+      "start": "2026-08-01",
+      "end": "2026-08-15",
+      "portfolio": {
+        "BH": {
+          "arm": "BH",
+          "n_pairs": 5,
+          "mean_return": 0.05822541425336771,
+          "median_return": 0.04585077544426497,
+          "mean_max_dd": -0.02939155222241585,
+          "worst_dd": -0.0529398569199494,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.060820820150462286,
+          "mean_win_rate": 1.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.04787310100166953,
+              "dd": -0.017233607241752158,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.04585077544426497,
+              "dd": -0.0529398569199494,
+              "n": 1
+            }
+          }
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "n_pairs": 5,
+          "mean_return": 0.05822541425336771,
+          "median_return": 0.04585077544426497,
+          "mean_max_dd": -0.02939155222241585,
+          "worst_dd": -0.0529398569199494,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.060820820150462286,
+          "mean_win_rate": 1.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.04787310100166953,
+              "dd": -0.017233607241752158,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.04585077544426497,
+              "dd": -0.0529398569199494,
+              "n": 1
+            }
+          }
+        },
+        "RSI_FIB_AND": {
+          "arm": "RSI_FIB_AND",
+          "n_pairs": 5,
+          "mean_return": 0.04404943553798955,
+          "median_return": 0.019940627204071193,
+          "mean_max_dd": -0.02361036563793719,
+          "worst_dd": -0.02832908452410432,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.04589127251835341,
+          "mean_win_rate": 0.8,
+          "pairs": {
+            "btc": {
+              "ret": -0.007976756344814762,
+              "dd": -0.02832908452410432,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.025348361435953315,
+              "dd": -0.01721425499854734,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.008531534753537517,
+              "dd": -0.024069356123072927,
+              "n": 1
+            }
+          }
+        },
+        "FIB_ONLY": {
+          "arm": "FIB_ONLY",
+          "n_pairs": 5,
+          "mean_return": 0.04404943553798955,
+          "median_return": 0.019940627204071193,
+          "mean_max_dd": -0.02361036563793719,
+          "worst_dd": -0.02832908452410432,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.04589127251835341,
+          "mean_win_rate": 0.8,
+          "pairs": {
+            "btc": {
+              "ret": -0.007976756344814762,
+              "dd": -0.02832908452410432,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.025348361435953315,
+              "dd": -0.01721425499854734,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.008531534753537517,
+              "dd": -0.024069356123072927,
+              "n": 1
+            }
+          }
+        },
+        "RSI_OR_FIB": {
+          "arm": "RSI_OR_FIB",
+          "n_pairs": 5,
+          "mean_return": 0.05822541425336771,
+          "median_return": 0.04585077544426497,
+          "mean_max_dd": -0.02939155222241585,
+          "worst_dd": -0.0529398569199494,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.060820820150462286,
+          "mean_win_rate": 1.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.04787310100166953,
+              "dd": -0.017233607241752158,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.04585077544426497,
+              "dd": -0.0529398569199494,
+              "n": 1
+            }
+          }
+        }
+      },
+      "pair_summaries": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_win_pct": 0.0027220262506332258,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "sharpe": 0.7452897717893555,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_win_pct": 0.0027220262506332258,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "sharpe": 0.6576130667124789,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 1,
+          "total_return": -0.007976756344814762,
+          "max_dd": -0.02832908452410432,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.008900535894067807,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.008900535894067807,
+          "avg_bars": 13.0,
+          "final_equity": 9920.232436551853,
+          "sharpe": -1.6708830596674324,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 1,
+          "total_return": -0.007976756344814762,
+          "max_dd": -0.02832908452410432,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.008900535894067807,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.008900535894067807,
+          "avg_bars": 13.0,
+          "final_equity": 9920.232436551853,
+          "sharpe": -1.6708830596674324,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_win_pct": 0.0027220262506332258,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "sharpe": 0.6576130667124789,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_win_pct": 0.020500884341192793,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "sharpe": 2.7476127101430645,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_win_pct": 0.020500884341192793,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "sharpe": 2.7017317629902164,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_win_pct": 0.020500884341192793,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "sharpe": 2.7017317629902164,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_win_pct": 0.020500884341192793,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "sharpe": 2.7017317629902164,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_win_pct": 0.020500884341192793,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "sharpe": 2.7017317629902164,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 0.04787310100166953,
+          "max_dd": -0.017233607241752158,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04991819699499189,
+          "avg_win_pct": 0.04991819699499189,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10478.731010016696,
+          "sharpe": 5.303693515623969,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 1,
+          "total_return": 0.04787310100166953,
+          "max_dd": -0.017233607241752158,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04991819699499189,
+          "avg_win_pct": 0.04991819699499189,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10478.731010016696,
+          "sharpe": 5.27372934041568,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 1,
+          "total_return": 0.025348361435953315,
+          "max_dd": -0.01721425499854734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.026196083763938005,
+          "avg_win_pct": 0.026196083763938005,
+          "avg_loss_pct": NaN,
+          "avg_bars": 13.0,
+          "final_equity": 10253.483614359533,
+          "sharpe": 3.1397390054365704,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 1,
+          "total_return": 0.025348361435953315,
+          "max_dd": -0.01721425499854734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.026196083763938005,
+          "avg_win_pct": 0.026196083763938005,
+          "avg_loss_pct": NaN,
+          "avg_bars": 13.0,
+          "final_equity": 10253.483614359533,
+          "sharpe": 3.1397390054365704,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 1,
+          "total_return": 0.04787310100166953,
+          "max_dd": -0.017233607241752158,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04991819699499189,
+          "avg_win_pct": 0.04991819699499189,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10478.731010016696,
+          "sharpe": 5.27372934041568,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_win_pct": 0.18317462482946778,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "sharpe": 9.038608522170803,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_win_pct": 0.18317462482946778,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "sharpe": 9.025165097448822,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_win_pct": 0.18317462482946778,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "sharpe": 9.025165097448822,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_win_pct": 0.18317462482946778,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "sharpe": 9.025165097448822,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_win_pct": 0.18317462482946778,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "sharpe": 9.025165097448822,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 0.04585077544426497,
+          "max_dd": -0.0529398569199494,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04778836833602573,
+          "avg_win_pct": 0.04778836833602573,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10458.50775444265,
+          "sharpe": 3.347540181570883,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 1,
+          "total_return": 0.04585077544426497,
+          "max_dd": -0.0529398569199494,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04778836833602573,
+          "avg_win_pct": 0.04778836833602573,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10458.50775444265,
+          "sharpe": 3.329433999062945,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 1,
+          "total_return": 0.008531534753537517,
+          "max_dd": -0.024069356123072927,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.008485305551236277,
+          "avg_win_pct": 0.008485305551236277,
+          "avg_loss_pct": NaN,
+          "avg_bars": 9.0,
+          "final_equity": 10085.315347535376,
+          "sharpe": 1.4863136226883282,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 1,
+          "total_return": 0.008531534753537517,
+          "max_dd": -0.024069356123072927,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.008485305551236277,
+          "avg_win_pct": 0.008485305551236277,
+          "avg_loss_pct": NaN,
+          "avg_bars": 9.0,
+          "final_equity": 10085.315347535376,
+          "sharpe": 1.4863136226883282,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 1,
+          "total_return": 0.04585077544426497,
+          "max_dd": -0.0529398569199494,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04778836833602573,
+          "avg_win_pct": 0.04778836833602573,
+          "avg_loss_pct": NaN,
+          "avg_bars": 14.0,
+          "final_equity": 10458.50775444265,
+          "sharpe": 3.329433999062945,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        }
+      ],
+      "n_trade_rows": 25,
+      "decision": {
+        "fib_as_add_on_vs_base": {
+          "delta_ret_pp": -1.4175978715378166,
+          "delta_dd_pp": 0.578118658447866,
+          "base_n": 5,
+          "fib_and_n": 5,
+          "edge_class": "inconclusive_sparse_N"
+        },
+        "fib_as_rsi_replacement": {
+          "delta_ret_pp_vs_base": -1.4175978715378166,
+          "edge_class": "inconclusive_sparse_N"
+        }
+      },
+      "plain_english": {
+        "add_on_gate": "inconclusive \u2014 too few trades; need longer tape or lower TF (not promote)",
+        "rsi_replacement": "confirmed: FIB_ONLY is a poor RSI replacement on this tape (as hypothesized)",
+        "note": "Shadow/offline only. No regime detector swap. No live config."
+      },
+      "trades_sample": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8041194266438568,
+          "entry_rsi": 43.92668925670757
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 63499.49,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.008900535894067807,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6619808430229752,
+          "entry_rsi": 47.63906662291791
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 63499.49,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.008900535894067807,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6619808430229752,
+          "entry_rsi": 47.63906662291791
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8041194266438568,
+          "entry_rsi": 43.92668925670757
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5880926607490795,
+          "entry_rsi": 48.68489393481081
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5880926607490795,
+          "entry_rsi": 48.68489393481081
+        },
+        {
+          "pair": "eth",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5880926607490795,
+          "entry_rsi": 48.68489393481081
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5880926607490795,
+          "entry_rsi": 48.68489393481081
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 71.88,
+          "exit_price": 75.54,
+          "pnl_pct": 0.04991819699499189,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 71.88,
+          "exit_price": 75.54,
+          "pnl_pct": 0.04991819699499189,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.0535714285714286,
+          "entry_rsi": 39.71730708867494
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 73.54,
+          "exit_price": 75.54,
+          "pnl_pct": 0.026196083763938005,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6414201183431947,
+          "entry_rsi": 45.38398644514882
+        },
+        {
+          "pair": "sol",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 73.54,
+          "exit_price": 75.54,
+          "pnl_pct": 0.026196083763938005,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6414201183431947,
+          "entry_rsi": 45.38398644514882
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 71.88,
+          "exit_price": 75.54,
+          "pnl_pct": 0.04991819699499189,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.0535714285714286,
+          "entry_rsi": 39.71730708867494
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.754244861483467,
+          "entry_rsi": 45.30370713324337
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.754244861483467,
+          "entry_rsi": 45.30370713324337
+        },
+        {
+          "pair": "link",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.754244861483467,
+          "entry_rsi": 45.30370713324337
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.754244861483467,
+          "entry_rsi": 45.30370713324337
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.19,
+          "exit_price": 6.492,
+          "pnl_pct": 0.04778836833602573,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.19,
+          "exit_price": 6.492,
+          "pnl_pct": 0.04778836833602573,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.927536231884057,
+          "entry_rsi": 40.62427968398811
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-08-06 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.431,
+          "exit_price": 6.492,
+          "pnl_pct": 0.008485305551236277,
+          "bars_held": 9,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5831556503198293,
+          "entry_rsi": 46.789663060194556
+        },
+        {
+          "pair": "avax",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-08-06 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.431,
+          "exit_price": 6.492,
+          "pnl_pct": 0.008485305551236277,
+          "bars_held": 9,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5831556503198293,
+          "entry_rsi": 46.789663060194556
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.19,
+          "exit_price": 6.492,
+          "pnl_pct": 0.04778836833602573,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.927536231884057,
+          "entry_rsi": 40.62427968398811
+        }
+      ]
+    },
+    {
+      "window": "last_90d",
+      "start": "2026-05-17",
+      "end": "2026-08-15",
+      "portfolio": {
+        "BH": {
+          "arm": "BH",
+          "n_pairs": 5,
+          "mean_return": -0.1353275424562384,
+          "median_return": -0.11056647043770595,
+          "mean_max_dd": -0.27333364363882157,
+          "worst_dd": -0.35772132298194126,
+          "total_trades": 5,
+          "mean_expectancy_pct": -0.14302105521838648,
+          "mean_win_rate": 0.0,
+          "pairs": {
+            "btc": {
+              "ret": -0.17723345940301205,
+              "dd": -0.2330656447901197,
+              "n": 1
+            },
+            "eth": {
+              "ret": -0.11056647043770595,
+              "dd": -0.25255918507272257,
+              "n": 1
+            },
+            "sol": {
+              "ret": -0.10803358962319509,
+              "dd": -0.273769780041926,
+              "n": 1
+            },
+            "link": {
+              "ret": -0.00156766398158803,
+              "dd": -0.24955228530739837,
+              "n": 1
+            },
+            "avax": {
+              "ret": -0.27923652883569094,
+              "dd": -0.35772132298194126,
+              "n": 1
+            }
+          }
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.12681561084155407,
+          "median_return": -0.12169924312908587,
+          "mean_max_dd": -0.19779453062946808,
+          "worst_dd": -0.2504170867064216,
+          "total_trades": 26,
+          "mean_expectancy_pct": -0.010705353004547233,
+          "mean_win_rate": 0.38666666666666666,
+          "pairs": {
+            "btc": {
+              "ret": -0.10496448859905527,
+              "dd": -0.12533820667587325,
+              "n": 5
+            },
+            "eth": {
+              "ret": -0.12169924312908587,
+              "dd": -0.17183373925002354,
+              "n": 5
+            },
+            "sol": {
+              "ret": -0.19669534445652015,
+              "dd": -0.2504170867064216,
+              "n": 5
+            },
+            "link": {
+              "ret": -0.017946490061959253,
+              "dd": -0.19416333538409558,
+              "n": 5
+            },
+            "avax": {
+              "ret": -0.19277248796114976,
+              "dd": -0.24722028513092642,
+              "n": 6
+            }
+          }
+        },
+        "RSI_FIB_AND": {
+          "arm": "RSI_FIB_AND",
+          "n_pairs": 5,
+          "mean_return": -0.07738752745324848,
+          "median_return": -0.10068381955940475,
+          "mean_max_dd": -0.1422949886319848,
+          "worst_dd": -0.1943275126174383,
+          "total_trades": 15,
+          "mean_expectancy_pct": 0.0036726943567720353,
+          "mean_win_rate": 0.4166666666666667,
+          "pairs": {
+            "btc": {
+              "ret": -0.10068381955940475,
+              "dd": -0.10453631043666733,
+              "n": 4
+            },
+            "eth": {
+              "ret": -0.07530269073717899,
+              "dd": -0.09890703961617076,
+              "n": 2
+            },
+            "sol": {
+              "ret": -0.14468971294191013,
+              "dd": -0.1943275126174383,
+              "n": 3
+            },
+            "link": {
+              "ret": 0.09015581343843393,
+              "dd": -0.12291148374699723,
+              "n": 3
+            },
+            "avax": {
+              "ret": -0.15641722746618247,
+              "dd": -0.19079259674265037,
+              "n": 3
+            }
+          }
+        },
+        "FIB_ONLY": {
+          "arm": "FIB_ONLY",
+          "n_pairs": 5,
+          "mean_return": -0.07738752745324848,
+          "median_return": -0.10068381955940475,
+          "mean_max_dd": -0.1422949886319848,
+          "worst_dd": -0.1943275126174383,
+          "total_trades": 15,
+          "mean_expectancy_pct": 0.0036726943567720353,
+          "mean_win_rate": 0.4166666666666667,
+          "pairs": {
+            "btc": {
+              "ret": -0.10068381955940475,
+              "dd": -0.10453631043666733,
+              "n": 4
+            },
+            "eth": {
+              "ret": -0.07530269073717899,
+              "dd": -0.09890703961617076,
+              "n": 2
+            },
+            "sol": {
+              "ret": -0.14468971294191013,
+              "dd": -0.1943275126174383,
+              "n": 3
+            },
+            "link": {
+              "ret": 0.09015581343843393,
+              "dd": -0.12291148374699723,
+              "n": 3
+            },
+            "avax": {
+              "ret": -0.15641722746618247,
+              "dd": -0.19079259674265037,
+              "n": 3
+            }
+          }
+        },
+        "RSI_OR_FIB": {
+          "arm": "RSI_OR_FIB",
+          "n_pairs": 5,
+          "mean_return": -0.12681561084155407,
+          "median_return": -0.12169924312908587,
+          "mean_max_dd": -0.19779453062946808,
+          "worst_dd": -0.2504170867064216,
+          "total_trades": 26,
+          "mean_expectancy_pct": -0.010705353004547233,
+          "mean_win_rate": 0.38666666666666666,
+          "pairs": {
+            "btc": {
+              "ret": -0.10496448859905527,
+              "dd": -0.12533820667587325,
+              "n": 5
+            },
+            "eth": {
+              "ret": -0.12169924312908587,
+              "dd": -0.17183373925002354,
+              "n": 5
+            },
+            "sol": {
+              "ret": -0.19669534445652015,
+              "dd": -0.2504170867064216,
+              "n": 5
+            },
+            "link": {
+              "ret": -0.017946490061959253,
+              "dd": -0.19416333538409558,
+              "n": 5
+            },
+            "avax": {
+              "ret": -0.19277248796114976,
+              "dd": -0.24722028513092642,
+              "n": 6
+            }
+          }
+        }
+      },
+      "pair_summaries": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.17723345940301205,
+          "max_dd": -0.2330656447901197,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.18715461352045715,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.18715461352045715,
+          "avg_bars": 90.0,
+          "final_equity": 8227.66540596988,
+          "sharpe": -2.335241998565614,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 5,
+          "total_return": -0.10496448859905527,
+          "max_dd": -0.12533820667587325,
+          "win_rate": 0.4,
+          "expectancy_pct": -0.011756525486153201,
+          "avg_win_pct": 0.02937739094363523,
+          "avg_loss_pct": -0.03917913643934549,
+          "avg_bars": 11.8,
+          "final_equity": 8950.355114009448,
+          "sharpe": -1.8746181631603038,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 4,
+          "total_return": -0.10068381955940475,
+          "max_dd": -0.10453631043666733,
+          "win_rate": 0.25,
+          "expectancy_pct": -0.0007134263107084202,
+          "avg_win_pct": 0.05701849000764769,
+          "avg_loss_pct": -0.019957398416827126,
+          "avg_bars": 13.25,
+          "final_equity": 8993.161804405952,
+          "sharpe": -1.7063941952044381,
+          "exit_mix": {
+            "max_hold": 2,
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 4,
+          "total_return": -0.10068381955940475,
+          "max_dd": -0.10453631043666733,
+          "win_rate": 0.25,
+          "expectancy_pct": -0.0007134263107084202,
+          "avg_win_pct": 0.05701849000764769,
+          "avg_loss_pct": -0.019957398416827126,
+          "avg_bars": 13.25,
+          "final_equity": 8993.161804405952,
+          "sharpe": -1.7063941952044381,
+          "exit_mix": {
+            "max_hold": 2,
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 5,
+          "total_return": -0.10496448859905527,
+          "max_dd": -0.12533820667587325,
+          "win_rate": 0.4,
+          "expectancy_pct": -0.011756525486153201,
+          "avg_win_pct": 0.02937739094363523,
+          "avg_loss_pct": -0.03917913643934549,
+          "avg_bars": 11.8,
+          "final_equity": 8950.355114009448,
+          "sharpe": -1.8746181631603038,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.11056647043770595,
+          "max_dd": -0.25255918507272257,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.11694373022059024,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.11694373022059024,
+          "avg_bars": 90.0,
+          "final_equity": 8894.335295622941,
+          "sharpe": -0.8123970789543086,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 5,
+          "total_return": -0.12169924312908587,
+          "max_dd": -0.17183373925002354,
+          "win_rate": 0.6,
+          "expectancy_pct": -0.003738807179414505,
+          "avg_win_pct": 0.03810987789943898,
+          "avg_loss_pct": -0.06651183479769474,
+          "avg_bars": 11.8,
+          "final_equity": 8783.007568709141,
+          "sharpe": -1.419115944029691,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "max_hold": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 2,
+          "total_return": -0.07530269073717899,
+          "max_dd": -0.09890703961617076,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.013096777544829796,
+          "avg_win_pct": 0.01090437801640276,
+          "avg_loss_pct": -0.03709793310606235,
+          "avg_bars": 9.0,
+          "final_equity": 9246.97309262821,
+          "sharpe": -2.130658580828773,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 2,
+          "total_return": -0.07530269073717899,
+          "max_dd": -0.09890703961617076,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.013096777544829796,
+          "avg_win_pct": 0.01090437801640276,
+          "avg_loss_pct": -0.03709793310606235,
+          "avg_bars": 9.0,
+          "final_equity": 9246.97309262821,
+          "sharpe": -2.130658580828773,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 5,
+          "total_return": -0.12169924312908587,
+          "max_dd": -0.17183373925002354,
+          "win_rate": 0.6,
+          "expectancy_pct": -0.003738807179414505,
+          "avg_win_pct": 0.03810987789943898,
+          "avg_loss_pct": -0.06651183479769474,
+          "avg_bars": 11.8,
+          "final_equity": 8783.007568709141,
+          "sharpe": -1.419115944029691,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "max_hold": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.10803358962319509,
+          "max_dd": -0.273769780041926,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.11427620612747968,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.11427620612747968,
+          "avg_bars": 90.0,
+          "final_equity": 8919.66410376805,
+          "sharpe": -0.7285048277362729,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 5,
+          "total_return": -0.19669534445652015,
+          "max_dd": -0.2504170867064216,
+          "win_rate": 0.2,
+          "expectancy_pct": -0.032899642381585915,
+          "avg_win_pct": 0.04991819699499189,
+          "avg_loss_pct": -0.053604102225730366,
+          "avg_bars": 10.8,
+          "final_equity": 8033.046555434798,
+          "sharpe": -2.8357972593934595,
+          "exit_mix": {
+            "sl_3pct": 4,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 3,
+          "total_return": -0.14468971294191013,
+          "max_dd": -0.1943275126174383,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.0170241480783746,
+          "avg_win_pct": 0.026196083763938005,
+          "avg_loss_pct": -0.038634263999530905,
+          "avg_bars": 12.666666666666666,
+          "final_equity": 8553.102870580899,
+          "sharpe": -2.544818735792428,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 3,
+          "total_return": -0.14468971294191013,
+          "max_dd": -0.1943275126174383,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.0170241480783746,
+          "avg_win_pct": 0.026196083763938005,
+          "avg_loss_pct": -0.038634263999530905,
+          "avg_bars": 12.666666666666666,
+          "final_equity": 8553.102870580899,
+          "sharpe": -2.544818735792428,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 5,
+          "total_return": -0.19669534445652015,
+          "max_dd": -0.2504170867064216,
+          "win_rate": 0.2,
+          "expectancy_pct": -0.032899642381585915,
+          "avg_win_pct": 0.04991819699499189,
+          "avg_loss_pct": -0.053604102225730366,
+          "avg_bars": 10.8,
+          "final_equity": 8033.046555434798,
+          "sharpe": -2.8357972593934595,
+          "exit_mix": {
+            "sl_3pct": 4,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.00156766398158803,
+          "max_dd": -0.24955228530739837,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.0021507479861909698,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.0021507479861909698,
+          "avg_bars": 90.0,
+          "final_equity": 9984.32336018412,
+          "sharpe": 0.22841309749519773,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 5,
+          "total_return": -0.017946490061959253,
+          "max_dd": -0.19416333538409558,
+          "win_rate": 0.4,
+          "expectancy_pct": 0.02223077402644289,
+          "avg_win_pct": 0.13785733825452717,
+          "avg_loss_pct": -0.0548536021256133,
+          "avg_bars": 11.8,
+          "final_equity": 9820.535099380408,
+          "sharpe": 0.013724553013990233,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 3,
+          "total_return": 0.09015581343843393,
+          "max_dd": -0.12291148374699723,
+          "win_rate": 0.6666666666666666,
+          "expectancy_pct": 0.07124947913323816,
+          "avg_win_pct": 0.1303891784236777,
+          "avg_loss_pct": -0.0470299194476409,
+          "avg_bars": 15.333333333333334,
+          "final_equity": 10901.558134384339,
+          "sharpe": 1.2218380916365894,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 3,
+          "total_return": 0.09015581343843393,
+          "max_dd": -0.12291148374699723,
+          "win_rate": 0.6666666666666666,
+          "expectancy_pct": 0.07124947913323816,
+          "avg_win_pct": 0.1303891784236777,
+          "avg_loss_pct": -0.0470299194476409,
+          "avg_bars": 15.333333333333334,
+          "final_equity": 10901.558134384339,
+          "sharpe": 1.2218380916365894,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 5,
+          "total_return": -0.017946490061959253,
+          "max_dd": -0.19416333538409558,
+          "win_rate": 0.4,
+          "expectancy_pct": 0.02223077402644289,
+          "avg_win_pct": 0.13785733825452717,
+          "avg_loss_pct": -0.0548536021256133,
+          "avg_bars": 11.8,
+          "final_equity": 9820.535099380408,
+          "sharpe": 0.013724553013990233,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.27923652883569094,
+          "max_dd": -0.35772132298194126,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.2945799782372144,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.2945799782372144,
+          "avg_bars": 90.0,
+          "final_equity": 7207.634711643091,
+          "sharpe": -2.132650555132754,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 6,
+          "total_return": -0.19277248796114976,
+          "max_dd": -0.24722028513092642,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.02736256400202543,
+          "avg_win_pct": 0.016611613693412575,
+          "avg_loss_pct": -0.049349652849744435,
+          "avg_bars": 10.0,
+          "final_equity": 8072.275120388502,
+          "sharpe": -2.014552386853228,
+          "exit_mix": {
+            "sl_3pct": 4,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 6
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 3,
+          "total_return": -0.15641722746618247,
+          "max_dd": -0.19079259674265037,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.022051655415465166,
+          "avg_win_pct": 0.008485305551236277,
+          "avg_loss_pct": -0.03732013589881589,
+          "avg_bars": 12.333333333333334,
+          "final_equity": 8435.827725338175,
+          "sharpe": -2.048247649819931,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 3,
+          "total_return": -0.15641722746618247,
+          "max_dd": -0.19079259674265037,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.022051655415465166,
+          "avg_win_pct": 0.008485305551236277,
+          "avg_loss_pct": -0.03732013589881589,
+          "avg_bars": 12.333333333333334,
+          "final_equity": 8435.827725338175,
+          "sharpe": -2.048247649819931,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 6,
+          "total_return": -0.19277248796114976,
+          "max_dd": -0.24722028513092642,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.02736256400202543,
+          "avg_win_pct": 0.016611613693412575,
+          "avg_loss_pct": -0.049349652849744435,
+          "avg_bars": 10.0,
+          "final_equity": 8072.275120388502,
+          "sharpe": -2.014552386853228,
+          "exit_mix": {
+            "sl_3pct": 4,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 6
+          }
+        }
+      ],
+      "n_trade_rows": 87,
+      "decision": {
+        "fib_as_add_on_vs_base": {
+          "delta_ret_pp": 4.9428083388305595,
+          "delta_dd_pp": 5.549954199748328,
+          "base_n": 26,
+          "fib_and_n": 15,
+          "edge_class": "EDGE_VS_BAGS_ONLY"
+        },
+        "fib_as_rsi_replacement": {
+          "delta_ret_pp_vs_base": 4.9428083388305595,
+          "edge_class": "EDGE_VS_BAGS_ONLY"
+        }
+      },
+      "plain_english": {
+        "add_on_gate": "weak_positive_add_on \u2014 slightly better ret + not worse DD; observe-only, no live",
+        "rsi_replacement": "unexpected: FIB_ONLY \u2265 BASE on this window \u2014 still not a live swap without long WF",
+        "note": "Shadow/offline only. No regime detector swap. No live config."
+      },
+      "trades_sample": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.18715461352045715,
+          "bars_held": 90,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04093936511910523,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6843648855792809,
+          "entry_rsi": 46.49714490860281
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-27 00:00:00+00:00",
+          "exit_time": "2026-06-01 00:00:00+00:00",
+          "entry_price": 74315.98,
+          "exit_price": 71314.42,
+          "pnl_pct": -0.04138915990881098,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.9855965607199423,
+          "entry_rsi": 38.00214157240729
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-07-23 00:00:00+00:00",
+          "entry_price": 61484.02,
+          "exit_price": 65051.23,
+          "pnl_pct": 0.05701849000764769,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6054585736058959,
+          "entry_rsi": 43.84711034038745
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-23 00:00:00+00:00",
+          "exit_time": "2026-07-31 00:00:00+00:00",
+          "entry_price": 65051.23,
+          "exit_price": 62825.9,
+          "pnl_pct": -0.03520888429012026,
+          "bars_held": 8,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.32505953662109627,
+          "entry_rsi": 53.95887153569306
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-31 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62825.9,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0017362918796227653,
+          "bars_held": 15,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7921922270227427,
+          "entry_rsi": 44.1707067185968
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04093936511910523,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6843648855792809,
+          "entry_rsi": 46.49714490860281
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-07-23 00:00:00+00:00",
+          "entry_price": 61484.02,
+          "exit_price": 65051.23,
+          "pnl_pct": 0.05701849000764769,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6054585736058959,
+          "entry_rsi": 43.84711034038745
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-07-24 00:00:00+00:00",
+          "exit_time": "2026-08-14 00:00:00+00:00",
+          "entry_price": 64083.32,
+          "exit_price": 62975.19,
+          "pnl_pct": -0.018292019202500676,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5006441720494539,
+          "entry_rsi": 49.55030320417637
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-08-14 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62975.19,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.0006408109288754673,
+          "bars_held": 1,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7810240696712976,
+          "entry_rsi": 42.79487664194741
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04093936511910523,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6843648855792809,
+          "entry_rsi": 46.49714490860281
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-07-23 00:00:00+00:00",
+          "entry_price": 61484.02,
+          "exit_price": 65051.23,
+          "pnl_pct": 0.05701849000764769,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6054585736058959,
+          "entry_rsi": 43.84711034038745
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-07-24 00:00:00+00:00",
+          "exit_time": "2026-08-14 00:00:00+00:00",
+          "entry_price": 64083.32,
+          "exit_price": 62975.19,
+          "pnl_pct": -0.018292019202500676,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5006441720494539,
+          "entry_rsi": 49.55030320417637
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-08-14 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62975.19,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.0006408109288754673,
+          "bars_held": 1,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7810240696712976,
+          "entry_rsi": 42.79487664194741
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04093936511910523,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6843648855792809,
+          "entry_rsi": 46.49714490860281
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-05-27 00:00:00+00:00",
+          "exit_time": "2026-06-01 00:00:00+00:00",
+          "entry_price": 74315.98,
+          "exit_price": 71314.42,
+          "pnl_pct": -0.04138915990881098,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.9855965607199423,
+          "entry_rsi": 38.00214157240729
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-07-23 00:00:00+00:00",
+          "entry_price": 61484.02,
+          "exit_price": 65051.23,
+          "pnl_pct": 0.05701849000764769,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6054585736058959,
+          "entry_rsi": 43.84711034038745
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-07-23 00:00:00+00:00",
+          "exit_time": "2026-07-31 00:00:00+00:00",
+          "entry_price": 65051.23,
+          "exit_price": 62825.9,
+          "pnl_pct": -0.03520888429012026,
+          "bars_held": 8,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.32505953662109627,
+          "entry_rsi": 53.95887153569306
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-07-31 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62825.9,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0017362918796227653,
+          "bars_held": 15,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7921922270227427,
+          "entry_rsi": 44.1707067185968
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 2129.74,
+          "exit_price": 1882.81,
+          "pnl_pct": -0.11694373022059024,
+          "bars_held": 90,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-22 00:00:00+00:00",
+          "entry_price": 2129.74,
+          "exit_price": 2063.39,
+          "pnl_pct": -0.032154037582052264,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.1222730739893227,
+          "entry_rsi": 35.22626240945554
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-22 00:00:00+00:00",
+          "exit_time": "2026-06-02 00:00:00+00:00",
+          "entry_price": 2063.39,
+          "exit_price": 1857.32,
+          "pnl_pct": -0.10086963201333721,
+          "bars_held": 11,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.0374280782508638,
+          "entry_rsi": 31.514905572863356
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-07-23 00:00:00+00:00",
+          "entry_price": 1698.63,
+          "exit_price": 1876.91,
+          "pnl_pct": 0.10395516975444907,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.44261568465220713,
+          "entry_rsi": 49.93081886003103
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-24 00:00:00+00:00",
+          "exit_time": "2026-08-14 00:00:00+00:00",
+          "entry_price": 1859.77,
+          "exit_price": 1880.41,
+          "pnl_pct": 0.01009814654500285,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.39237301976155464,
+          "entry_rsi": 54.5278770655726
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-14 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1880.41,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.00027631739886502336,
+          "bars_held": 1,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6206093415586049,
+          "entry_rsi": 50.95371494089993
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-05-24 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 2097.35,
+          "exit_price": 2021.64,
+          "pnl_pct": -0.03709793310606235,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.782657657657658,
+          "entry_rsi": 37.35944812888255
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_FIB_AND",
+          "entry_time": "2026-07-31 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1860.66,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.01090437801640276,
+          "bars_held": 15,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5124052825286854,
+          "entry_rsi": 50.64740140360509
+        },
+        {
+          "pair": "eth",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-05-24 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 2097.35,
+          "exit_price": 2021.64,
+          "pnl_pct": -0.03709793310606235,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.782657657657658,
+          "entry_rsi": 37.35944812888255
+        },
+        {
+          "pair": "eth",
+          "arm": "FIB_ONLY",
+          "entry_time": "2026-07-31 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1860.66,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.01090437801640276,
+          "bars_held": 15,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5124052825286854,
+          "entry_rsi": 50.64740140360509
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-22 00:00:00+00:00",
+          "entry_price": 2129.74,
+          "exit_price": 2063.39,
+          "pnl_pct": -0.032154037582052264,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.1222730739893227,
+          "entry_rsi": 35.22626240945554
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-05-22 00:00:00+00:00",
+          "exit_time": "2026-06-02 00:00:00+00:00",
+          "entry_price": 2063.39,
+          "exit_price": 1857.32,
+          "pnl_pct": -0.10086963201333721,
+          "bars_held": 11,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.0374280782508638,
+          "entry_rsi": 31.514905572863356
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-07-23 00:00:00+00:00",
+          "entry_price": 1698.63,
+          "exit_price": 1876.91,
+          "pnl_pct": 0.10395516975444907,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.44261568465220713,
+          "entry_rsi": 49.93081886003103
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-07-24 00:00:00+00:00",
+          "exit_time": "2026-08-14 00:00:00+00:00",
+          "entry_price": 1859.77,
+          "exit_price": 1880.41,
+          "pnl_pct": 0.01009814654500285,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.39237301976155464,
+          "entry_rsi": 54.5278770655726
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "entry_time": "2026-08-14 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1880.41,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.00027631739886502336,
+          "bars_held": 1,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6206093415586049,
+          "entry_rsi": 50.95371494089993
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 85.19,
+          "exit_price": 75.54,
+          "pnl_pct": -0.11427620612747968,
+          "bars_held": 90,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 85.19,
+          "exit_price": 82.3,
+          "pnl_pct": -0.03492416950346289,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7746478873239435,
+          "entry_rsi": 43.197324426537925
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-27 00:00:00+00:00",
+          "exit_time": "2026-06-02 00:00:00+00:00",
+          "entry_price": 82.3,
+          "exit_price": 74.12,
+          "pnl_pct": -0.10039246658566214,
+          "bars_held": 6,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.9420374707259956,
+          "entry_rsi": 39.21425063357732
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-08 00:00:00+00:00",
+          "exit_time": "2026-07-13 00:00:00+00:00",
+          "entry_price": 77.76,
+          "exit_price": 74.91,
+          "pnl_pct": -0.037651234567901315,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.3079619429143711,
+          "entry_rsi": 53.95736540672956
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-13 00:00:00+00:00",
+          "exit_time": "2026-08-01 00:00:00+00:00",
+          "entry_price": 74.91,
+          "exit_price": 71.88,
+          "pnl_pct": -0.04144853824589512,
+          "bars_held": 19,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.4506760140210316,
+          "entry_rsi": 46.62501993053431
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 71.88,
+          "exit_price": 75.54,
+          "pnl_pct": 0.04991819699499189,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_fib_ret": 1.0535714285714286,
+          "entry_rsi": 39.71730708867494
+        }
+      ]
+    },
+    {
+      "window": "long_tape",
+      "start": "2021-01-01",
+      "end": "2026-08-15",
+      "portfolio": {
+        "BH": {
+          "arm": "BH",
+          "n_pairs": 5,
+          "mean_return": 0.48246062750427043,
+          "median_return": 0.8774425095541403,
+          "mean_max_dd": -0.863074303718868,
+          "worst_dd": -0.9551170078803349,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.5076075959077122,
+          "mean_win_rate": 0.6,
+          "pairs": {
+            "btc": {
+              "ret": 1.0837374949256855,
+              "dd": -0.7495218203270689,
+              "n": 1
+            },
+            "eth": {
+              "ret": 1.4956903175830036,
+              "dd": -0.7872064117482503,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.8774425095541403,
+              "dd": -0.9551170078803349,
+              "n": 1
+            },
+            "link": {
+              "ret": -0.1869441709044326,
+              "dd": -0.8912755620202565,
+              "n": 1
+            },
+            "avax": {
+              "ret": -0.8576230136370449,
+              "dd": -0.9322507166184296,
+              "n": 1
+            }
+          }
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.8900691473876325,
+          "median_return": -0.9157160087948316,
+          "mean_max_dd": -0.9754858771912438,
+          "worst_dd": -0.9893571264559399,
+          "total_trades": 744,
+          "mean_expectancy_pct": 0.015604550995826905,
+          "mean_win_rate": 0.26959640384660505,
+          "pairs": {
+            "btc": {
+              "ret": -0.9514981014445077,
+              "dd": -0.968930983131265,
+              "n": 134
+            },
+            "eth": {
+              "ret": -0.8640316899716878,
+              "dd": -0.9660582375517955,
+              "n": 146
+            },
+            "sol": {
+              "ret": -0.7409644926082273,
+              "dd": -0.9668534153338583,
+              "n": 143
+            },
+            "link": {
+              "ret": -0.9157160087948316,
+              "dd": -0.9862296234833602,
+              "n": 174
+            },
+            "avax": {
+              "ret": -0.9781354441189085,
+              "dd": -0.9893571264559399,
+              "n": 147
+            }
+          }
+        },
+        "RSI_FIB_AND": {
+          "arm": "RSI_FIB_AND",
+          "n_pairs": 5,
+          "mean_return": -0.9698482054212867,
+          "median_return": -0.9777665710063048,
+          "mean_max_dd": -0.9867308256958388,
+          "worst_dd": -0.9983225324931139,
+          "total_trades": 504,
+          "mean_expectancy_pct": 0.012437143514369241,
+          "mean_win_rate": 0.25210653155019913,
+          "pairs": {
+            "btc": {
+              "ret": -0.9499975252784232,
+              "dd": -0.9758145869788493,
+              "n": 92
+            },
+            "eth": {
+              "ret": -0.9335747559185162,
+              "dd": -0.9755465521559848,
+              "n": 98
+            },
+            "sol": {
+              "ret": -0.9777665710063048,
+              "dd": -0.9876544627173383,
+              "n": 107
+            },
+            "link": {
+              "ret": -0.9953359890449568,
+              "dd": -0.9983225324931139,
+              "n": 114
+            },
+            "avax": {
+              "ret": -0.992566185858232,
+              "dd": -0.9963159941339077,
+              "n": 93
+            }
+          }
+        },
+        "FIB_ONLY": {
+          "arm": "FIB_ONLY",
+          "n_pairs": 5,
+          "mean_return": -0.9711598089561415,
+          "median_return": -0.9828266442955341,
+          "mean_max_dd": -0.9874219373165898,
+          "worst_dd": -0.9983225324931139,
+          "total_trades": 508,
+          "mean_expectancy_pct": 0.011606181489740193,
+          "mean_win_rate": 0.25052747502428596,
+          "pairs": {
+            "btc": {
+              "ret": -0.9499975252784232,
+              "dd": -0.9758145869788493,
+              "n": 92
+            },
+            "eth": {
+              "ret": -0.9335747559185162,
+              "dd": -0.9755465521559848,
+              "n": 98
+            },
+            "sol": {
+              "ret": -0.9828266442955341,
+              "dd": -0.9901955989198031,
+              "n": 110
+            },
+            "link": {
+              "ret": -0.9953359890449568,
+              "dd": -0.9983225324931139,
+              "n": 114
+            },
+            "avax": {
+              "ret": -0.9940641302432768,
+              "dd": -0.9972304160351981,
+              "n": 94
+            }
+          }
+        },
+        "RSI_OR_FIB": {
+          "arm": "RSI_OR_FIB",
+          "n_pairs": 5,
+          "mean_return": -0.9006154021255582,
+          "median_return": -0.9157160087948316,
+          "mean_max_dd": -0.9760142192740254,
+          "worst_dd": -0.9919988368698475,
+          "total_trades": 747,
+          "mean_expectancy_pct": 0.015097070159879863,
+          "mean_win_rate": 0.2685581685719166,
+          "pairs": {
+            "btc": {
+              "ret": -0.9514981014445077,
+              "dd": -0.968930983131265,
+              "n": 134
+            },
+            "eth": {
+              "ret": -0.8640316899716878,
+              "dd": -0.9660582375517955,
+              "n": 146
+            },
+            "sol": {
+              "ret": -0.7892899675935865,
+              "dd": -0.9668534153338584,
+              "n": 145
+            },
+            "link": {
+              "ret": -0.9157160087948316,
+              "dd": -0.9862296234833602,
+              "n": 174
+            },
+            "avax": {
+              "ret": -0.9825412428231777,
+              "dd": -0.9919988368698475,
+              "n": 148
+            }
+          }
+        }
+      },
+      "pair_summaries": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 1.0837374949256855,
+          "max_dd": -0.7495218203270689,
+          "win_rate": 1.0,
+          "expectancy_pct": 1.1408472340651228,
+          "avg_win_pct": 1.1408472340651228,
+          "avg_loss_pct": NaN,
+          "avg_bars": 2052.0,
+          "final_equity": 20837.374949256853,
+          "sharpe": 0.5124672543021164,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "bull": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 134,
+          "total_return": -0.9514981014445077,
+          "max_dd": -0.968930983131265,
+          "win_rate": 0.31343283582089554,
+          "expectancy_pct": 0.00870865236589537,
+          "avg_win_pct": 0.14011824177548315,
+          "avg_loss_pct": -0.051282681929786,
+          "avg_bars": 10.537313432835822,
+          "final_equity": 485.0189855549223,
+          "sharpe": -0.9301291622203438,
+          "exit_mix": {
+            "sl_3pct": 88,
+            "max_hold": 41,
+            "rsi_overbought": 4,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 103,
+            "bull": 31
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 92,
+          "total_return": -0.9499975252784232,
+          "max_dd": -0.9758145869788493,
+          "win_rate": 0.32608695652173914,
+          "expectancy_pct": 0.01757827853091942,
+          "avg_win_pct": 0.14897613883001146,
+          "avg_loss_pct": -0.04600133129122189,
+          "avg_bars": 11.23913043478261,
+          "final_equity": 500.02474721576766,
+          "sharpe": -1.1247386556678232,
+          "exit_mix": {
+            "sl_3pct": 58,
+            "max_hold": 30,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 83,
+            "bull": 9
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 92,
+          "total_return": -0.9499975252784232,
+          "max_dd": -0.9758145869788493,
+          "win_rate": 0.32608695652173914,
+          "expectancy_pct": 0.01757827853091942,
+          "avg_win_pct": 0.14897613883001146,
+          "avg_loss_pct": -0.04600133129122189,
+          "avg_bars": 11.23913043478261,
+          "final_equity": 500.02474721576766,
+          "sharpe": -1.1247386556678232,
+          "exit_mix": {
+            "sl_3pct": 58,
+            "max_hold": 30,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 83,
+            "bull": 9
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 134,
+          "total_return": -0.9514981014445077,
+          "max_dd": -0.968930983131265,
+          "win_rate": 0.31343283582089554,
+          "expectancy_pct": 0.00870865236589537,
+          "avg_win_pct": 0.14011824177548315,
+          "avg_loss_pct": -0.051282681929786,
+          "avg_bars": 10.537313432835822,
+          "final_equity": 485.0189855549223,
+          "sharpe": -0.9301291622203438,
+          "exit_mix": {
+            "sl_3pct": 88,
+            "max_hold": 41,
+            "rsi_overbought": 4,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 103,
+            "bull": 31
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 1.4956903175830036,
+          "max_dd": -0.7872064117482503,
+          "win_rate": 1.0,
+          "expectancy_pct": 1.5746987099686724,
+          "avg_win_pct": 1.5746987099686724,
+          "avg_loss_pct": NaN,
+          "avg_bars": 2052.0,
+          "final_equity": 24956.903175830037,
+          "sharpe": 0.5938855391679763,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "bull": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 146,
+          "total_return": -0.8640316899716878,
+          "max_dd": -0.9660582375517955,
+          "win_rate": 0.3219178082191781,
+          "expectancy_pct": 0.02054007848775622,
+          "avg_win_pct": 0.187740665077896,
+          "avg_loss_pct": -0.058837977772209074,
+          "avg_bars": 9.794520547945206,
+          "final_equity": 1359.6831002831227,
+          "sharpe": -0.2895203755988906,
+          "exit_mix": {
+            "sl_3pct": 97,
+            "max_hold": 43,
+            "rsi_overbought": 5,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 117,
+            "bull": 29
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 98,
+          "total_return": -0.9335747559185162,
+          "max_dd": -0.9755465521559848,
+          "win_rate": 0.2857142857142857,
+          "expectancy_pct": 0.0210194440551445,
+          "avg_win_pct": 0.1996038178192563,
+          "avg_loss_pct": -0.05041430545050021,
+          "avg_bars": 9.877551020408163,
+          "final_equity": 664.2524408148379,
+          "sharpe": -0.8344943904807143,
+          "exit_mix": {
+            "sl_3pct": 66,
+            "max_hold": 29,
+            "rsi_overbought": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 88,
+            "bull": 10
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 98,
+          "total_return": -0.9335747559185162,
+          "max_dd": -0.9755465521559848,
+          "win_rate": 0.2857142857142857,
+          "expectancy_pct": 0.0210194440551445,
+          "avg_win_pct": 0.1996038178192563,
+          "avg_loss_pct": -0.05041430545050021,
+          "avg_bars": 9.877551020408163,
+          "final_equity": 664.2524408148379,
+          "sharpe": -0.8344943904807143,
+          "exit_mix": {
+            "sl_3pct": 66,
+            "max_hold": 29,
+            "rsi_overbought": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 88,
+            "bull": 10
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 146,
+          "total_return": -0.8640316899716878,
+          "max_dd": -0.9660582375517955,
+          "win_rate": 0.3219178082191781,
+          "expectancy_pct": 0.02054007848775622,
+          "avg_win_pct": 0.187740665077896,
+          "avg_loss_pct": -0.058837977772209074,
+          "avg_bars": 9.794520547945206,
+          "final_equity": 1359.6831002831227,
+          "sharpe": -0.2895203755988906,
+          "exit_mix": {
+            "sl_3pct": 97,
+            "max_hold": 43,
+            "rsi_overbought": 5,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 117,
+            "bull": 29
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": 0.8774425095541403,
+          "max_dd": -0.9551170078803349,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.9235859872611466,
+          "avg_win_pct": 0.9235859872611466,
+          "avg_loss_pct": NaN,
+          "avg_bars": 1885.0,
+          "final_equity": 18774.425095541403,
+          "sharpe": 0.5999622244773021,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "transition": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 143,
+          "total_return": -0.7409644926082273,
+          "max_dd": -0.9668534153338583,
+          "win_rate": 0.27972027972027974,
+          "expectancy_pct": 0.027708367367113792,
+          "avg_win_pct": 0.2717103715563451,
+          "avg_loss_pct": -0.0670496925121993,
+          "avg_bars": 8.951048951048952,
+          "final_equity": 2590.355073917727,
+          "sharpe": 0.020541984603371432,
+          "exit_mix": {
+            "sl_3pct": 102,
+            "max_hold": 33,
+            "rsi_overbought": 7,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 116,
+            "bull": 27
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 107,
+          "total_return": -0.9777665710063048,
+          "max_dd": -0.9876544627173383,
+          "win_rate": 0.205607476635514,
+          "expectancy_pct": 0.020962110453856264,
+          "avg_win_pct": 0.3258979635934076,
+          "avg_loss_pct": -0.05796246329990999,
+          "avg_bars": 7.700934579439252,
+          "final_equity": 222.3342899369515,
+          "sharpe": -1.009366989449397,
+          "exit_mix": {
+            "sl_3pct": 84,
+            "max_hold": 19,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 98,
+            "bull": 9
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 110,
+          "total_return": -0.9828266442955341,
+          "max_dd": -0.9901955989198031,
+          "win_rate": 0.2,
+          "expectancy_pct": 0.018525886361007847,
+          "avg_win_pct": 0.3258979635934076,
+          "avg_loss_pct": -0.058317132947092114,
+          "avg_bars": 7.545454545454546,
+          "final_equity": 171.7335570446585,
+          "sharpe": -1.0715074402904585,
+          "exit_mix": {
+            "sl_3pct": 87,
+            "max_hold": 19,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 101,
+            "bull": 9
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 145,
+          "total_return": -0.7892899675935865,
+          "max_dd": -0.9668534153338584,
+          "win_rate": 0.27586206896551724,
+          "expectancy_pct": 0.02628150593975945,
+          "avg_win_pct": 0.2717103715563451,
+          "avg_loss_pct": -0.0672152047713208,
+          "avg_bars": 8.862068965517242,
+          "final_equity": 2107.1003240641344,
+          "sharpe": -0.026532035410628093,
+          "exit_mix": {
+            "sl_3pct": 104,
+            "max_hold": 33,
+            "rsi_overbought": 7,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 118,
+            "bull": 27
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.1869441709044326,
+          "max_dd": -0.8912755620202565,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.19738152855841884,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.19738152855841884,
+          "avg_bars": 2052.0,
+          "final_equity": 8130.558290955674,
+          "sharpe": 0.4330938912580775,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "bull": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 174,
+          "total_return": -0.9157160087948316,
+          "max_dd": -0.9862296234833602,
+          "win_rate": 0.23563218390804597,
+          "expectancy_pct": 0.01634222717333329,
+          "avg_win_pct": 0.2706553005683668,
+          "avg_loss_pct": -0.06205503605370711,
+          "avg_bars": 8.477011494252874,
+          "final_equity": 842.8399120516834,
+          "sharpe": -0.18046042263418605,
+          "exit_mix": {
+            "sl_3pct": 130,
+            "max_hold": 40,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 134,
+            "bull": 40
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 114,
+          "total_return": -0.9953359890449568,
+          "max_dd": -0.9983225324931139,
+          "win_rate": 0.22807017543859648,
+          "expectancy_pct": 0.0007156954513570732,
+          "avg_win_pct": 0.20538548937733037,
+          "avg_loss_pct": -0.05975492548131685,
+          "avg_bars": 8.43859649122807,
+          "final_equity": 46.64010955043167,
+          "sharpe": -1.2884700657770773,
+          "exit_mix": {
+            "sl_3pct": 86,
+            "max_hold": 26,
+            "rsi_overbought": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 97,
+            "bull": 17
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 114,
+          "total_return": -0.9953359890449568,
+          "max_dd": -0.9983225324931139,
+          "win_rate": 0.22807017543859648,
+          "expectancy_pct": 0.0007156954513570732,
+          "avg_win_pct": 0.20538548937733037,
+          "avg_loss_pct": -0.05975492548131685,
+          "avg_bars": 8.43859649122807,
+          "final_equity": 46.64010955043167,
+          "sharpe": -1.2884700657770773,
+          "exit_mix": {
+            "sl_3pct": 86,
+            "max_hold": 26,
+            "rsi_overbought": 1,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 97,
+            "bull": 17
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 174,
+          "total_return": -0.9157160087948316,
+          "max_dd": -0.9862296234833602,
+          "win_rate": 0.23563218390804597,
+          "expectancy_pct": 0.01634222717333329,
+          "avg_win_pct": 0.2706553005683668,
+          "avg_loss_pct": -0.06205503605370711,
+          "avg_bars": 8.477011494252874,
+          "final_equity": 842.8399120516834,
+          "sharpe": -0.18046042263418605,
+          "exit_mix": {
+            "sl_3pct": 130,
+            "max_hold": 40,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 134,
+            "bull": 40
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "description": "Buy & hold pair",
+          "n_trades": 1,
+          "total_return": -0.8576230136370449,
+          "max_dd": -0.9322507166184296,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.903712423197962,
+          "avg_win_pct": NaN,
+          "avg_loss_pct": -0.903712423197962,
+          "avg_bars": 1780.0,
+          "final_equity": 1423.7698636295518,
+          "sharpe": -0.07049261516144456,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "transition": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like entry surface)",
+          "n_trades": 147,
+          "total_return": -0.9781354441189085,
+          "max_dd": -0.9893571264559399,
+          "win_rate": 0.19727891156462585,
+          "expectancy_pct": 0.004723429585035851,
+          "avg_win_pct": 0.2682336188276643,
+          "avg_loss_pct": -0.06003754912713554,
+          "avg_bars": 8.251700680272108,
+          "final_equity": 218.64555881091485,
+          "sharpe": -0.7374131880547414,
+          "exit_mix": {
+            "sl_3pct": 115,
+            "max_hold": 29,
+            "rsi_overbought": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 124,
+            "bull": 23
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_FIB_AND",
+          "description": "Regime allow + RSI\u2264max + Fib discount [0.5\u20130.786]",
+          "n_trades": 93,
+          "total_return": -0.992566185858232,
+          "max_dd": -0.9963159941339077,
+          "win_rate": 0.21505376344086022,
+          "expectancy_pct": 0.0019101890805689494,
+          "avg_win_pct": 0.2401060118098107,
+          "avg_loss_pct": -0.06334894043429179,
+          "avg_bars": 8.13978494623656,
+          "final_equity": 74.33814141768073,
+          "sharpe": -1.4738897086102265,
+          "exit_mix": {
+            "sl_3pct": 71,
+            "max_hold": 21,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 84,
+            "bull": 9
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "FIB_ONLY",
+          "description": "Regime allow + Fib only (RSI replacement check)",
+          "n_trades": 94,
+          "total_return": -0.9940641302432768,
+          "max_dd": -0.9972304160351981,
+          "win_rate": 0.2127659574468085,
+          "expectancy_pct": 0.00019160305027212334,
+          "avg_win_pct": 0.2401060118098107,
+          "avg_loss_pct": -0.06465012904690046,
+          "avg_bars": 8.117021276595745,
+          "final_equity": 59.35869756723272,
+          "sharpe": -1.5294694098060115,
+          "exit_mix": {
+            "sl_3pct": 72,
+            "max_hold": 21,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 85,
+            "bull": 9
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "RSI_OR_FIB",
+          "description": "Regime allow + (RSI ok OR Fib discount)",
+          "n_trades": 148,
+          "total_return": -0.9825412428231777,
+          "max_dd": -0.9919988368698475,
+          "win_rate": 0.19594594594594594,
+          "expectancy_pct": 0.0036128868326549823,
+          "avg_win_pct": 0.2682336188276643,
+          "avg_loss_pct": -0.06087451844343972,
+          "avg_bars": 8.236486486486486,
+          "final_equity": 174.5875717682236,
+          "sharpe": -0.7900804681871334,
+          "exit_mix": {
+            "sl_3pct": 116,
+            "max_hold": 29,
+            "rsi_overbought": 2,
+            "eod_flatten": 1
+          },
+          "regime_n": {
+            "flat": 125,
+            "bull": 23
+          }
+        }
+      ],
+      "n_trade_rows": 2508,
+      "decision": {
+        "fib_as_add_on_vs_base": {
+          "delta_ret_pp": -7.977905803365415,
+          "delta_dd_pp": -1.124494850459501,
+          "base_n": 744,
+          "fib_and_n": 504,
+          "edge_class": "unstable_or_no_edge"
+        },
+        "fib_as_rsi_replacement": {
+          "delta_ret_pp_vs_base": -8.109066156850897,
+          "edge_class": "unstable_or_no_edge"
+        }
+      },
+      "plain_english": {
+        "add_on_gate": "no_go_add_on \u2014 Fib AND does not beat RSI-only BASE on this tape",
+        "rsi_replacement": "confirmed: FIB_ONLY is a poor RSI replacement on this tape (as hypothesized)",
+        "note": "Shadow/offline only. No regime detector swap. No live config."
+      },
+      "trades_sample": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "entry_time": "2021-01-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 29412.84,
+          "exit_price": 62997.81,
+          "pnl_pct": 1.1408472340651228,
+          "bars_held": 2052,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "bull",
+          "entry_fib_ret": NaN,
+          "entry_rsi": NaN
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-01-11 00:00:00+00:00",
+          "exit_time": "2021-01-12 00:00:00+00:00",
+          "entry_price": 35452.59,
+          "exit_price": 34038.98,
+          "pnl_pct": -0.04087325044517176,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.3332486667564339,
+          "entry_rsi": 64.4798219432694
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-01-12 00:00:00+00:00",
+          "exit_time": "2021-01-21 00:00:00+00:00",
+          "entry_price": 34038.98,
+          "exit_price": 30855.95,
+          "pnl_pct": -0.09451132143207586,
+          "bars_held": 9,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.4099472980243335,
+          "entry_rsi": 59.453642455650005
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-01-21 00:00:00+00:00",
+          "exit_time": "2021-02-11 00:00:00+00:00",
+          "entry_price": 30855.95,
+          "exit_price": 47997.91,
+          "pnl_pct": 0.55454795752521,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.7778957351536199,
+          "entry_rsi": 43.88138215458916
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-02-22 00:00:00+00:00",
+          "exit_time": "2021-02-23 00:00:00+00:00",
+          "entry_price": 54142.13,
+          "exit_price": 48899.99,
+          "pnl_pct": -0.09782182802929995,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.16955773166914165,
+          "entry_rsi": 68.78510013310051
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-02-23 00:00:00+00:00",
+          "exit_time": "2021-02-25 00:00:00+00:00",
+          "entry_price": 48899.99,
+          "exit_price": 47058.48,
+          "pnl_pct": -0.03865869890770923,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.41208930405864236,
+          "entry_rsi": 55.48488464725542
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-02-25 00:00:00+00:00",
+          "exit_time": "2021-02-28 00:00:00+00:00",
+          "entry_price": 47058.48,
+          "exit_price": 45231.75,
+          "pnl_pct": -0.039818295873559895,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.5196660283726074,
+          "entry_rsi": 51.235329546419095
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-02-28 00:00:00+00:00",
+          "exit_time": "2021-03-21 00:00:00+00:00",
+          "entry_price": 45231.75,
+          "exit_price": 57363.32,
+          "pnl_pct": 0.26720916723319343,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.6467383785024021,
+          "entry_rsi": 47.44685139382248
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-03-22 00:00:00+00:00",
+          "exit_time": "2021-03-24 00:00:00+00:00",
+          "entry_price": 54110.07,
+          "exit_price": 52276.16,
+          "pnl_pct": -0.03489221266947162,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.49317977305090255,
+          "entry_rsi": 50.32044108949188
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-03-24 00:00:00+00:00",
+          "exit_time": "2021-04-14 00:00:00+00:00",
+          "entry_price": 52276.16,
+          "exit_price": 62971.8,
+          "pnl_pct": 0.2035988075635241,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6109711974914459,
+          "entry_rsi": 46.14761382649654
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-17 00:00:00+00:00",
+          "exit_time": "2021-04-18 00:00:00+00:00",
+          "entry_price": 60058.86,
+          "exit_price": 56274.41,
+          "pnl_pct": -0.06401235154979623,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.4746165914885271,
+          "entry_rsi": 54.294566451800634
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-18 00:00:00+00:00",
+          "exit_time": "2021-04-21 00:00:00+00:00",
+          "entry_price": 56274.41,
+          "exit_price": 53800.86,
+          "pnl_pct": -0.04495514764170794,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8625452545254522,
+          "entry_rsi": 44.06266345294509
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-21 00:00:00+00:00",
+          "exit_time": "2021-04-22 00:00:00+00:00",
+          "entry_price": 53800.86,
+          "exit_price": 51701.59,
+          "pnl_pct": -0.0400192647478127,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8160997132142069,
+          "entry_rsi": 39.109533372551354
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-22 00:00:00+00:00",
+          "exit_time": "2021-04-24 00:00:00+00:00",
+          "entry_price": 51701.59,
+          "exit_price": 50089.15,
+          "pnl_pct": -0.03218743543477087,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.9704691521435402,
+          "entry_rsi": 35.14125798950266
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-24 00:00:00+00:00",
+          "exit_time": "2021-05-15 00:00:00+00:00",
+          "entry_price": 50089.15,
+          "exit_price": 46775.51,
+          "pnl_pct": -0.06715484590974297,
+          "bars_held": 21,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8494638457986675,
+          "entry_rsi": 32.289239270643534
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-06-18 00:00:00+00:00",
+          "exit_time": "2021-06-21 00:00:00+00:00",
+          "entry_price": 35841.81,
+          "exit_price": 31609.82,
+          "pnl_pct": -0.1190741151186282,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5312029929440959,
+          "entry_rsi": 42.83026018101604
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-06-22 00:00:00+00:00",
+          "exit_time": "2021-07-13 00:00:00+00:00",
+          "entry_price": 32538.37,
+          "exit_price": 32734.14,
+          "pnl_pct": 0.005016589030120478,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8513782274947664,
+          "entry_rsi": 37.63421822656877
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-07-21 00:00:00+00:00",
+          "exit_time": "2021-08-11 00:00:00+00:00",
+          "entry_price": 32135.19,
+          "exit_price": 45553.49,
+          "pnl_pct": 0.4165578236817645,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5738543396135618,
+          "entry_rsi": 45.77566197934742
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-08-11 00:00:00+00:00",
+          "exit_time": "2021-09-01 00:00:00+00:00",
+          "entry_price": 45553.49,
+          "exit_price": 48839.86,
+          "pnl_pct": 0.07114310034203741,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.07772157269847567,
+          "entry_rsi": 69.3615209317071
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-01 00:00:00+00:00",
+          "exit_time": "2021-09-07 00:00:00+00:00",
+          "entry_price": 48839.86,
+          "exit_price": 46894.5,
+          "pnl_pct": -0.04083140000810814,
+          "bars_held": 6,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.24521105521718123,
+          "entry_rsi": 58.92853542853903
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-07 00:00:00+00:00",
+          "exit_time": "2021-09-10 00:00:00+00:00",
+          "entry_price": 46894.5,
+          "exit_price": 44851.45,
+          "pnl_pct": -0.0445669428184543,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6677416036794268,
+          "entry_rsi": 48.11270954513243
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-10 00:00:00+00:00",
+          "exit_time": "2021-09-20 00:00:00+00:00",
+          "entry_price": 44851.45,
+          "exit_price": 43012.97,
+          "pnl_pct": -0.041990425058721526,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8002133636010398,
+          "entry_rsi": 43.00944515804796
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-23 00:00:00+00:00",
+          "exit_time": "2021-09-24 00:00:00+00:00",
+          "entry_price": 44897.59,
+          "exit_price": 42848.92,
+          "pnl_pct": -0.046629843383575786,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6030269105340146,
+          "entry_rsi": 46.89526824499532
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-30 00:00:00+00:00",
+          "exit_time": "2021-10-21 00:00:00+00:00",
+          "entry_price": 43824.43,
+          "exit_price": 62204.02,
+          "pnl_pct": 0.41839142163400644,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.542097983658551,
+          "entry_rsi": 47.6945383632117
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-10-21 00:00:00+00:00",
+          "exit_time": "2021-10-26 00:00:00+00:00",
+          "entry_price": 62204.02,
+          "exit_price": 60337.62,
+          "pnl_pct": -0.031004491671116963,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.20222119506266156,
+          "entry_rsi": 65.24415073652267
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-10-26 00:00:00+00:00",
+          "exit_time": "2021-10-27 00:00:00+00:00",
+          "entry_price": 60337.62,
+          "exit_price": 58455.47,
+          "pnl_pct": -0.03219364005408232,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.401699572875579,
+          "entry_rsi": 56.944474883162144
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-10-27 00:00:00+00:00",
+          "exit_time": "2021-11-17 00:00:00+00:00",
+          "entry_price": 58455.47,
+          "exit_price": 60351.51,
+          "pnl_pct": 0.031435630061652176,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "bull",
+          "entry_fib_ret": 0.6272782672540381,
+          "entry_rsi": 52.28547553750745
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-11-17 00:00:00+00:00",
+          "exit_time": "2021-11-18 00:00:00+00:00",
+          "entry_price": 60351.51,
+          "exit_price": 56898.0,
+          "pnl_pct": -0.058223257545668705,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7622420704170233,
+          "entry_rsi": 45.47797517809704
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-11-20 00:00:00+00:00",
+          "exit_time": "2021-11-22 00:00:00+00:00",
+          "entry_price": 59760.76,
+          "exit_price": 56280.81,
+          "pnl_pct": -0.05923135448745975,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.6907842990654204,
+          "entry_rsi": 46.227830455009574
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-11-23 00:00:00+00:00",
+          "exit_time": "2021-11-26 00:00:00+00:00",
+          "entry_price": 57566.85,
+          "exit_price": 53757.67,
+          "pnl_pct": -0.06716967925116624,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8548149532710282,
+          "entry_rsi": 42.637533752152926
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-11-28 00:00:00+00:00",
+          "exit_time": "2021-12-03 00:00:00+00:00",
+          "entry_price": 57317.17,
+          "exit_price": 53638.04,
+          "pnl_pct": -0.06518896815736008,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7553391090709253,
+          "entry_rsi": 45.84848396382874
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-12-26 00:00:00+00:00",
+          "exit_time": "2021-12-28 00:00:00+00:00",
+          "entry_price": 50801.79,
+          "exit_price": 47543.09,
+          "pnl_pct": -0.06514537755460992,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.18284837748709698,
+          "entry_rsi": 50.49618014898423
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-01-03 00:00:00+00:00",
+          "exit_time": "2022-01-05 00:00:00+00:00",
+          "entry_price": 46459.56,
+          "exit_price": 43436.04,
+          "pnl_pct": -0.06607853281434428,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.8506578510801308,
+          "entry_rsi": 40.35822051073362
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-01-12 00:00:00+00:00",
+          "exit_time": "2022-01-13 00:00:00+00:00",
+          "entry_price": 43920.37,
+          "exit_price": 42581.65,
+          "pnl_pct": -0.03148061753578124,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.656998393574297,
+          "entry_rsi": 41.17705753360001
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-01-16 00:00:00+00:00",
+          "exit_time": "2022-01-19 00:00:00+00:00",
+          "entry_price": 43104.34,
+          "exit_price": 41674.27,
+          "pnl_pct": -0.034176937635514215,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.7225429718875505,
+          "entry_rsi": 39.62191374129342
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-02-11 00:00:00+00:00",
+          "exit_time": "2022-02-17 00:00:00+00:00",
+          "entry_price": 42386.47,
+          "exit_price": 40536.73,
+          "pnl_pct": -0.04463986904311679,
+          "bars_held": 6,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.2684273781949237,
+          "entry_rsi": 54.60333600555307
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-02-17 00:00:00+00:00",
+          "exit_time": "2022-02-20 00:00:00+00:00",
+          "entry_price": 40536.73,
+          "exit_price": 38389.03,
+          "pnl_pct": -0.053981579915301614,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5486983777180753,
+          "entry_rsi": 45.451925120945724
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-02-20 00:00:00+00:00",
+          "exit_time": "2022-02-21 00:00:00+00:00",
+          "entry_price": 38389.03,
+          "exit_price": 37023.0,
+          "pnl_pct": -0.03658386341097963,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.778030198030636,
+          "entry_rsi": 38.76731677118254
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-02-21 00:00:00+00:00",
+          "exit_time": "2022-03-14 00:00:00+00:00",
+          "entry_price": 37023.0,
+          "exit_price": 39674.17,
+          "pnl_pct": 0.07060872970855947,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.9203844522555777,
+          "entry_rsi": 35.07937086268913
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-03-14 00:00:00+00:00",
+          "exit_time": "2022-04-04 00:00:00+00:00",
+          "entry_price": 39674.17,
+          "exit_price": 46596.83,
+          "pnl_pct": 0.1734878342760543,
+          "bars_held": 21,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_fib_ret": 0.5180157504423902,
+          "entry_rsi": 49.32030785065097
+        }
+      ]
+    }
+  ],
+  "overall_recommendation": {
+    "primary_window": "long_tape",
+    "long_tape_add_on": "no_go_add_on \u2014 Fib AND does not beat RSI-only BASE on this tape",
+    "last_14d_context": "inconclusive \u2014 too few trades; need longer tape or lower TF (not promote)",
+    "recommendation_enum": "drop"
+  },
+  "live_writes": false
+}

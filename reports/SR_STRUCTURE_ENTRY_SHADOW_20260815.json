@@ -1,0 +1,3944 @@
+{
+  "generated_at": "2026-08-15T19:28:22.574229+00:00",
+  "hypothesis": "S/R bounce and break+retest as separate structure arms under REGIME-CASH allow",
+  "formal_names": [
+    "support_and_resistance",
+    "market_structure_price_action",
+    "breakout_pullback"
+  ],
+  "knobs": {
+    "swing_n": 3,
+    "zone_atr": 0.35,
+    "sl_pct": 0.03,
+    "pairs": [
+      "btc",
+      "eth",
+      "sol",
+      "link",
+      "avax"
+    ]
+  },
+  "windows": [
+    {
+      "window": "last_14d",
+      "start": "2026-08-01",
+      "end": "2026-08-15",
+      "portfolio": {
+        "BH": {
+          "arm": "BH",
+          "n_pairs": 5,
+          "mean_return": 0.05798763670745788,
+          "median_return": 0.04585077544426497,
+          "mean_max_dd": -0.02939155222241585,
+          "worst_dd": -0.0529398569199494,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.06057040278819181,
+          "mean_win_rate": 1.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.046684213272120356,
+              "dd": -0.017233607241752158,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.04585077544426497,
+              "dd": -0.0529398569199494,
+              "n": 1
+            }
+          }
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "n_pairs": 5,
+          "mean_return": 0.05798763670745788,
+          "median_return": 0.04585077544426497,
+          "mean_max_dd": -0.02939155222241585,
+          "worst_dd": -0.0529398569199494,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.06057040278819181,
+          "mean_win_rate": 1.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.019940627204071193,
+              "dd": -0.021843934105127638,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.046684213272120356,
+              "dd": -0.017233607241752158,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.17440341064120046,
+              "dd": -0.026595198438833734,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.04585077544426497,
+              "dd": -0.0529398569199494,
+              "n": 1
+            }
+          }
+        },
+        "SR_BOUNCE": {
+          "arm": "SR_BOUNCE",
+          "n_pairs": 5,
+          "mean_return": -0.015180364470549,
+          "median_return": 0.0,
+          "mean_max_dd": -0.030315111470736223,
+          "worst_dd": -0.10140939460673748,
+          "total_trades": 4,
+          "mean_expectancy_pct": -0.0026871649296279386,
+          "mean_win_rate": 0.3,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": -0.0007472507765418079,
+              "dd": -0.02182099834052731,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "link": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "avax": {
+              "ret": -0.07821372855183562,
+              "dd": -0.10140939460673748,
+              "n": 2
+            }
+          }
+        },
+        "SR_BOUNCE_RSI": {
+          "arm": "SR_BOUNCE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.015180364470549,
+          "median_return": 0.0,
+          "mean_max_dd": -0.030315111470736223,
+          "worst_dd": -0.10140939460673748,
+          "total_trades": 4,
+          "mean_expectancy_pct": -0.0026871649296279386,
+          "mean_win_rate": 0.3,
+          "pairs": {
+            "btc": {
+              "ret": 0.0030591569756324155,
+              "dd": -0.028345164406416323,
+              "n": 1
+            },
+            "eth": {
+              "ret": -0.0007472507765418079,
+              "dd": -0.02182099834052731,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "link": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "avax": {
+              "ret": -0.07821372855183562,
+              "dd": -0.10140939460673748,
+              "n": 2
+            }
+          }
+        },
+        "SR_BREAK_RETEST": {
+          "arm": "SR_BREAK_RETEST",
+          "n_pairs": 5,
+          "mean_return": -0.001988817084372085,
+          "median_return": 0.0,
+          "mean_max_dd": -0.002287840834536148,
+          "worst_dd": -0.01143920417268074,
+          "total_trades": 2,
+          "mean_expectancy_pct": -0.0023944889122162307,
+          "mean_win_rate": 0.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "eth": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "sol": {
+              "ret": -0.009944085421860427,
+              "dd": -0.01143920417268074,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 1
+            },
+            "avax": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            }
+          }
+        },
+        "SR_BREAK_RSI": {
+          "arm": "SR_BREAK_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.0012706500263435006,
+          "median_return": 0.0,
+          "mean_max_dd": -0.0022189592062014764,
+          "worst_dd": -0.011094796031007381,
+          "total_trades": 1,
+          "mean_expectancy_pct": -0.0014381454162275984,
+          "mean_win_rate": 0.0,
+          "pairs": {
+            "btc": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "eth": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "sol": {
+              "ret": -0.006353250131717503,
+              "dd": -0.011094796031007381,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "avax": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            }
+          }
+        }
+      },
+      "decisions": {
+        "BH": {
+          "arm": "BH",
+          "mean_return": 0.05798763670745788,
+          "mean_max_dd": -0.02939155222241585,
+          "total_trades": 5,
+          "delta_vs_bh_pp": 0.0,
+          "delta_vs_base_pp": 0.0,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_14d"
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "mean_return": 0.05798763670745788,
+          "mean_max_dd": -0.02939155222241585,
+          "total_trades": 5,
+          "delta_vs_bh_pp": 0.0,
+          "delta_vs_base_pp": 0.0,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_14d"
+        },
+        "SR_BOUNCE": {
+          "arm": "SR_BOUNCE",
+          "mean_return": -0.015180364470549,
+          "mean_max_dd": -0.030315111470736223,
+          "total_trades": 4,
+          "delta_vs_bh_pp": -7.316800117800688,
+          "delta_vs_base_pp": -7.316800117800688,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_14d"
+        },
+        "SR_BOUNCE_RSI": {
+          "arm": "SR_BOUNCE_RSI",
+          "mean_return": -0.015180364470549,
+          "mean_max_dd": -0.030315111470736223,
+          "total_trades": 4,
+          "delta_vs_bh_pp": -7.316800117800688,
+          "delta_vs_base_pp": -7.316800117800688,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_14d"
+        },
+        "SR_BREAK_RETEST": {
+          "arm": "SR_BREAK_RETEST",
+          "mean_return": -0.001988817084372085,
+          "mean_max_dd": -0.002287840834536148,
+          "total_trades": 2,
+          "delta_vs_bh_pp": -5.9976453791829965,
+          "delta_vs_base_pp": -5.9976453791829965,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_14d"
+        },
+        "SR_BREAK_RSI": {
+          "arm": "SR_BREAK_RSI",
+          "mean_return": -0.0012706500263435006,
+          "mean_max_dd": -0.0022189592062014764,
+          "total_trades": 1,
+          "delta_vs_bh_pp": -5.925828673380138,
+          "delta_vs_base_pp": -5.925828673380138,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_14d"
+        }
+      },
+      "plain_english": {
+        "headline": "Best structure arm `SR_BREAK_RSI` still sparse/inconclusive on last_14d",
+        "enum_hint": "inconclusive",
+        "bounce": "SR_BOUNCE: inconclusive (N=4 trades) \u2014 not promote",
+        "bounce_rsi": "SR_BOUNCE_RSI: inconclusive (N=4 trades) \u2014 not promote",
+        "break": "SR_BREAK_RETEST: inconclusive (N=2 trades) \u2014 not promote",
+        "break_rsi": "SR_BREAK_RSI: inconclusive (N=1 trades) \u2014 not promote",
+        "note": "S/R is entry/exit structure add-on research; not REGIME-CASH replacement. Shadow/offline only."
+      },
+      "pair_summaries": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 1,
+          "total_return": 0.0030591569756324155,
+          "max_dd": -0.028345164406416323,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.0027220262506332258,
+          "avg_bars": 14.0,
+          "final_equity": 10030.591569756325,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 1,
+          "total_return": 0.019940627204071193,
+          "max_dd": -0.021843934105127638,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.020500884341192793,
+          "avg_bars": 14.0,
+          "final_equity": 10199.406272040711,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 1,
+          "total_return": -0.0007472507765418079,
+          "max_dd": -0.02182099834052731,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.001286723126344035,
+          "avg_bars": 13.0,
+          "final_equity": 9992.527492234582,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 1,
+          "total_return": -0.0007472507765418079,
+          "max_dd": -0.02182099834052731,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.001286723126344035,
+          "avg_bars": 13.0,
+          "final_equity": 9992.527492234582,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 0.046684213272120356,
+          "max_dd": -0.017233607241752158,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04866611018363953,
+          "avg_bars": 14.0,
+          "final_equity": 10466.842132721204,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 1,
+          "total_return": 0.046684213272120356,
+          "max_dd": -0.017233607241752158,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04866611018363953,
+          "avg_bars": 14.0,
+          "final_equity": 10466.842132721204,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 1,
+          "total_return": -0.009944085421860427,
+          "max_dd": -0.01143920417268074,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.010972444561081152,
+          "avg_bars": 6.0,
+          "final_equity": 9900.559145781395,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 1,
+          "total_return": -0.006353250131717503,
+          "max_dd": -0.011094796031007381,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.007190727081137992,
+          "avg_bars": 5.0,
+          "final_equity": 9936.467498682825,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "retest": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 1,
+          "total_return": 0.17440341064120046,
+          "max_dd": -0.026595198438833734,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.18317462482946778,
+          "avg_bars": 14.0,
+          "final_equity": 11744.034106412006,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 1,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.001,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 0.04585077544426497,
+          "max_dd": -0.0529398569199494,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04778836833602573,
+          "avg_bars": 14.0,
+          "final_equity": 10458.50775444265,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 1,
+          "total_return": 0.04585077544426497,
+          "max_dd": -0.0529398569199494,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.04778836833602573,
+          "avg_bars": 14.0,
+          "final_equity": 10458.50775444265,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 2,
+          "total_return": -0.07821372855183562,
+          "max_dd": -0.10140939460673748,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.014871127772428883,
+          "avg_bars": 5.5,
+          "final_equity": 9217.862714481644,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 2
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 2,
+          "total_return": -0.07821372855183562,
+          "max_dd": -0.10140939460673748,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.014871127772428883,
+          "avg_bars": 5.5,
+          "final_equity": 9217.862714481644,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 2
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        }
+      ],
+      "n_trade_rows": 21,
+      "trades_sample": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62764.2,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0027220262506332258,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1843.18,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.020500884341192793,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1883.35,
+          "exit_price": 1882.81,
+          "pnl_pct": -0.001286723126344035,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1883.35,
+          "exit_price": 1882.81,
+          "pnl_pct": -0.001286723126344035,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 71.88,
+          "exit_price": 75.45,
+          "pnl_pct": 0.04866611018363953,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 71.88,
+          "exit_price": 75.45,
+          "pnl_pct": 0.04866611018363953,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RETEST",
+          "entry_time": "2026-08-09 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 76.21,
+          "exit_price": 75.45,
+          "pnl_pct": -0.010972444561081152,
+          "bars_held": 6,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "break"
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RSI",
+          "entry_time": "2026-08-10 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 75.92,
+          "exit_price": 75.45,
+          "pnl_pct": -0.007190727081137992,
+          "bars_held": 5,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "retest"
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 8.063,
+          "exit_price": 9.548,
+          "pnl_pct": 0.18317462482946778,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RETEST",
+          "entry_time": "2026-08-15 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 9.548,
+          "exit_price": 9.548,
+          "pnl_pct": -0.001,
+          "bars_held": 0,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "break"
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.19,
+          "exit_price": 6.492,
+          "pnl_pct": 0.04778836833602573,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.19,
+          "exit_price": 6.492,
+          "pnl_pct": 0.04778836833602573,
+          "bars_held": 14,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-11 00:00:00+00:00",
+          "entry_price": 6.54,
+          "exit_price": 6.317,
+          "pnl_pct": -0.035097859327217096,
+          "bars_held": 9,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-08-13 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.451,
+          "exit_price": 6.492,
+          "pnl_pct": 0.005355603782359331,
+          "bars_held": 2,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-11 00:00:00+00:00",
+          "entry_price": 6.54,
+          "exit_price": 6.317,
+          "pnl_pct": -0.035097859327217096,
+          "bars_held": 9,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-08-13 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 6.451,
+          "exit_price": 6.492,
+          "pnl_pct": 0.005355603782359331,
+          "bars_held": 2,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        }
+      ]
+    },
+    {
+      "window": "last_90d",
+      "start": "2026-05-17",
+      "end": "2026-08-15",
+      "portfolio": {
+        "BH": {
+          "arm": "BH",
+          "n_pairs": 5,
+          "mean_return": -0.13552816987729724,
+          "median_return": -0.11056647043770595,
+          "mean_max_dd": -0.27333364363882157,
+          "worst_dd": -0.35772132298194126,
+          "total_trades": 5,
+          "mean_expectancy_pct": -0.14323234762359835,
+          "mean_win_rate": 0.0,
+          "pairs": {
+            "btc": {
+              "ret": -0.17723345940301205,
+              "dd": -0.2330656447901197,
+              "n": 1
+            },
+            "eth": {
+              "ret": -0.11056647043770595,
+              "dd": -0.25255918507272257,
+              "n": 1
+            },
+            "sol": {
+              "ret": -0.10903672672848919,
+              "dd": -0.273769780041926,
+              "n": 1
+            },
+            "link": {
+              "ret": -0.00156766398158803,
+              "dd": -0.24955228530739837,
+              "n": 1
+            },
+            "avax": {
+              "ret": -0.27923652883569094,
+              "dd": -0.35772132298194126,
+              "n": 1
+            }
+          }
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.1492399583159191,
+          "median_return": -0.16980997404462939,
+          "mean_max_dd": -0.20362762308573243,
+          "worst_dd": -0.2873294337553267,
+          "total_trades": 18,
+          "mean_expectancy_pct": -0.005280066389605581,
+          "mean_win_rate": 0.4,
+          "pairs": {
+            "btc": {
+              "ret": -0.14215274187956783,
+              "dd": -0.14350926261068386,
+              "n": 3
+            },
+            "eth": {
+              "ret": -0.16980997404462939,
+              "dd": -0.19472549581022258,
+              "n": 4
+            },
+            "sol": {
+              "ret": -0.2206984402149268,
+              "dd": -0.26508446632305604,
+              "n": 4
+            },
+            "link": {
+              "ret": 0.035837290344766126,
+              "dd": -0.12748945692937308,
+              "n": 3
+            },
+            "avax": {
+              "ret": -0.2493759257852376,
+              "dd": -0.2873294337553267,
+              "n": 4
+            }
+          }
+        },
+        "SR_BOUNCE": {
+          "arm": "SR_BOUNCE",
+          "n_pairs": 5,
+          "mean_return": -0.20895061302379422,
+          "median_return": -0.234193801728392,
+          "mean_max_dd": -0.21739987783118325,
+          "worst_dd": -0.35882237003947914,
+          "total_trades": 16,
+          "mean_expectancy_pct": -0.0344236986009893,
+          "mean_win_rate": 0.18,
+          "pairs": {
+            "btc": {
+              "ret": -0.088568477937639,
+              "dd": -0.09177963872852035,
+              "n": 2
+            },
+            "eth": {
+              "ret": -0.234193801728392,
+              "dd": -0.24341291884180816,
+              "n": 4
+            },
+            "sol": {
+              "ret": -0.35078216529332307,
+              "dd": -0.35882237003947914,
+              "n": 4
+            },
+            "link": {
+              "ret": -0.09416065357311076,
+              "dd": -0.09416065357311076,
+              "n": 1
+            },
+            "avax": {
+              "ret": -0.27704796658650643,
+              "dd": -0.2988238079729978,
+              "n": 5
+            }
+          }
+        },
+        "SR_BOUNCE_RSI": {
+          "arm": "SR_BOUNCE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.19558999090288753,
+          "median_return": -0.1673906911238584,
+          "mean_max_dd": -0.20420009684778462,
+          "worst_dd": -0.35882237003947914,
+          "total_trades": 15,
+          "mean_expectancy_pct": -0.03415773552763964,
+          "mean_win_rate": 0.18,
+          "pairs": {
+            "btc": {
+              "ret": -0.088568477937639,
+              "dd": -0.09177963872852035,
+              "n": 2
+            },
+            "eth": {
+              "ret": -0.1673906911238584,
+              "dd": -0.17741401392481515,
+              "n": 3
+            },
+            "sol": {
+              "ret": -0.35078216529332307,
+              "dd": -0.35882237003947914,
+              "n": 4
+            },
+            "link": {
+              "ret": -0.09416065357311076,
+              "dd": -0.09416065357311076,
+              "n": 1
+            },
+            "avax": {
+              "ret": -0.27704796658650643,
+              "dd": -0.2988238079729978,
+              "n": 5
+            }
+          }
+        },
+        "SR_BREAK_RETEST": {
+          "arm": "SR_BREAK_RETEST",
+          "n_pairs": 5,
+          "mean_return": -0.0809590484999739,
+          "median_return": -0.08566171319837501,
+          "mean_max_dd": -0.09486381778233707,
+          "worst_dd": -0.1983691838533762,
+          "total_trades": 10,
+          "mean_expectancy_pct": -0.008431354336053689,
+          "mean_win_rate": 0.31666666666666665,
+          "pairs": {
+            "btc": {
+              "ret": -0.08566171319837501,
+              "dd": -0.08566171319837501,
+              "n": 1
+            },
+            "eth": {
+              "ret": -0.028659735152083865,
+              "dd": -0.06106640782108719,
+              "n": 2
+            },
+            "sol": {
+              "ret": -0.18193813819986282,
+              "dd": -0.1983691838533762,
+              "n": 4
+            },
+            "link": {
+              "ret": -0.10853565594954784,
+              "dd": -0.129221784038847,
+              "n": 3
+            },
+            "avax": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            }
+          }
+        },
+        "SR_BREAK_RSI": {
+          "arm": "SR_BREAK_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.01795379247837321,
+          "median_return": 0.0,
+          "mean_max_dd": -0.01958800336900337,
+          "worst_dd": -0.08684522081400947,
+          "total_trades": 2,
+          "mean_expectancy_pct": -0.00847992227425165,
+          "mean_win_rate": 0.0,
+          "pairs": {
+            "btc": {
+              "ret": -0.08341571226014854,
+              "dd": -0.08684522081400947,
+              "n": 1
+            },
+            "eth": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "sol": {
+              "ret": -0.006353250131717503,
+              "dd": -0.011094796031007381,
+              "n": 1
+            },
+            "link": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            },
+            "avax": {
+              "ret": 0.0,
+              "dd": 0.0,
+              "n": 0
+            }
+          }
+        }
+      },
+      "decisions": {
+        "BH": {
+          "arm": "BH",
+          "mean_return": -0.13552816987729724,
+          "mean_max_dd": -0.27333364363882157,
+          "total_trades": 5,
+          "delta_vs_bh_pp": 0.0,
+          "delta_vs_base_pp": 1.3711788438621864,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_90d"
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "mean_return": -0.1492399583159191,
+          "mean_max_dd": -0.20362762308573243,
+          "total_trades": 18,
+          "delta_vs_bh_pp": -1.3711788438621864,
+          "delta_vs_base_pp": 0.0,
+          "edge_class": "unstable_or_no_edge",
+          "window": "last_90d"
+        },
+        "SR_BOUNCE": {
+          "arm": "SR_BOUNCE",
+          "mean_return": -0.20895061302379422,
+          "mean_max_dd": -0.21739987783118325,
+          "total_trades": 16,
+          "delta_vs_bh_pp": -7.342244314649698,
+          "delta_vs_base_pp": -5.971065470787512,
+          "edge_class": "unstable_or_no_edge",
+          "window": "last_90d"
+        },
+        "SR_BOUNCE_RSI": {
+          "arm": "SR_BOUNCE_RSI",
+          "mean_return": -0.19558999090288753,
+          "mean_max_dd": -0.20420009684778462,
+          "total_trades": 15,
+          "delta_vs_bh_pp": -6.00618210255903,
+          "delta_vs_base_pp": -4.635003258696843,
+          "edge_class": "unstable_or_no_edge",
+          "window": "last_90d"
+        },
+        "SR_BREAK_RETEST": {
+          "arm": "SR_BREAK_RETEST",
+          "mean_return": -0.0809590484999739,
+          "mean_max_dd": -0.09486381778233707,
+          "total_trades": 10,
+          "delta_vs_bh_pp": 5.456912137732334,
+          "delta_vs_base_pp": 6.82809098159452,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_90d"
+        },
+        "SR_BREAK_RSI": {
+          "arm": "SR_BREAK_RSI",
+          "mean_return": -0.01795379247837321,
+          "mean_max_dd": -0.01958800336900337,
+          "total_trades": 2,
+          "delta_vs_bh_pp": 11.757437739892403,
+          "delta_vs_base_pp": 13.12861658375459,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "last_90d"
+        }
+      },
+      "plain_english": {
+        "headline": "Best structure arm `SR_BREAK_RSI` still sparse/inconclusive on last_90d",
+        "enum_hint": "inconclusive",
+        "bounce": "SR_BOUNCE: no_go vs BASE (-6.0pp, class unstable_or_no_edge)",
+        "bounce_rsi": "SR_BOUNCE_RSI: no_go vs BASE (-4.6pp, class unstable_or_no_edge)",
+        "break": "SR_BREAK_RETEST: inconclusive (N=10 trades) \u2014 not promote",
+        "break_rsi": "SR_BREAK_RSI: inconclusive (N=2 trades) \u2014 not promote",
+        "note": "S/R is entry/exit structure add-on research; not REGIME-CASH replacement. Shadow/offline only."
+      },
+      "pair_summaries": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.17723345940301205,
+          "max_dd": -0.2330656447901197,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.18715461352045715,
+          "avg_bars": 90.0,
+          "final_equity": 8227.66540596988,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 3,
+          "total_return": -0.14215274187956783,
+          "max_dd": -0.14350926261068386,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.017100690045689038,
+          "avg_bars": 16.0,
+          "final_equity": 8578.472581204322,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 3
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 2,
+          "total_return": -0.088568477937639,
+          "max_dd": -0.09177963872852035,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.020468341369534793,
+          "avg_bars": 10.5,
+          "final_equity": 9114.31522062361,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 2
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 2,
+          "total_return": -0.088568477937639,
+          "max_dd": -0.09177963872852035,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.020468341369534793,
+          "avg_bars": 10.5,
+          "final_equity": 9114.31522062361,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 2
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 1,
+          "total_return": -0.08566171319837501,
+          "max_dd": -0.08566171319837501,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.037575461789898235,
+          "avg_bars": 3.0,
+          "final_equity": 9143.38286801625,
+          "exit_mix": {
+            "sl_3pct": 1
+          },
+          "entry_kind_mix": {
+            "break": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 1,
+          "total_return": -0.08341571226014854,
+          "max_dd": -0.08684522081400947,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.03520888429012026,
+          "avg_bars": 8.0,
+          "final_equity": 9165.842877398514,
+          "exit_mix": {
+            "sl_3pct": 1
+          },
+          "entry_kind_mix": {
+            "retest": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.11056647043770595,
+          "max_dd": -0.25255918507272257,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.11694373022059024,
+          "avg_bars": 90.0,
+          "final_equity": 8894.335295622941,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 4,
+          "total_return": -0.16980997404462939,
+          "max_dd": -0.19472549581022258,
+          "win_rate": 0.5,
+          "expectancy_pct": -0.006415721821152326,
+          "avg_bars": 10.75,
+          "final_equity": 8301.900259553706,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 4,
+          "total_return": -0.234193801728392,
+          "max_dd": -0.24341291884180816,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.027866327637970673,
+          "avg_bars": 5.25,
+          "final_equity": 7658.06198271608,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 3,
+          "total_return": -0.1673906911238584,
+          "max_dd": -0.17741401392481515,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.026536512271222373,
+          "avg_bars": 6.0,
+          "final_equity": 8326.093088761416,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 3
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 2,
+          "total_return": -0.028659735152083865,
+          "max_dd": -0.06106640782108719,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.011180982172714016,
+          "avg_bars": 15.5,
+          "final_equity": 9713.402648479161,
+          "exit_mix": {
+            "target_extension": 1,
+            "max_hold": 1
+          },
+          "entry_kind_mix": {
+            "break": 2
+          },
+          "regime_n": {
+            "flat": 2
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.10903672672848919,
+          "max_dd": -0.273769780041926,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.11533266815353904,
+          "avg_bars": 90.0,
+          "final_equity": 8909.632732715108,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 4,
+          "total_return": -0.2206984402149268,
+          "max_dd": -0.26508446632305604,
+          "win_rate": 0.25,
+          "expectancy_pct": -0.023197821266182778,
+          "avg_bars": 9.25,
+          "final_equity": 7793.015597850732,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 4,
+          "total_return": -0.35078216529332307,
+          "max_dd": -0.35882237003947914,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.05473771981142969,
+          "avg_bars": 6.25,
+          "final_equity": 6492.17834706677,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "structure_fail": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 4,
+          "total_return": -0.35078216529332307,
+          "max_dd": -0.35882237003947914,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.05473771981142969,
+          "avg_bars": 6.25,
+          "final_equity": 6492.17834706677,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "structure_fail": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 4,
+          "total_return": -0.18193813819986282,
+          "max_dd": -0.1983691838533762,
+          "win_rate": 0.25,
+          "expectancy_pct": -0.011597371756173341,
+          "avg_bars": 2.5,
+          "final_equity": 8180.618618001372,
+          "exit_mix": {
+            "target_extension": 2,
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 1,
+          "total_return": -0.006353250131717503,
+          "max_dd": -0.011094796031007381,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.007190727081137992,
+          "avg_bars": 5.0,
+          "final_equity": 9936.467498682825,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "retest": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.00156766398158803,
+          "max_dd": -0.24955228530739837,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.0021507479861909698,
+          "avg_bars": 90.0,
+          "final_equity": 9984.32336018412,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 3,
+          "total_return": 0.035837290344766126,
+          "max_dd": -0.12748945692937308,
+          "win_rate": 0.6666666666666666,
+          "expectancy_pct": 0.05293269120655664,
+          "avg_bars": 16.333333333333332,
+          "final_equity": 10358.372903447662,
+          "exit_mix": {
+            "sl_3pct": 1,
+            "max_hold": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 3
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 1,
+          "total_return": -0.09416065357311076,
+          "max_dd": -0.09416065357311076,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.04653066778312753,
+          "avg_bars": 4.0,
+          "final_equity": 9058.393464268893,
+          "exit_mix": {
+            "sl_3pct": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 1,
+          "total_return": -0.09416065357311076,
+          "max_dd": -0.09416065357311076,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.04653066778312753,
+          "avg_bars": 4.0,
+          "final_equity": 9058.393464268893,
+          "exit_mix": {
+            "sl_3pct": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 3,
+          "total_return": -0.10853565594954784,
+          "max_dd": -0.129221784038847,
+          "win_rate": 0.3333333333333333,
+          "expectancy_pct": -0.004164920306910884,
+          "avg_bars": 5.666666666666667,
+          "final_equity": 8914.643440504522,
+          "exit_mix": {
+            "target_extension": 1,
+            "sl_3pct": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 3
+          },
+          "regime_n": {
+            "flat": 3
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.27923652883569094,
+          "max_dd": -0.35772132298194126,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.2945799782372144,
+          "avg_bars": 90.0,
+          "final_equity": 7207.634711643091,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "flat": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 4,
+          "total_return": -0.2493759257852376,
+          "max_dd": -0.2873294337553267,
+          "win_rate": 0.25,
+          "expectancy_pct": -0.0326187900215604,
+          "avg_bars": 11.0,
+          "final_equity": 7506.240742147624,
+          "exit_mix": {
+            "sl_3pct": 3,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 4
+          },
+          "regime_n": {
+            "flat": 4
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 5,
+          "total_return": -0.27704796658650643,
+          "max_dd": -0.2988238079729978,
+          "win_rate": 0.4,
+          "expectancy_pct": -0.022515436402883848,
+          "avg_bars": 7.4,
+          "final_equity": 7229.520334134935,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "structure_fail": 1,
+            "target_resist": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 5
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 5,
+          "total_return": -0.27704796658650643,
+          "max_dd": -0.2988238079729978,
+          "win_rate": 0.4,
+          "expectancy_pct": -0.022515436402883848,
+          "avg_bars": 7.4,
+          "final_equity": 7229.520334134935,
+          "exit_mix": {
+            "sl_3pct": 2,
+            "structure_fail": 1,
+            "target_resist": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 5
+          },
+          "regime_n": {
+            "flat": 5
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 0,
+          "total_return": 0.0,
+          "max_dd": 0.0,
+          "win_rate": 0.0,
+          "expectancy_pct": 0.0,
+          "avg_bars": 0.0,
+          "final_equity": 10000.0,
+          "exit_mix": {},
+          "entry_kind_mix": {},
+          "regime_n": {}
+        }
+      ],
+      "n_trade_rows": 66,
+      "trades_sample": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.18715461352045715,
+          "bars_held": 90,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77407.59,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04093936511910523,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-08-01 00:00:00+00:00",
+          "entry_price": 61484.02,
+          "exit_price": 62764.2,
+          "pnl_pct": 0.01982134512349709,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-07 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 64891.61,
+          "exit_price": 62997.81,
+          "pnl_pct": -0.030184050141458973,
+          "bars_held": 8,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-05-21 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77547.62,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04267297461869235,
+          "bars_held": 6,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-07-31 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62825.9,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0017362918796227653,
+          "bars_held": 15,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-05-21 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 77547.62,
+          "exit_price": 74315.98,
+          "pnl_pct": -0.04267297461869235,
+          "bars_held": 6,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-07-31 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 62825.9,
+          "exit_price": 62997.81,
+          "pnl_pct": 0.0017362918796227653,
+          "bars_held": 15,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RETEST",
+          "entry_time": "2026-07-21 00:00:00+00:00",
+          "exit_time": "2026-07-24 00:00:00+00:00",
+          "entry_price": 66516.18,
+          "exit_price": 64083.32,
+          "pnl_pct": -0.037575461789898235,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "break"
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RSI",
+          "entry_time": "2026-07-23 00:00:00+00:00",
+          "exit_time": "2026-07-31 00:00:00+00:00",
+          "entry_price": 65051.23,
+          "exit_price": 62825.9,
+          "pnl_pct": -0.03520888429012026,
+          "bars_held": 8,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "retest"
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 2129.74,
+          "exit_price": 1882.81,
+          "pnl_pct": -0.11694373022059024,
+          "bars_held": 90,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-22 00:00:00+00:00",
+          "entry_price": 2129.74,
+          "exit_price": 2063.39,
+          "pnl_pct": -0.032154037582052264,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-29 00:00:00+00:00",
+          "exit_time": "2026-06-02 00:00:00+00:00",
+          "entry_price": 2011.65,
+          "exit_price": 1857.32,
+          "pnl_pct": -0.0777181169686576,
+          "bars_held": 4,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-02 00:00:00+00:00",
+          "exit_time": "2026-08-01 00:00:00+00:00",
+          "entry_price": 1698.63,
+          "exit_price": 1843.18,
+          "pnl_pct": 0.08409799073370883,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-11 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1880.72,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.00011127653239173616,
+          "bars_held": 4,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-05-21 00:00:00+00:00",
+          "exit_time": "2026-05-22 00:00:00+00:00",
+          "entry_price": 2131.96,
+          "exit_price": 2063.39,
+          "pnl_pct": -0.03316289236195813,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-05-23 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 2115.04,
+          "exit_price": 2021.64,
+          "pnl_pct": -0.04515992132536495,
+          "bars_held": 4,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-07-28 00:00:00+00:00",
+          "exit_time": "2026-07-31 00:00:00+00:00",
+          "entry_price": 1919.9,
+          "exit_price": 1860.66,
+          "pnl_pct": -0.031855773738215576,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1883.35,
+          "exit_price": 1882.81,
+          "pnl_pct": -0.001286723126344035,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-05-21 00:00:00+00:00",
+          "exit_time": "2026-05-22 00:00:00+00:00",
+          "entry_price": 2131.96,
+          "exit_price": 2063.39,
+          "pnl_pct": -0.03316289236195813,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-05-23 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 2115.04,
+          "exit_price": 2021.64,
+          "pnl_pct": -0.04515992132536495,
+          "bars_held": 4,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "entry_time": "2026-08-02 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1883.35,
+          "exit_price": 1882.81,
+          "pnl_pct": -0.001286723126344035,
+          "bars_held": 13,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RETEST",
+          "entry_time": "2026-07-14 00:00:00+00:00",
+          "exit_time": "2026-07-15 00:00:00+00:00",
+          "entry_price": 1890.63,
+          "exit_price": 1916.76,
+          "pnl_pct": 0.012820789895431672,
+          "bars_held": 1,
+          "exit_reason": "target_extension",
+          "entry_regime": "flat",
+          "entry_kind": "break"
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RETEST",
+          "entry_time": "2026-07-16 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 1863.17,
+          "exit_price": 1882.81,
+          "pnl_pct": 0.009541174449996359,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "break"
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 85.19,
+          "exit_price": 75.45,
+          "pnl_pct": -0.11533266815353904,
+          "bars_held": 90,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-05-17 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 85.19,
+          "exit_price": 82.3,
+          "pnl_pct": -0.03492416950346289,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-09 00:00:00+00:00",
+          "exit_time": "2026-07-13 00:00:00+00:00",
+          "entry_price": 77.99,
+          "exit_price": 74.91,
+          "pnl_pct": -0.04049224259520445,
+          "bars_held": 4,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-07-18 00:00:00+00:00",
+          "exit_time": "2026-07-31 00:00:00+00:00",
+          "entry_price": 75.46,
+          "exit_price": 72.79,
+          "pnl_pct": -0.03638298436257603,
+          "bars_held": 13,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "entry_time": "2026-08-05 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 73.97,
+          "exit_price": 75.45,
+          "pnl_pct": 0.01900811139651226,
+          "bars_held": 10,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE",
+          "entry_time": "2026-05-20 00:00:00+00:00",
+          "exit_time": "2026-05-27 00:00:00+00:00",
+          "entry_price": 86.09,
+          "exit_price": 82.3,
+          "pnl_pct": -0.045023696131955004,
+          "bars_held": 7,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "bounce"
+        }
+      ]
+    },
+    {
+      "window": "long_tape",
+      "start": "2021-01-01",
+      "end": "2026-08-15",
+      "portfolio": {
+        "BH": {
+          "arm": "BH",
+          "n_pairs": 5,
+          "mean_return": 0.4820251765488564,
+          "median_return": 0.8752652547770701,
+          "mean_max_dd": -0.863074303718868,
+          "worst_dd": -0.9551170078803349,
+          "total_trades": 5,
+          "mean_expectancy_pct": 0.5071489971815974,
+          "mean_win_rate": 0.6,
+          "pairs": {
+            "btc": {
+              "ret": 1.0837374949256855,
+              "dd": -0.7495218203270689,
+              "n": 1
+            },
+            "eth": {
+              "ret": 1.4956903175830036,
+              "dd": -0.7872064117482503,
+              "n": 1
+            },
+            "sol": {
+              "ret": 0.8752652547770701,
+              "dd": -0.9551170078803349,
+              "n": 1
+            },
+            "link": {
+              "ret": -0.1869441709044326,
+              "dd": -0.8912755620202565,
+              "n": 1
+            },
+            "avax": {
+              "ret": -0.8576230136370449,
+              "dd": -0.9322507166184296,
+              "n": 1
+            }
+          }
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.9312844035552967,
+          "median_return": -0.9594242863035132,
+          "mean_max_dd": -0.9745617521839369,
+          "worst_dd": -0.9956111751500464,
+          "total_trades": 421,
+          "mean_expectancy_pct": 0.02986218452851091,
+          "mean_win_rate": 0.24534378600207135,
+          "pairs": {
+            "btc": {
+              "ret": -0.9799828521291574,
+              "dd": -0.9873939628064996,
+              "n": 84
+            },
+            "eth": {
+              "ret": -0.905274452485096,
+              "dd": -0.9679050569371895,
+              "n": 83
+            },
+            "sol": {
+              "ret": -0.8274494899580453,
+              "dd": -0.9412929436334562,
+              "n": 81
+            },
+            "link": {
+              "ret": -0.9842909369006715,
+              "dd": -0.9956111751500464,
+              "n": 92
+            },
+            "avax": {
+              "ret": -0.9594242863035132,
+              "dd": -0.9806056223924935,
+              "n": 81
+            }
+          }
+        },
+        "SR_BOUNCE": {
+          "arm": "SR_BOUNCE",
+          "n_pairs": 5,
+          "mean_return": -0.974298574108037,
+          "median_return": -0.9689144054543924,
+          "mean_max_dd": -0.9769960680255613,
+          "worst_dd": -0.9920649834762343,
+          "total_trades": 318,
+          "mean_expectancy_pct": -0.006022152486645208,
+          "mean_win_rate": 0.345103232279508,
+          "pairs": {
+            "btc": {
+              "ret": -0.9689144054543924,
+              "dd": -0.9695643081777956,
+              "n": 68
+            },
+            "eth": {
+              "ret": -0.9598224084847913,
+              "dd": -0.9640788252000692,
+              "n": 67
+            },
+            "sol": {
+              "ret": -0.9863567033748761,
+              "dd": -0.9880260390787191,
+              "n": 56
+            },
+            "link": {
+              "ret": -0.9914348958777773,
+              "dd": -0.9920649834762343,
+              "n": 69
+            },
+            "avax": {
+              "ret": -0.9649644573483479,
+              "dd": -0.9712461841949882,
+              "n": 58
+            }
+          }
+        },
+        "SR_BOUNCE_RSI": {
+          "arm": "SR_BOUNCE_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.9670302447683028,
+          "median_return": -0.9661611724731178,
+          "mean_max_dd": -0.9700553504258279,
+          "worst_dd": -0.9911306634921196,
+          "total_trades": 305,
+          "mean_expectancy_pct": -0.004662215975977222,
+          "mean_win_rate": 0.3495456429108199,
+          "pairs": {
+            "btc": {
+              "ret": -0.9661611724731178,
+              "dd": -0.9668686367017407,
+              "n": 66
+            },
+            "eth": {
+              "ret": -0.9365708704651985,
+              "dd": -0.9432905566635428,
+              "n": 62
+            },
+            "sol": {
+              "ret": -0.9770283382357398,
+              "dd": -0.9777407110767483,
+              "n": 51
+            },
+            "link": {
+              "ret": -0.9904263853191102,
+              "dd": -0.9911306634921196,
+              "n": 68
+            },
+            "avax": {
+              "ret": -0.9649644573483479,
+              "dd": -0.9712461841949882,
+              "n": 58
+            }
+          }
+        },
+        "SR_BREAK_RETEST": {
+          "arm": "SR_BREAK_RETEST",
+          "n_pairs": 5,
+          "mean_return": -0.9973418020273499,
+          "median_return": -0.999164716677076,
+          "mean_max_dd": -0.9974455945667542,
+          "worst_dd": -0.9997947507250832,
+          "total_trades": 724,
+          "mean_expectancy_pct": 0.005772575205586798,
+          "mean_win_rate": 0.49782452182767606,
+          "pairs": {
+            "btc": {
+              "ret": -0.999164716677076,
+              "dd": -0.9992339228670376,
+              "n": 152
+            },
+            "eth": {
+              "ret": -0.9997434439827013,
+              "dd": -0.9997737089959495,
+              "n": 177
+            },
+            "sol": {
+              "ret": -0.996416998870734,
+              "dd": -0.996800375086173,
+              "n": 139
+            },
+            "link": {
+              "ret": -0.9997586354467105,
+              "dd": -0.9997947507250832,
+              "n": 160
+            },
+            "avax": {
+              "ret": -0.9916252151595277,
+              "dd": -0.9916252151595277,
+              "n": 96
+            }
+          }
+        },
+        "SR_BREAK_RSI": {
+          "arm": "SR_BREAK_RSI",
+          "n_pairs": 5,
+          "mean_return": -0.8351915675706124,
+          "median_return": -0.9088796077523489,
+          "mean_max_dd": -0.8507166454678036,
+          "worst_dd": -0.9820874386158402,
+          "total_trades": 283,
+          "mean_expectancy_pct": 0.014859522701363263,
+          "mean_win_rate": 0.5473050297403745,
+          "pairs": {
+            "btc": {
+              "ret": -0.9088796077523489,
+              "dd": -0.9145348214527987,
+              "n": 52
+            },
+            "eth": {
+              "ret": -0.9473658048612565,
+              "dd": -0.9502080211515809,
+              "n": 64
+            },
+            "sol": {
+              "ret": -0.7232226413633751,
+              "dd": -0.7528375116602336,
+              "n": 44
+            },
+            "link": {
+              "ret": -0.9789355778308553,
+              "dd": -0.9820874386158402,
+              "n": 87
+            },
+            "avax": {
+              "ret": -0.6175542060452267,
+              "dd": -0.653915434458564,
+              "n": 36
+            }
+          }
+        }
+      },
+      "decisions": {
+        "BH": {
+          "arm": "BH",
+          "mean_return": 0.4820251765488564,
+          "mean_max_dd": -0.863074303718868,
+          "total_trades": 5,
+          "delta_vs_bh_pp": 0.0,
+          "delta_vs_base_pp": 141.33095801041532,
+          "edge_class": "inconclusive_sparse_N",
+          "window": "long_tape"
+        },
+        "BASE_RSI": {
+          "arm": "BASE_RSI",
+          "mean_return": -0.9312844035552967,
+          "mean_max_dd": -0.9745617521839369,
+          "total_trades": 421,
+          "delta_vs_bh_pp": -141.33095801041532,
+          "delta_vs_base_pp": 0.0,
+          "edge_class": "unstable_or_no_edge",
+          "window": "long_tape"
+        },
+        "SR_BOUNCE": {
+          "arm": "SR_BOUNCE",
+          "mean_return": -0.974298574108037,
+          "mean_max_dd": -0.9769960680255613,
+          "total_trades": 318,
+          "delta_vs_bh_pp": -145.63237506568933,
+          "delta_vs_base_pp": -4.301417055274026,
+          "edge_class": "unstable_or_no_edge",
+          "window": "long_tape"
+        },
+        "SR_BOUNCE_RSI": {
+          "arm": "SR_BOUNCE_RSI",
+          "mean_return": -0.9670302447683028,
+          "mean_max_dd": -0.9700553504258279,
+          "total_trades": 305,
+          "delta_vs_bh_pp": -144.90554213171592,
+          "delta_vs_base_pp": -3.5745841213006058,
+          "edge_class": "unstable_or_no_edge",
+          "window": "long_tape"
+        },
+        "SR_BREAK_RETEST": {
+          "arm": "SR_BREAK_RETEST",
+          "mean_return": -0.9973418020273499,
+          "mean_max_dd": -0.9974455945667542,
+          "total_trades": 724,
+          "delta_vs_bh_pp": -147.93669785762063,
+          "delta_vs_base_pp": -6.605739847205316,
+          "edge_class": "unstable_or_no_edge",
+          "window": "long_tape"
+        },
+        "SR_BREAK_RSI": {
+          "arm": "SR_BREAK_RSI",
+          "mean_return": -0.8351915675706124,
+          "mean_max_dd": -0.8507166454678036,
+          "total_trades": 283,
+          "delta_vs_bh_pp": -131.72167441194688,
+          "delta_vs_base_pp": 9.609283598468432,
+          "edge_class": "unstable_or_no_edge",
+          "window": "long_tape"
+        }
+      },
+      "plain_english": {
+        "headline": "Best structure arm `SR_BREAK_RSI` less-loss vs BASE only on long_tape",
+        "enum_hint": "EDGE_VS_BAGS_ONLY",
+        "bounce": "SR_BOUNCE: no_go vs BASE (-4.3pp, class unstable_or_no_edge)",
+        "bounce_rsi": "SR_BOUNCE_RSI: no_go vs BASE (-3.6pp, class unstable_or_no_edge)",
+        "break": "SR_BREAK_RETEST: no_go vs BASE (-6.6pp, class unstable_or_no_edge)",
+        "break_rsi": "SR_BREAK_RSI: weak/observe \u2014 beats BASE by +9.6pp ret (class unstable_or_no_edge)",
+        "note": "S/R is entry/exit structure add-on research; not REGIME-CASH replacement. Shadow/offline only."
+      },
+      "pair_summaries": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 1.0837374949256855,
+          "max_dd": -0.7495218203270689,
+          "win_rate": 1.0,
+          "expectancy_pct": 1.1408472340651228,
+          "avg_bars": 2052.0,
+          "final_equity": 20837.374949256853,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "bull": 1
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 84,
+          "total_return": -0.9799828521291574,
+          "max_dd": -0.9873939628064996,
+          "win_rate": 0.2619047619047619,
+          "expectancy_pct": 0.011783535845625042,
+          "avg_bars": 12.297619047619047,
+          "final_equity": 200.17147870842612,
+          "exit_mix": {
+            "sl_3pct": 60,
+            "max_hold": 17,
+            "rsi_overbought": 6,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 84
+          },
+          "regime_n": {
+            "flat": 64,
+            "bull": 20
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 68,
+          "total_return": -0.9689144054543924,
+          "max_dd": -0.9695643081777956,
+          "win_rate": 0.4264705882352941,
+          "expectancy_pct": 0.0014580683155498366,
+          "avg_bars": 6.970588235294118,
+          "final_equity": 310.85594545607586,
+          "exit_mix": {
+            "target_resist": 29,
+            "sl_3pct": 22,
+            "structure_fail": 16,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 68
+          },
+          "regime_n": {
+            "flat": 51,
+            "bull": 17
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 66,
+          "total_return": -0.9661611724731178,
+          "max_dd": -0.9668686367017407,
+          "win_rate": 0.42424242424242425,
+          "expectancy_pct": 0.0012127152931876801,
+          "avg_bars": 7.121212121212121,
+          "final_equity": 338.3882752688216,
+          "exit_mix": {
+            "target_resist": 28,
+            "sl_3pct": 22,
+            "structure_fail": 15,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 66
+          },
+          "regime_n": {
+            "flat": 50,
+            "bull": 16
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 152,
+          "total_return": -0.999164716677076,
+          "max_dd": -0.9992339228670376,
+          "win_rate": 0.5394736842105263,
+          "expectancy_pct": 0.0056782058140142635,
+          "avg_bars": 2.0460526315789473,
+          "final_equity": 8.352833229240195,
+          "exit_mix": {
+            "target_extension": 123,
+            "sl_3pct": 24,
+            "structure_fail": 5
+          },
+          "entry_kind_mix": {
+            "break": 138,
+            "retest": 14
+          },
+          "regime_n": {
+            "bull": 91,
+            "flat": 61
+          }
+        },
+        {
+          "pair": "btc",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 52,
+          "total_return": -0.9088796077523489,
+          "max_dd": -0.9145348214527987,
+          "win_rate": 0.5384615384615384,
+          "expectancy_pct": 0.006309300197007513,
+          "avg_bars": 2.423076923076923,
+          "final_equity": 911.2039224765106,
+          "exit_mix": {
+            "target_extension": 39,
+            "sl_3pct": 10,
+            "structure_fail": 2,
+            "max_hold": 1
+          },
+          "entry_kind_mix": {
+            "break": 39,
+            "retest": 13
+          },
+          "regime_n": {
+            "bull": 41,
+            "flat": 11
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 1.4956903175830036,
+          "max_dd": -0.7872064117482503,
+          "win_rate": 1.0,
+          "expectancy_pct": 1.5746987099686724,
+          "avg_bars": 2052.0,
+          "final_equity": 24956.903175830037,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "bull": 1
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 83,
+          "total_return": -0.905274452485096,
+          "max_dd": -0.9679050569371895,
+          "win_rate": 0.2891566265060241,
+          "expectancy_pct": 0.03579157695210369,
+          "avg_bars": 12.879518072289157,
+          "final_equity": 947.2554751490408,
+          "exit_mix": {
+            "sl_3pct": 59,
+            "max_hold": 16,
+            "rsi_overbought": 7,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 83
+          },
+          "regime_n": {
+            "flat": 65,
+            "bull": 18
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 67,
+          "total_return": -0.9598224084847913,
+          "max_dd": -0.9640788252000692,
+          "win_rate": 0.43283582089552236,
+          "expectancy_pct": 0.005532796900316336,
+          "avg_bars": 6.08955223880597,
+          "final_equity": 401.7759151520878,
+          "exit_mix": {
+            "target_resist": 28,
+            "sl_3pct": 22,
+            "structure_fail": 16,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 67
+          },
+          "regime_n": {
+            "flat": 53,
+            "bull": 14
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 62,
+          "total_return": -0.9365708704651985,
+          "max_dd": -0.9432905566635428,
+          "win_rate": 0.45161290322580644,
+          "expectancy_pct": 0.00900037015251297,
+          "avg_bars": 6.274193548387097,
+          "final_equity": 634.2912953480146,
+          "exit_mix": {
+            "target_resist": 27,
+            "sl_3pct": 20,
+            "structure_fail": 14,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 62
+          },
+          "regime_n": {
+            "flat": 48,
+            "bull": 14
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 177,
+          "total_return": -0.9997434439827013,
+          "max_dd": -0.9997737089959495,
+          "win_rate": 0.4915254237288136,
+          "expectancy_pct": 0.00545114291618194,
+          "avg_bars": 2.073446327683616,
+          "final_equity": 2.5655601729863253,
+          "exit_mix": {
+            "target_extension": 146,
+            "sl_3pct": 25,
+            "structure_fail": 5,
+            "max_hold": 1
+          },
+          "entry_kind_mix": {
+            "break": 160,
+            "retest": 17
+          },
+          "regime_n": {
+            "bull": 101,
+            "flat": 76
+          }
+        },
+        {
+          "pair": "eth",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 64,
+          "total_return": -0.9473658048612565,
+          "max_dd": -0.9502080211515809,
+          "win_rate": 0.484375,
+          "expectancy_pct": 0.006784954013926602,
+          "avg_bars": 2.375,
+          "final_equity": 526.341951387435,
+          "exit_mix": {
+            "target_extension": 48,
+            "sl_3pct": 13,
+            "structure_fail": 3
+          },
+          "entry_kind_mix": {
+            "break": 51,
+            "retest": 13
+          },
+          "regime_n": {
+            "bull": 50,
+            "flat": 14
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": 0.8752652547770701,
+          "max_dd": -0.9551170078803349,
+          "win_rate": 1.0,
+          "expectancy_pct": 0.9212929936305733,
+          "avg_bars": 1885.0,
+          "final_equity": 18752.6525477707,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "transition": 1
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 81,
+          "total_return": -0.8274494899580453,
+          "max_dd": -0.9412929436334562,
+          "win_rate": 0.24691358024691357,
+          "expectancy_pct": 0.053675200840812946,
+          "avg_bars": 10.666666666666666,
+          "final_equity": 1725.5051004195461,
+          "exit_mix": {
+            "sl_3pct": 60,
+            "max_hold": 14,
+            "rsi_overbought": 6,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 81
+          },
+          "regime_n": {
+            "flat": 68,
+            "bull": 13
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 56,
+          "total_return": -0.9863567033748761,
+          "max_dd": -0.9880260390787191,
+          "win_rate": 0.21428571428571427,
+          "expectancy_pct": -0.021230117111621902,
+          "avg_bars": 4.767857142857143,
+          "final_equity": 136.43296625123895,
+          "exit_mix": {
+            "sl_3pct": 33,
+            "target_resist": 12,
+            "structure_fail": 11
+          },
+          "entry_kind_mix": {
+            "bounce": 56
+          },
+          "regime_n": {
+            "flat": 45,
+            "bull": 11
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 51,
+          "total_return": -0.9770283382357398,
+          "max_dd": -0.9777407110767483,
+          "win_rate": 0.21568627450980393,
+          "expectancy_pct": -0.018317202030616597,
+          "avg_bars": 5.0588235294117645,
+          "final_equity": 229.71661764260233,
+          "exit_mix": {
+            "sl_3pct": 29,
+            "target_resist": 11,
+            "structure_fail": 11
+          },
+          "entry_kind_mix": {
+            "bounce": 51
+          },
+          "regime_n": {
+            "flat": 40,
+            "bull": 11
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 139,
+          "total_return": -0.996416998870734,
+          "max_dd": -0.996800375086173,
+          "win_rate": 0.5539568345323741,
+          "expectancy_pct": 0.012413316054732918,
+          "avg_bars": 1.460431654676259,
+          "final_equity": 35.83001129266002,
+          "exit_mix": {
+            "target_extension": 117,
+            "sl_3pct": 20,
+            "structure_fail": 1,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 126,
+            "retest": 13
+          },
+          "regime_n": {
+            "bull": 80,
+            "flat": 59
+          }
+        },
+        {
+          "pair": "sol",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 44,
+          "total_return": -0.7232226413633751,
+          "max_dd": -0.7528375116602336,
+          "win_rate": 0.6590909090909091,
+          "expectancy_pct": 0.02348591780428545,
+          "avg_bars": 1.6590909090909092,
+          "final_equity": 2767.773586366249,
+          "exit_mix": {
+            "target_extension": 36,
+            "sl_3pct": 7,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 37,
+            "retest": 7
+          },
+          "regime_n": {
+            "bull": 35,
+            "flat": 9
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.1869441709044326,
+          "max_dd": -0.8912755620202565,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.19738152855841884,
+          "avg_bars": 2052.0,
+          "final_equity": 8130.558290955674,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "bull": 1
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 92,
+          "total_return": -0.9842909369006715,
+          "max_dd": -0.9956111751500464,
+          "win_rate": 0.20652173913043478,
+          "expectancy_pct": 0.02207289708395862,
+          "avg_bars": 10.880434782608695,
+          "final_equity": 157.09063099328557,
+          "exit_mix": {
+            "sl_3pct": 73,
+            "max_hold": 15,
+            "rsi_overbought": 3,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 92
+          },
+          "regime_n": {
+            "flat": 67,
+            "bull": 25
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 69,
+          "total_return": -0.9914348958777773,
+          "max_dd": -0.9920649834762343,
+          "win_rate": 0.2898550724637681,
+          "expectancy_pct": -0.013123825233352112,
+          "avg_bars": 3.971014492753623,
+          "final_equity": 85.65104122222692,
+          "exit_mix": {
+            "sl_3pct": 34,
+            "target_resist": 20,
+            "structure_fail": 15
+          },
+          "entry_kind_mix": {
+            "bounce": 69
+          },
+          "regime_n": {
+            "flat": 51,
+            "bull": 18
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 68,
+          "total_return": -0.9904263853191102,
+          "max_dd": -0.9911306634921196,
+          "win_rate": 0.29411764705882354,
+          "expectancy_pct": -0.012459277990851968,
+          "avg_bars": 3.9705882352941178,
+          "final_equity": 95.73614680889749,
+          "exit_mix": {
+            "sl_3pct": 34,
+            "target_resist": 20,
+            "structure_fail": 14
+          },
+          "entry_kind_mix": {
+            "bounce": 68
+          },
+          "regime_n": {
+            "flat": 50,
+            "bull": 18
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 160,
+          "total_return": -0.9997586354467105,
+          "max_dd": -0.9997947507250832,
+          "win_rate": 0.45625,
+          "expectancy_pct": 0.0014630904326675986,
+          "avg_bars": 1.7125,
+          "final_equity": 2.4136455328954423,
+          "exit_mix": {
+            "target_extension": 120,
+            "sl_3pct": 37,
+            "structure_fail": 2,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "break": 136,
+            "retest": 24
+          },
+          "regime_n": {
+            "bull": 81,
+            "flat": 79
+          }
+        },
+        {
+          "pair": "link",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 87,
+          "total_return": -0.9789355778308553,
+          "max_dd": -0.9820874386158402,
+          "win_rate": 0.47126436781609193,
+          "expectancy_pct": 0.009987720835779342,
+          "avg_bars": 1.6091954022988506,
+          "final_equity": 210.6442216914471,
+          "exit_mix": {
+            "target_extension": 65,
+            "sl_3pct": 20,
+            "structure_fail": 2
+          },
+          "entry_kind_mix": {
+            "break": 64,
+            "retest": 23
+          },
+          "regime_n": {
+            "bull": 64,
+            "flat": 23
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BH",
+          "description": "Buy & hold",
+          "n_trades": 1,
+          "total_return": -0.8576230136370449,
+          "max_dd": -0.9322507166184296,
+          "win_rate": 0.0,
+          "expectancy_pct": -0.903712423197962,
+          "avg_bars": 1780.0,
+          "final_equity": 1423.7698636295518,
+          "exit_mix": {
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bh": 1
+          },
+          "regime_n": {
+            "transition": 1
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "BASE_RSI",
+          "description": "Regime allow + RSI\u2264max (live-like baseline)",
+          "n_trades": 81,
+          "total_return": -0.9594242863035132,
+          "max_dd": -0.9806056223924935,
+          "win_rate": 0.2222222222222222,
+          "expectancy_pct": 0.02598771192005424,
+          "avg_bars": 10.148148148148149,
+          "final_equity": 405.75713696486883,
+          "exit_mix": {
+            "sl_3pct": 62,
+            "max_hold": 16,
+            "rsi_overbought": 2,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "base_rsi": 81
+          },
+          "regime_n": {
+            "flat": 69,
+            "bull": 12
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE",
+          "description": "S/R bounce off support zone (no RSI)",
+          "n_trades": 58,
+          "total_return": -0.9649644573483479,
+          "max_dd": -0.9712461841949882,
+          "win_rate": 0.3620689655172414,
+          "expectancy_pct": -0.002747685304118196,
+          "avg_bars": 5.172413793103448,
+          "final_equity": 350.3554265165207,
+          "exit_mix": {
+            "sl_3pct": 26,
+            "target_resist": 19,
+            "structure_fail": 12,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 58
+          },
+          "regime_n": {
+            "flat": 51,
+            "bull": 7
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BOUNCE_RSI",
+          "description": "S/R bounce + RSI\u2264max",
+          "n_trades": 58,
+          "total_return": -0.9649644573483479,
+          "max_dd": -0.9712461841949882,
+          "win_rate": 0.3620689655172414,
+          "expectancy_pct": -0.002747685304118196,
+          "avg_bars": 5.172413793103448,
+          "final_equity": 350.3554265165207,
+          "exit_mix": {
+            "sl_3pct": 26,
+            "target_resist": 19,
+            "structure_fail": 12,
+            "eod_flatten": 1
+          },
+          "entry_kind_mix": {
+            "bounce": 58
+          },
+          "regime_n": {
+            "flat": 51,
+            "bull": 7
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BREAK_RETEST",
+          "description": "Break resistance + retest hold (no RSI)",
+          "n_trades": 96,
+          "total_return": -0.9916252151595277,
+          "max_dd": -0.9916252151595277,
+          "win_rate": 0.4479166666666667,
+          "expectancy_pct": 0.0038571208103372716,
+          "avg_bars": 1.4479166666666667,
+          "final_equity": 83.74784840472246,
+          "exit_mix": {
+            "target_extension": 75,
+            "sl_3pct": 20,
+            "structure_fail": 1
+          },
+          "entry_kind_mix": {
+            "break": 87,
+            "retest": 9
+          },
+          "regime_n": {
+            "bull": 57,
+            "flat": 39
+          }
+        },
+        {
+          "pair": "avax",
+          "arm": "SR_BREAK_RSI",
+          "description": "Break+retest + RSI\u2264max",
+          "n_trades": 36,
+          "total_return": -0.6175542060452267,
+          "max_dd": -0.653915434458564,
+          "win_rate": 0.5833333333333334,
+          "expectancy_pct": 0.027729720655817403,
+          "avg_bars": 1.9444444444444444,
+          "final_equity": 3824.457939547733,
+          "exit_mix": {
+            "target_extension": 30,
+            "sl_3pct": 5,
+            "structure_fail": 1
+          },
+          "entry_kind_mix": {
+            "break": 32,
+            "retest": 4
+          },
+          "regime_n": {
+            "bull": 29,
+            "flat": 7
+          }
+        }
+      ],
+      "n_trade_rows": 2056,
+      "trades_sample": [
+        {
+          "pair": "btc",
+          "arm": "BH",
+          "entry_time": "2021-01-01 00:00:00+00:00",
+          "exit_time": "2026-08-15 00:00:00+00:00",
+          "entry_price": 29412.84,
+          "exit_price": 62997.81,
+          "pnl_pct": 1.1408472340651228,
+          "bars_held": 2052,
+          "exit_reason": "eod_flatten",
+          "entry_regime": "bull",
+          "entry_kind": "bh"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-01-13 00:00:00+00:00",
+          "exit_time": "2021-01-16 00:00:00+00:00",
+          "entry_price": 37393.66,
+          "exit_price": 36006.94,
+          "pnl_pct": -0.038084361359652985,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-01-22 00:00:00+00:00",
+          "exit_time": "2021-01-27 00:00:00+00:00",
+          "entry_price": 32984.93,
+          "exit_price": 30407.13,
+          "pnl_pct": -0.07915084039893372,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-02-01 00:00:00+00:00",
+          "exit_time": "2021-02-21 00:00:00+00:00",
+          "entry_price": 33533.19,
+          "exit_price": 57489.16,
+          "pnl_pct": 0.7133957971192123,
+          "bars_held": 20,
+          "exit_reason": "rsi_overbought",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-03-01 00:00:00+00:00",
+          "exit_time": "2021-03-31 00:00:00+00:00",
+          "entry_price": 49639.4,
+          "exit_price": 58800.0,
+          "pnl_pct": 0.18354292356474888,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-05 00:00:00+00:00",
+          "exit_time": "2021-04-07 00:00:00+00:00",
+          "entry_price": 59123.02,
+          "exit_price": 55955.75,
+          "pnl_pct": -0.05457084262610401,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-20 00:00:00+00:00",
+          "exit_time": "2021-04-21 00:00:00+00:00",
+          "entry_price": 56499.29,
+          "exit_price": 53800.86,
+          "pnl_pct": -0.048760423184078916,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-04-26 00:00:00+00:00",
+          "exit_time": "2021-05-12 00:00:00+00:00",
+          "entry_price": 54053.6,
+          "exit_price": 49498.77,
+          "pnl_pct": -0.0852650628265278,
+          "bars_held": 16,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-06-20 00:00:00+00:00",
+          "exit_time": "2021-06-21 00:00:00+00:00",
+          "entry_price": 35585.78,
+          "exit_price": 31609.82,
+          "pnl_pct": -0.11272889845325851,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-06-27 00:00:00+00:00",
+          "exit_time": "2021-07-01 00:00:00+00:00",
+          "entry_price": 34709.23,
+          "exit_price": 33516.11,
+          "pnl_pct": -0.03537471819455529,
+          "bars_held": 4,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-07-06 00:00:00+00:00",
+          "exit_time": "2021-07-08 00:00:00+00:00",
+          "entry_price": 34225.73,
+          "exit_price": 32875.95,
+          "pnl_pct": -0.040437581024568514,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-07-21 00:00:00+00:00",
+          "exit_time": "2021-08-20 00:00:00+00:00",
+          "entry_price": 32135.19,
+          "exit_price": 49342.4,
+          "pnl_pct": 0.5344631480317995,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-08-25 00:00:00+00:00",
+          "exit_time": "2021-08-26 00:00:00+00:00",
+          "entry_price": 48987.33,
+          "exit_price": 46851.47,
+          "pnl_pct": -0.04460025337163709,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-08-31 00:00:00+00:00",
+          "exit_time": "2021-09-10 00:00:00+00:00",
+          "entry_price": 47112.5,
+          "exit_price": 44851.45,
+          "pnl_pct": -0.04899257097373311,
+          "bars_held": 10,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-15 00:00:00+00:00",
+          "exit_time": "2021-09-20 00:00:00+00:00",
+          "entry_price": 48148.12,
+          "exit_price": 43012.97,
+          "pnl_pct": -0.10765317773570393,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-09-30 00:00:00+00:00",
+          "exit_time": "2021-10-30 00:00:00+00:00",
+          "entry_price": 43824.43,
+          "exit_price": 61892.41,
+          "pnl_pct": 0.41128100399708567,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-11-07 00:00:00+00:00",
+          "exit_time": "2021-11-16 00:00:00+00:00",
+          "entry_price": 63309.13,
+          "exit_price": 60107.98,
+          "pnl_pct": -0.0515637970384365,
+          "bars_held": 9,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "bull",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-11-23 00:00:00+00:00",
+          "exit_time": "2021-11-26 00:00:00+00:00",
+          "entry_price": 57566.85,
+          "exit_price": 53757.67,
+          "pnl_pct": -0.06716967925116624,
+          "bars_held": 3,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-12-01 00:00:00+00:00",
+          "exit_time": "2021-12-03 00:00:00+00:00",
+          "entry_price": 57226.5,
+          "exit_price": 53638.04,
+          "pnl_pct": -0.06370626370649957,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2021-12-26 00:00:00+00:00",
+          "exit_time": "2021-12-28 00:00:00+00:00",
+          "entry_price": 50801.79,
+          "exit_price": 47543.09,
+          "pnl_pct": -0.06514537755460992,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-01-12 00:00:00+00:00",
+          "exit_time": "2022-01-13 00:00:00+00:00",
+          "entry_price": 43920.37,
+          "exit_price": 42581.65,
+          "pnl_pct": -0.03148061753578124,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-02-19 00:00:00+00:00",
+          "exit_time": "2022-02-20 00:00:00+00:00",
+          "entry_price": 40101.94,
+          "exit_price": 38389.03,
+          "pnl_pct": -0.04371389364205336,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-02-25 00:00:00+00:00",
+          "exit_time": "2022-02-27 00:00:00+00:00",
+          "entry_price": 39238.48,
+          "exit_price": 37717.08,
+          "pnl_pct": -0.03977316348645521,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-03-05 00:00:00+00:00",
+          "exit_time": "2022-03-07 00:00:00+00:00",
+          "entry_price": 39402.43,
+          "exit_price": 37994.0,
+          "pnl_pct": -0.036744749752743666,
+          "bars_held": 2,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-03-14 00:00:00+00:00",
+          "exit_time": "2022-04-13 00:00:00+00:00",
+          "entry_price": 39674.17,
+          "exit_price": 41146.68,
+          "pnl_pct": 0.036115080164247915,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-04-18 00:00:00+00:00",
+          "exit_time": "2022-04-23 00:00:00+00:00",
+          "entry_price": 40803.58,
+          "exit_price": 39465.87,
+          "pnl_pct": -0.03378413315694351,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-07-14 00:00:00+00:00",
+          "exit_time": "2022-08-13 00:00:00+00:00",
+          "entry_price": 20577.02,
+          "exit_price": 24456.49,
+          "pnl_pct": 0.18753410260572234,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-08-21 00:00:00+00:00",
+          "exit_time": "2022-08-26 00:00:00+00:00",
+          "entry_price": 21518.62,
+          "exit_price": 20240.72,
+          "pnl_pct": -0.06038577845605331,
+          "bars_held": 5,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-09-19 00:00:00+00:00",
+          "exit_time": "2022-09-20 00:00:00+00:00",
+          "entry_price": 19540.38,
+          "exit_price": 18876.91,
+          "pnl_pct": -0.034953792096162006,
+          "bars_held": 1,
+          "exit_reason": "sl_3pct",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        },
+        {
+          "pair": "btc",
+          "arm": "BASE_RSI",
+          "entry_time": "2022-09-26 00:00:00+00:00",
+          "exit_time": "2022-10-26 00:00:00+00:00",
+          "entry_price": 19228.0,
+          "exit_price": 20775.4,
+          "pnl_pct": 0.07947638859995843,
+          "bars_held": 30,
+          "exit_reason": "max_hold",
+          "entry_regime": "flat",
+          "entry_kind": "base_rsi"
+        }
+      ]
+    }
+  ],
+  "overall_recommendation": {
+    "primary_window": "long_tape",
+    "call": "Best structure arm `SR_BREAK_RSI` less-loss vs BASE only on long_tape",
+    "last_14d_context": "Best structure arm `SR_BREAK_RSI` still sparse/inconclusive on last_14d",
+    "recommendation_enum": "drop",
+    "family": "market_structure_sr",
+    "live_writes": false
+  }
+}

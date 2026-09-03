@@ -1,0 +1,426 @@
+{
+  "generated_at": "2026-08-04T20:07:44.232826+00:00",
+  "phase": "baseline",
+  "analysis": {
+    "window": {
+      "start": "2026-07-21T00:00:00+00:00",
+      "end": "2026-08-04T20:07:44.210691+00:00",
+      "n_decisions": 57,
+      "n_with_native_shadow": 0,
+      "native_shadow_ratio": 0.0,
+      "n_with_buys": 8
+    },
+    "flag_counts": {
+      "sell_stoch_overbought": 2,
+      "buy_stoch_oversold": 4,
+      "buy_stoch_overbought": 1
+    },
+    "missed_stoch_buy_events": 13,
+    "missed_stoch_sell_events": 3,
+    "disagreement_pair_events": 151,
+    "forward_compare_72h": {
+      "n": 0,
+      "stoch_alt_better_n": 0,
+      "mean_delta_alt_minus_bought": null
+    },
+    "episodes": [
+      {
+        "decision_id": "rebalance_20260723T040121Z_6a3616d6",
+        "timestamp": "2026-07-23T04:01:21.311386+00:00",
+        "path": "arch4_rotation",
+        "strategy": "rotation_catch_wave",
+        "buys": {
+          "SOL-USD": 545.0492
+        },
+        "missed_stoch_buys": [
+          {
+            "pair": "ETH-USD",
+            "stoch_k": 0.0,
+            "rank": 1,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          },
+          {
+            "pair": "XRP-USD",
+            "stoch_k": 0.0,
+            "rank": 2,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          },
+          {
+            "pair": "DOGE-USD",
+            "stoch_k": 0.0,
+            "rank": 3,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 3.5342
+          }
+        ],
+        "action_flags": [
+          {
+            "pair": "SOL-USD",
+            "side": "BUY",
+            "usd": 545.0492,
+            "flag": "buy_stoch_oversold",
+            "stoch_k": 24.9,
+            "rsi": 43.54
+          }
+        ],
+        "buy_rank_compare": [
+          {
+            "pair": "SOL-USD",
+            "usd": 545.0492,
+            "rsi_oversold_rank": 9,
+            "stoch_oversold_rank": 10,
+            "rsi": 43.54,
+            "stoch_k": 24.9
+          }
+        ],
+        "fwd_bought": {
+          "SOL-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        },
+        "fwd_missed_stoch_alts": {
+          "ETH-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "XRP-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "DOGE-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        }
+      },
+      {
+        "decision_id": "rebalance_20260802T160154Z_57d428c7",
+        "timestamp": "2026-08-02T16:01:54.607252+00:00",
+        "path": "arch4_rotation",
+        "strategy": "rotation_catch_wave",
+        "buys": {
+          "BTC-USD": 590.2477
+        },
+        "missed_stoch_buys": [
+          {
+            "pair": "OP-USD",
+            "stoch_k": 0.0,
+            "rank": 1,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          },
+          {
+            "pair": "LINK-USD",
+            "stoch_k": 29.88,
+            "rank": 2,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 590.2477
+          }
+        ],
+        "action_flags": [],
+        "buy_rank_compare": [
+          {
+            "pair": "BTC-USD",
+            "usd": 590.2477,
+            "rsi_oversold_rank": 3,
+            "stoch_oversold_rank": 9,
+            "rsi": 44.67,
+            "stoch_k": 62.51
+          }
+        ],
+        "fwd_bought": {
+          "BTC-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        },
+        "fwd_missed_stoch_alts": {
+          "OP-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "LINK-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        }
+      },
+      {
+        "decision_id": "rebalance_20260802T160643Z_4fd1936f",
+        "timestamp": "2026-08-02T16:06:43.403173+00:00",
+        "path": "arch4_rotation",
+        "strategy": "rotation_catch_wave",
+        "buys": {
+          "BTC-USD": 295.1305
+        },
+        "missed_stoch_buys": [
+          {
+            "pair": "OP-USD",
+            "stoch_k": 0.0,
+            "rank": 1,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          },
+          {
+            "pair": "LINK-USD",
+            "stoch_k": 29.88,
+            "rank": 2,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 295.1305
+          }
+        ],
+        "action_flags": [],
+        "buy_rank_compare": [
+          {
+            "pair": "BTC-USD",
+            "usd": 295.1305,
+            "rsi_oversold_rank": 3,
+            "stoch_oversold_rank": 9,
+            "rsi": 44.67,
+            "stoch_k": 62.51
+          }
+        ],
+        "fwd_bought": {
+          "BTC-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        },
+        "fwd_missed_stoch_alts": {
+          "OP-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "LINK-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        }
+      },
+      {
+        "decision_id": "rebalance_20260803T040132Z_6761cca3",
+        "timestamp": "2026-08-03T04:01:32.489871+00:00",
+        "path": "arch4_rotation",
+        "strategy": "rotation_catch_wave",
+        "buys": {
+          "BTC-USD": 98.3798
+        },
+        "missed_stoch_buys": [
+          {
+            "pair": "ETH-USD",
+            "stoch_k": 0.0,
+            "rank": 2,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          },
+          {
+            "pair": "SOL-USD",
+            "stoch_k": 0.0,
+            "rank": 3,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 98.3798
+          }
+        ],
+        "action_flags": [
+          {
+            "pair": "BTC-USD",
+            "side": "BUY",
+            "usd": 98.3798,
+            "flag": "buy_stoch_oversold",
+            "stoch_k": 0.0,
+            "rsi": 27.89
+          }
+        ],
+        "buy_rank_compare": [
+          {
+            "pair": "BTC-USD",
+            "usd": 98.3798,
+            "rsi_oversold_rank": 4,
+            "stoch_oversold_rank": 1,
+            "rsi": 27.89,
+            "stoch_k": 0.0
+          }
+        ],
+        "fwd_bought": {
+          "BTC-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        },
+        "fwd_missed_stoch_alts": {
+          "ETH-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "SOL-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        }
+      },
+      {
+        "decision_id": "rebalance_20260803T040632Z_b3a67245",
+        "timestamp": "2026-08-03T04:06:32.918927+00:00",
+        "path": "arch4_rotation",
+        "strategy": "rotation_catch_wave",
+        "buys": {
+          "BTC-USD": 65.5931
+        },
+        "missed_stoch_buys": [
+          {
+            "pair": "ETH-USD",
+            "stoch_k": 0.0,
+            "rank": 2,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          },
+          {
+            "pair": "SOL-USD",
+            "stoch_k": 0.0,
+            "rank": 3,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 65.5931
+          }
+        ],
+        "action_flags": [
+          {
+            "pair": "BTC-USD",
+            "side": "BUY",
+            "usd": 65.5931,
+            "flag": "buy_stoch_oversold",
+            "stoch_k": 0.0,
+            "rsi": 27.89
+          }
+        ],
+        "buy_rank_compare": [
+          {
+            "pair": "BTC-USD",
+            "usd": 65.5931,
+            "rsi_oversold_rank": 4,
+            "stoch_oversold_rank": 1,
+            "rsi": 27.89,
+            "stoch_k": 0.0
+          }
+        ],
+        "fwd_bought": {
+          "BTC-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        },
+        "fwd_missed_stoch_alts": {
+          "ETH-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "SOL-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        }
+      },
+      {
+        "decision_id": "rebalance_20260804T040111Z_baaeeb67",
+        "timestamp": "2026-08-04T04:01:11.476867+00:00",
+        "path": "arch4_rotation",
+        "strategy": "rotation_catch_wave",
+        "buys": {
+          "LINK-USD": 636.9799
+        },
+        "missed_stoch_buys": [
+          {
+            "pair": "UNI-USD",
+            "stoch_k": 0.0,
+            "rank": 1,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 636.9799
+          },
+          {
+            "pair": "OP-USD",
+            "stoch_k": 17.27,
+            "rank": 2,
+            "note": "stoch_oversold_not_bought_while_buys_occurred",
+            "holding_usd": 0.0
+          }
+        ],
+        "action_flags": [
+          {
+            "pair": "LINK-USD",
+            "side": "BUY",
+            "usd": 636.9799,
+            "flag": "buy_stoch_overbought",
+            "stoch_k": 82.06,
+            "rsi": 51.55
+          }
+        ],
+        "buy_rank_compare": [
+          {
+            "pair": "LINK-USD",
+            "usd": 636.9799,
+            "rsi_oversold_rank": 2,
+            "stoch_oversold_rank": 9,
+            "rsi": 51.55,
+            "stoch_k": 82.06
+          }
+        ],
+        "fwd_bought": {
+          "LINK-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        },
+        "fwd_missed_stoch_alts": {
+          "UNI-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          },
+          "OP-USD": {
+            "ret_24h": null,
+            "ret_72h": null,
+            "ret_168h": null
+          }
+        }
+      }
+    ],
+    "recommendation": {
+      "enum": "extend_collect",
+      "plain_english": "Not enough forward-priced missed-buy comparisons yet. Keep logging rotation_shadow + price_snapshot on each rebalance.",
+      "go_allocator_change": false,
+      "go_live_rotation_overlay": false,
+      "live_allocator_unchanged": true
+    },
+    "notes": [
+      "Shadow is log-only; live path stays plain RSI allocator.",
+      "Pre-shadow rows rebuild candidates from indicator_snapshot; holdings may be tilted_plan proxy.",
+      "Forward returns need price_snapshot on decisions \u2014 sparse until this deploy ages.",
+      "Trade fill prices available as secondary marks; not used as primary basket marks yet."
+    ],
+    "trades_loaded": 362
+  },
+  "rules": {
+    "allocator_change": false,
+    "live_rotation_overlay": false,
+    "real_data_only": true
+  }
+}

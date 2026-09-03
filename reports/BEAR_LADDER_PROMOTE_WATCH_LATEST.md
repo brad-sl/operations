@@ -1,10 +1,10 @@
 # Bear ladder promote watch
 
-**As of:** 2026-08-21T00:48:36.267887+00:00
+**As of:** 2026-09-03T16:00:27.178435+00:00
 **Phase:** `partial_data`
 **Alert this tick:** False (silent)
 
-- Regime: transition
+- Regime: flat
 - Episodes: 0/10
 - Bear days: 1/30
 - Path CF: pursue_shadow

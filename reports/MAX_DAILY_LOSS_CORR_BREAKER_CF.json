@@ -1,0 +1,446 @@
+{
+  "as_of": "2026-08-31T21:16:20.892831+00:00",
+  "nav_live": 2295.29791474713,
+  "ledger": {
+    "n_days": 47,
+    "range": [
+      "2026-05-01",
+      "2026-08-30"
+    ],
+    "n_sells_with_pnl": 150,
+    "n_buys": 263,
+    "total_realized": 400.98,
+    "sum_negative_days": -290.71,
+    "worst15": [
+      {
+        "day": "2026-06-05",
+        "pnl": -69.89
+      },
+      {
+        "day": "2026-07-11",
+        "pnl": -37.15
+      },
+      {
+        "day": "2026-08-01",
+        "pnl": -36.15
+      },
+      {
+        "day": "2026-08-25",
+        "pnl": -30.26
+      },
+      {
+        "day": "2026-07-27",
+        "pnl": -18.07
+      },
+      {
+        "day": "2026-06-20",
+        "pnl": -17.24
+      },
+      {
+        "day": "2026-08-28",
+        "pnl": -14.41
+      },
+      {
+        "day": "2026-08-04",
+        "pnl": -10.45
+      },
+      {
+        "day": "2026-07-20",
+        "pnl": -10.29
+      },
+      {
+        "day": "2026-08-11",
+        "pnl": -6.44
+      },
+      {
+        "day": "2026-07-15",
+        "pnl": -5.68
+      },
+      {
+        "day": "2026-07-17",
+        "pnl": -5.46
+      },
+      {
+        "day": "2026-07-16",
+        "pnl": -4.68
+      },
+      {
+        "day": "2026-07-12",
+        "pnl": -4.64
+      },
+      {
+        "day": "2026-08-12",
+        "pnl": -3.63
+      }
+    ]
+  },
+  "max_daily_loss": {
+    "config_pct": 0.02,
+    "config_capital": 1000.0,
+    "config_usd": 20.0,
+    "live_2pct_usd": 45.91,
+    "semantics": "legacy: block NEW buys after daily realized loss hits threshold; does NOT auto-flatten",
+    "wired_phase6_core": false,
+    "eod_fire_counts": {
+      "cfg_20": 4,
+      "live_2pct": 1,
+      "hard_50": 1,
+      "hard_100": 0,
+      "pct5_live": 0
+    },
+    "eod_fire_days": {
+      "cfg_20": [
+        {
+          "day": "2026-06-05",
+          "pnl": -69.89
+        },
+        {
+          "day": "2026-07-11",
+          "pnl": -37.15
+        },
+        {
+          "day": "2026-08-01",
+          "pnl": -36.15
+        },
+        {
+          "day": "2026-08-25",
+          "pnl": -30.26
+        }
+      ],
+      "live_2pct": [
+        {
+          "day": "2026-06-05",
+          "pnl": -69.89
+        }
+      ],
+      "hard_50": [
+        {
+          "day": "2026-06-05",
+          "pnl": -69.89
+        }
+      ],
+      "hard_100": [],
+      "pct5_live": []
+    },
+    "cf_block_buys_cfg20": {
+      "fire_days": 4,
+      "blocked_buys": 3,
+      "blocked_notional": 29.64,
+      "sell_pnl_after_breach": -32.5,
+      "detail": [
+        {
+          "day": "2026-06-05",
+          "blocked_buys": 3,
+          "blocked_notional": 29.64,
+          "sell_pnl_after": -24.87,
+          "day_pnl": -69.89
+        },
+        {
+          "day": "2026-07-11",
+          "blocked_buys": 0,
+          "blocked_notional": 0.0,
+          "sell_pnl_after": -6.47,
+          "day_pnl": -37.15
+        }
+      ]
+    },
+    "cf_block_buys_live2pct": {
+      "fire_days": 1,
+      "blocked_buys": 3,
+      "blocked_notional": 29.64,
+      "sell_pnl_after_breach": -0.47,
+      "detail": [
+        {
+          "day": "2026-06-05",
+          "blocked_buys": 3,
+          "blocked_notional": 29.64,
+          "sell_pnl_after": -0.47,
+          "day_pnl": -69.89
+        }
+      ]
+    },
+    "pre_vs_post_breach_cfg20": {
+      "pre_sum": -140.96,
+      "post_sum": -32.5,
+      "n_fire": 4,
+      "rows": [
+        {
+          "day": "2026-06-05",
+          "pre": -45.02,
+          "post": -24.87,
+          "day_pnl": -69.89,
+          "pairs": {
+            "XRP-USD": -24.87,
+            "SOL-USD": -45.02
+          }
+        },
+        {
+          "day": "2026-07-11",
+          "pre": -30.69,
+          "post": -6.47,
+          "day_pnl": -37.15,
+          "pairs": {
+            "DOGE-USD": -2.26,
+            "AVAX-USD": -2.75,
+            "SOL-USD": -3.89,
+            "OP-USD": -27.94
+          }
+        },
+        {
+          "day": "2026-08-01",
+          "pre": -35.58,
+          "post": -0.57,
+          "day_pnl": -36.15,
+          "pairs": {
+            "LINK-USD": -36.15
+          }
+        },
+        {
+          "day": "2026-08-25",
+          "pre": -29.67,
+          "post": -0.59,
+          "day_pnl": -30.26,
+          "pairs": {
+            "LINK-USD": -30.26
+          }
+        }
+      ]
+    },
+    "verdict_class": "ATTENTION_ONLY_less_loss_path_weak"
+  },
+  "correlation_breaker": {
+    "threshold": 0.85,
+    "reduction_pct": 0.3,
+    "reserve_redeploy_pct": 0.15,
+    "wired_live": false,
+    "ohlcv_meta": {
+      "ARB": {
+        "n": 467,
+        "start": "2025-04-20",
+        "end": "2026-07-30",
+        "file": "backtest_historical_ohlcv_arb_2025-04-20_to_2026-04-20.json"
+      },
+      "SOL": {
+        "n": 1886,
+        "start": "2021-06-17",
+        "end": "2026-08-15",
+        "file": "ohlcv_daily_sol.json"
+      },
+      "AVAX": {
+        "n": 1781,
+        "start": "2021-09-30",
+        "end": "2026-08-15",
+        "file": "ohlcv_daily_avax.json"
+      },
+      "NEAR": {
+        "n": 467,
+        "start": "2025-04-20",
+        "end": "2026-07-30",
+        "file": "backtest_historical_ohlcv_near_2025-04-20_to_2026-04-20.json"
+      },
+      "LINK": {
+        "n": 2093,
+        "start": "2020-11-22",
+        "end": "2026-08-15",
+        "file": "ohlcv_daily_link.json"
+      },
+      "BTC": {
+        "n": 2093,
+        "start": "2020-11-22",
+        "end": "2026-08-15",
+        "file": "ohlcv_daily_btc.json"
+      },
+      "ETH": {
+        "n": 2093,
+        "start": "2020-11-22",
+        "end": "2026-08-15",
+        "file": "ohlcv_daily_eth.json"
+      },
+      "DOGE": {
+        "n": 467,
+        "start": "2025-04-20",
+        "end": "2026-07-30",
+        "file": "backtest_historical_ohlcv_doge_2025-04-20_to_2026-04-20.json"
+      },
+      "XRP": {
+        "n": 467,
+        "start": "2025-04-20",
+        "end": "2026-07-30",
+        "file": "backtest_historical_ohlcv_xrp_2025-04-20_to_2026-04-20.json"
+      }
+    },
+    "aligned_dates": 131,
+    "core_symbols": [
+      "BTC",
+      "ETH",
+      "SOL",
+      "XRP",
+      "LINK",
+      "AVAX",
+      "DOGE"
+    ],
+    "rolling30_any_pair_fire_days": 101,
+    "rolling30_sample_days": 101,
+    "pair_fire_days": {
+      "BTC-ETH": 98,
+      "SOL-LINK": 77,
+      "ETH-LINK": 68,
+      "XRP-DOGE": 61,
+      "BTC-XRP": 61,
+      "XRP-LINK": 60,
+      "SOL-AVAX": 59,
+      "LINK-AVAX": 59,
+      "ETH-XRP": 59,
+      "LINK-DOGE": 47,
+      "BTC-SOL": 38,
+      "BTC-LINK": 36,
+      "ETH-SOL": 34,
+      "ETH-DOGE": 34,
+      "SOL-XRP": 32,
+      "SOL-DOGE": 21,
+      "ETH-AVAX": 20,
+      "AVAX-DOGE": 11,
+      "XRP-AVAX": 7,
+      "BTC-DOGE": 7,
+      "BTC-AVAX": 2
+    },
+    "latest_corrs": {
+      "ETH-LINK": 0.953,
+      "BTC-SOL": 0.885,
+      "BTC-XRP": 0.884,
+      "XRP-DOGE": 0.883,
+      "BTC-ETH": 0.878,
+      "ETH-XRP": 0.872,
+      "BTC-LINK": 0.862,
+      "ETH-SOL": 0.86,
+      "SOL-LINK": 0.858,
+      "XRP-LINK": 0.846,
+      "ETH-DOGE": 0.809,
+      "SOL-XRP": 0.808,
+      "AVAX-DOGE": 0.801,
+      "LINK-DOGE": 0.782,
+      "BTC-DOGE": 0.759,
+      "SOL-DOGE": 0.699,
+      "XRP-AVAX": 0.65,
+      "ETH-AVAX": 0.602,
+      "BTC-AVAX": 0.598,
+      "LINK-AVAX": 0.595,
+      "SOL-AVAX": 0.584
+    },
+    "multi_pair_loss_days": 5,
+    "multi_rows": [
+      {
+        "day": "2026-06-05",
+        "day_pnl": -69.89,
+        "losers": [
+          "XRP-USD",
+          "SOL-USD"
+        ],
+        "corrs": [
+          {
+            "a": "XRP",
+            "b": "SOL",
+            "corr": 0.853
+          }
+        ],
+        "fantasy_30pct_save": 20.97,
+        "applied": [
+          {
+            "a": "XRP",
+            "b": "SOL",
+            "corr": 0.853
+          }
+        ]
+      },
+      {
+        "day": "2026-07-11",
+        "day_pnl": -37.15,
+        "losers": [
+          "DOGE-USD",
+          "AVAX-USD",
+          "SOL-USD",
+          "OP-USD"
+        ],
+        "corrs": [
+          {
+            "a": "DOGE",
+            "b": "AVAX",
+            "corr": 0.491
+          },
+          {
+            "a": "DOGE",
+            "b": "SOL",
+            "corr": 0.702
+          },
+          {
+            "a": "AVAX",
+            "b": "SOL",
+            "corr": 0.687
+          }
+        ],
+        "fantasy_30pct_save": 0.0,
+        "applied": []
+      },
+      {
+        "day": "2026-07-16",
+        "day_pnl": -4.68,
+        "losers": [
+          "AVAX-USD",
+          "SOL-USD"
+        ],
+        "corrs": [
+          {
+            "a": "AVAX",
+            "b": "SOL",
+            "corr": 0.667
+          }
+        ],
+        "fantasy_30pct_save": 0.0,
+        "applied": []
+      },
+      {
+        "day": "2026-07-20",
+        "day_pnl": -10.29,
+        "losers": [
+          "ADA-USD",
+          "DOGE-USD"
+        ],
+        "corrs": [],
+        "fantasy_30pct_save": 0.0,
+        "applied": []
+      },
+      {
+        "day": "2026-08-23",
+        "day_pnl": 42.26,
+        "losers": [
+          "RAVE-USD",
+          "UNI-USD"
+        ],
+        "corrs": [],
+        "fantasy_30pct_save": 0.0,
+        "applied": []
+      }
+    ],
+    "fantasy_30pct_reduce_save_usd": 20.97,
+    "fantasy_appl_days": 1,
+    "verdict_class": "ATTENTION_ONLY_less_loss_path_sparse"
+  },
+  "context_levers_usd": {
+    "c_standdown_90d_approx": 89,
+    "fee_drag_30d_approx": 139,
+    "note": "Prior digs; not re-run here"
+  },
+  "honest_limits": [
+    "Realized SELL ledger only \u2014 no mark-to-market intraday equity curve",
+    "max_daily_loss CF assumes chronological fills within day; no open unrealized",
+    "corr CF fantasy assumes 30% size already cut BEFORE the loss day",
+    "OHLCV alignment may miss some alt pairs (OP/ICP/PENGU) \u2192 undercount multi-day corr",
+    "Does not model redeploy risk after corr cut or opportunity cost of blocked buys"
+  ],
+  "decision": {
+    "status": "PARKED",
+    "by": "Brad",
+    "as_of": "2026-08-31T21:21:10.988614+00:00",
+    "note": "complexity > return; no wire / no promote; honesty-only optional later for max_daily_loss"
+  }
+}

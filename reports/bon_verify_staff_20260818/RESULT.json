@@ -1,0 +1,110 @@
+{
+  "pilot_id": "BON-STAFF-20260818-2",
+  "n": 3,
+  "margin_min": 1.5,
+  "safety_floors": {
+    "live_safety": 14.0,
+    "evidence_honesty": 12.0
+  },
+  "notes": {
+    "candidate_A": "Leaf fleet_scale \u2192 GAP-03 cap matrix",
+    "candidate_B": "Leaf less_loss \u2192 GAP-05 STAGED NEXT READY_LEDGER",
+    "candidate_C": "Leaf evidence_clock \u2192 GAP-04 COLLECTING; prior n\u22480 staged",
+    "baseline": "Parent single-shot after gens (GAP-05 + optional GAP-08)"
+  },
+  "ranking": [
+    {
+      "candidate_id": "B",
+      "primary": "P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816",
+      "scores": {
+        "fleet_bang": 18,
+        "feasibility_7d": 18,
+        "live_safety": 18,
+        "evidence_honesty": 18,
+        "low_drag": 17
+      },
+      "evidence": {
+        "fleet_bang": "L3 less_loss after GAP-02; post-SL recycle at platform scale",
+        "feasibility_7d": "STAGED NEXT + READY_LEDGER (~18 rebuy episodes); frozen bars",
+        "live_safety": "Offline ledger only; must-nots clear",
+        "evidence_honesty": "Grounded READY_LEDGER + prior pilot; no fantasy returns",
+        "low_drag": "Single primary; already staged after GAP-06 ship"
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 17.8
+    },
+    {
+      "candidate_id": "BASELINE",
+      "primary": "P6-SCALE-GAP-05-POST-SL-REENTRY-EFF-20260816",
+      "scores": {
+        "fleet_bang": 17,
+        "feasibility_7d": 17,
+        "live_safety": 18,
+        "evidence_honesty": 17,
+        "low_drag": 15
+      },
+      "evidence": {
+        "fleet_bang": "Same L3 primary; secondary GAP-08 dilutes focus slightly",
+        "feasibility_7d": "GAP-05 ready; dual primary+secondary raises coordination",
+        "live_safety": "Offline",
+        "evidence_honesty": "Matches prior staging narrative",
+        "low_drag": "Secondary promo firedrill adds optional thrash"
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 16.8
+    },
+    {
+      "candidate_id": "A",
+      "primary": "P6-SCALE-GAP-03-CAP-SCOPE-MATRIX-20260816",
+      "scores": {
+        "fleet_bang": 18,
+        "feasibility_7d": 14,
+        "live_safety": 18,
+        "evidence_honesty": 17,
+        "low_drag": 14
+      },
+      "evidence": {
+        "fleet_bang": "L2 cap scope before cloning option B \u2014 real fleet lever",
+        "feasibility_7d": "M offline CF+ISO; no READY_LEDGER flag; heavier than staged L3",
+        "live_safety": "Explicit offline-only; no live capital writes",
+        "evidence_honesty": "Real MASTER id; frozen bars; kill on low-evidence",
+        "low_drag": "M effort; not pre-staged; new matrix work"
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 16.2
+    },
+    {
+      "candidate_id": "C",
+      "primary": "P6-SCALE-GAP-04-HARD-EXIT-EVIDENCE-CLOCK-20260816",
+      "scores": {
+        "fleet_bang": 13,
+        "feasibility_7d": 7,
+        "live_safety": 18,
+        "evidence_honesty": 15,
+        "low_drag": 11
+      },
+      "evidence": {
+        "fleet_bang": "Clock matters for exit scale but not this week's loss lever",
+        "feasibility_7d": "COLLECTING; historical staged n\u22480 \u2014 pass needs mature clock \u22647d unlikely",
+        "live_safety": "Watch-not-build; no live writes",
+        "evidence_honesty": "Acknowledges n=0 / idle-with-reason; still staffs immature clock as primary",
+        "low_drag": "S on paper; likely idle week with no closeout"
+      },
+      "disqualify": false,
+      "disqualify_reason": null,
+      "overall": 12.8
+    }
+  ],
+  "eligible_order": [
+    "B",
+    "BASELINE",
+    "A",
+    "C"
+  ],
+  "winner_id": null,
+  "margin": 1.0,
+  "decision": "escalate"
+}

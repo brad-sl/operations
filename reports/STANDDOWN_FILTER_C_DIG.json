@@ -1,0 +1,1300 @@
+{
+  "as_of": "2026-08-31T17:10:32.519974+00:00",
+  "mode": "read_only_counterfactual",
+  "thesis": "C_standdown_filter",
+  "nav_usd": 2294.9217719115304,
+  "lookback_days": 90,
+  "exit_horizon_days": 21,
+  "method": {
+    "C": "Block process-hint buys when elevated-tape def is true; alt arm blocks all elevated buys.",
+    "elevated_defs_frozen": {
+      "heat_strict": "r24>=12 OR (r24>=8 & RSI>=70) OR r6>=8",
+      "elev_r24_5": "r24>=5 (elevated; process-on-heat boundary)",
+      "elev_r24_8": "r24>=8 OR r6>=5",
+      "elev_soft": "r24>=3 OR r6>=3 OR RSI>=65"
+    },
+    "process_hint": "src/reason contains rebalance|rsi|runner|phase6|allocator|regime|fresh_start|arch4|rotation|deploy|opportunity|signal",
+    "pnl": "qty_min * (sell_px - buy_px) - buy_fee - scaled_sell_fee; fee imputed at 0.8% if missing",
+    "caveats": [
+      "Imperfect lot match (first SELL within 21d)",
+      "Fee imputation when ledger fee blank",
+      "No path simulation of capital reuse after block",
+      "Blocking winners hurts CF \u2014 reported honestly",
+      "Not walk-forward optimized; half-sample split only",
+      "No live gate / no promote"
+    ]
+  },
+  "baseline_90d": {
+    "n_buys": 297,
+    "n_with_exit": 161,
+    "outcome_all_buys": {
+      "n": 161,
+      "win_rate": 0.137,
+      "sum_pnl": -760.89,
+      "avg_pnl": -4.73,
+      "median_pnl": -1.88,
+      "p25": -5.41,
+      "p75": -0.34
+    },
+    "sum_buy_fees": 268.72,
+    "sum_matched_sell_fees": 194.72,
+    "process_hint_count": 225,
+    "fee_imputed_buy_count": 233
+  },
+  "calm_vs_elev_process_elev_r24_5": {
+    "calm_process": {
+      "n": 90,
+      "win_rate": 0.156,
+      "sum_pnl": -427.18,
+      "avg_pnl": -4.75,
+      "median_pnl": -1.83,
+      "p25": -4.9,
+      "p75": -0.33
+    },
+    "elevated_process": {
+      "n": 8,
+      "win_rate": 0.0,
+      "sum_pnl": -88.51,
+      "avg_pnl": -11.06,
+      "median_pnl": -5.33,
+      "p25": -8.57,
+      "p75": -2.74
+    },
+    "delta_avg_pnl_elev_minus_calm": -6.32
+  },
+  "counterfactuals": {
+    "heat_strict": {
+      "definition": "r24>=12 OR (r24>=8 & RSI>=70) OR r6>=8",
+      "process_on_elevated_block": {
+        "mode": "block_process_if_elevated",
+        "n_blocked": 2,
+        "n_allowed": 295,
+        "n_blocked_with_exit": 2,
+        "n_allowed_with_exit": 159,
+        "blocked_outcome": {
+          "n": 2,
+          "win_rate": 0.0,
+          "sum_pnl": -8.88,
+          "avg_pnl": -4.44,
+          "median_pnl": -4.44,
+          "p25": -6.12,
+          "p75": -2.76
+        },
+        "allowed_outcome": {
+          "n": 159,
+          "win_rate": 0.138,
+          "sum_pnl": -752.01,
+          "avg_pnl": -4.73,
+          "median_pnl": -1.88,
+          "p25": -5.41,
+          "p75": -0.33
+        },
+        "blocked_buy_notional": 428.21,
+        "fee_buy_on_blocked": 3.43,
+        "fee_sell_on_blocked_matched": 1.11,
+        "cf_avoided_net_pnl_after_fees": 8.88,
+        "cf_fee_only_unmatched_buys": 0,
+        "cf_total_if_add_unmatched_fees": 8.88,
+        "cf_pct_nav": 0.39,
+        "edge_class": "inconclusive_sparse_N",
+        "half1_blocked": {
+          "n": 1,
+          "win_rate": 0.0,
+          "sum_pnl": -6.12,
+          "avg_pnl": -6.12,
+          "median_pnl": -6.12,
+          "p25": -6.12,
+          "p75": -6.12
+        },
+        "half2_blocked": {
+          "n": 1,
+          "win_rate": 0.0,
+          "sum_pnl": -2.76,
+          "avg_pnl": -2.76,
+          "median_pnl": -2.76,
+          "p25": -2.76,
+          "p75": -2.76
+        },
+        "blocked_pairs": [
+          [
+            "ARB-USD",
+            1
+          ],
+          [
+            "UNI-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "arch4_rebalance",
+            1
+          ],
+          [
+            "coinbase_fill_reconcile",
+            1
+          ]
+        ]
+      },
+      "all_elevated_block": {
+        "mode": "block_all_if_elevated",
+        "n_blocked": 3,
+        "n_allowed": 294,
+        "n_blocked_with_exit": 3,
+        "n_allowed_with_exit": 158,
+        "blocked_outcome": {
+          "n": 3,
+          "win_rate": 0.0,
+          "sum_pnl": -11.64,
+          "avg_pnl": -3.88,
+          "median_pnl": -2.76,
+          "p25": -6.12,
+          "p75": -2.76
+        },
+        "allowed_outcome": {
+          "n": 158,
+          "win_rate": 0.139,
+          "sum_pnl": -749.25,
+          "avg_pnl": -4.74,
+          "median_pnl": -1.83,
+          "p25": -5.41,
+          "p75": -0.33
+        },
+        "blocked_buy_notional": 764.4,
+        "fee_buy_on_blocked": 6.12,
+        "fee_sell_on_blocked_matched": 1.16,
+        "cf_avoided_net_pnl_after_fees": 11.64,
+        "cf_fee_only_unmatched_buys": 0,
+        "cf_total_if_add_unmatched_fees": 11.64,
+        "cf_pct_nav": 0.51,
+        "edge_class": "inconclusive_sparse_N",
+        "half1_blocked": {
+          "n": 1,
+          "win_rate": 0.0,
+          "sum_pnl": -6.12,
+          "avg_pnl": -6.12,
+          "median_pnl": -6.12,
+          "p25": -6.12,
+          "p75": -6.12
+        },
+        "half2_blocked": {
+          "n": 2,
+          "win_rate": 0.0,
+          "sum_pnl": -5.52,
+          "avg_pnl": -2.76,
+          "median_pnl": -2.76,
+          "p25": -2.76,
+          "p75": -2.76
+        },
+        "blocked_pairs": [
+          [
+            "UNI-USD",
+            2
+          ],
+          [
+            "ARB-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "coinbase_fill_reconcile",
+            2
+          ],
+          [
+            "arch4_rebalance",
+            1
+          ]
+        ]
+      },
+      "diagnostic": {
+        "n_elevated": 3,
+        "n_process_elevated": 2,
+        "n_process_calm": 223
+      }
+    },
+    "elev_r24_5": {
+      "definition": "r24>=5 (elevated; process-on-heat boundary)",
+      "process_on_elevated_block": {
+        "mode": "block_process_if_elevated",
+        "n_blocked": 9,
+        "n_allowed": 288,
+        "n_blocked_with_exit": 8,
+        "n_allowed_with_exit": 153,
+        "blocked_outcome": {
+          "n": 8,
+          "win_rate": 0.0,
+          "sum_pnl": -88.51,
+          "avg_pnl": -11.06,
+          "median_pnl": -5.33,
+          "p25": -8.57,
+          "p75": -2.74
+        },
+        "allowed_outcome": {
+          "n": 153,
+          "win_rate": 0.144,
+          "sum_pnl": -672.38,
+          "avg_pnl": -4.39,
+          "median_pnl": -1.79,
+          "p25": -5.16,
+          "p75": -0.32
+        },
+        "blocked_buy_notional": 2737.41,
+        "fee_buy_on_blocked": 25.96,
+        "fee_sell_on_blocked_matched": 19.39,
+        "cf_avoided_net_pnl_after_fees": 88.51,
+        "cf_fee_only_unmatched_buys": 0,
+        "cf_total_if_add_unmatched_fees": 88.51,
+        "cf_pct_nav": 3.86,
+        "edge_class": "ATTENTION_ONLY_less_loss_path",
+        "half1_blocked": {
+          "n": 3,
+          "win_rate": 0.0,
+          "sum_pnl": -13.39,
+          "avg_pnl": -4.46,
+          "median_pnl": -4.53,
+          "p25": -6.12,
+          "p75": -2.74
+        },
+        "half2_blocked": {
+          "n": 5,
+          "win_rate": 0.0,
+          "sum_pnl": -75.12,
+          "avg_pnl": -15.02,
+          "median_pnl": -8.57,
+          "p25": -25.34,
+          "p75": -2.76
+        },
+        "blocked_pairs": [
+          [
+            "LINK-USD",
+            4
+          ],
+          [
+            "ADA-USD",
+            2
+          ],
+          [
+            "UNI-USD",
+            2
+          ],
+          [
+            "ARB-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "arch4_rebalance",
+            5
+          ],
+          [
+            "coinbase_fill_reconcile",
+            3
+          ],
+          [
+            "phase6_fresh_start",
+            1
+          ]
+        ]
+      },
+      "all_elevated_block": {
+        "mode": "block_all_if_elevated",
+        "n_blocked": 12,
+        "n_allowed": 285,
+        "n_blocked_with_exit": 11,
+        "n_allowed_with_exit": 150,
+        "blocked_outcome": {
+          "n": 11,
+          "win_rate": 0.0,
+          "sum_pnl": -149.44,
+          "avg_pnl": -13.59,
+          "median_pnl": -6.12,
+          "p25": -25.34,
+          "p75": -2.76
+        },
+        "allowed_outcome": {
+          "n": 150,
+          "win_rate": 0.147,
+          "sum_pnl": -611.45,
+          "avg_pnl": -4.08,
+          "median_pnl": -1.76,
+          "p25": -4.9,
+          "p75": -0.32
+        },
+        "blocked_buy_notional": 5063.4,
+        "fee_buy_on_blocked": 44.57,
+        "fee_sell_on_blocked_matched": 34.99,
+        "cf_avoided_net_pnl_after_fees": 149.44,
+        "cf_fee_only_unmatched_buys": 0,
+        "cf_total_if_add_unmatched_fees": 149.44,
+        "cf_pct_nav": 6.51,
+        "edge_class": "ATTENTION_ONLY_less_loss_path",
+        "half1_blocked": {
+          "n": 5,
+          "win_rate": 0.0,
+          "sum_pnl": -23.52,
+          "avg_pnl": -4.7,
+          "median_pnl": -4.53,
+          "p25": -6.12,
+          "p75": -2.74
+        },
+        "half2_blocked": {
+          "n": 6,
+          "win_rate": 0.0,
+          "sum_pnl": -125.92,
+          "avg_pnl": -20.99,
+          "median_pnl": -23.31,
+          "p25": -36.89,
+          "p75": -2.76
+        },
+        "blocked_pairs": [
+          [
+            "LINK-USD",
+            5
+          ],
+          [
+            "UNI-USD",
+            4
+          ],
+          [
+            "ADA-USD",
+            2
+          ],
+          [
+            "ARB-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "coinbase_fill_reconcile",
+            6
+          ],
+          [
+            "arch4_rebalance",
+            5
+          ],
+          [
+            "phase6_fresh_start",
+            1
+          ]
+        ]
+      },
+      "diagnostic": {
+        "n_elevated": 12,
+        "n_process_elevated": 9,
+        "n_process_calm": 216
+      }
+    },
+    "elev_r24_8": {
+      "definition": "r24>=8 OR r6>=5",
+      "process_on_elevated_block": {
+        "mode": "block_process_if_elevated",
+        "n_blocked": 5,
+        "n_allowed": 292,
+        "n_blocked_with_exit": 4,
+        "n_allowed_with_exit": 157,
+        "blocked_outcome": {
+          "n": 4,
+          "win_rate": 0.0,
+          "sum_pnl": -71.11,
+          "avg_pnl": -17.78,
+          "median_pnl": -15.73,
+          "p25": -25.34,
+          "p75": -2.76
+        },
+        "allowed_outcome": {
+          "n": 157,
+          "win_rate": 0.14,
+          "sum_pnl": -689.78,
+          "avg_pnl": -4.39,
+          "median_pnl": -1.79,
+          "p25": -5.16,
+          "p75": -0.33
+        },
+        "blocked_buy_notional": 2418.01,
+        "fee_buy_on_blocked": 23.41,
+        "fee_sell_on_blocked_matched": 16.65,
+        "cf_avoided_net_pnl_after_fees": 71.11,
+        "cf_fee_only_unmatched_buys": 0,
+        "cf_total_if_add_unmatched_fees": 71.11,
+        "cf_pct_nav": 3.1,
+        "edge_class": "inconclusive_sparse_N",
+        "half1_blocked": {
+          "n": 1,
+          "win_rate": 0.0,
+          "sum_pnl": -6.12,
+          "avg_pnl": -6.12,
+          "median_pnl": -6.12,
+          "p25": -6.12,
+          "p75": -6.12
+        },
+        "half2_blocked": {
+          "n": 3,
+          "win_rate": 0.0,
+          "sum_pnl": -64.99,
+          "avg_pnl": -21.66,
+          "median_pnl": -25.34,
+          "p25": -36.89,
+          "p75": -2.76
+        },
+        "blocked_pairs": [
+          [
+            "UNI-USD",
+            2
+          ],
+          [
+            "ADA-USD",
+            1
+          ],
+          [
+            "ARB-USD",
+            1
+          ],
+          [
+            "LINK-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "coinbase_fill_reconcile",
+            3
+          ],
+          [
+            "phase6_fresh_start",
+            1
+          ],
+          [
+            "arch4_rebalance",
+            1
+          ]
+        ]
+      },
+      "all_elevated_block": {
+        "mode": "block_all_if_elevated",
+        "n_blocked": 8,
+        "n_allowed": 289,
+        "n_blocked_with_exit": 7,
+        "n_allowed_with_exit": 154,
+        "blocked_outcome": {
+          "n": 7,
+          "win_rate": 0.0,
+          "sum_pnl": -132.04,
+          "avg_pnl": -18.86,
+          "median_pnl": -21.28,
+          "p25": -36.89,
+          "p75": -2.76
+        },
+        "allowed_outcome": {
+          "n": 154,
+          "win_rate": 0.143,
+          "sum_pnl": -628.85,
+          "avg_pnl": -4.08,
+          "median_pnl": -1.77,
+          "p25": -4.9,
+          "p75": -0.32
+        },
+        "blocked_buy_notional": 4744.0,
+        "fee_buy_on_blocked": 42.02,
+        "fee_sell_on_blocked_matched": 32.26,
+        "cf_avoided_net_pnl_after_fees": 132.04,
+        "cf_fee_only_unmatched_buys": 0,
+        "cf_total_if_add_unmatched_fees": 132.04,
+        "cf_pct_nav": 5.75,
+        "edge_class": "inconclusive_sparse_N",
+        "half1_blocked": {
+          "n": 3,
+          "win_rate": 0.0,
+          "sum_pnl": -52.74,
+          "avg_pnl": -17.58,
+          "median_pnl": -21.28,
+          "p25": -25.34,
+          "p75": -6.12
+        },
+        "half2_blocked": {
+          "n": 4,
+          "win_rate": 0.0,
+          "sum_pnl": -79.3,
+          "avg_pnl": -19.82,
+          "median_pnl": -19.82,
+          "p25": -36.89,
+          "p75": -2.76
+        },
+        "blocked_pairs": [
+          [
+            "UNI-USD",
+            4
+          ],
+          [
+            "LINK-USD",
+            2
+          ],
+          [
+            "ADA-USD",
+            1
+          ],
+          [
+            "ARB-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "coinbase_fill_reconcile",
+            6
+          ],
+          [
+            "phase6_fresh_start",
+            1
+          ],
+          [
+            "arch4_rebalance",
+            1
+          ]
+        ]
+      },
+      "diagnostic": {
+        "n_elevated": 8,
+        "n_process_elevated": 5,
+        "n_process_calm": 220
+      }
+    },
+    "elev_soft": {
+      "definition": "r24>=3 OR r6>=3 OR RSI>=65",
+      "process_on_elevated_block": {
+        "mode": "block_process_if_elevated",
+        "n_blocked": 57,
+        "n_allowed": 240,
+        "n_blocked_with_exit": 22,
+        "n_allowed_with_exit": 139,
+        "blocked_outcome": {
+          "n": 22,
+          "win_rate": 0.136,
+          "sum_pnl": -117.12,
+          "avg_pnl": -5.32,
+          "median_pnl": -4.41,
+          "p25": -6.92,
+          "p75": -0.95
+        },
+        "allowed_outcome": {
+          "n": 139,
+          "win_rate": 0.137,
+          "sum_pnl": -643.77,
+          "avg_pnl": -4.63,
+          "median_pnl": -1.76,
+          "p25": -5.16,
+          "p75": -0.32
+        },
+        "blocked_buy_notional": 5148.17,
+        "fee_buy_on_blocked": 45.29,
+        "fee_sell_on_blocked_matched": 37.64,
+        "cf_avoided_net_pnl_after_fees": 117.12,
+        "cf_fee_only_unmatched_buys": 2.42,
+        "cf_total_if_add_unmatched_fees": 119.54,
+        "cf_pct_nav": 5.21,
+        "edge_class": "ATTENTION_ONLY_less_loss_path",
+        "half1_blocked": {
+          "n": 0
+        },
+        "half2_blocked": {
+          "n": 22,
+          "win_rate": 0.136,
+          "sum_pnl": -117.12,
+          "avg_pnl": -5.32,
+          "median_pnl": -4.41,
+          "p25": -6.92,
+          "p75": -0.95
+        },
+        "blocked_pairs": [
+          [
+            "BTC-USD",
+            10
+          ],
+          [
+            "SOL-USD",
+            10
+          ],
+          [
+            "DOGE-USD",
+            9
+          ],
+          [
+            "ETH-USD",
+            8
+          ],
+          [
+            "LINK-USD",
+            5
+          ],
+          [
+            "ADA-USD",
+            4
+          ],
+          [
+            "ARB-USD",
+            3
+          ],
+          [
+            "UNI-USD",
+            3
+          ],
+          [
+            "OP-USD",
+            2
+          ],
+          [
+            "XRP-USD",
+            1
+          ],
+          [
+            "AVAX-USD",
+            1
+          ],
+          [
+            "ICP-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "phase6_fresh_start",
+            31
+          ],
+          [
+            "arch4_rebalance",
+            19
+          ],
+          [
+            "coinbase_fill_reconcile",
+            6
+          ],
+          [
+            "phase6_rebalance_arch4",
+            1
+          ]
+        ]
+      },
+      "all_elevated_block": {
+        "mode": "block_all_if_elevated",
+        "n_blocked": 63,
+        "n_allowed": 234,
+        "n_blocked_with_exit": 28,
+        "n_allowed_with_exit": 133,
+        "blocked_outcome": {
+          "n": 28,
+          "win_rate": 0.107,
+          "sum_pnl": -187.16,
+          "avg_pnl": -6.68,
+          "median_pnl": -4.41,
+          "p25": -7.6,
+          "p75": -0.95
+        },
+        "allowed_outcome": {
+          "n": 133,
+          "win_rate": 0.143,
+          "sum_pnl": -573.73,
+          "avg_pnl": -4.31,
+          "median_pnl": -1.76,
+          "p25": -4.9,
+          "p75": -0.32
+        },
+        "blocked_buy_notional": 7905.75,
+        "fee_buy_on_blocked": 67.35,
+        "fee_sell_on_blocked_matched": 56.72,
+        "cf_avoided_net_pnl_after_fees": 187.16,
+        "cf_fee_only_unmatched_buys": 2.42,
+        "cf_total_if_add_unmatched_fees": 189.58,
+        "cf_pct_nav": 8.26,
+        "edge_class": "ATTENTION_ONLY_less_loss_path",
+        "half1_blocked": {
+          "n": 1,
+          "win_rate": 0.0,
+          "sum_pnl": -0.95,
+          "avg_pnl": -0.95,
+          "median_pnl": -0.95,
+          "p25": -0.95,
+          "p75": -0.95
+        },
+        "half2_blocked": {
+          "n": 27,
+          "win_rate": 0.111,
+          "sum_pnl": -186.21,
+          "avg_pnl": -6.9,
+          "median_pnl": -4.53,
+          "p25": -7.84,
+          "p75": -0.95
+        },
+        "blocked_pairs": [
+          [
+            "SOL-USD",
+            11
+          ],
+          [
+            "BTC-USD",
+            10
+          ],
+          [
+            "DOGE-USD",
+            9
+          ],
+          [
+            "ETH-USD",
+            8
+          ],
+          [
+            "LINK-USD",
+            6
+          ],
+          [
+            "UNI-USD",
+            5
+          ],
+          [
+            "ADA-USD",
+            4
+          ],
+          [
+            "OP-USD",
+            3
+          ],
+          [
+            "ARB-USD",
+            3
+          ],
+          [
+            "ICP-USD",
+            2
+          ],
+          [
+            "XRP-USD",
+            1
+          ],
+          [
+            "AVAX-USD",
+            1
+          ]
+        ],
+        "blocked_reasons_src": [
+          [
+            "phase6_fresh_start",
+            31
+          ],
+          [
+            "arch4_rebalance",
+            19
+          ],
+          [
+            "coinbase_fill_reconcile",
+            12
+          ],
+          [
+            "phase6_rebalance_arch4",
+            1
+          ]
+        ]
+      },
+      "diagnostic": {
+        "n_elevated": 63,
+        "n_process_elevated": 57,
+        "n_process_calm": 168
+      }
+    }
+  },
+  "blocked_samples": {
+    "heat_strict": [
+      {
+        "ts": "2026-08-23T16:00:35.456648+00:00",
+        "pair": "UNI-USD",
+        "r24": 8.62,
+        "r6": 8.46,
+        "rsi": 64.2,
+        "process_hint": true,
+        "notional": 336.19,
+        "fee": 2.6895,
+        "pnl_aft_fees": -2.76,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r6=8.5>=8"
+        ]
+      },
+      {
+        "ts": "2026-07-12T16:00:36.893517+00:00",
+        "pair": "ARB-USD",
+        "r24": 24.41,
+        "r6": -0.31,
+        "rsi": 20.9,
+        "process_hint": true,
+        "notional": 92.02,
+        "fee": 0.7362,
+        "pnl_aft_fees": -6.12,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=24.4>=12"
+        ]
+      }
+    ],
+    "elev_r24_5": [
+      {
+        "ts": "2026-08-23T18:04:41.899120+00:00",
+        "pair": "UNI-USD",
+        "r24": 7.31,
+        "r6": 5.64,
+        "rsi": 61.2,
+        "process_hint": true,
+        "notional": 973.55,
+        "fee": 7.7884,
+        "pnl_aft_fees": -36.89,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=7.3>=5"
+        ]
+      },
+      {
+        "ts": "2026-08-23T16:00:35.456648+00:00",
+        "pair": "UNI-USD",
+        "r24": 8.62,
+        "r6": 8.46,
+        "rsi": 64.2,
+        "process_hint": true,
+        "notional": 336.19,
+        "fee": 2.6895,
+        "pnl_aft_fees": -2.76,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=8.6>=5"
+        ]
+      },
+      {
+        "ts": "2026-08-21T18:30:08.645804+00:00",
+        "pair": "LINK-USD",
+        "r24": 8.97,
+        "r6": 3.07,
+        "rsi": 59.9,
+        "process_hint": true,
+        "notional": 1016.25,
+        "fee": 12.195,
+        "pnl_aft_fees": -25.34,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=9.0>=5"
+        ]
+      },
+      {
+        "ts": "2026-07-15T04:04:20.714568+00:00",
+        "pair": "LINK-USD",
+        "r24": 5.17,
+        "r6": 0.77,
+        "rsi": 61.1,
+        "process_hint": true,
+        "notional": 137.78,
+        "fee": 1.1022,
+        "pnl_aft_fees": -8.57,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=5.2>=5"
+        ]
+      },
+      {
+        "ts": "2026-07-14T22:46:08.083756+00:00",
+        "pair": "LINK-USD",
+        "r24": 5.82,
+        "r6": 0.09,
+        "rsi": 49.8,
+        "process_hint": true,
+        "notional": 26.55,
+        "fee": 0.2124,
+        "pnl_aft_fees": -1.56,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=5.8>=5"
+        ]
+      },
+      {
+        "ts": "2026-07-14T22:41:01.410102+00:00",
+        "pair": "LINK-USD",
+        "r24": 6.09,
+        "r6": 0.24,
+        "rsi": 65.7,
+        "process_hint": true,
+        "notional": 77.52,
+        "fee": 0.6202,
+        "pnl_aft_fees": -4.53,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=6.1>=5"
+        ]
+      },
+      {
+        "ts": "2026-07-14T22:41:01.409607+00:00",
+        "pair": "ADA-USD",
+        "r24": 5.53,
+        "r6": 0.89,
+        "rsi": 68.1,
+        "process_hint": true,
+        "notional": 77.55,
+        "fee": 0.6204,
+        "pnl_aft_fees": -2.74,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=5.5>=5"
+        ]
+      },
+      {
+        "ts": "2026-07-12T16:00:36.893517+00:00",
+        "pair": "ARB-USD",
+        "r24": 24.41,
+        "r6": -0.31,
+        "rsi": 20.9,
+        "process_hint": true,
+        "notional": 92.02,
+        "fee": 0.7362,
+        "pnl_aft_fees": -6.12,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=24.4>=5"
+        ]
+      },
+      {
+        "ts": "2026-07-05T07:08:06.756991+00:00",
+        "pair": "ADA-USD",
+        "r24": 8.13,
+        "r6": 0.0,
+        "rsi": 45.6,
+        "process_hint": true,
+        "notional": 0,
+        "fee": 0,
+        "pnl_aft_fees": null,
+        "src": "phase6_fresh_start",
+        "elev_why": [
+          "r24=8.1>=5"
+        ]
+      }
+    ],
+    "elev_r24_8": [
+      {
+        "ts": "2026-08-23T18:04:41.899120+00:00",
+        "pair": "UNI-USD",
+        "r24": 7.31,
+        "r6": 5.64,
+        "rsi": 61.2,
+        "process_hint": true,
+        "notional": 973.55,
+        "fee": 7.7884,
+        "pnl_aft_fees": -36.89,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r6=5.6>=5"
+        ]
+      },
+      {
+        "ts": "2026-08-23T16:00:35.456648+00:00",
+        "pair": "UNI-USD",
+        "r24": 8.62,
+        "r6": 8.46,
+        "rsi": 64.2,
+        "process_hint": true,
+        "notional": 336.19,
+        "fee": 2.6895,
+        "pnl_aft_fees": -2.76,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=8.6>=8",
+          "r6=8.5>=5"
+        ]
+      },
+      {
+        "ts": "2026-08-21T18:30:08.645804+00:00",
+        "pair": "LINK-USD",
+        "r24": 8.97,
+        "r6": 3.07,
+        "rsi": 59.9,
+        "process_hint": true,
+        "notional": 1016.25,
+        "fee": 12.195,
+        "pnl_aft_fees": -25.34,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=9.0>=8"
+        ]
+      },
+      {
+        "ts": "2026-07-12T16:00:36.893517+00:00",
+        "pair": "ARB-USD",
+        "r24": 24.41,
+        "r6": -0.31,
+        "rsi": 20.9,
+        "process_hint": true,
+        "notional": 92.02,
+        "fee": 0.7362,
+        "pnl_aft_fees": -6.12,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=24.4>=8"
+        ]
+      },
+      {
+        "ts": "2026-07-05T07:08:06.756991+00:00",
+        "pair": "ADA-USD",
+        "r24": 8.13,
+        "r6": 0.0,
+        "rsi": 45.6,
+        "process_hint": true,
+        "notional": 0,
+        "fee": 0,
+        "pnl_aft_fees": null,
+        "src": "phase6_fresh_start",
+        "elev_why": [
+          "r24=8.1>=8"
+        ]
+      }
+    ],
+    "elev_soft": [
+      {
+        "ts": "2026-08-29T04:00:44.909379+00:00",
+        "pair": "ICP-USD",
+        "r24": 0.29,
+        "r6": 3.01,
+        "rsi": 72.4,
+        "process_hint": true,
+        "notional": 411.14,
+        "fee": 3.2891,
+        "pnl_aft_fees": -7.84,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r6=3.0>=3",
+          "rsi=72>=65"
+        ]
+      },
+      {
+        "ts": "2026-08-23T18:04:41.899120+00:00",
+        "pair": "UNI-USD",
+        "r24": 7.31,
+        "r6": 5.64,
+        "rsi": 61.2,
+        "process_hint": true,
+        "notional": 973.55,
+        "fee": 7.7884,
+        "pnl_aft_fees": -36.89,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=7.3>=3",
+          "r6=5.6>=3"
+        ]
+      },
+      {
+        "ts": "2026-08-23T16:00:35.456648+00:00",
+        "pair": "UNI-USD",
+        "r24": 8.62,
+        "r6": 8.46,
+        "rsi": 64.2,
+        "process_hint": true,
+        "notional": 336.19,
+        "fee": 2.6895,
+        "pnl_aft_fees": -2.76,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=8.6>=3",
+          "r6=8.5>=3"
+        ]
+      },
+      {
+        "ts": "2026-08-21T18:30:08.645804+00:00",
+        "pair": "LINK-USD",
+        "r24": 8.97,
+        "r6": 3.07,
+        "rsi": 59.9,
+        "process_hint": true,
+        "notional": 1016.25,
+        "fee": 12.195,
+        "pnl_aft_fees": -25.34,
+        "src": "coinbase_fill_reconcile",
+        "elev_why": [
+          "r24=9.0>=3",
+          "r6=3.1>=3"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:08.880608+00:00",
+        "pair": "ARB-USD",
+        "r24": 0.11,
+        "r6": -2.05,
+        "rsi": 96.2,
+        "process_hint": true,
+        "notional": 178.93,
+        "fee": 1.4315,
+        "pnl_aft_fees": -3.97,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=96>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:08.577248+00:00",
+        "pair": "UNI-USD",
+        "r24": -3.04,
+        "r6": -0.43,
+        "rsi": 68.2,
+        "process_hint": true,
+        "notional": 178.93,
+        "fee": 1.4315,
+        "pnl_aft_fees": 6.89,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=68>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:08.267431+00:00",
+        "pair": "LINK-USD",
+        "r24": -2.96,
+        "r6": -0.75,
+        "rsi": 75.0,
+        "process_hint": true,
+        "notional": 178.93,
+        "fee": 1.4315,
+        "pnl_aft_fees": -7.6,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=75>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:07.765425+00:00",
+        "pair": "ADA-USD",
+        "r24": 0.52,
+        "r6": 1.61,
+        "rsi": 72.7,
+        "process_hint": true,
+        "notional": 178.93,
+        "fee": 1.4315,
+        "pnl_aft_fees": -4.59,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=73>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:07.446244+00:00",
+        "pair": "DOGE-USD",
+        "r24": -1.85,
+        "r6": 0.38,
+        "rsi": 72.1,
+        "process_hint": true,
+        "notional": 179.03,
+        "fee": 1.4323,
+        "pnl_aft_fees": -4.28,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=72>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:06.825085+00:00",
+        "pair": "ETH-USD",
+        "r24": -2.5,
+        "r6": -0.43,
+        "rsi": 68.8,
+        "process_hint": true,
+        "notional": 178.93,
+        "fee": 1.4315,
+        "pnl_aft_fees": 7.51,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=69>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T16:06:06.520229+00:00",
+        "pair": "BTC-USD",
+        "r24": -1.81,
+        "r6": 0.49,
+        "rsi": 74.9,
+        "process_hint": true,
+        "notional": 178.93,
+        "fee": 1.4315,
+        "pnl_aft_fees": 3.05,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=75>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-17T04:03:00.596524+00:00",
+        "pair": "ARB-USD",
+        "r24": 3.68,
+        "r6": 0.73,
+        "rsi": 54.9,
+        "process_hint": true,
+        "notional": 10.03,
+        "fee": 0.0802,
+        "pnl_aft_fees": null,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=3.7>=3"
+        ]
+      },
+      {
+        "ts": "2026-07-15T04:04:20.715047+00:00",
+        "pair": "OP-USD",
+        "r24": 2.53,
+        "r6": 1.0,
+        "rsi": 100.0,
+        "process_hint": true,
+        "notional": 137.78,
+        "fee": 1.1022,
+        "pnl_aft_fees": -4.65,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "rsi=100>=65"
+        ]
+      },
+      {
+        "ts": "2026-07-15T04:04:20.714568+00:00",
+        "pair": "LINK-USD",
+        "r24": 5.17,
+        "r6": 0.77,
+        "rsi": 61.1,
+        "process_hint": true,
+        "notional": 137.78,
+        "fee": 1.1022,
+        "pnl_aft_fees": -8.57,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=5.2>=3"
+        ]
+      },
+      {
+        "ts": "2026-07-15T04:04:20.714085+00:00",
+        "pair": "AVAX-USD",
+        "r24": 3.42,
+        "r6": 0.38,
+        "rsi": 56.6,
+        "process_hint": true,
+        "notional": 137.78,
+        "fee": 1.1022,
+        "pnl_aft_fees": -4.58,
+        "src": "arch4_rebalance",
+        "elev_why": [
+          "r24=3.4>=3"
+        ]
+      }
+    ]
+  },
+  "plain_english": {
+    "verdict_lines": [
+      "Primary C (process + r24>=5): blocked n=9 with_exit=8 cf_avoided_net=$88.51 (3.86% NAV) class=ATTENTION_ONLY_less_loss_path",
+      "Strict heat process block: n=2 cf=$8.88 class=inconclusive_sparse_N",
+      "Soft elev process block: n=57 cf=$117.12 class=ATTENTION_ONLY_less_loss_path"
+    ],
+    "decision": "ATTENTION_ONLY \u2014 C (process on r24>=5) would have avoided net losses on this sample; half-sample both negative avg with n>=3 each. Not HIT abs return. **Shadow gate candidate only** \u2014 not live.",
+    "go_no_go": "SHADOW_ONLY",
+    "recommended_next": [
+      "If SHADOW_ONLY: paper log would-block events at rebalance without changing fills",
+      "Improve signal_source on ledger (many ambiguous rows)",
+      "Do not retune elevated cutoffs on this same 90d",
+      "Fee path (maker entries) remains separate high-leverage work"
+    ]
+  }
+}

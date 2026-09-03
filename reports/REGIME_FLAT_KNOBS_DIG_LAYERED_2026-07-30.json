@@ -1,0 +1,398 @@
+{
+  "generated_at": "2026-07-30T22:02:22.706769+00:00",
+  "trial_id": "ANALYST-REGIME-FLAT-KNOBS-20260730-TRIAL",
+  "master_id": "ANALYST-REGIME-FLAT-KNOBS-20260730",
+  "spec": "docs/research/BULL_REENTRY_LAYERED_SPEC.md",
+  "policy_fingerprint": {
+    "regime_cash_policy_sha256": "28da3576c5415c5315e5bc3303c78ab53eea8fa7afbe3c5ae979103bee0a0a9e",
+    "regime_knob_map_sha256": "a3f43f75f013df0839587f0a24ebf731d8ab612969251d19becd26e9af39081b"
+  },
+  "evaluation": {
+    "checks": [
+      {
+        "name": "full_sample_layered_vs_current",
+        "pass": true,
+        "detail": "lay ret=1.919 dd=-1.572 cur ret=0.362 dd=-2.14"
+      },
+      {
+        "name": "bear_dd_not_much_worse",
+        "pass": true,
+        "detail": "lay dd=-1.021 cur dd=-1.218"
+      },
+      {
+        "name": "live_overlap_not_disaster",
+        "pass": true,
+        "detail": "lay ret=1.128 dd=-1.258 cur ret=1.523 dd=-1.582"
+      },
+      {
+        "name": "reject_breakout_cap200_full_sample",
+        "pass": true,
+        "detail": "brk200 full ret=-3.483 dd=-5.345"
+      }
+    ],
+    "go_shadow_layered": true,
+    "go_live": false,
+    "recommendation_enum": "propose_scoped_experiment",
+    "plain_english": "Keep flat option B rebalance (not rotation). ADD scoped shadow experiment: layered bull re-entry (bear veto + breakout + RSI 50\u201370 @ $75 rebalance; 30d\u226515% size-up $200 only). Do NOT live-edit regime_cash_policy. Reject breakout @$200 and 5d+RSI full bull flip.",
+    "windows": {
+      "full_sample": {
+        "current": {
+          "ret": 0.362,
+          "dd": -2.14,
+          "tin": 65.88,
+          "mean_cap": 58.24
+        },
+        "layered_boost": {
+          "ret": 1.919,
+          "dd": -1.572,
+          "tin": 21.41,
+          "mean_cap": 24.88
+        },
+        "layered_pure": {
+          "ret": 1.366,
+          "dd": -1.572,
+          "tin": 17.18,
+          "mean_cap": 12.88
+        },
+        "layered_brk200": {
+          "ret": -3.285,
+          "dd": -5.207,
+          "tin": 17.18,
+          "mean_cap": 34.35
+        },
+        "brk75": {
+          "ret": 1.304,
+          "dd": -1.183,
+          "tin": 26.82,
+          "mean_cap": 20.12
+        },
+        "brk200": {
+          "ret": -3.483,
+          "dd": -5.345,
+          "tin": 26.82,
+          "mean_cap": 53.65
+        },
+        "only3015": {
+          "ret": 4.523,
+          "dd": -1.218,
+          "tin": 7.06,
+          "mean_cap": 14.12
+        },
+        "flat_always": {
+          "ret": 6.953,
+          "dd": -1.847,
+          "tin": 100.0,
+          "mean_cap": 75.0
+        }
+      },
+      "live_overlap": {
+        "current": {
+          "ret": 1.523,
+          "dd": -1.582,
+          "tin": 67.65,
+          "mean_cap": 87.5
+        },
+        "layered_boost": {
+          "ret": 1.128,
+          "dd": -1.258,
+          "tin": 37.25,
+          "mean_cap": 64.71
+        },
+        "layered_pure": {
+          "ret": 0.575,
+          "dd": -0.329,
+          "tin": 19.61,
+          "mean_cap": 14.71
+        },
+        "layered_brk200": {
+          "ret": -0.097,
+          "dd": -0.972,
+          "tin": 19.61,
+          "mean_cap": 39.22
+        },
+        "brk75": {
+          "ret": 1.232,
+          "dd": -0.429,
+          "tin": 39.22,
+          "mean_cap": 29.41
+        },
+        "brk200": {
+          "ret": 1.648,
+          "dd": -1.278,
+          "tin": 39.22,
+          "mean_cap": 78.43
+        },
+        "only3015": {
+          "ret": 1.347,
+          "dd": -1.258,
+          "tin": 29.41,
+          "mean_cap": 58.82
+        },
+        "flat_always": {
+          "ret": 0.06,
+          "dd": -2.006,
+          "tin": 100.0,
+          "mean_cap": 75.0
+        }
+      },
+      "flat_chop": {
+        "current": {
+          "ret": -1.166,
+          "dd": -1.659,
+          "tin": 71.11,
+          "mean_cap": 53.33
+        },
+        "layered_boost": {
+          "ret": 0.319,
+          "dd": -0.328,
+          "tin": 15.56,
+          "mean_cap": 11.67
+        },
+        "layered_pure": {
+          "ret": 0.319,
+          "dd": -0.328,
+          "tin": 15.56,
+          "mean_cap": 11.67
+        },
+        "layered_brk200": {
+          "ret": -0.574,
+          "dd": -1.221,
+          "tin": 15.56,
+          "mean_cap": 31.11
+        },
+        "brk75": {
+          "ret": 0.003,
+          "dd": -0.607,
+          "tin": 18.89,
+          "mean_cap": 14.17
+        },
+        "brk200": {
+          "ret": -1.416,
+          "dd": -2.041,
+          "tin": 18.89,
+          "mean_cap": 37.78
+        },
+        "only3015": {
+          "ret": 0.857,
+          "dd": 0.0,
+          "tin": 0.0,
+          "mean_cap": 0.0
+        },
+        "flat_always": {
+          "ret": 0.589,
+          "dd": -1.12,
+          "tin": 100.0,
+          "mean_cap": 75.0
+        }
+      },
+      "bear_stress": {
+        "current": {
+          "ret": -0.346,
+          "dd": -1.218,
+          "tin": 63.93,
+          "mean_cap": 47.95
+        },
+        "layered_boost": {
+          "ret": -0.402,
+          "dd": -1.021,
+          "tin": 13.11,
+          "mean_cap": 9.84
+        },
+        "layered_pure": {
+          "ret": -0.402,
+          "dd": -1.021,
+          "tin": 13.11,
+          "mean_cap": 9.84
+        },
+        "layered_brk200": {
+          "ret": -2.032,
+          "dd": -2.89,
+          "tin": 13.11,
+          "mean_cap": 26.23
+        },
+        "brk75": {
+          "ret": 0.135,
+          "dd": -0.631,
+          "tin": 24.59,
+          "mean_cap": 18.44
+        },
+        "brk200": {
+          "ret": -0.611,
+          "dd": -1.859,
+          "tin": 24.59,
+          "mean_cap": 49.18
+        },
+        "only3015": {
+          "ret": 0.577,
+          "dd": 0.0,
+          "tin": 0.0,
+          "mean_cap": 0.0
+        },
+        "flat_always": {
+          "ret": -0.242,
+          "dd": -1.511,
+          "tin": 100.0,
+          "mean_cap": 75.0
+        }
+      },
+      "recent": {
+        "current": {
+          "ret": 0.519,
+          "dd": -1.6,
+          "tin": 70.0,
+          "mean_cap": 73.33
+        },
+        "layered_boost": {
+          "ret": 1.251,
+          "dd": -1.257,
+          "tin": 31.11,
+          "mean_cap": 44.17
+        },
+        "layered_pure": {
+          "ret": 0.699,
+          "dd": -0.329,
+          "tin": 21.11,
+          "mean_cap": 15.83
+        },
+        "layered_brk200": {
+          "ret": -1.023,
+          "dd": -1.333,
+          "tin": 21.11,
+          "mean_cap": 42.22
+        },
+        "brk75": {
+          "ret": 0.544,
+          "dd": -0.873,
+          "tin": 36.11,
+          "mean_cap": 27.08
+        },
+        "brk200": {
+          "ret": -1.448,
+          "dd": -3.253,
+          "tin": 36.11,
+          "mean_cap": 72.22
+        },
+        "only3015": {
+          "ret": 2.105,
+          "dd": -1.249,
+          "tin": 16.67,
+          "mean_cap": 33.33
+        },
+        "flat_always": {
+          "ret": 6.098,
+          "dd": -1.866,
+          "tin": 100.0,
+          "mean_cap": 75.0
+        }
+      },
+      "bull_ex": {
+        "current": {
+          "ret": 0.504,
+          "dd": -1.078,
+          "tin": 53.26,
+          "mean_cap": 39.95
+        },
+        "layered_boost": {
+          "ret": 1.369,
+          "dd": -0.309,
+          "tin": 19.57,
+          "mean_cap": 14.67
+        },
+        "layered_pure": {
+          "ret": 1.369,
+          "dd": -0.309,
+          "tin": 19.57,
+          "mean_cap": 14.67
+        },
+        "layered_brk200": {
+          "ret": 2.187,
+          "dd": -0.88,
+          "tin": 19.57,
+          "mean_cap": 39.13
+        },
+        "brk75": {
+          "ret": 0.917,
+          "dd": -0.637,
+          "tin": 27.17,
+          "mean_cap": 20.38
+        },
+        "brk200": {
+          "ret": 0.976,
+          "dd": -1.806,
+          "tin": 27.17,
+          "mean_cap": 54.35
+        },
+        "only3015": {
+          "ret": 0.876,
+          "dd": 0.0,
+          "tin": 0.0,
+          "mean_cap": 0.0
+        },
+        "flat_always": {
+          "ret": 0.041,
+          "dd": -1.301,
+          "tin": 100.0,
+          "mean_cap": 75.0
+        }
+      }
+    },
+    "flat_primary": {
+      "recommendation": {
+        "enum": "continue_observe_only",
+        "go_shadow": false,
+        "confidence": "medium-high",
+        "primary_hypothesis_supported": true,
+        "grid_promote_candidate": null,
+        "reasons": [
+          "Primary hyp SUPPORTED: rebalance under B envelope beats rotation on DD/Sharpe on flat + live_overlap (Path B real OHLCV)",
+          "Scorecard flat winner remains usdc_hold (true APY) \u2014 risk styles do not beat cash on flat window",
+          "Nearby cap/freq grid does not materially beat live-B rebalance_7d cap75; cap differentiation often weak at low Path B exposure",
+          "RSI/sentiment grid NOT testable in Path B \u2014 leave live B gates (RSI\u226455, sent\u22650.25) unchanged",
+          "Live detector is `transition` (not flat) \u2014 flat B knobs are latent until flat returns; no live apply regardless",
+          "No live regime_cash_policy / knob_map writes in this trial"
+        ],
+        "plain_english": "Keep flat option B as-is (rebalance-style small cap, not rotation). Evidence: on real flat and live-overlap OHLCV, rotation under the same $75 envelope takes much more drawdown for little/no extra return. Nearby Path B cap grid does not clearly beat live B. Do not promote bull rotation knobs into flat. RSI/sent not proven in harness \u2014 leave gates. Live is not in flat right now anyway.",
+        "path_b_gaps": [
+          "ARCH-4 Path B does not apply live RSI/sentiment/lockout REGIME-CASH entry filters",
+          "cap0 usdc_hold_proxy has no USDC APY (~0); scorecard usdc_hold uses ~3.5% APY",
+          "live rebalance clock != day stride; basket/allocator differs from live book",
+          "do not promote from Path B alone \u2014 gates + Brad required"
+        ],
+        "north_star": "better returns AND less loss \u2014 prefer lower DD over idle-cash FOMO"
+      },
+      "go_shadow": null,
+      "primary_hypothesis_supported": null,
+      "plain_english": ""
+    },
+    "spec": "docs/research/BULL_REENTRY_LAYERED_SPEC.md"
+  },
+  "stress_meta": {
+    "pairs": [
+      "btc",
+      "eth",
+      "sol",
+      "avax",
+      "link",
+      "doge",
+      "arb"
+    ],
+    "initial_usd": 1000.0,
+    "flat_b_cap": 75.0,
+    "bull_cap": 200.0,
+    "usdc_apy": 0.035,
+    "fee_bps": 10,
+    "live_merge": {
+      "live_appended": true,
+      "ohlcv_last": "2026-07-30",
+      "live_price": 66812.66,
+      "lag_days": 0,
+      "live_mode": "replace_same_day"
+    },
+    "bars": 467,
+    "breakout_days": 114,
+    "bull_label_days": 30,
+    "breakout_share_pct": 24.41,
+    "bull_share_pct": 6.42
+  },
+  "live_writes": false
+}

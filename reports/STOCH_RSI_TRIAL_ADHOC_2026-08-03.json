@@ -1,0 +1,93 @@
+{
+  "trial_id": "STOCH-RSI-PARALLEL-20260721",
+  "phase": "adhoc",
+  "generated_at": "2026-08-03T17:23:03.329822+00:00",
+  "trial": {
+    "status": "RUNNING",
+    "start_at": "2026-07-21T21:54:57.262723+00:00",
+    "end_at": "2026-08-04T21:54:57.262723+00:00",
+    "intent": {
+      "parallel_only": true,
+      "allocator_stays_plain_rsi": true,
+      "sl_scorer_may_use_stoch": true,
+      "no_live_config_without_brad": true
+    }
+  },
+  "history": {
+    "history_rows": 1688,
+    "ts_min": "2026-07-21T22:00:54.419170+00:00",
+    "ts_max": "2026-08-03T17:15:35.306319+00:00",
+    "pair_obs": {
+      "BTC-USD": 1688,
+      "ETH-USD": 1688,
+      "SOL-USD": 1688,
+      "XRP-USD": 1688,
+      "DOGE-USD": 1688,
+      "ADA-USD": 1688,
+      "AVAX-USD": 1650,
+      "LINK-USD": 1688,
+      "UNI-USD": 1688,
+      "ARB-USD": 1688,
+      "OP-USD": 1203
+    },
+    "obs_with_stoch": 18045,
+    "obs_rsi_only": 0,
+    "disagree_rsi_neutral_stoch_extreme": {
+      "AVAX-USD": 652,
+      "BTC-USD": 569,
+      "UNI-USD": 548,
+      "OP-USD": 534,
+      "DOGE-USD": 491,
+      "ARB-USD": 490,
+      "LINK-USD": 488,
+      "ADA-USD": 478,
+      "ETH-USD": 466,
+      "SOL-USD": 452,
+      "XRP-USD": 442
+    },
+    "stoch_extreme_counts": {
+      "BTC-USD": 1076,
+      "ADA-USD": 1068,
+      "AVAX-USD": 1065,
+      "DOGE-USD": 1038,
+      "ETH-USD": 1022,
+      "SOL-USD": 1018,
+      "LINK-USD": 1017,
+      "XRP-USD": 979,
+      "ARB-USD": 918,
+      "UNI-USD": 910,
+      "OP-USD": 721
+    },
+    "disagree_total": 5610
+  },
+  "trades": {
+    "trades": 34,
+    "with_indicators_at_trade": 34,
+    "with_stoch_at_trade": 28,
+    "sl_exits": 15,
+    "sl_exits_with_stoch": 15,
+    "sl_exits_stoch_k_lt_30": 12,
+    "by_reason_top": {
+      "stop_loss_exchange": 15,
+      "rebalance_buy": 6,
+      "dust_sweep_orphan": 5,
+      "preserve_disarm": 3,
+      "preserve_arm": 3,
+      "SELL": 2
+    }
+  },
+  "decisions": {
+    "decision_rows": 50,
+    "with_indicator_snapshot": 50,
+    "stoch_pair_mentions_sum": 550
+  },
+  "recommendation": "propose_scoped_sl_risk_experiment",
+  "caveats": [
+    "Enough SL+stoch tags to design a *shadow* SL threshold experiment \u2014 not live allocator change."
+  ],
+  "rules": {
+    "allocator_change": false,
+    "requires_brad_go_for_live": true,
+    "real_data_only": true
+  }
+}

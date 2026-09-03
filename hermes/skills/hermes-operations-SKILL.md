@@ -136,6 +136,17 @@ Update this section whenever a new desync or import-side-effect incident occurs.
 
 **2026-07-21 — RSI refresher desync killed Stoch trial data:** Hermes job `rsi-15min-refresher` ran a *stale* `~/.hermes/scripts/refresh_rsi_prices.py` (6-pair FIXED_UNIVERSE, no StochRSI) that continuously overwrote `rsi_cache.json`, while the project `scripts/refresh_rsi_prices.py` already had full-basket + Stoch. Fix pattern: make the hermes file a **thin wrapper** (`runpy.run_path` / exec) pointing at the absolute project script so cron cannot drift. Verify with `python3 ~/.hermes/scripts/refresh_rsi_prices.py` and assert cache has `stoch_k` for full basket. Related trial cycle: project `docs/testing/ANALYST_TEST_CYCLE.md`.
 
+### Thin wrapper rules (cronjob tool)
+- Prefer a **real file** under `~/.hermes/scripts/<name>.sh` that `exec`s the absolute project path.
+- **Do not** use a symlink whose target escapes the Hermes scripts directory — `cronjob create` can reject with `Script path escapes the scripts directory via traversal`.
+- After create: run the **Hermes path** once; empty stdout = OK for quiet health patterns.
+
+### Skill path drift (not only scripts) — 2026-09-02
+**Symptom:** Project `hermes/skills/crypto_analyst/polymarket_overlay.py` fixed (parse + polarity); live `influence_stack_log` / intel still stamps **bias=0.5**.
+**Cause:** Runtime loads **`~/.hermes/skills/crypto_analyst/polymarket_overlay.py`** (stale Jul copy), not the project tree.
+**Fix:** After any seal of project skills used by intel/cron/agents: `cp -a` (or thin re-export) project → `~/.hermes/skills/...`, clear regime cache if needed, **seed-stamp** and assert feature left the stuck value before opening a post-fix collect trial.
+**Class rule:** “Fixed in repo” ≠ “fixed in the process that stamps.” Always verify the path the live importer uses.
+
 ## Common Pitfalls
 - Using `--prompt` or `--schedule` flags with `hermes cron create` often fails due to CLI parsing.
 - Dropping YAML files in `~/.hermes/cron/` does not always auto-register the job.

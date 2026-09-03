@@ -16,7 +16,7 @@ import math
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 import requests
 
@@ -98,13 +98,28 @@ def _save_cache(bias: dict):
         pass
 
 
+def _parse_outcome_prices(m: dict) -> list:
+    """Gamma often returns outcomePrices as a JSON *string* — never treat str as miss."""
+    prices = m.get("outcomePrices") or m.get("outcome_prices") or []
+    if isinstance(prices, str):
+        s = prices.strip()
+        if not s:
+            return []
+        try:
+            prices = json.loads(s)
+        except Exception:
+            return []
+    if isinstance(prices, list):
+        return prices
+    return []
+
+
 def _get_yes_probability(m: dict) -> float:
     """Safely extract the 'Yes' / first outcome price as float."""
     try:
-        prices = m.get("outcomePrices") or m.get("outcome_prices") or []
-        if isinstance(prices, list) and len(prices) > 0:
-            p = prices[0]
-            return float(p)
+        prices = _parse_outcome_prices(m)
+        if prices:
+            return float(prices[0])
         # Fallbacks
         if "yes_price" in m:
             return float(m.get("yes_price", 0.5))
@@ -127,6 +142,10 @@ BULLISH_KEYWORDS = {
     "above": 0.65, "higher": 0.6, "win": 0.55, "beat": 0.6, "exceed": 0.6,
     "hit": 0.55, "ath": 0.7, "all-time high": 0.75, "new high": 0.7,
     "target": 0.5, "high": 0.55, "up": 0.55, "rallying": 0.8,
+    # Macro / risk-on framing (crypto tends to like easier money)
+    "rate cut": 0.8, "rate cuts": 0.8, "cut rates": 0.75, "cuts rates": 0.75,
+    "decrease interest": 0.75, "lower rates": 0.7, "dovish": 0.7, "qe": 0.65,
+    "stimulus": 0.65, "easing": 0.7,
 }
 
 BEARISH_KEYWORDS = {
@@ -137,6 +156,10 @@ BEARISH_KEYWORDS = {
     "below": -0.65, "lower": -0.6, "lose": -0.55, "under": -0.5, "fail": -0.6,
     "dip": -0.75, "dips": -0.7, "hike": -0.65, "hikes": -0.6, "tightening": -0.65,
     "no cut": -0.5, "no cuts": -0.5, "hawkish": -0.7, "down": -0.55, "correction": -0.7,
+    # Macro / risk-off
+    "rate hike": -0.8, "rate hikes": -0.8, "increase interest": -0.75,
+    "higher rates": -0.7, "qt": -0.65, "quantitative tightening": -0.7,
+    "recession": -0.7, "no change in fed": -0.15,  # mild — hold is not strongly risk-off
 }
 
 def _compute_sentiment_polarity(q_lower: str, config: dict = None) -> str:
@@ -156,7 +179,7 @@ def _compute_sentiment_polarity(q_lower: str, config: dict = None) -> str:
         return "bearish"
     return "neutral"
 
-def _get_sentiment_p(q_lower: str, yes_p: float, config: dict = None) -> float:
+def _get_sentiment_p(q_lower: str, yes_p: float, config: Optional[Dict[str, Any]] = None) -> float:
     """Map yes_p to a sentiment value (positive/risk-on framing).
     Uses tunable thresholds from config.
     """
@@ -174,7 +197,7 @@ def _get_sentiment_p(q_lower: str, yes_p: float, config: dict = None) -> float:
 
 
 
-def get_polymarket_regime_bias(config: dict = None) -> Dict[str, Any]:
+def get_polymarket_regime_bias(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Returns a richer regime signal:
     {
@@ -291,7 +314,7 @@ def get_polymarket_regime_bias(config: dict = None) -> Dict[str, Any]:
 
 
 def extract_polymarket_vocabulary(n_markets: int = 500, min_vol: int = 1000, crypto_only: bool = True,
-                                   bull_cut: float = 0.55, bear_cut: float = 0.45) -> dict:
+                                   bull_cut: float = 0.55, bear_cut: float = 0.45, config: Optional[Dict[str, Any]] = None) -> dict:
     """
     Extract terms that trend with bullish vs bearish crowd sentiment on Polymarket.
 
@@ -342,12 +365,9 @@ def extract_polymarket_vocabulary(n_markets: int = 500, min_vol: int = 1000, cry
         if vol < min_vol: continue
         if crypto_only and not _matches(q): continue
 
-        try:
-            yes_p = float((m.get("outcomePrices") or [0.5])[0])
-        except:
-            yes_p = 0.5
+        yes_p = _get_yes_probability(m)
 
-        words = _re.findall(r"[a-z]{3,}", q.lower())
+        words = _re.findall(r"\b[a-z]{3,}\b", q.lower())
 
         if yes_p > bull_cut:
             for w in words: b_counter[w] += 1
@@ -365,7 +385,7 @@ def extract_polymarket_vocabulary(n_markets: int = 500, min_vol: int = 1000, cry
 
 
 def get_polymarket_influence(
-    data: dict = None,
+    data: Optional[dict] = None,
     age_hours: float = 0.0,
     half_life_hours: float = 8.0,   # Proposed slower regime persistence (vs 1h for per-pair sentiment)
     vol_weight: bool = True

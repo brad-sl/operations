@@ -11,8 +11,9 @@
       "AVAX-USD",
       "LINK-USD",
       "UNI-USD",
-      "ARB-USD",
-      "ADA-USD"
+      "ADA-USD",
+      "ZEC-USD",
+      "STX-USD"
     ],
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 150.0,

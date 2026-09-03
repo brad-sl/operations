@@ -1,6 +1,6 @@
 # Hermes cron SSOT (Phase 6 + host)
 
-**Updated:** 2026-08-29  
+**Updated:** 2026-09-02  
 **Law:** **Do not put Phase 6 / sentiment / X / Apify / runner monitors on Linux `crontab`.**  
 User crontab is comment-only. Backup: `~/.hermes/cron/linux-crontab.bak.20260813`.
 
@@ -37,10 +37,10 @@ Full audit: `reports/CRON_ARCHIVE_AND_SSOT_2026-08-29.md`.
 Rebalance 09:05/21:05 · RSI */15 · X 08:50/20:50 · free sentiment 08:40/20:40 · runner monitor */15 · reentry SL/TP monitor */10 · dashboard live */5
 
 ### B — Ops / hygiene
-ops-triage 06:00 · ops-issue-loop 07/13/19 · ops-engineer */30 · kanban backup */15 + daily 03:00 · git-daily 04:30 · llm-token rollup 05:05 · master-test pickup/scan · analyst-test-strategy Mon 10:00
+ops-triage 06:00 TG **only when actionable** (empty stdout on OK) · ops-issue-loop 07/13/19 local · ops-engineer */30 · kanban backup */15 + daily 03:00 · git-daily 04:30 · llm-token rollup 05:05 · master-test pickup/scan TG only when work · analyst-test-strategy Mon 10:00
 
 ### C — Operator briefs (read-only surfaces)
-daily-dose 08:00 · intel TG 09:00/21:00 · deep maint 03:00 · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30
+daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30
 
 ### D — Shadow / research still active (own state only — **not** config writers)
 | Job | Why still on |

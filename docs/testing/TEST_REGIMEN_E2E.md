@@ -32,7 +32,7 @@ That is **not** a testing regimen. It is a file drop.
 | 8 | **Manage end-to-end** | Status machine enforced; stale review alerts; capacity honest | `trial_cycle` + strategy slots + stale scan |
 
 **Close is a function call**, not a vibe:  
-`python3 phase6/research/trial_cycle.py decide <TRIAL_ID> <enum> --note '…'`
+`python3 phase6/research/trial_cycle.py decide <TRIAL_ID> <enum> --note ‘…’`
 
 ---
 
@@ -58,9 +58,9 @@ If any missing → status stays pre-RUNNING; **not launched**.
 
 Template: `docs/testing/templates/PROTOCOL_OFFLINE.md`.
 
-### 2. Define success criteria (before results)
+### 2. Define success criteria (frozen before run)
 
-Frozen on trial JSON:
+Frozen on trial JSON (must also include `sensor_preflight`):
 
 ```json
 {
@@ -74,7 +74,8 @@ Frozen on trial JSON:
     "usdc_hurdle": false,
     "sparse_is": "inconclusive_not_promote",
     "live_promote_allowed": false,
-    "shadow_ok_if": "primary_pass_and_n_ok"
+    "shadow_ok_if": "primary_pass_and_n_ok",
+    "sensor_preflight": {"outcome_class": "sensor_ok"}
   }
 }
 ```
@@ -85,11 +86,30 @@ Frozen on trial JSON:
 |-------|---------|--------|
 | `HIT_CRITERIA` | Primary window meets frozen bar | CR path open |
 | `EDGE_VS_BAGS_ONLY` | Beats crashing BH; still fails absolute/baseline bar | **Reject** promote; optional observe note |
-| `inconclusive_sparse_N` | N &lt; min | **Reject** promote; optional `extend_trial` |
+| `inconclusive_sparse_N` | N < min | **Reject** promote; optional `extend_trial` |
 | `unstable_or_no_edge` | Long tape fail / worse than baseline | **Reject** |
 | `process_incomplete` | Ran without design/gates (legacy debt) | **Reject** or re-run under regimen |
+| `sensor_broken` | Data source / parser failed | **Fix meter**, do not score |
+| `sensor_degenerate` | Feature has no variance/stuck | **Fix meter**, do not score |
+| `sensor_thin` | Too few samples / low join rate | **Fix data**, do not score |
+| `method_invalid` | Missing treatment / control | **Fix design**, do not score |
 
 Sparse short windows **never** alone justify `promote_*`.
+
+**Sensor preflight (mandatory before scoreboard):**
+```bash
+# Library + isolation (example)
+.venv/bin/python3 phase6/research/test_isolation_sensor_preflight.py
+# Runner must call sensor_preflight *before* WR/ROI tables
+```
+| Fail class | Do | Don't |
+|------------|----|-------|
+| `sensor_broken` | Fix parser/API/shape | Report “no edge” |
+| `sensor_degenerate` | Fix feature / market mix | Promote on stuck 0.5 |
+| `sensor_thin` | Fix join/stamps / more N | Wave through as sparse HIT |
+| `method_invalid` | Fix design/arms | Score anyway |
+
+Polymarket case (024): historical bias all 0.5 = **degenerate meter**, not inconclusive edge. Live parse fix ≠ rewritten log.
 
 ### 3. Determine actual outcome
 
@@ -158,7 +178,7 @@ Preferred: Telegram home (cron/agent delivery) with ≤15 lines:
 |---------|-----------|
 | Capacity | 1 offline + 1 instru; review_pending ≤ 2 |
 | Stale RUNNING | `trial_cycle.py stale` past `final_at` + grace |
-| Stale REVIEW | `REPORT_READY`/`REVIEW_PENDING` &gt; 48h → alert |
+| Stale REVIEW | `REPORT_READY`/`REVIEW_PENDING` > 48h → alert |
 | Thin JSON ban | finalize-report / transition to REPORT_READY gated |
 | Live boundary | no `regime_cash_policy` / trading config from test agents |
 | Strategy emit | blocked while review full; regime gates (`emit_only_when_regime`); bear/bull **parked** until live match **or** `emit --allow-historical-backtest PLAN_ID` |
@@ -200,7 +220,7 @@ Reject path does **not** mint a CR; packet records rejection evidence.
 ## Failure modes this regimen forbids
 
 1. **Staged not run** — status pretends RUNNING/READY without runner exit 0 + report mtime  
-2. **Sparse N as soft yes** — N &lt; min ⇒ cannot promote  
+2. **Sparse N as soft yes** — N < min ⇒ cannot promote  
 3. **Less-loss vs bags sold as edge** — class `EDGE_VS_BAGS_ONLY` ≠ CR accept  
 4. **Recommendation without decide** — READY without CLOSED still occupies review slot  
 5. **No notify** — decide without packet/inbox  
@@ -261,3 +281,4 @@ python3 phase6/research/analyst_test_strategy.py status
 - Honesty classes: skill `offline-strategy-honesty`  
 - Scale board: `docs/testing/SCALE_TEST_LANES.md`  
 - CLI: `phase6/research/trial_cycle.py`  
+

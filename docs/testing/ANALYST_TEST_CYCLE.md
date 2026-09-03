@@ -95,7 +95,7 @@ Helpers: `phase6/research/trial_cycle.py` (`load`, `transition`, `record_decisio
 **CR mapping:** promote_*/propose_scoped_* = **ACCEPT CR** · drop/abort = **REJECT** · observe/extend = **NO_CR** (see TEST_REGIMEN_E2E).
 
 **Close command:**  
-`python3 phase6/research/trial_cycle.py decide <ID> <enum> --note '…' --follow-on none|extend|scoped_shadow|promotion_queue`
+`python3 phase6/research/trial_cycle.py decide <ID> <enum> --note ‘…’ --follow-on none|extend|scoped_shadow|promotion_queue`
 
 ---
 
@@ -123,6 +123,10 @@ Helpers: `phase6/research/trial_cycle.py` (`load`, `transition`, `record_decisio
 - Hermes `script:` resolves under `~/.hermes/scripts/` — prefer **wrapper → project absolute path**, not full script copies that drift.
 - MASTER is durable human record; Kanban optional.
 - **Close is a function call** (`trial_cycle.record_decision`) not a vibe.
+- Sensor validity (`phase6/research/sensor_preflight.py`): must return `sensor_ok` **before** any WR/ROI/edge table. Degenerate stuck feature ≠ “no edge.”
+- Final report: `outcome.class` may be `sensor_broken` | `sensor_degenerate` | `sensor_thin` | `method_invalid` when preflight fails — **fix meter / data, do not promote**.
+- Isolation example: `phase6/research/test_isolation_sensor_preflight.py` (Polymarket Gamma string prices + range gates).
+- Checklist: `[ ] sensor_preflight_ok` on every offline protocol (`PROTOCOL_OFFLINE.md`).
 
 ---
 
@@ -232,7 +236,7 @@ If any missing → **not launched** (still designing).
 ### CLI
 
 ```bash
-cd /home/brad/projects/crypto-trading-bot
+cd /home/brad/brad/projects/crypto-trading-bot
 python3 phase6/research/master_test_pickup.py scan
 python3 phase6/research/master_test_pickup.py launch --dry-run
 python3 phase6/research/master_test_pickup.py launch

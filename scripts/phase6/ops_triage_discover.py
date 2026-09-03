@@ -244,7 +244,8 @@ def main() -> int:
         print(f"See {OUT}")
         print("Kanban: ops_issue_loop ensures cards on crypto-bot-project")
     else:
-        print("OPS_TRIAGE_OK")
+        # Quiet when healthy — Hermes no_agent empty stdout = no TG filler
+        pass
     return 0
 
 

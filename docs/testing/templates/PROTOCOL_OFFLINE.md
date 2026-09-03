@@ -25,27 +25,28 @@
 | Runner | `phase6/research/run_….py` |
 
 ## 4. Success criteria (frozen before run)
+
 | Gate | Value |
 |------|--------|
-| primary_window | |
+| primary_window | <PRIMARY_WINDOW> |
 | min_n_trades | ≥ 15 (or justify) |
 | must_beat_baseline_ret_pp | ≥ 0 |
 | must_beat_baseline_dd_pp | ≥ 0 |
 | require_both_ret_and_dd | true |
 | sparse_is | inconclusive_not_promote |
 | live_promote_allowed | false |
+| sensor_preflight_ok | true (outcome `sensor_ok`) |
 
-**CR accept only if** primary window passes all gates above.  
-Else reject (`drop`) or `extend_trial` / scoped observe — never promote on sparse or bags-only.
+**CR accept only if** primary window passes all gates above AND `sensor_preflight.outcome_class == "sensor_ok"`.
 
 ## 5. Outcome recording
 Report must set `outcome.class` ∈  
-`HIT_CRITERIA` | `EDGE_VS_BAGS_ONLY` | `inconclusive_sparse_N` | `unstable_or_no_edge` | `process_incomplete`
+`HIT_CRITERIA` | `EDGE_VS_BAGS_ONLY` | `inconclusive_sparse_N` | `unstable_or_no_edge` | `process_incomplete` | `sensor_broken` | `sensor_degenerate` | `sensor_thin` | `method_invalid`
 
 ## 6. Decision path
 1. `trial_cycle.py finalize-report …` → REPORT_READY  
 2. `trial_cycle.py review-request <ID>` → REVIEW_PENDING + inbox  
-3. Brad: `trial_cycle.py decide <ID> <enum> --note '…' --follow-on …`
+3. Brad: `trial_cycle.py decide <ID> <enum> --note ‘…’ --follow-on …`
 
 ## 7. Follow-on policy
 | If | Then |
@@ -57,3 +58,4 @@ Report must set `outcome.class` ∈
 
 ## 8. Notify
 Decision packet under `docs/testing/decisions/` + DECIDED inbox (+ TG when agent/cron delivers).
+

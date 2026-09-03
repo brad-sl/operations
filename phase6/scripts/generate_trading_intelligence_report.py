@@ -218,6 +218,9 @@ def collect_known_proposal_titles(*, include_strategic_json: bool = True) -> set
             known.add(normalize_proposal_title(t))
     try:
         backlog = load_proposed_backlog()
+        for t in backlog.get("dedupe_titles") or []:
+            if t:
+                known.add(normalize_proposal_title(str(t)))
         for p in backlog.get("proposals", []):
             t = p.get("title")
             if t:
@@ -234,7 +237,12 @@ def collect_deployed_proposal_titles() -> set:
         backlog = load_proposed_backlog()
         for p in backlog.get("proposals", []):
             status = str(p.get("status") or "").lower()
-            if p.get("deployed") or p.get("accepted") or status in ("accepted", "deployed", "done"):
+            if p.get("deployed") or p.get("accepted") or status in (
+                "accepted",
+                "deployed",
+                "done",
+                "implemented",
+            ):
                 t = p.get("title")
                 if t:
                     deployed.add(normalize_proposal_title(t))
@@ -260,9 +268,18 @@ def load_proposed_backlog():
 
 
 def save_proposed_backlog(data):
+    """Write backlog; keep dedupe_titles unioned with proposal titles."""
     PROPOSED_BACKLOG.parent.mkdir(parents=True, exist_ok=True)
+    props = list(data.get("proposals") or [])
+    titles = set(str(t) for t in (data.get("dedupe_titles") or []) if t)
+    for p in props:
+        if isinstance(p, dict) and p.get("title"):
+            titles.add(str(p["title"]))
+    data["dedupe_titles"] = sorted(titles)
+    data.setdefault("schema", "analyst_proposed_backlog_v2")
     with open(PROPOSED_BACKLOG, "w") as f:
         json.dump(data, f, indent=2)
+        f.write("\n")
 
 
 # Stable stems: if any known title contains the stem, treat as already proposed.

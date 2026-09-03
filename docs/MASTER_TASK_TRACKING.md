@@ -1,3 +1,24 @@
+## ANALYST-METHOD-ROTATION-21D-20260902 — QUEUED (strategy)
+
+**Type:** test  
+**Date:** 2026-09-02  
+**Role:** Crypto-Analyst  
+**Status:** **REPORT_READY** — trial `ANALYST-METHOD-ROTATION-21D-20260902-TRIAL` awaiting Brad `decide` (2026-09-02T19:51Z)
+**auto_pickup:** true  
+**trial_kind:** offline_analysis  
+**family:** method_rotation_21d  
+**duration_days:** 2  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-METHOD-ROTATION-21D-20260902.md`  
+**Strategy plan:** `PLAN-METHOD-ROTATION-001` · workstream `WS-METHODOLOGY`  
+**Protocol:** `docs/testing/trials/PLAN-METHOD-ROTATION-001_PROTOCOL.md`
+
+### Offline result (2026-09-02)
+- **enum:** `continue_observe_only` · **outcome.class:** `inconclusive_sparse_N` · **primary_pass:** false · **n_primary:** 14
+- Fresh window cand `defensive_rotation_21d` +19.25% / DD 0.83% vs control_no_swap +1.22% / DD 0.0% — fails min_n=15 and DD gate; full-tape red −22.58%
+- **Shadow/promote:** NO · live config untouched
+- Reports: `reports/METHOD_ROTATION_21D_TEST_2026-09-02.md` + `.json` · inbox `docs/testing/inbox/REVIEW_ANALYST-METHOD-ROTATION-21D-20260902-TRIAL.md`
+- Decide: `python3 phase6/research/trial_cycle.py decide ANALYST-METHOD-ROTATION-21D-20260902-TRIAL continue_observe_only --note "…" --follow-on none`
+
 ## P6-RETURN-ENTROPY-SHADOW-20260830 — DONE (shadow + offline dig)
 
 **Type:** regime / soft-filter research (shadow)  
@@ -202,7 +223,7 @@ Kanban board `crypto-bot-project`, assignee `crypto-engineer`, priority 2. Dispa
 **Type:** test  
 **Date:** 2026-08-24  
 **Role:** Crypto-Analyst  
-**Status:** **RUNNING** — auto-pickup trial `ANALYST-REGIME-BULL-KNOBS-20260824-TRIAL` at 2026-08-24T17:01:00  
+**Status:** **DONE** — trial `ANALYST-REGIME-BULL-KNOBS-20260824-TRIAL` decision=`abort`  
 **auto_pickup:** true  
 **blocked_on:** none  
 **trial_kind:** offline_analysis  
@@ -11741,6 +11762,99 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260902`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+## 2026-09-02 — Analyst Daily Review full stack (Brad GO)
+
+**Done**
+- **C capacity:** aborted zombie `ANALYST-REGIME-BULL-KNOBS-20260824` (process_incomplete; regime gate was transition≠bull; no runner/reports). Decision: `docs/testing/decisions/ANALYST-REGIME-BULL-KNOBS-20260824_DROP.md`.
+- **A scoreboard:** `phase6/research/analyst_daily_scoreboard.py` → `data/state/analyst_daily_scoreboard_latest.{json,md}`
+- **B review:** `phase6/research/run_analyst_daily_review.py` — GOAL/WORKING/NOT WORKING/NEEDS CHANGE/PIPELINE/CHANGE RESULTS/BLOCKERS/NEEDS YOUR CALL. no_agent primary (not LLM filler).
+- **Crons:** `analyst-daily-scoreboard` `442949e02f36` 08:30 local; `analyst-daily-review` `d8aa09257600` 10:15 TG material-only.
+- **Filler strip:** twice-daily intel `c16b620103dc` deliver→**local**; ops-triage silent on OK; stale REVIEW_* archived when DECIDED exists.
+- **Skill:** `phase6-analyst-daily-review`. Plan: `docs/plans/2026-09-02-analyst-daily-review-full-stack.md`. SSOT: `docs/HERMES_CRON_SSOT.md`.
+- **Isolation:** `phase6/research/test_isolation_analyst_daily_review.py` OK.
+- **No** auto-promote / live knob writes / book changes.
+
+**Still open for Brad**
+- Needs-your-call proposals from first review (hold earn/scale; trend-repair observe; OPT refresh shadow).
+- stoch-30d-reeval 2026-09-03 09:00.
+
+### Brad GO 2026-09-02 — ANALYST-20260902-001
+**ACCEPT:** Hold Phase3 earn / Phase4 scale until `phase2_ready` **and** new Brad GO. Book leave-as-is. Sticky: `data/state/brad_go_hold_earn_scale_until_phase2.json`. Doc: `docs/testing/decisions/DEC_ANALYST-20260902-001_HOLD_EARN_SCALE.md`. 002–004 still open.
+
+### Policy 2026-09-02 — Analyst offline backtest
+Analyst **free to offline-backtest any proposal** to validate before active CR. Live promote / knobs / book still **Brad GO only**. Sticky: `data/state/analyst_research_policy.json`.
+
+- **Addendum:** Backtest results **must be attached to the relevant CR** (artifact paths + short summary) for justification/validation. Policy sticky: `data/state/analyst_research_policy.json`.
+
+## 2026-09-02 — Analyst backlog hygiene
+- Input 200 → kept 14 unique stems (4 open, 3 waiting, 7 terminal).
+- Archived 186 duplicates → `data/state/analyst_proposed_backlog_archive_20260902.json`.
+- Waiting: bear_window_rotation (regime), Stoch→Kelly (dependency).
+- Open: Polymarket backtest, trend-repair review, OPT refresh, emit TEST_STRATEGY.
+- Schema `analyst_proposed_backlog_v2` + `dedupe_titles` for novelty.
+- Decision: `docs/testing/decisions/DEC_ANALYST_BACKLOG_HYGIENE_20260902.md`
+
+## 2026-09-02 — Processed open Analyst proposals (offline)
+- **002** trend-repair observe → HOLD Tier0 park. CR_…002_PROCESSED_OBSERVE.md
+- **003** OPT+reentry stress refreshed (OHLCV end 2026-09-02). Prefer rebalance over 14d OPT winner in transition. CR_…003_PROCESSED_SHADOW.md
+- **004** emitted+launched METHOD-ROTATION-21D trial (`7300f2e43702`). CR_…004_PROCESSED_LAUNCHED.md
+- **024** Polymarket influence backtest → inconclusive (bias stuck 0.5). CR_…024_PROCESSED_INCONCLUSIVE.md
+- Still waiting: bear_window (regime), Stoch→Kelly (dependency)
+
+---
+
+## ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902
+
+**Type:** test  
+**Status:** RUNNING  
+**auto_pickup:** false  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** polymarket_influence  
+**duration_days:** 14  
+**Role:** crypto-analyst  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902.md`  
+**Protocol:** `docs/testing/trials/ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902_PROTOCOL.md`  
+**Trial JSON:** `data/state/trials/ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902.json`  
+**Parent:** `ANALYST-20260627-024`  
+
+### Why re-run (Brad GO 2026-09-02)
+024 offline influence backtest used **bad test data**: historical `risk_on_bias` stuck at 0.5 (`sensor_degenerate`) from Gamma `outcomePrices` JSON-string parse + polarity collapse. That is **not** a valid no-edge close. Code sealed; **historical log not rewritten**. This trial collects/scores **post-fix stamps only** (`--since 2026-09-02T00:00:00+00:00`). **No live promote.**
+
+### Commands
+```bash
+.venv/bin/python3 phase6/research/test_isolation_sensor_preflight.py
+.venv/bin/python3 phase6/research/run_polymarket_influence_health.py
+.venv/bin/python3 phase6/research/run_polymarket_influence_backtest.py --rerun
+```
+
+### Gates
+- sensor_preflight_ok before scoreboard  
+- min_joined ≥15; live_promote_allowed=false  
+- finalize-report → review → Brad decide  
+
+**Opened:** 2026-09-02T22:00:00Z  
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260903** (opened 2026-09-03T01:30:13.793759)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260903`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

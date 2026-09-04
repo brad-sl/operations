@@ -41,7 +41,9 @@ CANONICAL_CACHE = str(SENTIMENT_CACHE)
 X_CACHE = str(X_SENTIMENT_CACHE)
 FREE_CACHE = str(FREE_SENTIMENT_CACHE)
 
-DEFAULT_UNIVERSE = load_trading_basket()  # Dynamic from config via paths.py; falls back to 11.
+# Snapshot only for rare callers that import the name; live loads must re-read
+# config (dashboard/runner stay up across basket promotes).
+DEFAULT_UNIVERSE = load_trading_basket()  # may be stale in long-lived processes
 
 
 def _load_sentiment_policy() -> Dict[str, Any]:
@@ -143,7 +145,10 @@ def x_signal_usable(
 ) -> Dict[str, Any]:
     """Whether X cache has enough real posts to prefer over free fallback."""
     if universe is None:
-        universe = DEFAULT_UNIVERSE
+        try:
+            universe = list(load_trading_basket() or []) or list(DEFAULT_UNIVERSE)
+        except Exception:
+            universe = list(DEFAULT_UNIVERSE)
     total_posts = 0
     nz = 0
     if os.path.exists(cache_path):
@@ -180,7 +185,10 @@ def load_x_sentiment_scores(
     Preferred source when posts exist. Low post count / confidence is damped.
     """
     if universe is None:
-        universe = DEFAULT_UNIVERSE
+        try:
+            universe = list(load_trading_basket() or []) or list(DEFAULT_UNIVERSE)
+        except Exception:
+            universe = list(DEFAULT_UNIVERSE)
 
     scores: Dict[str, float] = {pair: 0.0 for pair in universe}
 
@@ -302,7 +310,13 @@ def load_sentiment_scores_detailed(
 ) -> Dict[str, Any]:
     """Rich loader: per-pair sentiment + source + overall mode (for dashboard/runner)."""
     if universe is None:
-        universe = DEFAULT_UNIVERSE
+        # Always re-read basket — do NOT use import-time DEFAULT_UNIVERSE.
+        # Long-lived serve_dashboard kept old pairs (ARB/ICP) and showed 0.00
+        # for newly promoted seats (ADA/ZEC/STX) until process restart.
+        try:
+            universe = list(load_trading_basket() or []) or list(DEFAULT_UNIVERSE)
+        except Exception:
+            universe = list(DEFAULT_UNIVERSE)
 
     policy = _load_sentiment_policy()
     primary = str(policy.get("primary") or "x_with_free_fallback").strip().lower()

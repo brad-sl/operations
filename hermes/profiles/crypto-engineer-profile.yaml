@@ -1,4 +1,9 @@
-description: "Builds and ships software \u2014 writes plans, develops features with\
-  \ subagents, opens PRs, and reviews code. Also handles DevOps orchestration, research,\
-  \ paper trading, and creative tasks like architecture diagrams and video generation."
+description: Builds and ships software — writes plans, develops features with subagents,
+  opens PRs, and reviews code. Also handles DevOps orchestration, research, paper
+  trading, and creative tasks like architecture diagrams and video generation.
 description_auto: true
+ui_meta:
+  hermes-bots:
+    sectionId: sec-mtmipt91-5qg25
+_ui_meta_revisions:
+  hermes-bots: 1

@@ -1,5 +1,10 @@
-description: "Tracks crypto markets, DeFi protocols, and on-chain data \u2014 analyzes\
-  \ trading opportunities, monitors Polymarket predictions, and executes paper trades.\
-  \ Strong in ML pipelines (DSPY, Llama.cpp, Segment Anything) and full-stack software\
-  \ development with automated PR workflows."
+description: Tracks crypto markets, DeFi protocols, and on-chain data — analyzes trading
+  opportunities, monitors Polymarket predictions, and executes paper trades. Strong
+  in ML pipelines (DSPY, Llama.cpp, Segment Anything) and full-stack software development
+  with automated PR workflows.
 description_auto: true
+ui_meta:
+  hermes-bots:
+    sectionId: sec-mtmipt91-5qg25
+_ui_meta_revisions:
+  hermes-bots: 1

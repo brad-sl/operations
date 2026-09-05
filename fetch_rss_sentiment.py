@@ -27,13 +27,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from phase6.core.paths import PROJECT_ROOT, RSS_SENTIMENT_CACHE, load_trading_basket
-
-try:
-    from textblob import TextBlob
-
-    HAS_TB = True
-except ImportError:
-    HAS_TB = False
+from phase6.core.simple_polarity import try_textblob_polarity
 
 UA = "phase6-free-sentiment/1.1 (+local research; rss longer-horizon)"
 # Expanded basket — public feeds only; failures are soft-skip
@@ -174,12 +168,7 @@ def fetch_feed(url: str) -> List[Tuple[str, str, Optional[datetime]]]:
 
 
 def polarity(text: str) -> float:
-    if not HAS_TB:
-        return 0.0
-    try:
-        return float(TextBlob(text).sentiment.polarity)
-    except Exception:
-        return 0.0
+    return try_textblob_polarity(text)
 
 
 def recency_weight(published: Optional[datetime], now: datetime) -> float:
@@ -194,9 +183,6 @@ def recency_weight(published: Optional[datetime], now: datetime) -> float:
 
 
 def main() -> int:
-    if not HAS_TB:
-        print("ERROR: textblob required", file=sys.stderr)
-        return 1
     basket = load_trading_basket()
     kws = load_keywords()
     now = datetime.now(timezone.utc)

@@ -2,10 +2,15 @@
 """Limit-first buy policy helpers (pure + wait loop). Default path remains market IOC.
 
 Brad decisions 2026-08-31:
-  unfilled → skip (no market fallback)
+  unfilled → skip (no market fallback) for normal size
   pilot universe → full basket (when enabled)
   fill_wait_s → 45
   Phase A/B only — enabled flag default False
+
+Brad 2026-09-04:
+  tryout-size unfilled → market IOC fallback so small seats can be tested
+  (market_fallback_max_usd; default 0 = off). Global market_fallback still
+  means always-fallback; tryout path is size-capped only.
 
 See docs/design/LIMIT_FIRST_BUY_DESIGN.md
 """
@@ -22,7 +27,8 @@ DEFAULT_POLL_INTERVAL_S = 2.0
 DEFAULT_MIN_FILL_USD = 10.0
 DEFAULT_POST_ONLY = True
 DEFAULT_PRICE_REF = "bid"
-DEFAULT_MARKET_FALLBACK = False  # skip
+DEFAULT_MARKET_FALLBACK = False  # skip large / default
+DEFAULT_MARKET_FALLBACK_MAX_USD = 0.0  # 0 = tryout fallback off
 DEFAULT_MAX_REQUOTES = 0
 DEFAULT_ELEVATED_TAPE = "abort"
 
@@ -37,6 +43,10 @@ class LimitFirstPolicy:
     poll_interval_s: float = DEFAULT_POLL_INTERVAL_S
     min_fill_usd: float = DEFAULT_MIN_FILL_USD
     market_fallback: bool = DEFAULT_MARKET_FALLBACK
+    # When >0: unfilled limit buys with usd_amount <= this still market-IOC
+    # (tryout force). Does not enable fallback for larger tickets unless
+    # market_fallback is True.
+    market_fallback_max_usd: float = DEFAULT_MARKET_FALLBACK_MAX_USD
     max_requotes: int = DEFAULT_MAX_REQUOTES
     elevated_tape_policy: str = DEFAULT_ELEVATED_TAPE  # abort | allow
     pilot_max_buys_per_day: int = 0  # 0 = no pilot cap when enabled (full basket)
@@ -44,6 +54,23 @@ class LimitFirstPolicy:
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+
+def should_market_fallback_on_unfilled(policy: LimitFirstPolicy, usd_amount: float) -> bool:
+    """True → after limit miss, chase with market IOC.
+
+    - market_fallback True → always
+    - else if market_fallback_max_usd > 0 and usd_amount <= that → tryout only
+    - else skip (historical Brad lock)
+    """
+    if policy is None:
+        return False
+    if bool(getattr(policy, "market_fallback", False)):
+        return True
+    cap = float(getattr(policy, "market_fallback_max_usd", 0) or 0)
+    if cap > 0 and float(usd_amount or 0) > 0 and float(usd_amount) <= cap + 1e-9:
+        return True
+    return False
 
 
 def policy_from_config(cfg: Optional[dict] = None) -> LimitFirstPolicy:
@@ -73,6 +100,13 @@ def policy_from_config(cfg: Optional[dict] = None) -> LimitFirstPolicy:
         ),
         min_fill_usd=float(lf.get("min_fill_usd", DEFAULT_MIN_FILL_USD) or DEFAULT_MIN_FILL_USD),
         market_fallback=bool(lf.get("market_fallback", DEFAULT_MARKET_FALLBACK)),
+        market_fallback_max_usd=float(
+            lf.get(
+                "market_fallback_max_usd",
+                lf.get("tryout_market_fallback_max_usd", DEFAULT_MARKET_FALLBACK_MAX_USD),
+            )
+            or 0
+        ),
         max_requotes=int(lf.get("max_requotes", DEFAULT_MAX_REQUOTES) or 0),
         elevated_tape_policy=str(
             lf.get("elevated_tape", lf.get("elevated_tape_policy", DEFAULT_ELEVATED_TAPE))

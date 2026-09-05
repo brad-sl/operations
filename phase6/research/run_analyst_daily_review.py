@@ -150,6 +150,40 @@ def _build_proposals(board: Dict[str, Any]) -> List[Dict[str, Any]]:
             "Exits / Risk",
         )
 
+    mp = board.get("month_path") or {}
+    if mp.get("ok"):
+        try:
+            tax = mp.get("current_mtd_process_tax_usd")
+            mtd = mp.get("current_mtd_return_pct")
+            tgt = float(mp.get("target_monthly_pct") or 5.0)
+            if tax is not None and float(tax) < -25:
+                offer(
+                    "Month-path process-tax dig: leak-adjacent SL $ vs ~5%/mo gap",
+                    f"process_tax_mtd={tax} mtd={mtd} target={tgt} "
+                    f"leaks={mp.get('current_leak_counts')} "
+                    f"artifact=data/state/month_path_scoreboard_latest.json",
+                    "High",
+                    "Process / Month-path",
+                )
+            elif (
+                mtd is not None
+                and float(mtd) < 0
+                and (
+                    "month_path_mtd_red" in flags
+                    or "month_path_short_of_5pct" in flags
+                )
+            ):
+                offer(
+                    "Month-path red MTD: rank exit mix vs regime weeks for ~5%/mo gap",
+                    f"mtd={mtd} gap={mp.get('current_mtd_gap_usd')} "
+                    f"hit_rate={mp.get('hit_rate_closed')} "
+                    f"artifact=reports/MONTH_PATH_SCOREBOARD_LATEST.md",
+                    "Medium",
+                    "Process / Month-path",
+                )
+        except (TypeError, ValueError):
+            pass
+
     if "path_soft_or_declining" in flags:
         offer(
             "Run trend-repair tier review on deposit-adjusted slope (observe-only)",
@@ -377,6 +411,50 @@ def _not_working(board: Dict[str, Any]) -> List[str]:
             f"Deposit-adjusted equity path looks {tone}: about {_fmt_pct(rr)} over the "
             f"recent stretch and {_fmt_pct(wr)} over the full repair window."
         )
+    mp = board.get("month_path") or {}
+    if mp.get("ok"):
+        tgt = mp.get("target_monthly_pct") or 5.0
+        mtd = mp.get("current_mtd_return_pct")
+        gap = mp.get("current_mtd_gap_usd")
+        tax = mp.get("current_mtd_process_tax_usd")
+        hr = mp.get("hit_rate_closed")
+        n_hit = mp.get("n_hit")
+        n_miss = mp.get("n_miss")
+        avg = mp.get("avg_closed_month_return_pct")
+        if mtd is not None:
+            try:
+                mtd_f = float(mtd)
+                gap_bit = f" Gap to the {tgt:g}% bar is about {_fmt_usd(gap)}." if gap is not None else ""
+                if mtd_f < float(tgt):
+                    items.append(
+                        f"Month-path meter (north star ~{tgt:g}%/mo): this month is at "
+                        f"{_fmt_pct(mtd_f)} deposit-adjusted so far.{gap_bit}"
+                    )
+                else:
+                    items.append(
+                        f"Month-path meter: MTD {_fmt_pct(mtd_f)} is on/above the ~{tgt:g}% bar "
+                        f"(keep process tax down)."
+                    )
+            except (TypeError, ValueError):
+                pass
+        if tax is not None:
+            try:
+                tax_f = float(tax)
+                if tax_f < -1:
+                    leaks = mp.get("current_leak_counts") or {}
+                    leak_bit = f" Leak tags this month: {leaks}." if leaks else ""
+                    items.append(
+                        f"Process tax (leak-adjacent stop-outs) is about {_fmt_usd(tax_f)} MTD — "
+                        f"that is house friction toward the {tgt:g}% bar, not missing alpha by itself."
+                        f"{leak_bit}"
+                    )
+            except (TypeError, ValueError):
+                pass
+        if hr is not None and int(mp.get("n_months_closed") or 0) >= 1:
+            items.append(
+                f"Closed-month hit rate vs ~{tgt:g}%: {n_hit or 0} hit / {n_miss or 0} miss "
+                f"(rate {hr}); average closed month about {_fmt_pct(avg)}."
+            )
     opt = board.get("opt") or {}
     ret = opt.get("production_return_pct")
     eq = opt.get("production_equity_usd")
@@ -424,7 +502,7 @@ def _not_working(board: Dict[str, Any]) -> List[str]:
         items.append(
             "No hard system failures — we are simply not ON_TRACK until the goal score rises."
         )
-    return items[:8]
+    return items[:10]
 
 
 def _needs_change(board: Dict[str, Any], proposals: List[Dict[str, Any]]) -> List[str]:
@@ -437,6 +515,25 @@ def _needs_change(board: Dict[str, Any], proposals: List[Dict[str, Any]]) -> Lis
             f"Main job remains moving us from {label} ({score}/100) toward ON_TRACK "
             f"without live FOMO or late pile-ons."
         )
+    mp = board.get("month_path") or {}
+    if mp.get("ok"):
+        tgt = mp.get("target_monthly_pct") or 5.0
+        tax = mp.get("current_mtd_process_tax_usd")
+        gap = mp.get("current_mtd_gap_usd")
+        try:
+            if tax is not None and float(tax) < -15:
+                items.append(
+                    f"Cut process tax first (leak-adjacent stops ~{_fmt_usd(tax)} MTD) before "
+                    f"chasing new entry alpha — it is the cleanest subtract line under the "
+                    f"~{tgt:g}%/mo bar."
+                )
+            elif gap is not None and float(gap) > 80:
+                items.append(
+                    f"Month-path still needs about {_fmt_usd(gap)} to clear this month's "
+                    f"~{tgt:g}% target — prioritize exit quality and regime size over new seats."
+                )
+        except (TypeError, ValueError):
+            pass
     path = board.get("path") or {}
     if path.get("phase2_ready") is False:
         items.append(
@@ -579,6 +676,7 @@ def compose_review(board: Dict[str, Any]) -> Dict[str, Any]:
         "as_of": _now().isoformat().replace("+00:00", "Z"),
         "scoreboard_as_of": board.get("as_of"),
         "goal": goal,
+        "month_path": board.get("month_path") or {},
         "working": _working(board),
         "not_working": _not_working(board),
         "needs_change": _needs_change(board, proposals),
@@ -648,6 +746,21 @@ def format_review_text(review: Dict[str, Any]) -> str:
                     s = f"go-live context roughly {float(m.group(1)):+.1f}% (backdrop only)"
                 else:
                     s = "go-live context still underwater (backdrop only)"
+            elif "month-path mtd" in sl or "month-path" in sl:
+                m = re.search(r"([+\-]?\d+(?:\.\d+)?)\s*%", s)
+                gap_m = re.search(r"\$([+\-]?\d+(?:\.\d+)?)", s)
+                if "process tax" in sl and gap_m:
+                    s = f"process tax about ${float(gap_m.group(1)):.0f} MTD (leak-adjacent stops)"
+                elif m and "≥" in s:
+                    s = f"month-path MTD {float(m.group(1)):+.1f}% clears the ~5% bar"
+                elif m and "red" in sl:
+                    s = f"month-path MTD {float(m.group(1)):+.1f}% (red vs ~5% bar)"
+                elif m:
+                    s = f"month-path MTD {float(m.group(1)):+.1f}% vs ~5% bar"
+                elif "hit_rate" in sl:
+                    s = s  # leave
+                else:
+                    s = "month-path meter updated"
             elif "test capacity free" in sl:
                 s = "offline test capacity is free"
             clean.append(s)

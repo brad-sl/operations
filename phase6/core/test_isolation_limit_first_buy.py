@@ -26,6 +26,7 @@ def test_policy_default_off() -> None:
     p = policy_from_config(None)
     assert p.enabled is False
     assert p.market_fallback is False
+    assert float(p.market_fallback_max_usd or 0) == 0.0
     assert p.fill_wait_s == 45.0
     assert p.post_only is True
     assert limit_first_enabled({}) is False
@@ -34,12 +35,22 @@ def test_policy_default_off() -> None:
         {
             "entry_execution": {
                 "mode": "limit_first_v1",
-                "limit_first": {"enabled": True, "market_fallback": False},
+                "limit_first": {
+                    "enabled": True,
+                    "market_fallback": False,
+                    "market_fallback_max_usd": 75.0,
+                },
             }
         }
     )
     assert on.enabled is True
     assert on.market_fallback is False
+    assert on.market_fallback_max_usd == 75.0
+    from phase6.core.limit_first_buy import should_market_fallback_on_unfilled
+
+    assert should_market_fallback_on_unfilled(on, 75.0) is True
+    assert should_market_fallback_on_unfilled(on, 75.01) is False
+    assert should_market_fallback_on_unfilled(on, 150.0) is False
 
 
 def test_limit_price_and_base() -> None:
@@ -225,6 +236,107 @@ def test_executor_limit_on_uses_limit_skip_unfilled() -> None:
         assert r.get("success") is False
         assert r.get("error") == "limit_unfilled_skip"
         assert "sl" not in calls  # no SL on empty fill
+    finally:
+        slp.fetch_verified_order_fill = orig  # type: ignore
+
+
+def test_executor_tryout_unfilled_markets() -> None:
+    """≤ market_fallback_max_usd: limit miss → market IOC (Brad 2026-09-04)."""
+    from phase6.core.order_executor import OrderExecutor
+
+    calls: List[str] = []
+
+    class Ex:
+        shadow_mode = False
+
+        def get_best_bid_ask(self, pair: str) -> Dict[str, Any]:
+            return {"bid": 100.0, "ask": 101.0, "last": 100.5}
+
+        def place_market_buy(self, pair: str, usd: float) -> Dict[str, Any]:
+            calls.append("market")
+            return {
+                "success": True,
+                "order_id": "m_try",
+                "average_filled_price": 100.5,
+                "filled_size": usd / 100.5,
+            }
+
+        def place_limit_buy(self, pair: str, base: float, px: float, *, post_only: bool = True):
+            calls.append("limit")
+            return {"success": True, "order_id": "l_try", "post_only": post_only}
+
+        def get_order_fill_details(self, oid: str) -> Dict[str, Any]:
+            return {"status": "OPEN", "filled_size": 0.0, "average_filled_price": 0.0}
+
+        def cancel_order(self, oid: str) -> bool:
+            calls.append("cancel")
+            return True
+
+        def quantize_size(self, pair: str, size: float) -> str:
+            return f"{size:.8f}"
+
+        def quantize_price(self, pair: str, px: float) -> str:
+            return f"{px:.2f}"
+
+    class SL:
+        config = {
+            "entry_execution": {
+                "mode": "limit_first_v1",
+                "limit_first": {
+                    "enabled": True,
+                    "fill_wait_s": 0.01,
+                    "poll_interval_s": 0.001,
+                    "market_fallback": False,
+                    "market_fallback_max_usd": 75.0,
+                },
+            }
+        }
+
+        def attach_stop_loss(self, *a: Any, **k: Any) -> bool:
+            calls.append("sl")
+            return True
+
+    import phase6.core.sl_preflight as slp
+
+    orig = slp.fetch_verified_order_fill
+
+    def fake_fill(ex: Any, oid: str) -> Dict[str, Any]:
+        # Market path finalize may re-query; provide fill for m_try
+        if oid == "m_try":
+            return {
+                "average_filled_price": 100.5,
+                "filled_size": 75.0 / 100.5,
+                "fill_verified": True,
+            }
+        return {"average_filled_price": 0.0, "filled_size": 0.0, "fill_verified": False}
+
+    slp.fetch_verified_order_fill = fake_fill  # type: ignore
+    try:
+        exe = OrderExecutor(exchange=Ex(), stop_loss_manager=SL(), mode="live")
+        # tryout size → fallback
+        r = exe.execute_buy(
+            "LINK-USD",
+            75.0,
+            record_ledger=False,
+            config_dict=SL.config,
+        )
+        assert "limit" in calls
+        assert "market" in calls
+        assert r.get("success") is True
+        assert r.get("limit_unfilled_fallback") is True
+        assert str(r.get("execution_style") or "").startswith("limit_then_market")
+        # over tryout → still skip
+        calls.clear()
+        r2 = exe.execute_buy(
+            "LINK-USD",
+            150.0,
+            record_ledger=False,
+            config_dict=SL.config,
+        )
+        assert "limit" in calls
+        assert "market" not in calls
+        assert r2.get("success") is False
+        assert r2.get("error") == "limit_unfilled_skip"
     finally:
         slp.fetch_verified_order_fill = orig  # type: ignore
 

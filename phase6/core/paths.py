@@ -77,6 +77,10 @@ FUNDING_SENTIMENT_CACHE = STATE_DIR / "funding_sentiment_cache.json"
 RSS_SENTIMENT_CACHE = STATE_DIR / "rss_sentiment_cache.json"
 FREE_SENTIMENT_CACHE = STATE_DIR / "sentiment_cache_free.json"
 FREE_VS_X_CORRELATION = STATE_DIR / "free_vs_x_correlation_latest.json"
+# Adanos Reddit-crypto shadow (true Reddit; free tier key required — not live)
+ADANOS_SENTIMENT_CACHE = STATE_DIR / "adanos_sentiment_cache.json"
+ADANOS_MULTI_CORR = STATE_DIR / "adanos_rss_free_x_correlation_latest.json"
+LAST30_PAIR_PROBE = STATE_DIR / "last30days_pair_score_probe_latest.json"
 # Daily dose news feed (human surface — not a trading signal)
 DAILY_DOSE_LATEST = STATE_DIR / "daily_dose_latest.json"
 DAILY_DOSE_HISTORY = STATE_DIR / "daily_dose_history.jsonl"

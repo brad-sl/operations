@@ -1,6 +1,6 @@
 # Hermes cron SSOT (Phase 6 + host)
 
-**Updated:** 2026-09-02  
+**Updated:** 2026-09-05  
 **Law:** **Do not put Phase 6 / sentiment / X / Apify / runner monitors on Linux `crontab`.**  
 User crontab is comment-only. Backup: `~/.hermes/cron/linux-crontab.bak.20260813`.
 
@@ -24,7 +24,8 @@ Full audit: `reports/CRON_ARCHIVE_AND_SSOT_2026-08-29.md`.
 | Was Linux | Hermes job | Schedule (PT) | Notes |
 |-----------|------------|---------------|--------|
 | `refresh_sentiment.py` 50 8,20 | `phase6-x-sentiment-live-2x` `e17a43bfbed6` | 08:50 / 20:50 | X live + free fallback |
-| `run_free_sentiment_shadow.sh` 40 8,20 | `phase6-free-sentiment-shadow-2x` `655188d1df61` | 08:40 / 20:40 | Free warm only |
+| `run_adanos_shadow.sh` 35 8,20 | `phase6-adanos-reddit-shadow-2x` `539424468b36` | 08:35 / 20:35 | Adanos Reddit free shadow + multi-corr; **not** live |
+| `run_free_sentiment_shadow.sh` 40 */2 | `phase6-free-sentiment-shadow-2h` `655188d1df61` | every 2h @:40 (incl 08:40/20:40) | Free shadow denser samples; **not** live |
 | `monitor_phase6_runner.py` */15 | `phase6-runner-monitor-15m` `f14dc4b04e34` | */15 | Watchdog |
 | `ops_engineer.py` */30 | `ops-engineer-30m` `3c83e4d2232c` | */30 | Deterministic |
 | `backup-kanban-frequent.sh` */15 | `kanban-backup-frequent-15m` `387e688fc854` | */15 | + daily `a93067255b66` @ 03:00 |
@@ -34,7 +35,7 @@ Full audit: `reports/CRON_ARCHIVE_AND_SSOT_2026-08-29.md`.
 ## Keep active (default gateway) — classes
 
 ### A — Live trading spine
-Rebalance 09:05/21:05 · RSI */15 · X 08:50/20:50 · free sentiment 08:40/20:40 · runner monitor */15 · reentry SL/TP monitor */10 · dashboard live */5
+Rebalance 09:05/21:05 · RSI */15 · X 08:50/20:50 · Adanos Reddit shadow **08:35/20:35** · free sentiment **every 2h @:40** (shadow) · runner monitor */15 · reentry SL/TP monitor */10 · dashboard live */5
 
 ### B — Ops / hygiene
 ops-triage 06:00 TG **only when actionable** (empty stdout on OK) · ops-issue-loop 07/13/19 local · ops-engineer */30 · kanban backup */15 + daily 03:00 · git-daily 04:30 · llm-token rollup 05:05 · master-test pickup/scan TG only when work · analyst-test-strategy Mon 10:00
@@ -50,9 +51,11 @@ daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst
 | `phase6-basket-pick-metrics-refresh` | Open promote pick still `status=open` |
 | `phase6-basket-seat-idle-refresh` | Soft idle flags; observe_only |
 | `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred=`risk_adj_mom` →2026-09-28 |
+| `phase6-tcs-shadow-would-block` `dd16da710656` | Trade-comparison CF + would-block replay · **12:25 PT daily** · local · own state only · live cooldown OFF |
 | `phase6-vol-risk-scalar-shadow` | Keep collecting (not enough data for promote) |
 | `bear-ladder-promote-watch` | **Not** done — 1 bear day / 0 episodes (need real bear) |
-| free-sentiment 2× | Warm cache for X fallback (ops spine-adjacent) |
+| free-sentiment **2h** `655188d1df61` | Shadow RSS+funding+F&G denser mid-cycle samples vs X (Brad 2026-09-04 lag thesis); live still X 2× |
+| Adanos Reddit **2×** `539424468b36` | True-Reddit free shadow @ **08:35/20:35** pre-X · multi-corr vs RSS/free/X · ~2 calls/run · **not** live wire |
 
 ### E — One-shot still scheduled
 | Job | When | Note |

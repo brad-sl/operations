@@ -49,15 +49,18 @@ def main() -> int:
         json.loads((ROOT / "config/trading_config_phase6.json").read_text())
     )
     assert cfg.get("enabled") is True, "config enabled"
+    # Pure gate math must not depend on live operator pair caps (LINK tryout etc.)
+    cfg_pure = json.loads(json.dumps(cfg))
+    cfg_pure["pair_ticket_caps"] = {}
 
     # --- classify ---
-    ed = classify_entry_drivers("LINK-USD", 46.6, 0.89, cfg=cfg)
+    ed = classify_entry_drivers("LINK-USD", 46.6, 0.89, cfg=cfg_pure)
     if not ed.sentiment_only:
         fails.append(f"expected sentiment_only LINK, got {ed}")
-    ed2 = classify_entry_drivers("BTC-USD", 28.0, 0.1, cfg=cfg)
+    ed2 = classify_entry_drivers("BTC-USD", 28.0, 0.1, cfg=cfg_pure)
     if ed2.sentiment_only or "rsi_oversold" not in ed2.drivers:
         fails.append(f"expected rsi_oversold BTC, got {ed2}")
-    ed3 = classify_entry_drivers("ETH-USD", 32.0, 0.5, cfg=cfg)
+    ed3 = classify_entry_drivers("ETH-USD", 32.0, 0.5, cfg=cfg_pure)
     if ed3.sentiment_only or not ed3.full_size_ok:
         fails.append(f"expected full_size RSI+sent ETH, got {ed3}")
 
@@ -72,7 +75,7 @@ def main() -> int:
         rebalance_cap_usd=100.0,
         free_cash_usd=1975.0,
         emergency_recovery=True,
-        cfg=cfg,
+        cfg=cfg_pure,
     )
     print("LINK case:", json.dumps(g.as_dict(), indent=2))
     if not g.haircut_applied:
@@ -94,7 +97,7 @@ def main() -> int:
         rebalance_cap_usd=None,
         free_cash_usd=1975.0,
         emergency_recovery=True,
-        cfg=cfg,
+        cfg=cfg_pure,
     )
     # 1925*0.35=673.75; pair w=0.35*2372=830.2; free share 0.5*1975=987.5 → 673.75
     print("LINK no-cap:", g2.final_usd, g2.notes)
@@ -102,6 +105,41 @@ def main() -> int:
         fails.append(f"no-cap should be haircut-bound ~674 got {g2.final_usd}")
     if g2.final_usd < 600:
         fails.append(f"no-cap unexpectedly small {g2.final_usd}")
+
+    # --- live operator pair_ticket_caps (LINK $150) binds when regime cap higher ---
+    g_pair = apply_buy_size_gates(
+        "LINK-USD",
+        500.0,
+        rsi=44.0,
+        sentiment=0.4,
+        equity_usd=2300.0,
+        current_pair_usd=0.0,
+        rebalance_cap_usd=200.0,
+        free_cash_usd=800.0,
+        emergency_recovery=False,
+        cfg=cfg,  # live config with pair_ticket_caps
+    )
+    print("LINK pair_ticket_cap live cfg:", g_pair.final_usd, g_pair.notes)
+    live_cap = float((cfg.get("pair_ticket_caps") or {}).get("LINK-USD") or 0)
+    if live_cap > 0 and g_pair.final_usd > live_cap + 1e-6:
+        fails.append(f"pair_ticket_cap not bound: {g_pair.final_usd} > {live_cap}")
+    if live_cap > 0 and not any("pair_ticket_cap" in n for n in g_pair.notes):
+        # may already be under via haircut; force high proposed after haircut
+        g_pair2 = apply_buy_size_gates(
+            "LINK-USD",
+            2000.0,
+            rsi=28.0,
+            sentiment=0.5,
+            equity_usd=5000.0,
+            current_pair_usd=0.0,
+            rebalance_cap_usd=500.0,
+            free_cash_usd=3000.0,
+            cfg=cfg,
+        )
+        if g_pair2.final_usd > live_cap + 1e-6:
+            fails.append(f"pair_ticket_cap miss on large: {g_pair2.final_usd}")
+        elif not any("pair_ticket_cap" in n for n in g_pair2.notes):
+            fails.append(f"pair_ticket_cap note missing: {g_pair2.notes}")
 
     # --- RSI oversold full size subject to cap only ---
     g3 = apply_buy_size_gates(
@@ -114,7 +152,7 @@ def main() -> int:
         rebalance_cap_usd=150.0,
         free_cash_usd=800.0,
         emergency_recovery=False,
-        cfg=cfg,
+        cfg=cfg_pure,
     )
     print("SOL oversold+sent:", g3.as_dict())
     if g3.haircut_applied:
@@ -133,7 +171,7 @@ def main() -> int:
         rebalance_cap_usd=500.0,
         free_cash_usd=500.0,
         emergency_recovery=False,
-        cfg=cfg,
+        cfg=cfg_pure,
     )
     print("ETH room:", g4.final_usd, g4.notes)
     if abs(g4.final_usd - 50.0) > 1e-6:
@@ -152,7 +190,7 @@ def main() -> int:
         rebalance_cap_usd=2000.0,
         free_cash_usd=1000.0,
         emergency_recovery=True,
-        cfg=cfg,
+        cfg=cfg_pure,
     )
     print("multi BUY finals:", [(a["pair"], a["usd"]) for a in acts])
     total = sum(a["usd"] for a in acts)

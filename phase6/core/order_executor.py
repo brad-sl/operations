@@ -392,12 +392,56 @@ class OrderExecutor:
         min_usd = float(getattr(policy, "min_fill_usd", 10) or 10)
         notional = filled * avg if filled > 0 and avg > 0 else 0.0
         if notional < min_usd or filled <= 0 or avg <= 0:
-            # Brad: skip — no market fallback
             if order_id and not residual_cancelled:
                 try:
                     cancel_and_recheck(self.exchange, order_id)
                 except Exception:
                     pass
+            # Brad 2026-09-04: tryout-size (or full market_fallback) → market IOC
+            from phase6.core.limit_first_buy import should_market_fallback_on_unfilled
+
+            if should_market_fallback_on_unfilled(policy, usd_amount):
+                self.logger.info(
+                    "[LIMIT BUY] unfilled → market fallback %s $%.2f "
+                    "(fallback=%s max_tryout=$%.2f)",
+                    pair,
+                    usd_amount,
+                    bool(getattr(policy, "market_fallback", False)),
+                    float(getattr(policy, "market_fallback_max_usd", 0) or 0),
+                )
+
+                def _do_mkt():
+                    return self.exchange.place_market_buy(pair, usd_amount)
+
+                mkt = self._retry_with_backoff(_do_mkt)
+                if mkt.get("success"):
+                    result = self._finalize_buy_fill(
+                        pair,
+                        usd_amount,
+                        mkt,
+                        tp_pct=tp_pct,
+                        execution_style="limit_then_market_fallback",
+                    )
+                    result["limit_order_id"] = order_id
+                    result["residual_cancelled"] = True
+                    result["fill_status"] = result.get("fill_status") or "full"
+                    result["limit_unfilled_fallback"] = True
+                    return result
+                return {
+                    "success": False,
+                    "error": mkt.get("error") or "limit_unfilled_market_failed",
+                    "order_id": mkt.get("order_id") or order_id,
+                    "limit_order_id": order_id,
+                    "execution_style": "limit_then_market_fallback",
+                    "fill_status": "none",
+                    "residual_cancelled": True,
+                    "sl_attached": False,
+                    "tp_attached": False,
+                    "entry_price": 0.0,
+                    "size": 0.0,
+                    "qty": 0.0,
+                }
+            # Larger than tryout cap: skip (original Brad lock)
             return {
                 "success": False,
                 "error": "limit_unfilled_skip",

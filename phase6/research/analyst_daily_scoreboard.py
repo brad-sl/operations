@@ -36,8 +36,8 @@ OUT_MD = STATE / "analyst_daily_scoreboard_latest.md"
 HISTORY = STATE / "analyst_daily_scoreboard_history.jsonl"
 TRADES = ROOT / "trades" / "phase6_trades.jsonl"
 NORTH_STAR = (
-    "Maximize risk-adjusted return and minimize losses via regime-aware knobs, "
-    "sizing, signals, and methodology — evidence before live change."
+    "Consistent ~5%/mo deposit-adjusted return on the process book (scoreboard target, "
+    "not a guarantee) — cut process tax, bank exits, regime-aware size; evidence before live change."
 )
 
 
@@ -375,7 +375,7 @@ def _pipeline() -> Dict[str, Any]:
         "proposal_waiting_n": waiting_n,
         "proposal_last_ids": last_ids,
         "open_review_files": open_reviews[:10],
-        "north_star": strategy.get("north_star") or NORTH_STAR,
+        "north_star": NORTH_STAR or strategy.get("north_star"),
     }
 
 
@@ -450,6 +450,23 @@ def _material_flags(board: Dict[str, Any]) -> List[str]:
     sc = sig.get("signal_counts") or {}
     if int(sc.get("SELL") or 0) >= 3:
         flags.append("many_sell_signals")
+    mp = board.get("month_path") or {}
+    if mp.get("ok"):
+        try:
+            mtd = mp.get("current_mtd_return_pct")
+            tax = mp.get("current_mtd_process_tax_usd")
+            tgt = float(mp.get("target_monthly_pct") or 5.0)
+            if mtd is not None and float(mtd) < 0:
+                flags.append("month_path_mtd_red")
+            elif mtd is not None and float(mtd) < tgt * 0.5:
+                flags.append("month_path_short_of_5pct")
+            if tax is not None and float(tax) < -25:
+                flags.append("month_path_process_tax")
+            hr = mp.get("hit_rate_closed")
+            if hr is not None and float(hr) == 0 and int(mp.get("n_months_closed") or 0) >= 2:
+                flags.append("month_path_zero_hit_rate")
+        except (TypeError, ValueError):
+            pass
     if not flags:
         flags.append("quiet_stable")
     return flags
@@ -465,6 +482,7 @@ def _goal_realization(board: Dict[str, Any]) -> Dict[str, Any]:
     health = str(path.get("path_health") or "")
     wounds = board.get("wounds") or {}
     ss3 = int((wounds.get("same_session_3d") or {}).get("count_2h") or 0)
+    mp = board.get("month_path") or {}
     score = 50  # neutral baseline
     notes = []
     if p2_ready is True:
@@ -493,6 +511,45 @@ def _goal_realization(board: Dict[str, Any]) -> Dict[str, Any]:
             notes.append(f"recent path recent={recent:+.2f}% window={window:+.2f}%")
     except (TypeError, ValueError):
         pass
+    # Month-path meter (~5%/mo target) — primary product scoreboard when present
+    if mp.get("ok"):
+        try:
+            mtd = mp.get("current_mtd_return_pct")
+            gap = mp.get("current_mtd_gap_usd")
+            tax = mp.get("current_mtd_process_tax_usd")
+            hit_rate = mp.get("hit_rate_closed")
+            tgt = float(mp.get("target_monthly_pct") or 5.0)
+            if mtd is not None:
+                mtd_f = float(mtd)
+                if mtd_f >= tgt:
+                    score += 15
+                    notes.append(f"month-path MTD {mtd_f:+.2f}% ≥ {tgt:.0f}% bar")
+                elif mtd_f >= tgt * 0.4:
+                    score += 4
+                    notes.append(f"month-path MTD {mtd_f:+.2f}% (below {tgt:.0f}% bar)")
+                elif mtd_f < 0:
+                    score -= 12
+                    notes.append(f"month-path MTD {mtd_f:+.2f}% (red vs {tgt:.0f}% bar)")
+                else:
+                    score -= 4
+                    notes.append(f"month-path MTD {mtd_f:+.2f}% (short of {tgt:.0f}% bar)")
+            if gap is not None and float(gap) > 50:
+                notes.append(f"month-path gap to {tgt:.0f}% ~${float(gap):.0f}")
+            if tax is not None and float(tax) < -15:
+                score -= 6
+                notes.append(f"process tax MTD ${float(tax):.0f} (leak-adjacent SL)")
+            if hit_rate is not None and mp.get("n_months_closed", 0) >= 2:
+                hr = float(hit_rate)
+                if hr >= 0.5:
+                    score += 6
+                    notes.append(f"month-path hit_rate {hr:.0%} closed ≥{tgt:.0f}%")
+                elif hr == 0:
+                    score -= 6
+                    notes.append(f"month-path hit_rate 0% closed ≥{tgt:.0f}%")
+                else:
+                    notes.append(f"month-path hit_rate {hr:.0%} closed ≥{tgt:.0f}%")
+        except (TypeError, ValueError):
+            pass
     if ret is not None:
         try:
             r = float(ret)
@@ -526,7 +583,42 @@ def _goal_realization(board: Dict[str, Any]) -> Dict[str, Any]:
         "notes": notes,
         "equity_usd": eq,
         "production_return_pct": ret,
+        "month_path_mtd_pct": (mp or {}).get("current_mtd_return_pct"),
+        "month_path_gap_usd": (mp or {}).get("current_mtd_gap_usd"),
+        "month_path_process_tax_usd": (mp or {}).get("current_mtd_process_tax_usd"),
+        "target_monthly_pct": (mp or {}).get("target_monthly_pct") or 5.0,
     }
+
+
+def _month_path_block() -> Dict[str, Any]:
+    """~5%/mo gap meter + process tax (refresh if stale)."""
+    try:
+        from phase6.research.month_path_scoreboard import (
+            OUT_JSON,
+            analyst_snippet,
+            build_month_path,
+            format_month_path_md,
+            load_latest,
+            persist,
+        )
+
+        latest = load_latest()
+        stale = True
+        if isinstance(latest, dict) and latest.get("as_of"):
+            try:
+                ts = datetime.fromisoformat(str(latest["as_of"]).replace("Z", "+00:00"))
+                age_h = (_now() - ts.astimezone(timezone.utc)).total_seconds() / 3600.0
+                stale = age_h > 20.0
+            except Exception:
+                stale = True
+        if stale or not isinstance(latest, dict):
+            latest = build_month_path()
+            persist(latest, format_month_path_md(latest))
+        snip = analyst_snippet(latest)
+        snip["path"] = str(OUT_JSON)
+        return snip
+    except Exception as e:
+        return {"ok": False, "error": f"month_path_failed: {e}"}
 
 
 def build_scoreboard() -> Dict[str, Any]:
@@ -547,6 +639,7 @@ def build_scoreboard() -> Dict[str, Any]:
         "pipeline": _pipeline(),
         "wounds": _wounds(),
         "gates": _gates_regime(),
+        "month_path": _month_path_block(),
     }
     board["goal"] = _goal_realization(board)
     board["material_flags"] = _material_flags(board)
@@ -606,6 +699,18 @@ def format_scoreboard_md(board: Dict[str, Any]) -> str:
         f"winner={opt.get('opt_winner')} hint={opt.get('deployment_hint')}",
         f"prod_ret={opt.get('production_return_pct')} eq={opt.get('production_equity_usd')}",
     ]
+    mp = board.get("month_path") or {}
+    if mp:
+        lines += [
+            "",
+            "--- Month path (~5%/mo bar) ---",
+            f"ok={mp.get('ok')} target={mp.get('target_monthly_pct')}% "
+            f"hit_rate={mp.get('hit_rate_closed')} "
+            f"avg_closed={mp.get('avg_closed_month_return_pct')}%",
+            f"MTD {mp.get('current_month')}: {mp.get('current_mtd_return_pct')}% "
+            f"gap=${mp.get('current_mtd_gap_usd')} process_tax=${mp.get('current_mtd_process_tax_usd')}",
+            f"total_process_tax=${mp.get('total_process_tax_usd')} edge={mp.get('edge_class')}",
+        ]
     pipe = board.get("pipeline") or {}
     lines += [
         "",

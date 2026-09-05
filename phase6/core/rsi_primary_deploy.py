@@ -31,6 +31,9 @@ DEFAULTS: Dict[str, Any] = {
     "max_pair_weight_recovery": 0.35,
     "max_single_share_of_free_cash": 0.50,
     "enforce_rebalance_cap": True,
+    # Per-pair hard ticket ceilings (min with rebalance_cap). Operator/process digs.
+    # Example: {"LINK-USD": 150.0} — binds even if regime cap lifts.
+    "pair_ticket_caps": {},
     "min_move_usd": 50.0,
     "sentiment_fade": {
         "mode": "shadow",  # shadow | live | off
@@ -281,6 +284,18 @@ def apply_buy_size_gates(
                 usd = cap
                 ticket = True
                 notes.append(f"ticket_cap={cap:.2f}")
+
+    # 2b) Per-pair ticket ceiling (process / tryout — min with regime cap)
+    pair_caps = c.get("pair_ticket_caps") or {}
+    if isinstance(pair_caps, dict) and pair in pair_caps:
+        try:
+            pcap = float(pair_caps[pair])
+        except (TypeError, ValueError):
+            pcap = -1.0
+        if pcap >= 0 and usd > pcap:
+            usd = pcap
+            ticket = True
+            notes.append(f"pair_ticket_cap={pcap:.2f}")
 
     # 3) Max pair weight room
     eq = max(0.0, _f(equity_usd, 0.0))

@@ -15,6 +15,17 @@ import phase6.core.basket_pick_metrics as bpm  # noqa: E402
 
 
 def main() -> int:
+    # regression coverage for naive legacy timestamps (e.g. old phase6_trades.jsonl entries without tz)
+    naive = "2026-08-10T02:00:00"
+    dt_naive = bpm._parse_ts(naive)
+    assert dt_naive is not None, "parse naive"
+    assert dt_naive.tzinfo is not None, "naive normalized to aware"  # type: ignore[attr-defined]
+    dt_aware = bpm._parse_ts("2026-08-10T02:00:00+00:00")
+    assert dt_aware is not None and dt_aware.tzinfo is not None
+    dt_z = bpm._parse_ts("2026-08-10T02:00:00Z")
+    assert dt_z is not None and dt_z.tzinfo is not None
+    print("parser tz normalization OK (naive/aware/Z)")
+
     tmp = Path(tempfile.mkdtemp(prefix="grad_iso_"))
     ledger = tmp / "picks.jsonl"
     dec = tmp / "decision.jsonl"

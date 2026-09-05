@@ -154,9 +154,8 @@ def refresh_open_picks(path: Path = LEDGER_PATH) -> Dict[str, Any]:
     for row in rows:
         if row.get("status") != "open":
             continue
-        try:
-            t0 = datetime.fromisoformat(str(row["promoted_at"]).replace("Z", "+00:00"))
-        except Exception:
+        t0 = _parse_ts(row.get("promoted_at"))
+        if t0 is None:
             continue
         age_h = (now - t0).total_seconds() / 3600.0
         marks = dict(row.get("marks") or {})
@@ -214,11 +213,19 @@ def refresh_open_picks(path: Path = LEDGER_PATH) -> Dict[str, Any]:
 
 
 def _parse_ts(ts: Any) -> Optional[datetime]:
+    """Parse ts string to tz-aware UTC datetime. Handles legacy naive ISO (no tz),
+    Z, +00:00 etc. Assumes UTC for naive (common in older trades logs).
+    """
     if ts is None:
         return None
     try:
-        s = str(ts).replace("Z", "+00:00")
-        return datetime.fromisoformat(s)
+        s = str(ts).strip().replace("Z", "+00:00")
+        if not s:
+            return None
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
     except Exception:
         return None
 

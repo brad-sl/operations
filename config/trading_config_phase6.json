@@ -7,7 +7,7 @@
       "SOL-USD",
       "XRP-USD",
       "DOGE-USD",
-      "PENGU-USD",
+      "NEAR-USD",
       "AVAX-USD",
       "LINK-USD",
       "UNI-USD",
@@ -169,7 +169,10 @@
       "MATIC-USD",
       "RAVE-USD",
       "ICP-USD",
-      "PENGU-USD"
+      "PENGU-USD",
+      "NEAR-USD",
+      "ZEC-USD",
+      "STX-USD"
     ]
   },
   "withdrawal_reserve": {
@@ -196,7 +199,15 @@
     "free_fallback_when_x_empty": true,
     "x_min_usable_posts_total": 1,
     "free_max_age_hours": 18,
-    "note": "Phase3 temp: when X empty/spend-cap, use free hybrid (funding+RSS+F&G). primary=x|free_hybrid|x_with_free_fallback|off"
+    "note": "X 2x/day + free_fallback. Aging ON (grid 2026-04-21 optimal): X HL 15m (transitory), Reddit HL 60m (hour bridge). Reddit Apify OFF \u2014 without bridge, aged X fades mid-cycle by design. Free denser shadow is candidate bridge after multi-day promote_ready + Brad GO.",
+    "apply_aging": true,
+    "x_half_life_minutes": 15.0,
+    "reddit_half_life_minutes": 60.0,
+    "free_half_life_minutes": 60.0,
+    "canonical_half_life_minutes": 15.0,
+    "x_staleness_zero_minutes": 120.0,
+    "reddit_staleness_zero_minutes": 240.0,
+    "free_staleness_zero_minutes": 360.0
   },
   "rsi_primary_deploy": {
     "enabled": true,
@@ -224,7 +235,11 @@
       "notify_telegram": true,
       "notify_dedupe_hours": 6,
       "time_stop_hours": 0
-    }
+    },
+    "pair_ticket_caps": {
+      "LINK-USD": 150.0
+    },
+    "pair_ticket_caps_note": "2026-09-04 Brad GO: LINK procurement tryout ceiling $150 (TCS process dig). Flat regime already $75; this binds if regime/cap lifts. Not a cooldown gate."
   },
   "run_phase_deploy": {
     "enabled": true,
@@ -340,7 +355,8 @@
       "pilot_universe": "full_basket",
       "pilot_max_buys_per_day": 3,
       "pilot_max_usd_per_day": 300,
-      "_note": "Phase D pilot 2026-08-31 Brad GO. skip unfilled, full basket, 45s. Caps 3 buys/$300/day. Kill: data/state/limit_first_buy_KILL. Cost-cut only not alpha."
+      "_note": "Phase D pilot 2026-08-31 Brad GO. limit bid 45s. 2026-09-04: tryout market_fallback_max_usd=$75 (unfilled\u2192market IOC); larger tickets still skip. Caps 3 buys/$300/day. Kill: data/state/limit_first_buy_KILL. Cost-cut + small-seat force, not alpha.",
+      "market_fallback_max_usd": 75.0
     }
   }
 }

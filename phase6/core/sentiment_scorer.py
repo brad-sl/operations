@@ -9,7 +9,11 @@ to retrieve current sentiment scores.
 - Free hybrid fallback when X empty/spend-cap
   (config sentiment.primary=x_with_free_fallback | free_hybrid | x | off)
 - Always returns scores for the requested universe (dynamic basket)
-- Aging helper (exponential decay, half-life 60min default)
+- **Source-aware exponential aging (default ON)** — grid-optimal 2026-04-21:
+  X / twitter half-life **15 min** (highly transitory); Reddit **60 min** (hour bridge).
+  Free hybrid uses **60 min** HL when it is the live source (bridge-shaped; not a
+  multi-day free promote). Without Reddit, aged X correctly fades mid-cycle —
+  do not re-enable raw full-strength stale X.
 - Real data only (no placeholder fabrication)
 
 Consumers:
@@ -30,6 +34,7 @@ from .paths import (
 
 import json
 import logging
+import math
 import os
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,12 +52,23 @@ DEFAULT_UNIVERSE = load_trading_basket()  # may be stale in long-lived processes
 
 
 def _load_sentiment_policy() -> Dict[str, Any]:
-    """Read sentiment.primary / free_fallback flags from trading_config_phase6.json."""
+    """Read sentiment.primary / free_fallback / aging flags from trading_config_phase6.json."""
+    # Half-lives from config/sentiment_grid_results_20260421_151742/SUMMARY.json optimal:
+    # twitter 15m (transitory) + reddit 60m (hour bridge). Brad 2026-09-04: raw unaged
+    # live path was a bug — aging must bind decision loads by default.
     defaults = {
         "primary": "x_with_free_fallback",
         "free_fallback_when_x_empty": True,
         "x_min_usable_posts_total": 1,
         "free_max_age_hours": 18,
+        "apply_aging": True,
+        "x_half_life_minutes": 15.0,
+        "reddit_half_life_minutes": 60.0,
+        "free_half_life_minutes": 60.0,
+        "canonical_half_life_minutes": 15.0,
+        "x_staleness_zero_minutes": 120.0,
+        "reddit_staleness_zero_minutes": 240.0,
+        "free_staleness_zero_minutes": 360.0,
     }
     try:
         cfg_path = Path(TRADING_CONFIG_PHASE6)
@@ -61,7 +77,9 @@ def _load_sentiment_policy() -> Dict[str, Any]:
         raw = json.loads(cfg_path.read_text(encoding="utf-8"))
         block = raw.get("sentiment") or {}
         out = dict(defaults)
-        out.update({k: block[k] for k in defaults if k in block})
+        for k in defaults:
+            if k in block:
+                out[k] = block[k]
         env_p = os.environ.get("SENTIMENT_PRIMARY", "").strip()
         if env_p:
             out["primary"] = env_p
@@ -70,22 +88,157 @@ def _load_sentiment_policy() -> Dict[str, Any]:
             out["free_fallback_when_x_empty"] = False
         elif env_fb in ("1", "true", "on", "yes"):
             out["free_fallback_when_x_empty"] = True
+        env_age = os.environ.get("SENTIMENT_APPLY_AGING", "").strip().lower()
+        if env_age in ("0", "false", "off", "no"):
+            out["apply_aging"] = False
+        elif env_age in ("1", "true", "on", "yes"):
+            out["apply_aging"] = True
         return out
     except Exception as e:
         logger.debug(f"sentiment policy load failed: {e}")
         return defaults
 
 
-def _cache_age_hours(ts: Optional[str]) -> Optional[float]:
+def _parse_ts_utc(ts: Optional[str]) -> Optional[datetime]:
     if not ts:
         return None
     try:
         last = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
         if last.tzinfo is None:
             last = last.replace(tzinfo=timezone.utc)
+        return last.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def _cache_age_hours(ts: Optional[str]) -> Optional[float]:
+    last = _parse_ts_utc(ts)
+    if last is None:
+        return None
+    try:
         return (datetime.now(timezone.utc) - last).total_seconds() / 3600.0
     except Exception:
         return None
+
+
+def _age_minutes(ts: Optional[str]) -> Optional[float]:
+    last = _parse_ts_utc(ts)
+    if last is None:
+        return None
+    try:
+        return max(0.0, (datetime.now(timezone.utc) - last).total_seconds() / 60.0)
+    except Exception:
+        return None
+
+
+def _exponential_decay_factor(
+    age_minutes: Optional[float],
+    half_life_minutes: float,
+    staleness_zero_minutes: Optional[float] = None,
+) -> float:
+    """decay = 0.5 ** (age / half_life). Age past staleness → 0 (neutral)."""
+    if age_minutes is None:
+        return 0.0
+    if age_minutes <= 0:
+        return 1.0
+    hl = float(half_life_minutes or 0.0)
+    if hl <= 0:
+        return 1.0
+    if staleness_zero_minutes is not None and age_minutes > float(staleness_zero_minutes):
+        return 0.0
+    return float(max(0.0, min(1.0, math.pow(0.5, age_minutes / hl))))
+
+
+def _half_life_for_source(source: str, policy: Dict[str, Any]) -> Tuple[float, Optional[float]]:
+    """Return (half_life_min, staleness_zero_min) for a resolved source label."""
+    s = str(source or "").lower()
+    if s in ("x", "twitter", "x_primary"):
+        return (
+            float(policy.get("x_half_life_minutes", 15.0) or 15.0),
+            float(policy.get("x_staleness_zero_minutes", 120.0) or 120.0),
+        )
+    if "reddit" in s or "apify" in s:
+        return (
+            float(policy.get("reddit_half_life_minutes", 60.0) or 60.0),
+            float(policy.get("reddit_staleness_zero_minutes", 240.0) or 240.0),
+        )
+    if "free" in s:
+        return (
+            float(policy.get("free_half_life_minutes", 60.0) or 60.0),
+            float(policy.get("free_staleness_zero_minutes", 360.0) or 360.0),
+        )
+    # canonical / unknown → treat as X-shaped (transitory) unless labeled free
+    return (
+        float(policy.get("canonical_half_life_minutes", 15.0) or 15.0),
+        float(policy.get("x_staleness_zero_minutes", 120.0) or 120.0),
+    )
+
+
+def _x_pair_timestamp(pair: str, cache_path: Optional[str] = None) -> Optional[str]:
+    if cache_path is None:
+        cache_path = X_CACHE
+    if not os.path.exists(cache_path):
+        return None
+    try:
+        with open(cache_path, "r") as f:
+            data = json.load(f)
+        entry = data.get(pair) if isinstance(data, dict) else None
+        if isinstance(entry, dict):
+            return entry.get("timestamp") or entry.get("fetched_at") or entry.get("ts")
+        # some caches nest under sentiment
+        block = data.get("sentiment") or data.get("data") or {}
+        if isinstance(block, dict):
+            e2 = block.get(pair)
+            if isinstance(e2, dict):
+                return e2.get("timestamp") or e2.get("fetched_at")
+        return data.get("timestamp") if isinstance(data, dict) else None
+    except Exception:
+        return None
+
+
+def _source_timestamp(
+    pair: str,
+    source: str,
+    *,
+    free_meta: Optional[Dict[str, Any]] = None,
+    cache_path: Optional[str] = None,
+    x_cache_path: Optional[str] = None,
+) -> Optional[str]:
+    if cache_path is None:
+        cache_path = CANONICAL_CACHE
+    if x_cache_path is None:
+        x_cache_path = X_CACHE
+    s = str(source or "").lower()
+    if s in ("x", "twitter", "x_primary"):
+        return _x_pair_timestamp(pair, cache_path=x_cache_path) or get_sentiment_timestamp(cache_path)
+    if "free" in s:
+        if free_meta and free_meta.get("timestamp"):
+            return str(free_meta.get("timestamp"))
+        try:
+            if os.path.exists(FREE_CACHE):
+                with open(FREE_CACHE) as f:
+                    return json.load(f).get("timestamp")
+        except Exception:
+            pass
+        return None
+    if "reddit" in s or "apify" in s:
+        # prefer pair ts from reddit cache if present
+        try:
+            from .paths import REDDIT_SENTIMENT_CACHE  # type: ignore
+
+            rp = str(REDDIT_SENTIMENT_CACHE)
+            if os.path.exists(rp):
+                with open(rp) as f:
+                    rd = json.load(f)
+                e = rd.get(pair) if isinstance(rd, dict) else None
+                if isinstance(e, dict) and e.get("timestamp"):
+                    return e.get("timestamp")
+                if isinstance(rd, dict) and rd.get("timestamp"):
+                    return rd.get("timestamp")
+        except Exception:
+            pass
+        return get_sentiment_timestamp(cache_path)
+    return get_sentiment_timestamp(cache_path)
 
 
 def load_free_sentiment_scores(
@@ -140,10 +293,12 @@ def load_free_sentiment_scores(
 
 def x_signal_usable(
     universe: Optional[List[str]] = None,
-    cache_path: str = X_CACHE,
+    cache_path: Optional[str] = None,
     min_posts_total: int = 1,
 ) -> Dict[str, Any]:
     """Whether X cache has enough real posts to prefer over free fallback."""
+    if cache_path is None:
+        cache_path = X_CACHE
     if universe is None:
         try:
             universe = list(load_trading_basket() or []) or list(DEFAULT_UNIVERSE)
@@ -175,7 +330,7 @@ def x_signal_usable(
 
 def load_x_sentiment_scores(
     universe: Optional[List[str]] = None,
-    cache_path: str = X_CACHE,
+    cache_path: Optional[str] = None,
     min_confidence: float = 0.15,
     min_posts: int = 5
 ) -> Dict[str, float]:
@@ -184,6 +339,8 @@ def load_x_sentiment_scores(
 
     Preferred source when posts exist. Low post count / confidence is damped.
     """
+    if cache_path is None:
+        cache_path = X_CACHE
     if universe is None:
         try:
             universe = list(load_trading_basket() or []) or list(DEFAULT_UNIVERSE)
@@ -225,9 +382,11 @@ def load_x_sentiment_scores(
 
 def load_x_sentiment_details(
     universe: Optional[List[str]] = None,
-    cache_path: str = X_CACHE
+    cache_path: Optional[str] = None
 ) -> Dict[str, dict]:
     """Return the full rich X data (sentiment + post_count + buzz + confidence) for a basket."""
+    if cache_path is None:
+        cache_path = X_CACHE
     if universe is None:
         universe = DEFAULT_UNIVERSE
 
@@ -289,7 +448,9 @@ def _load_reddit_from_db(universe: List[str]) -> Dict[str, float]:
 
 def load_sentiment_scores(
     universe: Optional[List[str]] = None,
-    cache_path: str = CANONICAL_CACHE
+    cache_path: str = CANONICAL_CACHE,
+    *,
+    apply_aging: Optional[bool] = None,
 ) -> Dict[str, float]:
     """
     Load sentiment for a (dynamic) trading basket.
@@ -299,16 +460,27 @@ def load_sentiment_scores(
     - free_hybrid: free cache primary (funding+RSS+F&G)
     - x_with_free_fallback (default): X when usable posts; else free hybrid
     - off: zeros
+
+    By default returns **aged** scores (X 15m HL / Reddit 60m HL). Pass
+    apply_aging=False for raw cache values (research / dash raw column only).
     """
-    detail = load_sentiment_scores_detailed(universe=universe, cache_path=cache_path)
+    detail = load_sentiment_scores_detailed(
+        universe=universe, cache_path=cache_path, apply_aging=apply_aging
+    )
     return {p: float(v.get("sentiment", 0.0)) for p, v in detail["scores"].items()}
 
 
 def load_sentiment_scores_detailed(
     universe: Optional[List[str]] = None,
     cache_path: str = CANONICAL_CACHE,
+    *,
+    apply_aging: Optional[bool] = None,
 ) -> Dict[str, Any]:
-    """Rich loader: per-pair sentiment + source + overall mode (for dashboard/runner)."""
+    """Rich loader: per-pair sentiment + source + overall mode (for dashboard/runner).
+
+    When aging is on (default), each pair keeps sentiment_raw + decay metadata;
+    `sentiment` is the decayed value used by decision paths.
+    """
     if universe is None:
         # Always re-read basket — do NOT use import-time DEFAULT_UNIVERSE.
         # Long-lived serve_dashboard kept old pairs (ARB/ICP) and showed 0.00
@@ -323,6 +495,7 @@ def load_sentiment_scores_detailed(
     free_fb = bool(policy.get("free_fallback_when_x_empty", True))
     min_posts = int(policy.get("x_min_usable_posts_total", 1) or 1)
     free_max_age = float(policy.get("free_max_age_hours", 18) or 18)
+    do_age = bool(policy.get("apply_aging", True)) if apply_aging is None else bool(apply_aging)
 
     out_scores: Dict[str, Dict[str, Any]] = {
         p: {"sentiment": 0.0, "source": "none"} for p in universe
@@ -339,6 +512,7 @@ def load_sentiment_scores_detailed(
             "free_meta": free_meta,
             "x_usable": x_info,
             "non_zero": 0,
+            "aging_applied": False,
         }
 
     def _set_all(m: Dict[str, float], src: str) -> None:
@@ -437,10 +611,64 @@ def load_sentiment_scores_detailed(
                     f"posts={x_info.get('total_posts')} mode={mode})"
                 )
 
+    # --- Source-aware exponential aging (decision path default) ---
+    aging_meta: Dict[str, Any] = {
+        "applied": False,
+        "x_half_life_minutes": float(policy.get("x_half_life_minutes", 15.0) or 15.0),
+        "reddit_half_life_minutes": float(policy.get("reddit_half_life_minutes", 60.0) or 60.0),
+        "free_half_life_minutes": float(policy.get("free_half_life_minutes", 60.0) or 60.0),
+    }
+    if do_age:
+        aging_meta["applied"] = True
+        for pair, info in out_scores.items():
+            raw = float(info.get("sentiment", 0.0) or 0.0)
+            src = str(info.get("source") or "none")
+            if src == "none" or abs(raw) <= 1e-12:
+                info["sentiment_raw"] = raw
+                info["decay_factor"] = 1.0 if src == "none" else 0.0
+                info["age_min"] = None
+                info["half_life_min"] = None
+                continue
+            hl, stale_z = _half_life_for_source(src, policy)
+            ts = _source_timestamp(pair, src, free_meta=free_meta, cache_path=cache_path)
+            age_m = _age_minutes(ts)
+            decay = _exponential_decay_factor(age_m, hl, stale_z)
+            info["sentiment_raw"] = round(raw, 6)
+            info["sentiment"] = round(raw * decay, 6)
+            info["decay_factor"] = round(decay, 4)
+            info["age_min"] = round(age_m, 1) if age_m is not None else None
+            info["half_life_min"] = hl
+            info["source_ts"] = ts
+        sample_ages = [
+            float(v.get("age_min"))
+            for v in out_scores.values()
+            if v.get("age_min") is not None
+        ]
+        sample_decays = [
+            float(v.get("decay_factor"))
+            for v in out_scores.values()
+            if v.get("decay_factor") is not None
+        ]
+        med_age = sorted(sample_ages)[len(sample_ages) // 2] if sample_ages else None
+        med_dec = sorted(sample_decays)[len(sample_decays) // 2] if sample_decays else None
+        logger.info(
+            "Sentiment aging ON mode=%s med_age_min=%s med_decay=%s "
+            "x_hl=%sm reddit_hl=%sm",
+            mode,
+            med_age,
+            med_dec,
+            aging_meta["x_half_life_minutes"],
+            aging_meta["reddit_half_life_minutes"],
+        )
+
     non_zero = sum(1 for v in out_scores.values() if abs(v["sentiment"]) > 1e-9)
+    non_zero_raw = sum(
+        1 for v in out_scores.values() if abs(float(v.get("sentiment_raw", v.get("sentiment", 0.0)) or 0.0)) > 1e-9
+    )
     logger.info(
         f"Sentiment loaded for dynamic basket ({len(universe)} pairs). mode={mode} "
-        f"non_zero={non_zero} x_posts={x_info.get('total_posts')}"
+        f"non_zero={non_zero} non_zero_raw={non_zero_raw} aged={do_age} "
+        f"x_posts={x_info.get('total_posts')}"
     )
     return {
         "scores": out_scores,
@@ -449,6 +677,9 @@ def load_sentiment_scores_detailed(
         "free_meta": free_meta,
         "x_usable": x_info,
         "non_zero": non_zero,
+        "non_zero_raw": non_zero_raw,
+        "aging_applied": do_age,
+        "aging": aging_meta,
     }
 
 
@@ -504,45 +735,37 @@ def get_sentiment_timestamp(cache_path: str = CANONICAL_CACHE) -> Optional[str]:
 
 def get_sentiment_freshness_minutes(cache_path: str = CANONICAL_CACHE) -> Optional[float]:
     """Return age of the sentiment data in minutes (for staleness checks in loops)."""
-    ts = get_sentiment_timestamp(cache_path)
-    if not ts:
-        return None
-    try:
-        last = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-        now = datetime.now(timezone.utc)
-        delta = (now - last).total_seconds() / 60.0
-        return round(delta, 1)
-    except Exception:
-        return None
+    return _age_minutes(get_sentiment_timestamp(cache_path))
 
 
 def get_aged_sentiment_scores(
     universe: Optional[List[str]] = None,
-    half_life_minutes: float = 60.0,
+    half_life_minutes: float = 15.0,
     cache_path: str = CANONICAL_CACHE,
     *,
     raw_scores: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
     """
-    Load scores and apply exponential aging/decay based on data age.
+    Decision-path aged scores.
 
-    decay = 2 ** (-age_minutes / half_life_minutes)
-    Default half-life 60 minutes.
+    Default path: canonical loader with source-aware aging (X 15m / Reddit 60m).
+    If raw_scores is provided, apply a single uniform half_life (legacy helper).
+    half_life_minutes default is 15 (X-shaped) — was 60, which overstated X relevance.
     """
-    raw = raw_scores if raw_scores is not None else load_sentiment_scores(universe, cache_path)
-    age = get_sentiment_freshness_minutes(cache_path) or 0.0
+    if raw_scores is not None:
+        age = get_sentiment_freshness_minutes(cache_path) or 0.0
+        if age <= 0:
+            return {p: float(s) for p, s in raw_scores.items()}
+        decay = 2 ** (-age / float(half_life_minutes or 15.0))
+        aged = {p: round(float(s) * decay, 4) for p, s in raw_scores.items()}
+        logger.info(
+            f"Applied uniform sentiment aging on raw_scores: age={age}min, "
+            f"half_life={half_life_minutes}min, decay_factor={decay:.3f}"
+        )
+        return aged
 
-    if age <= 0:
-        return raw
-
-    decay = 2 ** (-age / half_life_minutes)
-    aged = {p: round(s * decay, 4) for p, s in raw.items()}
-
-    logger.info(
-        f"Applied sentiment aging: age={age}min, half_life={half_life_minutes}min, "
-        f"decay_factor={decay:.3f}"
-    )
-    return aged
+    # Canonical path already applies per-source HL; avoid double-aging.
+    return load_sentiment_scores(universe=universe, cache_path=cache_path, apply_aging=True)
 
 
 def get_sentiment_adjusted_weights(

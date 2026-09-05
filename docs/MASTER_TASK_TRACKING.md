@@ -1,3 +1,42 @@
+## ANALYST-TRADE-COMPARISON-STANDARD-20260904 — QUEUED
+
+**Type:** test  
+**Date:** 2026-09-04  
+**Role:** Crypto-Analyst  
+**Status:** **IN_PROGRESS** (CF+shadow+LINK $150 cap shipped 2026-09-05; 7d watch; live cooldown OFF)  
+**auto_pickup:** true  
+**trial_kind:** offline_analysis  
+**family:** trade_comparison_standard  
+**duration_days:** 7  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-TRADE-COMPARISON-STANDARD-20260904.md`  
+**Protocol:** `docs/testing/trials/ANALYST-TRADE-COMPARISON-STANDARD-20260904_PROTOCOL.md`  
+**Backlog:** `ANALYST-20260904-TCS-001` (+ shadow follow-on `TCS-002`)  
+**Skill:** `trade-comparison-standard`
+
+### Goal
+Platform-standard way to compare pair/process trades (SELL-PnL SSOT + leak classes) and turn leaks into paper/shadow rules — not LINK-anecdote knobs.
+
+### Seed evidence (2026-09-04)
+- Isolation: `phase6/research/test_isolation_trade_comparison_standard.py` **ALL PASS**
+- Multipair dig: `reports/TRADE_COMPARISON_DIG_20260904.md` · `data/state/trade_comparison_dig_latest.json`
+- leak_totals (9 pairs): post_sl_reentry=14, same_day_churn=14, pile_on=8, elevated_rsi_large=6, post_tp_rebuy=2
+- LINK case: `reports/LINK_TIMING_DIG_2026-09-04.md` (net ~+$18; TP +81 / SL −62; post-TP Aug24 bleed)
+- Edge class seed: `ATTENTION_ONLY_less_loss_path` — process hygiene, not HIT_10
+- Live config: **untouched**
+
+### Next
+1. Would-block CF on matched book (paper) using scoreboard rules  
+2. Shadow logger (no evaluate_buy_entry) on Brad GO for shadow wire  
+3. `trial_cycle` finalize-report → review → decide  
+
+### Commands
+```bash
+cd /home/brad/projects/crypto-trading-bot && . .venv/bin/activate
+export OPENBLAS_CORETYPE=GENERIC PYTHONPATH=.
+python phase6/research/test_isolation_trade_comparison_standard.py
+python phase6/research/run_trade_comparison_dig.py
+```
+
 ## ANALYST-METHOD-ROTATION-21D-20260902 — QUEUED (strategy)
 
 **Type:** test  
@@ -11875,6 +11914,30 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260904`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+## KANBAN-OPS-FIX-20260904
+- t_14329ba7 / #27 P6-OPS-20260904-001 DONE: Hermes cron phase6-basket-pick-metrics-refresh — root cause fixed (naive vs aware dt in _scan_fills via legacy trades ts; _parse_ts now always returns tz-aware UTC, legacy naive assumed UTC). Direct parse site in refresh_open_picks unified to _parse_ts. Isolation test adjusted with parser tz regression coverage (naive/aware/Z). Verified live: refresh script runs clean on real data (no traceback, graduation output produced). GH#27 closed via ops_triage_tasks.py + evidence note. Registry marked done. (no live book impact)
+- t_01d0f856 / #28 P6-OPS-20260904-002 DONE: Hermes cron phase6-basket-pick-metrics-refresh — stale last_status=error (lingering from 09-04 12:30 run that hit the dt-compare before #27 patch applied); cleared jobs.json last_status=ok / last_error=null / failure_streak=0 after manual verify run succeeded; isolation test PASS; ops_triage_discover now clean (no actionable); GH#28 closed via `ops_triage_tasks.py close`. State hygiene post-fix; script+graduation verified on real data. (no live book impact)
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260905** (opened 2026-09-05T00:00:26.853880)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260905`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

@@ -219,13 +219,15 @@ rg -n 'apify|Actor|SENTIMENT_REDDIT' phase6/scripts/refresh_sentiment.py fetch_r
 
 | When (PT) | Job | Live? | Notes |
 |-----------|-----|-------|-------|
-| **08:40 / 20:40** | `scripts/phase6/run_free_sentiment_shadow.sh` | Free file | OKX funding + F&G + RSS → `sentiment_cache_free.json` |
+| **every 2h :40** (`40 */2 * * *`) | `run_free_sentiment_shadow.sh` · job `phase6-free-sentiment-shadow-2h` `655188d1df61` | Free file only | OKX funding + F&G + RSS → `sentiment_cache_free.json` + free↔X correlate; denser mid-cycle samples (Brad 2026-09-04 lag thesis). Still hits 08:40/20:40 pre-X. **Not** live wire. |
 | **08:50 / 20:50** | `phase6/scripts/refresh_sentiment.py` | **Live** | X attempt; on fail/0 posts → **free → live canonical**; Reddit OFF unless env=1 |
 | Rebalance | 09:00 / 21:00 | Live | Prefer warm X; else free_fallback scores via scorer |
 
-- **Paused/disabled:** Hermes `sentiment-30min-refresh`; `fetch_x` 2h; old half-hourly refresh; standalone `fetch_reddit` 2h; **Apify in refresh** (default off).
-- Docs: `docs/X_SENTIMENT_COST_CONTROL.md`, `docs/FREE_SENTIMENT_SHADOW.md`.
+- **Paused/disabled:** Hermes `sentiment-30min-refresh`; paid `fetch_x` 2h; old half-hourly refresh; standalone `fetch_reddit` 2h; **Apify in refresh** (default off).
+- **Do not** confuse free 2h shadow with paid X 2h — free is $0 and shadow-only; paid X 2h is a cost regression.
+- Docs: `docs/X_SENTIMENT_COST_CONTROL.md`, `docs/FREE_SENTIMENT_SHADOW.md`, `docs/design/FREE_SENTIMENT_MIDCYCLE_LAG_2026-09-04.md`.
 - X lead-time: ~**10 min** before rebalance (not 30m) — Reddit-dominance / decay math; see `references/x-sentiment-pre-rebalance-2x-day.md`.
+- Class skill: **`phase6-sentiment-pipeline`** → `references/free-midcycle-lag-shadow-2h-20260904.md`.
 
 ### Apify Reddit — kill-switch (mandatory after 2026-07 overage)
 

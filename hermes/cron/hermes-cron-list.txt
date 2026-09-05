@@ -7,39 +7,39 @@
     Name:      Daily Kanban Backup
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-09-05T03:00:00-07:00
+    Next run:  2026-09-06T03:00:00-07:00
     Deliver:   local
     Script:    backup-kanban.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-04T03:00:32.993194-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T03:00:00-07:00)
-    Execution: completed  36ec010a5e5f43d893b2a2a470305370
+    Last run:  2026-09-05T03:00:25.682925-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T03:00:00-07:00)
+    Execution: completed  fec4d080c2f24b3786fbc2ba3a0e8405
 
   5c1207235cf6 [active]
     Name:      rsi-15min-refresher
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-09-04T04:45:00-07:00
+    Next run:  2026-09-05T04:45:00-07:00
     Deliver:   local
     Script:    refresh_rsi_prices.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-04T04:15:59.685603-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: running  d55453c598ef415f9063d2c805c01e0a
+    Last run:  2026-09-05T04:31:00.923575-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: completed  33c7ec1f612546efaa12801c7fe20c2f
 
   92d0bbe12216 [active]
     Name:      daily-git-hermes-management
     Schedule:  30 4 * * *
     Repeat:    ∞
-    Next run:  2026-09-05T04:30:00-07:00
+    Next run:  2026-09-06T04:30:00-07:00
     Deliver:   local
     Script:    git-daily-management.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T04:30:22.199080-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: running  9086caf9846348baa9964681694374c7
+    Last run:  2026-09-04T04:31:08.961200-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: running  088f80399efe414f98c6322318948983
 
   e039d96c4732 [active]
     Name:      Phase6 Analyst Optimization Weekly
@@ -56,92 +56,92 @@
     Name:      twice-daily-trading-intelligence-v2
     Schedule:  0 9,21 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T09:00:00-07:00
+    Next run:  2026-09-05T09:00:00-07:00
     Deliver:   local
     Script:    phase6/scripts/cron_intelligence_telegram.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T21:01:32.437378-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T21:00:00-07:00)
-    Execution: completed  9f8ff426de8c49bdb5d39414b3b4239e
+    Last run:  2026-09-04T21:00:55.514411-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T21:00:00-07:00)
+    Execution: completed  0eda049c787a43fa92e6e8878cbd428c
 
   a4541bb6be69 [active]
     Name:      phase6-ops-triage-daily
     Schedule:  0 6 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T06:00:00-07:00
+    Next run:  2026-09-05T06:00:00-07:00
     Deliver:   telegram
     Script:    phase6/run_ops_triage_discover.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T06:00:33.879563-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T06:00:00-07:00)
-    Execution: completed  2dddffce91124d0fb0dbd4a5855ef270
+    Last run:  2026-09-04T06:00:26.960280-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T06:00:00-07:00)
+    Execution: completed  7e713006a9154c8088fe5a410c25dff7
 
   1dfedf1dd8c9 [active]
     Name:      dashboard-live-state-5m
     Schedule:  */5 * * * *
     Repeat:    ∞
-    Next run:  2026-09-04T04:35:00-07:00
+    Next run:  2026-09-05T04:35:00-07:00
     Deliver:   local
     Script:    refresh_dashboard_live_state.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-04T04:26:00.273696-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: running  e8b75ef8f0114ec482dc191bfb1385e3
+    Last run:  2026-09-05T04:30:59.646090-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: completed  66e547699b5246458e8e052cde33700b
 
   8909f6a921ae [active]
     Name:      ops-issue-loop
     Schedule:  15 7,13,19 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T07:15:00-07:00
+    Next run:  2026-09-05T07:15:00-07:00
     Deliver:   local
     Script:    phase6/run_ops_issue_loop.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T19:15:47.606056-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T19:15:00-07:00)
-    Execution: completed  946a437788c949fd831315cadda6f17a
+    Last run:  2026-09-04T19:16:09.689633-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T19:15:00-07:00)
+    Execution: completed  0d74252372ad469bb5f91142fea11886
 
   9505b498cd6d [active]
     Name:      llm-token-daily-rollup
     Schedule:  5 5 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T05:05:00-07:00
+    Next run:  2026-09-05T05:05:00-07:00
     Deliver:   local
     Script:    ops/llm_token_daily_rollup.py
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T05:05:17.726843-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T05:05:00-07:00)
-    Execution: completed  7accf00ea7874cd1b0f06d83f31637fe
+    Last run:  2026-09-04T05:05:10.805346-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T05:05:00-07:00)
+    Execution: completed  8f633de5cbee4fa6bfdb8db22ecb7d1d
 
   5446999f1dcb [active]
     Name:      master-test-pickup-scan
     Schedule:  20 */6 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T06:20:00-07:00
+    Next run:  2026-09-05T06:20:00-07:00
     Deliver:   telegram
     Script:    run_master_test_pickup_scan.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-04T00:20:55.606915-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T00:20:00-07:00)
-    Execution: completed  4ce6c849b2044f48928850b69612ad8c
+    Last run:  2026-09-05T00:20:32.096179-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T00:20:00-07:00)
+    Execution: completed  565df362dc0047ba819b6eb4046b8dd7
 
   9262ae4b1f3c [active]
     Name:      master-test-pickup
     Schedule:  30 9 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T09:30:00-07:00
+    Next run:  2026-09-05T09:30:00-07:00
     Deliver:   telegram
     Script:    run_master_test_pickup_launch.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T09:30:33.294779-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T09:30:00-07:00)
-    Execution: completed  44b05876e4ed4b6eb668b8227fae4f66
+    Last run:  2026-09-04T09:30:24.335710-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T09:30:00-07:00)
+    Execution: completed  d74ab402f73a4b58b7b5115aac1966a3
 
   608468e7e58a [active]
     Name:      analyst-test-strategy-weekly
@@ -158,77 +158,77 @@
     Name:      Phase6 Daily Rebalance - Morning
     Schedule:  5 9 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T09:05:00-07:00
+    Next run:  2026-09-05T09:05:00-07:00
     Deliver:   local
     Script:    phase6/scripts/cron_rebalance_live.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T09:05:27.197917-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T09:05:00-07:00)
-    Execution: completed  3987ec40c2ff400cbbd6301acc54070e
+    Last run:  2026-09-04T09:05:17.655817-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T09:05:00-07:00)
+    Execution: completed  8207a778519347f48fdaf3fb2ae7b8fe
 
   79def136a313 [active]
     Name:      Phase6 Daily Rebalance - Evening
     Schedule:  5 21 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T21:05:00-07:00
+    Next run:  2026-09-05T21:05:00-07:00
     Deliver:   local
     Script:    phase6/scripts/cron_rebalance_live.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T21:05:55.835876-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T21:05:00-07:00)
-    Execution: completed  38460186e44546faaaab92126aa8feba
+    Last run:  2026-09-04T21:05:31.143641-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T21:05:00-07:00)
+    Execution: completed  c33cf74e2f8949dd8df66c3468185a5d
 
   ea73d1428e6c [active]
     Name:      Phase6 Deep Maintenance Brief
     Schedule:  0 3 * * *
     Repeat:    ∞
-    Next run:  2026-09-05T03:00:00-07:00
+    Next run:  2026-09-06T03:00:00-07:00
     Deliver:   local
     Script:    phase6/scripts/generate_trading_intelligence_report_cron.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-04T03:01:05.328717-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T03:00:00-07:00)
-    Execution: completed  38f58f7743364605916ff55c429e92dc
+    Last run:  2026-09-05T03:01:31.576253-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T03:00:00-07:00)
+    Execution: completed  21bafc28a6854bdf85b92e0b33c94704
 
   8f339465993e [active]
     Name:      daily-dose-telegram
     Schedule:  0 8 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T08:00:00-07:00
+    Next run:  2026-09-05T08:00:00-07:00
     Deliver:   telegram
     Script:    run_daily_dose_pipeline.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T08:00:27.981423-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T08:00:00-07:00)
-    Execution: completed  98321e0ccaea409b873978af506fc829
+    Last run:  2026-09-04T08:01:04.087640-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T08:00:00-07:00)
+    Execution: completed  7265cc5f8dd2490e93bfc05ed072aaa3
 
   a1e57ac32c4b [active]
     Name:      phase6-discovery-pipeline-shadow
     Schedule:  15 10,22 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T10:15:00-07:00
+    Next run:  2026-09-05T10:15:00-07:00
     Deliver:   local
     Script:    run_discovery_pipeline_shadow.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T22:15:45.398909-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T22:15:00-07:00)
-    Execution: completed  b0bb2015840949889f2d520a88ce6f59
+    Last run:  2026-09-04T22:16:22.093038-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T22:15:00-07:00)
+    Execution: completed  c3df1d7836734d738740fb27d0c6a13a
 
   da8c3451a2b3 [active]
     Name:      phase6-basket-pick-metrics-refresh
     Schedule:  30 12 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T12:30:00-07:00
+    Next run:  2026-09-05T12:30:00-07:00
     Deliver:   local
     Script:    refresh_basket_pick_metrics.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T12:30:25.503244-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T12:30:00-07:00)
-    Execution: completed  948847ba772a42d9920aac160578f829
+    Last run:  2026-09-05T02:21:06.889700-07:00  ok
+    Dispatch:  ⚠ late: scheduled 2026-09-05T02:21:06.889700-07:00, ran 2026-09-05T02:21:06.889700-07:00 (0s late)
+    Execution: failed  6e97fe92eab44cf68a868437d28903f0
 
   686741bc89ba [active]
     Name:      Phase6 SL Exit Counterfactual Weekly
@@ -245,125 +245,125 @@
     Name:      phase6-basket-swap-cf-shadow
     Schedule:  30 11,23 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T11:30:00-07:00
+    Next run:  2026-09-05T11:30:00-07:00
     Deliver:   origin
     Script:    run_basket_swap_shadow_cf.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T23:31:42.859102-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T23:30:00-07:00)
-    Execution: completed  03e23ac9543c43c68ddbf7a2d236f090
+    Last run:  2026-09-04T23:31:19.851874-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T23:30:00-07:00)
+    Execution: completed  c49d914befd1466c897c6ee3012ab471
 
   e17a43bfbed6 [active]
     Name:      phase6-x-sentiment-live-2x
     Schedule:  50 8,20 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T08:50:00-07:00
+    Next run:  2026-09-05T08:50:00-07:00
     Deliver:   local
     Script:    phase6/run_refresh_sentiment_live.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T20:50:54.392583-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T20:50:00-07:00)
-    Execution: completed  cc4e698462574db7bcb268f395bff370
+    Last run:  2026-09-04T20:50:28.283624-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T20:50:00-07:00)
+    Execution: completed  c53c04fd5b5a46979e85c8441ee8954e
 
   655188d1df61 [active]
-    Name:      phase6-free-sentiment-shadow-2x
-    Schedule:  40 8,20 * * *
+    Name:      phase6-free-sentiment-shadow-2h
+    Schedule:  40 */2 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T08:40:00-07:00
+    Next run:  2026-09-05T04:40:00-07:00
     Deliver:   local
     Script:    phase6/run_free_sentiment_shadow.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T20:41:02.697142-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T20:40:00-07:00)
-    Execution: completed  d8b41abe22d74d9a87c14a49cc62fb9a
+    Last run:  2026-09-05T02:40:28.958790-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T02:40:00-07:00)
+    Execution: completed  f833d93837aa4f598e993a401fd3e59d
 
   f14dc4b04e34 [active]
     Name:      phase6-runner-monitor-15m
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-09-04T04:45:00-07:00
+    Next run:  2026-09-05T04:45:00-07:00
     Deliver:   local
     Script:    phase6/run_monitor_phase6_runner.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-04T04:31:01.871520-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: completed  aa91dec47ccb4042911100e3f4ef0bc7
+    Last run:  2026-09-05T04:30:56.286038-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: completed  1143f90f08014f15a3df69bee85ee200
 
   3c83e4d2232c [active]
     Name:      ops-engineer-30m
     Schedule:  */30 * * * *
     Repeat:    ∞
-    Next run:  2026-09-04T05:00:00-07:00
+    Next run:  2026-09-05T05:00:00-07:00
     Deliver:   local
     Script:    phase6/run_ops_engineer.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-04T04:00:54.316755-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: running  9d8c91b8fc20493eaf0b55039df97155
+    Last run:  2026-09-05T04:30:58.936678-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: completed  4e17b7346460444faffc8e295aed93c4
 
   387e688fc854 [active]
     Name:      kanban-backup-frequent-15m
     Schedule:  */15 * * * *
     Repeat:    ∞
-    Next run:  2026-09-04T04:45:00-07:00
+    Next run:  2026-09-05T04:45:00-07:00
     Deliver:   local
     Script:    run_backup_kanban_frequent.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-04T04:31:02.354792-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: completed  e499b01416a5454cbfcffa6b521941e1
+    Last run:  2026-09-05T04:30:57.534540-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: completed  284c87e1029e4c7b84006051503d50c3
 
   523161fb9545 [active]
     Name:      bear-ladder-promote-watch
     Schedule:  0 9,21 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T09:00:00-07:00
+    Next run:  2026-09-05T09:00:00-07:00
     Deliver:   telegram
     Script:    run_bear_ladder_promote_watch.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T21:00:56.765642-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T21:00:00-07:00)
-    Execution: completed  79d801e471f5466e93594a6ed00f0a44
+    Last run:  2026-09-04T21:00:31.658112-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T21:00:00-07:00)
+    Execution: completed  dffcc848fc7c4bdc947d5fefd68afeba
 
   28a45b62daf7 [active]
     Name:      phase6-basket-seat-idle-refresh
     Schedule:  35 12 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T12:35:00-07:00
+    Next run:  2026-09-05T12:35:00-07:00
     Deliver:   local
     Script:    refresh_basket_seat_idle.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T12:35:27.510833-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T12:35:00-07:00)
-    Execution: completed  925c8731d60c4fb78ac0366a6b2c2b77
+    Last run:  2026-09-04T12:35:18.404659-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T12:35:00-07:00)
+    Execution: completed  76b610f6175342efac012a47f9baf7ae
 
   29cf4156e22f [active]
     Name:      phase6-vol-risk-scalar-shadow
     Schedule:  15 11,23 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T11:15:00-07:00
+    Next run:  2026-09-05T11:15:00-07:00
     Deliver:   local
     Script:    run_vol_risk_scalar_shadow.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T23:15:39.546679-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T23:15:00-07:00)
-    Execution: completed  1f0ccf07812b45c8927b7b5f8cef58e0
+    Last run:  2026-09-04T23:15:15.206903-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T23:15:00-07:00)
+    Execution: completed  2f6579a0db284658beb4a5be63490999
 
   788e8f3c5fda [active]
     Name:      phase6-reentry-sl-tp-monitor
     Schedule:  */10 * * * *
     Repeat:    ∞
-    Next run:  2026-09-04T04:40:00-07:00
+    Next run:  2026-09-05T04:40:00-07:00
     Deliver:   telegram
     Script:    phase6_reentry_sl_tp_monitor.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-04T04:21:00.222376-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-04T04:30:00-07:00)
-    Execution: claimed  407fbe5a6e2c48f2b2ea7d02c489f1fc
+    Last run:  2026-09-05T04:20:52.882061-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-05T04:30:00-07:00)
+    Execution: running  f478acc60b2f428f82de0ebe167802a4
 
   38987b457e6c [active]
     Name:      basket-swap-30d-revisit
@@ -376,99 +376,121 @@
     Name:      phase6-discovery-retro-board-daily
     Schedule:  0 23 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T23:00:00-07:00
+    Next run:  2026-09-05T23:00:00-07:00
     Deliver:   local
     Script:    run_discovery_retro_board.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T23:01:09.640722-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T23:00:00-07:00)
-    Execution: completed  269254606e81456ca07d948383fba5a8
+    Last run:  2026-09-04T23:00:34.334559-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T23:00:00-07:00)
+    Execution: completed  3e10d74e9a544cbeb1caa66eb2caeb38
 
   a6b3de5d1a46 [active]
     Name:      phase6-standdown-filter-c-shadow
     Schedule:  20 11,23 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T11:20:00-07:00
+    Next run:  2026-09-05T11:20:00-07:00
     Deliver:   local
     Script:    run_standdown_filter_c_shadow.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T23:20:42.132119-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T23:20:00-07:00)
-    Execution: completed  8dfd06e402d7439c8f62493f6329f655
+    Last run:  2026-09-04T23:20:17.903825-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T23:20:00-07:00)
+    Execution: completed  ad5e57d4da67406b8264d3c358cc0831
 
   b38ff4aece7b [active]
     Name:      phase6-fee-tier-snapshot
     Schedule:  15 6 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T06:15:00-07:00
+    Next run:  2026-09-05T06:15:00-07:00
     Deliver:   local
     Script:    run_fee_tier_snapshot.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T06:15:36.275655-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T06:15:00-07:00)
-    Execution: completed  11a86346f2434423870f205bc9097aae
+    Last run:  2026-09-04T06:15:29.991094-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T06:15:00-07:00)
+    Execution: completed  85f624536e714917947a67276556085a
 
   0c3c57b3a691 [active]
     Name:      phase6-limit-first-buy-shadow
     Schedule:  40 11,23 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T11:40:00-07:00
+    Next run:  2026-09-05T11:40:00-07:00
     Deliver:   local
     Script:    run_limit_first_buy_shadow.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T23:40:44.819115-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T23:40:00-07:00)
-    Execution: completed  9096080a08b14a7088d12f8a7b3815b8
+    Last run:  2026-09-04T23:40:20.701520-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T23:40:00-07:00)
+    Execution: completed  59c2942b454b4386846e8311648a7df8
 
   c4f1d982dc86 [active]
     Name:      phase6-limit-first-buy-pilot
     Schedule:  45 11,23 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T11:45:00-07:00
+    Next run:  2026-09-05T11:45:00-07:00
     Deliver:   local
     Script:    run_limit_first_buy_pilot.sh
     Mode:      no-agent (script stdout delivered directly)
-    Last run:  2026-09-03T23:45:46.828168-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T23:45:00-07:00)
-    Execution: completed  f17ce8813c35454894a528f3a4816633
+    Last run:  2026-09-04T23:45:23.170310-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T23:45:00-07:00)
+    Execution: completed  754225976f4a49a88d7eea2d54d9405d
 
   442949e02f36 [active]
     Name:      analyst-daily-scoreboard
     Schedule:  30 8 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T08:30:00-07:00
+    Next run:  2026-09-05T08:30:00-07:00
     Deliver:   local
     Script:    cron_analyst_daily_scoreboard.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T08:30:17.789424-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T08:30:00-07:00)
-    Execution: completed  e4111243b58f4170a76f1e37153ee43b
+    Last run:  2026-09-04T08:30:13.700592-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T08:30:00-07:00)
+    Execution: completed  cdf9289325cd4d6d829027afd61430f3
 
   d8aa09257600 [active]
     Name:      analyst-daily-review
     Schedule:  15 10 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T10:15:00-07:00
+    Next run:  2026-09-05T10:15:00-07:00
     Deliver:   telegram
     Script:    cron_analyst_daily_review.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T10:15:56.337118-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T10:15:00-07:00)
-    Execution: completed  ba3e9f5a5ceb460e813e72e2b80e76a2
+    Last run:  2026-09-04T10:15:48.746558-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T10:15:00-07:00)
+    Execution: completed  ac7c6d04df864c929c497641402af3d0
 
   6183c52efe35 [active]
     Name:      polymarket-influence-rerun-health
     Schedule:  0 10,22 * * *
     Repeat:    ∞
-    Next run:  2026-09-04T10:00:00-07:00
+    Next run:  2026-09-05T10:00:00-07:00
     Deliver:   local
     Script:    run_polymarket_influence_rerun_health.sh
     Mode:      no-agent (script stdout delivered directly)
     Workdir:   /home/brad/projects/crypto-trading-bot
-    Last run:  2026-09-03T22:00:12.627512-07:00  ok
-    Dispatch:  on time (scheduled 2026-09-03T22:00:00-07:00)
-    Execution: completed  f73aa83c5d9e4ca3acf749a400e3c9ed
+    Last run:  2026-09-04T22:00:50.410644-07:00  ok
+    Dispatch:  on time (scheduled 2026-09-04T22:00:00-07:00)
+    Execution: completed  cdaa7c11940b469bb8ead1a378f9948d
+
+  dd16da710656 [active]
+    Name:      phase6-tcs-shadow-would-block
+    Schedule:  25 12 * * *
+    Repeat:    ∞
+    Next run:  2026-09-05T12:25:00-07:00
+    Deliver:   local
+    Script:    run_tcs_shadow_would_block.sh
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   /home/brad/projects/crypto-trading-bot
+    Last run:  2026-09-04T18:28:38.083999-07:00  ok
+    Execution: completed  b217fc92818640838d635d9d15324a30
+
+  539424468b36 [active]
+    Name:      phase6-adanos-reddit-shadow-2x
+    Schedule:  35 8,20 * * *
+    Repeat:    ∞
+    Next run:  2026-09-05T08:35:00-07:00
+    Deliver:   local
+    Script:    run_adanos_shadow.sh
+    Mode:      no-agent (script stdout delivered directly)
+    Workdir:   /home/brad/projects/crypto-trading-bot
 

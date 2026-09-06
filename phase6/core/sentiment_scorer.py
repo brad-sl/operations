@@ -5,15 +5,16 @@ Canonical Sentiment Scorer / Loader (single source of truth)
 All trading logic, reports, and dashboards MUST use this module
 to retrieve current sentiment scores.
 
-- Primary: X cache + Reddit gate + canonical file
-- Free hybrid fallback when X empty/spend-cap
+- Primary: X cache when fresh/usable
+- **Complete clock (Brad GO 2026-09-05):** when X is aged-out or unavailable,
+  revert to **latest Reddit** score (Hermes reddit-reading cache; 60m HL).
+  Free hybrid + Adanos stay **shadow** / emergency-only — not the mid-cycle bridge.
+- Free hybrid fallback only when X empty/spend-cap **and** Reddit also empty
   (config sentiment.primary=x_with_free_fallback | free_hybrid | x | off)
 - Always returns scores for the requested universe (dynamic basket)
 - **Source-aware exponential aging (default ON)** — grid-optimal 2026-04-21:
   X / twitter half-life **15 min** (highly transitory); Reddit **60 min** (hour bridge).
-  Free hybrid uses **60 min** HL when it is the live source (bridge-shaped; not a
-  multi-day free promote). Without Reddit, aged X correctly fades mid-cycle —
-  do not re-enable raw full-strength stale X.
+  Free hybrid uses **60 min** HL when it is the live emergency source.
 - Real data only (no placeholder fabrication)
 
 Consumers:
@@ -45,6 +46,14 @@ logger = logging.getLogger(__name__)
 CANONICAL_CACHE = str(SENTIMENT_CACHE)
 X_CACHE = str(X_SENTIMENT_CACHE)
 FREE_CACHE = str(FREE_SENTIMENT_CACHE)
+# Live Reddit bridge (Hermes reddit-reading skill) — not Adanos/free shadow
+REDDIT_READING_CACHE = str(PROJECT_ROOT / "data/state/sentiment_cache_reddit_reading.json")
+try:
+    from .paths import REDDIT_SENTIMENT_CACHE as _REDDIT_LEGACY_PATH  # type: ignore
+
+    REDDIT_LEGACY_CACHE = str(_REDDIT_LEGACY_PATH)
+except Exception:
+    REDDIT_LEGACY_CACHE = str(PROJECT_ROOT / "data/state/reddit_sentiment_cache.json")
 
 # Snapshot only for rare callers that import the name; live loads must re-read
 # config (dashboard/runner stay up across basket promotes).
@@ -69,6 +78,11 @@ def _load_sentiment_policy() -> Dict[str, Any]:
         "x_staleness_zero_minutes": 120.0,
         "reddit_staleness_zero_minutes": 240.0,
         "free_staleness_zero_minutes": 360.0,
+        # Complete clock: hand X → Reddit when X faded or missing (Brad GO 2026-09-05)
+        "reddit_bridge_when_x_aged_out": True,
+        "x_aged_out_decay_max": 0.15,  # ~45m at 15m HL
+        "x_aged_out_age_min_minutes": 45.0,
+        "reddit_bridge_max_age_hours": 8.0,
     }
     try:
         cfg_path = Path(TRADING_CONFIG_PHASE6)
@@ -222,21 +236,25 @@ def _source_timestamp(
             pass
         return None
     if "reddit" in s or "apify" in s:
-        # prefer pair ts from reddit cache if present
-        try:
-            from .paths import REDDIT_SENTIMENT_CACHE  # type: ignore
-
-            rp = str(REDDIT_SENTIMENT_CACHE)
-            if os.path.exists(rp):
+        # Prefer live bridge cache (reddit-reading), then legacy Apify file
+        for rp in (REDDIT_READING_CACHE, REDDIT_LEGACY_CACHE):
+            try:
+                if not os.path.exists(rp):
+                    continue
                 with open(rp) as f:
                     rd = json.load(f)
-                e = rd.get(pair) if isinstance(rd, dict) else None
-                if isinstance(e, dict) and e.get("timestamp"):
-                    return e.get("timestamp")
+                block = rd.get("sentiment") if isinstance(rd.get("sentiment"), dict) else None
+                e = None
+                if block and pair in block and isinstance(block[pair], dict):
+                    e = block[pair]
+                elif isinstance(rd.get(pair), dict):
+                    e = rd.get(pair)
+                if isinstance(e, dict) and (e.get("timestamp") or e.get("fetched_at")):
+                    return e.get("timestamp") or e.get("fetched_at")
                 if isinstance(rd, dict) and rd.get("timestamp"):
                     return rd.get("timestamp")
-        except Exception:
-            pass
+            except Exception:
+                continue
         return get_sentiment_timestamp(cache_path)
     return get_sentiment_timestamp(cache_path)
 
@@ -412,6 +430,262 @@ def load_x_sentiment_details(
         return details
 
 
+
+def _pair_score_from_entry(entry: Any) -> float:
+    if entry is None:
+        return 0.0
+    if isinstance(entry, dict):
+        val = entry.get(
+            "sentiment_score",
+            entry.get("score", entry.get("sentiment", 0.0)),
+        )
+    else:
+        val = entry
+    try:
+        return float(val or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def load_latest_reddit_scores(
+    universe: Optional[List[str]] = None,
+    *,
+    max_age_hours: float = 8.0,
+) -> Tuple[Dict[str, float], Dict[str, Any]]:
+    """Latest Reddit scores for the complete-clock bridge.
+
+    Preference order (live path — Adanos/free stay shadow):
+      1) Hermes reddit-reading cache (Atom/OAuth skill)
+      2) Legacy reddit_sentiment_cache.json if still fresh + non-zero
+      3) DB reddit/apify rows (posts > 0)
+
+    Returns (scores, meta). Does not invent scores.
+    """
+    if universe is None:
+        try:
+            universe = list(load_trading_basket() or []) or list(DEFAULT_UNIVERSE)
+        except Exception:
+            universe = list(DEFAULT_UNIVERSE)
+    scores: Dict[str, float] = {p: 0.0 for p in universe}
+    meta: Dict[str, Any] = {
+        "available": False,
+        "source": None,
+        "timestamp": None,
+        "path": None,
+        "non_zero": 0,
+    }
+
+    def _from_file(path: str, label: str) -> bool:
+        if not os.path.exists(path):
+            return False
+        try:
+            with open(path, "r") as f:
+                data = json.load(f)
+        except Exception as e:
+            logger.debug("reddit cache read fail %s: %s", path, e)
+            return False
+        ts = data.get("timestamp") or data.get("fetched_at") or data.get("as_of")
+        age_h = _cache_age_hours(ts) if ts else None
+        if age_h is not None and age_h > float(max_age_hours):
+            logger.info(
+                "Reddit cache stale label=%s age_h=%.2f > max=%.2f path=%s",
+                label,
+                age_h,
+                max_age_hours,
+                path,
+            )
+            return False
+        block = data.get("sentiment") if isinstance(data.get("sentiment"), dict) else None
+        local: Dict[str, float] = {}
+        for pair in universe:
+            if block and pair in block:
+                local[pair] = _pair_score_from_entry(block.get(pair))
+            elif pair in data:
+                local[pair] = _pair_score_from_entry(data.get(pair))
+            else:
+                local[pair] = 0.0
+        nz = sum(1 for v in local.values() if abs(v) > 1e-9)
+        if nz <= 0 and label != "reddit_reading":
+            # empty legacy file is not a signal
+            return False
+        scores.update(local)
+        meta.update(
+            {
+                "available": nz > 0 or label == "reddit_reading",
+                "source": label,
+                "timestamp": ts,
+                "path": path,
+                "age_hours": age_h,
+                "non_zero": nz,
+            }
+        )
+        return nz > 0 or label == "reddit_reading"
+
+    if _from_file(REDDIT_READING_CACHE, "reddit_reading"):
+        return scores, meta
+    if _from_file(REDDIT_LEGACY_CACHE, "reddit_legacy"):
+        return scores, meta
+
+    # DB last resort
+    db_scores = _load_reddit_from_db(universe)
+    nz = sum(1 for v in db_scores.values() if abs(v) > 1e-9)
+    if nz > 0:
+        scores.update(db_scores)
+        meta.update(
+            {
+                "available": True,
+                "source": "reddit_db",
+                "timestamp": None,
+                "path": "data/phase6.db",
+                "non_zero": nz,
+            }
+        )
+    return scores, meta
+
+
+def _x_score_aged_out(info: Dict[str, Any], policy: Dict[str, Any]) -> bool:
+    """True when this pair's live X contribution should yield to Reddit bridge."""
+    src = str(info.get("source") or "").lower()
+    if src in ("none", ""):
+        return True
+    if src not in ("x", "twitter", "x_primary"):
+        return False
+    handoff_decay = float(policy.get("x_aged_out_decay_max", 0.15) or 0.15)
+    handoff_age = float(policy.get("x_aged_out_age_min_minutes", 45.0) or 45.0)
+    decay = info.get("decay_factor")
+    age = info.get("age_min")
+    aged = abs(float(info.get("sentiment", 0.0) or 0.0))
+    raw = abs(float(info.get("sentiment_raw", info.get("sentiment", 0.0)) or 0.0))
+    if decay is not None and float(decay) <= handoff_decay:
+        return True
+    if age is not None and float(age) >= handoff_age:
+        return True
+    if aged <= 1e-9 and raw > 1e-9:
+        return True
+    if aged <= 1e-9 and (decay is not None and float(decay) <= handoff_decay):
+        return True
+    return False
+
+
+def _apply_reddit_bridge(
+    out_scores: Dict[str, Dict[str, Any]],
+    *,
+    universe: List[str],
+    policy: Dict[str, Any],
+    x_info: Dict[str, Any],
+    do_age: bool,
+    mode: str,
+) -> Tuple[str, Dict[str, Any]]:
+    """When X aged-out or unavailable, revert pairs to latest Reddit (60m HL)."""
+    bridge_meta: Dict[str, Any] = {
+        "enabled": bool(policy.get("reddit_bridge_when_x_aged_out", True)),
+        "bridged_pairs": 0,
+        "source": None,
+    }
+    if not bridge_meta["enabled"]:
+        return mode, bridge_meta
+
+    max_age = float(policy.get("reddit_bridge_max_age_hours", 8.0) or 8.0)
+    rr_scores, rr_meta = load_latest_reddit_scores(universe, max_age_hours=max_age)
+    bridge_meta["reddit_meta"] = {
+        k: rr_meta.get(k)
+        for k in ("available", "source", "timestamp", "age_hours", "non_zero", "path")
+    }
+    if not rr_meta.get("available"):
+        return mode, bridge_meta
+
+    x_usable = bool(x_info.get("usable"))
+    hl = float(policy.get("reddit_half_life_minutes", 60.0) or 60.0)
+    stale_z = float(policy.get("reddit_staleness_zero_minutes", 240.0) or 240.0)
+    rr_ts = rr_meta.get("timestamp")
+    rr_label = str(rr_meta.get("source") or "reddit")
+    src_tag = f"reddit_bridge:{rr_label}" if "reddit" not in rr_label else f"reddit_bridge"
+
+    bridged = 0
+    for pair in universe:
+        info = out_scores.get(pair) or {"sentiment": 0.0, "source": "none"}
+        need = False
+        if not x_usable and abs(float(info.get("sentiment", 0.0) or 0.0)) <= 1e-9:
+            need = True
+        elif _x_score_aged_out(info, policy):
+            need = True
+        elif str(info.get("source") or "").lower() in ("none", "") and abs(
+            float(info.get("sentiment", 0.0) or 0.0)
+        ) <= 1e-9:
+            need = True
+        # Source priority after X fades: Reddit bridge > emergency free_fallback.
+        # Do not clobber intentional free_hybrid primary or an existing reddit row.
+        src = str(info.get("source") or "").lower()
+        if src.startswith("reddit"):
+            need = False
+        elif ("free_hybrid" in src or src in ("free", "free_shadow")) and abs(
+            float(info.get("sentiment", 0.0) or 0.0)
+        ) > 1e-9:
+            need = False
+        elif "free_fallback" in src and abs(float(info.get("sentiment", 0.0) or 0.0)) > 1e-9:
+            # Emergency free filled while X dead — prefer Reddit when available
+            need = True
+
+        if not need:
+            continue
+        raw_r = float(rr_scores.get(pair, 0.0) or 0.0)
+        if abs(raw_r) <= 1e-9:
+            # Reddit has no signal for this pair — clear dead X residue to Neutral
+            if _x_score_aged_out(info, policy) or not x_usable:
+                out_scores[pair] = {
+                    "sentiment": 0.0,
+                    "source": f"{src_tag}:empty",
+                    "sentiment_raw": 0.0,
+                    "decay_factor": 0.0,
+                    "age_min": info.get("age_min"),
+                    "half_life_min": hl,
+                    "source_ts": rr_ts,
+                    "bridge": "x_to_reddit_empty",
+                    "prior_source": src or info.get("source"),
+                    "prior_sentiment": info.get("sentiment"),
+                }
+                bridged += 1
+            continue
+        if do_age:
+            age_m = _age_minutes(rr_ts)
+            decay = _exponential_decay_factor(age_m, hl, stale_z)
+            aged_v = raw_r * decay
+        else:
+            age_m = _age_minutes(rr_ts)
+            decay = 1.0
+            aged_v = raw_r
+        # Only take bridge if reddit aged value is the handoff (always when X dead/aged)
+        out_scores[pair] = {
+            "sentiment": round(float(aged_v), 6),
+            "source": src_tag,
+            "sentiment_raw": round(float(raw_r), 6),
+            "decay_factor": round(float(decay), 4),
+            "age_min": round(age_m, 1) if age_m is not None else None,
+            "half_life_min": hl,
+            "source_ts": rr_ts,
+            "bridge": "x_to_reddit",
+            "prior_source": src or info.get("source"),
+            "prior_sentiment": info.get("sentiment"),
+        }
+        bridged += 1
+
+    bridge_meta["bridged_pairs"] = bridged
+    bridge_meta["source"] = rr_label
+    if bridged:
+        if x_usable:
+            mode = "x_reddit_bridge"
+        else:
+            mode = "reddit_bridge"
+        logger.info(
+            "Sentiment Reddit bridge ON bridged=%s/%s src=%s mode=%s",
+            bridged,
+            len(universe),
+            rr_label,
+            mode,
+        )
+    return mode, bridge_meta
+
+
 def _load_reddit_from_db(universe: List[str]) -> Dict[str, float]:
     """Query DB for latest Reddit/Apify sentiment per pair (shared cache).
 
@@ -580,7 +854,32 @@ def load_sentiment_scores_detailed(
             except Exception:
                 pass
 
-        # Free hybrid fallback when X unusable / still all zero
+        # Reddit first when X unusable (complete clock); free only if Reddit empty
+        if not x_info.get("usable"):
+            rr_pre, rr_pre_meta = load_latest_reddit_scores(
+                universe,
+                max_age_hours=float(policy.get("reddit_bridge_max_age_hours", 8.0) or 8.0),
+            )
+            if rr_pre_meta.get("available") and int(rr_pre_meta.get("non_zero") or 0) > 0:
+                filled_rr = 0
+                for pair in universe:
+                    rv = float(rr_pre.get(pair, 0.0) or 0.0)
+                    if abs(out_scores[pair]["sentiment"]) <= 1e-9 and abs(rv) > 1e-9:
+                        out_scores[pair] = {
+                            "sentiment": rv,
+                            "source": f"reddit:{rr_pre_meta.get('source') or 'reddit'}",
+                        }
+                        filled_rr += 1
+                if filled_rr:
+                    mode = "reddit_pre_bridge"
+                    logger.info(
+                        "X unusable — preloaded Reddit (%s) for %s pairs",
+                        rr_pre_meta.get("source"),
+                        filled_rr,
+                    )
+
+        # Free hybrid fallback when X unusable / still all zero AFTER Reddit try
+        # (emergency only — free stays shadow for mid-cycle when X exists but aged)
         use_free_fallback = free_fb and primary in (
             "x_with_free_fallback",
             "x+free",
@@ -661,6 +960,16 @@ def load_sentiment_scores_detailed(
             aging_meta["reddit_half_life_minutes"],
         )
 
+    # Complete clock: X aged-out / unavailable → latest Reddit (not free/Adanos)
+    mode, bridge_meta = _apply_reddit_bridge(
+        out_scores,
+        universe=universe,
+        policy=policy,
+        x_info=x_info,
+        do_age=do_age,
+        mode=mode,
+    )
+
     non_zero = sum(1 for v in out_scores.values() if abs(v["sentiment"]) > 1e-9)
     non_zero_raw = sum(
         1 for v in out_scores.values() if abs(float(v.get("sentiment_raw", v.get("sentiment", 0.0)) or 0.0)) > 1e-9
@@ -680,6 +989,7 @@ def load_sentiment_scores_detailed(
         "non_zero_raw": non_zero_raw,
         "aging_applied": do_age,
         "aging": aging_meta,
+        "reddit_bridge": bridge_meta,
     }
 
 

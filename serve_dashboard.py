@@ -1159,6 +1159,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
             rsi_map, rsi_src = _load_rsi_map()
             sent_map, sent_meta = _load_sentiment_map()
+            # Mid-cycle teed-up preview (free/Adanos/raw X) — DISPLAY ONLY, not gates
+            teed_bundle: Dict[str, Any] = {}
+            teed_by: Dict[str, Any] = {}
+            try:
+                from phase6.core.sentiment_teed_up_preview import (
+                    load_sentiment_teed_up_preview,
+                )
+                teed_bundle = load_sentiment_teed_up_preview(basket=basket) or {}
+                teed_by = teed_bundle.get("by_pair") or {}
+            except Exception:
+                teed_bundle = {}
+                teed_by = {}
             # Post-SL / manual rebuy blocks (same sources as runner deploy gate)
             buy_blocks = {}
             block_hours = 72.0
@@ -1242,6 +1254,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 add_room_by = {}
                 max_blocked_pairs = []
                 add_room_meta = {}
+
+            # Recovery / quality_tryout telegraph (visible mode, not hover-only)
+            recovery_summary: Dict[str, Any] = {}
+            try:
+                from phase6.core.dashboard_serve_helpers import (
+                    recovery_policy_dashboard_summary,
+                    short_gate_label,
+                )
+                recovery_summary = recovery_policy_dashboard_summary() or {}
+            except Exception:
+                recovery_summary = {}
+                try:
+                    from phase6.core.dashboard_serve_helpers import short_gate_label
+                except Exception:
+                    short_gate_label = None  # type: ignore
 
             # Preserve config basket order (not A→Z cache union).
             pairs = list(basket)
@@ -1331,23 +1358,136 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     and not block_max
                 )
 
+                gate_label = None
+                # Surface deploy gates even when Status ≠ BUY (HOLD/SELL still blocked from new seats).
+                show_gate = (not entry_allowed) or buy_blocked or block_max
+                if short_gate_label is not None and show_gate:
+                    try:
+                        gate_label = short_gate_label(
+                            entry_reasons if not entry_allowed else [],
+                            buy_blocked=buy_blocked,
+                            block_max=block_max,
+                            add_block_reason=add_block_reason,
+                            block_reason=blk.get("reason") if buy_blocked else None,
+                        )
+                    except Exception:
+                        gate_label = None
+
+                # seat_closed: empty seat that policy will not open (tryout/allowlist/floors)
+                seat_closed = bool(is_new_seat and not entry_allowed)
+
+                tee = teed_by.get(pair) or teed_by.get(str(pair).upper()) or {}
+                teed_v = tee.get("teed")
+                teed_src = tee.get("teed_source")
+                teed_label = None
+                teed_color = None
+                if teed_v is not None:
+                    try:
+                        teed_label, teed_color = get_sentiment_label(float(teed_v))
+                    except Exception:
+                        teed_label, teed_color = None, None
+
+                aged_out = bool(tee.get("live_aged_out"))
+                # Preview signal from tee (RSI + free/Adanos/x_raw) — DISPLAY ONLY
+                status_preview = None
+                status_preview_color = None
+                status_preview_conf = None
+                status_preview_reason = None
+                if teed_v is not None and aged_out:
+                    try:
+                        sp, spc, spconf, spreason = get_combined_status(
+                            rsi_v, float(teed_v), pair=pair
+                        )
+                        status_preview = sp
+                        status_preview_color = spc
+                        status_preview_conf = spconf
+                        status_preview_reason = spreason
+                    except Exception:
+                        status_preview = None
+
+                # What the operator should *read* as the score mid-cycle
+                if aged_out and teed_v is not None:
+                    sent_show = round(float(teed_v), 4)
+                    sent_show_label = teed_label or sent_label
+                    sent_show_color = teed_color or sent_color
+                    sent_show_is_preview = True
+                    sent_show_source = teed_src or "preview"
+                else:
+                    sent_show = round(float(sent_v), 4)
+                    sent_show_label = sent_label
+                    sent_show_color = sent_color
+                    sent_show_is_preview = False
+                    sent_show_source = "live"
+
+                # Status the eye should read: preview when live aged-out, else live
+                if (
+                    aged_out
+                    and status_preview
+                    and status_preview != status
+                ):
+                    status_show = status_preview
+                    status_show_color = (
+                        "amber-400"
+                        if status_preview == "BUY"
+                        else (
+                            "orange-400"
+                            if status_preview == "SELL"
+                            else (status_preview_color or st_color)
+                        )
+                    )
+                    status_show_is_preview = True
+                else:
+                    status_show = status
+                    status_show_color = st_color
+                    status_show_is_preview = False
+
                 rows.append({
                     "pair": pair,
                     "rsi": round(float(rsi_v), 2),
                     "rsi_label": rsi_label,
                     "rsi_color": rsi_color,
+                    # Live gate scorer (may be 0 when aged) — still authoritative for deploy
                     "sentiment": round(float(sent_v), 4),
                     "sentiment_label": sent_label,
                     "sentiment_color": sent_color,
+                    # Operator-facing score (tee when live aged-out)
+                    "sentiment_show": sent_show,
+                    "sentiment_show_label": sent_show_label,
+                    "sentiment_show_color": sent_show_color,
+                    "sentiment_show_is_preview": sent_show_is_preview,
+                    "sentiment_show_source": sent_show_source,
+                    "sentiment_live_raw": tee.get("live_raw"),
+                    "sentiment_aged_out": aged_out,
+                    "sentiment_age_min": tee.get("age_min"),
+                    "sentiment_decay": tee.get("decay_factor"),
+                    "teed_sentiment": None if teed_v is None else round(float(teed_v), 4),
+                    "teed_source": teed_src,
+                    "teed_label": teed_label,
+                    "teed_color": teed_color,
+                    "teed_drives_gates": False,
+                    "teed_free": tee.get("free"),
+                    "teed_adanos": tee.get("adanos"),
+                    "teed_x_raw": tee.get("x_raw"),
+                    "teed_reddit": tee.get("reddit"),
+                    # Live status (runner/gates path)
                     "status": status,
                     "status_color": st_color,
                     "confidence": conf,
                     "reason": reason,
+                    # Preview status from tee mid-cycle (not deploy)
+                    "status_preview": status_preview,
+                    "status_preview_color": status_preview_color,
+                    "status_preview_confidence": status_preview_conf,
+                    "status_preview_reason": status_preview_reason,
+                    "status_show": status_show,
+                    "status_show_color": status_show_color,
+                    "status_show_is_preview": status_show_is_preview,
                     # back-compat for older UI tooltip
                     "weighted": conf,
                     "in_active_basket": True,
                     "held_usd": round(float(held_usd_map.get(pair) or 0.0), 2),
                     "is_new_seat": is_new_seat,
+                    "seat_closed": seat_closed,
                     "buy_blocked": buy_blocked,
                     "block_reason": blk.get("reason") if buy_blocked else None,
                     "block_source": blk.get("source") if buy_blocked else None,
@@ -1360,6 +1500,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "entry_reasons": entry_reasons,
                     "entry_sent_floor": sent_floor,
                     "deploy_ready": deploy_ready,
+                    # Plain-English gate (visible; full machine string stays in entry_reasons)
+                    "gate_label": gate_label,
                     # ADD-RISK size telegraph — held stack maxed / no add budget
                     "block_max": block_max,
                     "max_add_usd": max_add_usd,
@@ -1376,6 +1518,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     regime_label = f"{entry_snap.regime}/{entry_snap.strategy_mode}"
             except Exception:
                 regime_label = None
+            formula = (
+                "Signal Status = SignalGenerator weighted (RSI±0.4 @30/70, sent±0.3 @±0.2; "
+                "BUY if score>0.25). Deploy is separate: REGIME-CASH entry — "
+                f"held min_sent≥{entry_floors['min_sentiment']}, "
+                f"new seat min_sent≥{entry_floors['min_sentiment_new_pair']}, "
+                f"max_rsi≤{entry_floors['max_rsi']}. "
+                "·gated = BUY signal but fails entry (reason in gate_label). "
+                "·blocked = post-SL/manual rebuy cooldown. "
+                "·block-max = held stack add-risk budget $0 / below min_move "
+                "(over target weight, zero risk budget, or gap). "
+                "·ready requires entry clear + not cooldown + not block-max. "
+                "When X is aged-out, Sent. and Status *show* free/Adanos preview "
+                "(sentiment_show / status_show) with ·prev — live gates still use aged X. "
+                "Preview BUY is amber, never ·ready. "
+                "Sent. colors scale by strength (mild ≠ full green)."
+            )
+            if recovery_summary.get("active") and recovery_summary.get("label"):
+                formula += f" Recovery: {recovery_summary.get('label')}."
             self.send_json({
                 "status": "ok" if ok else "no_data",
                 "rows": rows,
@@ -1388,23 +1548,21 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "max_blocked_pairs": max_blocked_pairs,
                 "add_room": add_room_meta,
                 "entry_floors": entry_floors,
+                "recovery": recovery_summary,
                 "regime": regime_label,
                 "rsi_source": rsi_src,
                 "sentiment_source": (sent_meta or {}).get("source"),
                 "sentiment_mode": (sent_meta or {}).get("mode"),
-                "formula": (
-                    "Signal Status = SignalGenerator weighted (RSI±0.4 @30/70, sent±0.3 @±0.2; "
-                    "BUY if score>0.25). Deploy is separate: REGIME-CASH entry — "
-                    f"held min_sent≥{entry_floors['min_sentiment']}, "
-                    f"new seat min_sent≥{entry_floors['min_sentiment_new_pair']}, "
-                    f"max_rsi≤{entry_floors['max_rsi']}. "
-                    "·gated = BUY signal but fails entry (e.g. weak sent on empty seat). "
-                    "·blocked = post-SL/manual rebuy cooldown. "
-                    "·block-max = held stack add-risk budget $0 / below min_move "
-                    "(over target weight, zero risk budget, or gap). "
-                    "·ready requires entry clear + not cooldown + not block-max. "
-                    "Sent. colors scale by strength (mild ≠ full green)."
-                ),
+                "sentiment_teed": {
+                    "drives_gates": False,
+                    "label": teed_bundle.get("label"),
+                    "next_x_refresh": teed_bundle.get("next_x_refresh"),
+                    "non_zero_live": teed_bundle.get("non_zero_live"),
+                    "non_zero_raw": teed_bundle.get("non_zero_raw"),
+                    "sources": teed_bundle.get("sources"),
+                    "note": teed_bundle.get("note"),
+                },
+                "formula": formula,
                 "last_updated": datetime.now(timezone.utc).isoformat(),
             })
             return

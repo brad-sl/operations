@@ -237,9 +237,9 @@
     "protect": true,
     "recovery_soft_down_20260828": {
       "enabled": true,
-      "reason": "Brad GO 2026-09-01: quality_tryout thaw A — week1 ETH+LINK; $75; max1 new seat/day; leave book; UNI/RAVE hard block",
-      "as_of": "20260901T183000Z",
-      "prior_as_of": "20260828T183930Z",
+      "reason": "Brad GO 2026-09-05: quality_tryout_v2 — ledger tier B; $75; max2 seats/day (was 1 — pace not armor); tier C off; UNI/RAVE hard block",
+      "as_of": "20260905T230000Z",
+      "prior_as_of": "20260905T220000Z",
       "block_new_buy_pairs": [
         "UNI-USD",
         "RAVE-USD"
@@ -250,7 +250,7 @@
         "declining",
         "hard_down"
       ],
-      "new_alt_policy": "quality_tryout",
+      "new_alt_policy": "quality_tryout_v2",
       "allowlist_pairs": [
         "BTC-USD",
         "BTC-USDC",
@@ -267,13 +267,33 @@
         "min_sentiment": 0.30,
         "max_rsi": 55.0,
         "min_rsi": 0.0,
-        "max_new_seats_per_day": 1,
+        "max_new_seats_per_day": 2,
         "abs_cap_usd": 75.0,
-        "note": "Week-1 majors tryout only. SOL excluded (ledger). Brad GO required to add pairs."
+        "v2_dynamic": true,
+        "v2": {
+          "live_apply": true,
+          "lookback_days": 90,
+          "allow_tier_c": false,
+          "allow_first_fill_tier_b": true,
+          "tier_b": [
+            "ETH-USD",
+            "ETH-USDC",
+            "LINK-USD",
+            "SOL-USD",
+            "XRP-USD"
+          ],
+          "min_net_pnl": 0.0,
+          "min_rt_graduated": 3,
+          "max_sl_rate": 0.50,
+          "min_tp_rate": 0.15,
+          "min_rt_for_rates": 5,
+          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors above. Tier C requires Brad GO allow_tier_c."
+        },
+        "note": "v2 live: dynamic eligible set from ledger scoreboard. Static tryout_pairs = legacy compare only."
       },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "set new_alt_policy=block_unless_allowlist OR enabled=false; restore allowlist-only"
+      "rollback": "set new_alt_policy=quality_tryout (static ETH+LINK) OR block_unless_allowlist; or quality_tryout.v2_dynamic=false"
     }
   },
   "buy_block_pairs": [

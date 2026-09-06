@@ -199,7 +199,7 @@
     "free_fallback_when_x_empty": true,
     "x_min_usable_posts_total": 1,
     "free_max_age_hours": 18,
-    "note": "X 2x/day + free_fallback. Aging ON (grid 2026-04-21 optimal): X HL 15m (transitory), Reddit HL 60m (hour bridge). Reddit Apify OFF \u2014 without bridge, aged X fades mid-cycle by design. Free denser shadow is candidate bridge after multi-day promote_ready + Brad GO.",
+    "note": "Complete clock (Brad GO 2026-09-05): X primary when fresh; when X aged-out (decay<=0.15 / age>=45m) or unavailable \u2192 latest Reddit (Hermes reddit-reading, 60m HL). Free+Adanos stay shadow/tuning; free is emergency only if X dead AND Reddit empty. Aging ON: X 15m / Reddit 60m. X pull cadence still 2x/day (increase later).",
     "apply_aging": true,
     "x_half_life_minutes": 15.0,
     "reddit_half_life_minutes": 60.0,
@@ -207,7 +207,11 @@
     "canonical_half_life_minutes": 15.0,
     "x_staleness_zero_minutes": 120.0,
     "reddit_staleness_zero_minutes": 240.0,
-    "free_staleness_zero_minutes": 360.0
+    "free_staleness_zero_minutes": 360.0,
+    "reddit_bridge_when_x_aged_out": true,
+    "x_aged_out_decay_max": 0.15,
+    "x_aged_out_age_min_minutes": 45.0,
+    "reddit_bridge_max_age_hours": 8.0
   },
   "rsi_primary_deploy": {
     "enabled": true,

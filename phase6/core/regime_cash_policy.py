@@ -285,18 +285,51 @@ def _norm_pair_set(xs: Any) -> Set[str]:
 
 
 def recovery_quality_tryout_cfg(rec: Dict[str, Any]) -> Dict[str, Any]:
-    """Normalize quality_tryout knobs (Brad GO 2026-09-01 thaw A)."""
+    """Normalize quality_tryout knobs (Brad GO 2026-09-01 thaw A; v2 2026-09-05)."""
     qt = rec.get("quality_tryout") if isinstance(rec.get("quality_tryout"), dict) else {}
+    v2 = qt.get("v2") if isinstance(qt.get("v2"), dict) else {}
+    # v2 nested knobs override flat deploy floors when present
+    src = {**qt, **v2}
     return {
         "tryout_pairs": _norm_pair_set(qt.get("tryout_pairs") or rec.get("tryout_pairs") or []),
-        "min_sentiment": float(qt.get("min_sentiment", rec.get("quality_min_sentiment", 0.30)) or 0.30),
-        "max_rsi": float(qt.get("max_rsi", rec.get("quality_max_rsi", 55.0)) or 55.0),
-        "min_rsi": float(qt.get("min_rsi", rec.get("quality_min_rsi", 0.0)) or 0.0),
+        "min_sentiment": float(src.get("min_sentiment", rec.get("quality_min_sentiment", 0.30)) or 0.30),
+        "max_rsi": float(src.get("max_rsi", rec.get("quality_max_rsi", 55.0)) or 55.0),
+        "min_rsi": float(src.get("min_rsi", rec.get("quality_min_rsi", 0.0)) or 0.0),
         "max_new_seats_per_day": int(
-            qt.get("max_new_seats_per_day", rec.get("max_new_seats_per_day", 1)) or 1
+            src.get("max_new_seats_per_day", rec.get("max_new_seats_per_day", 1)) or 1
         ),
-        "abs_cap_usd": float(qt.get("abs_cap_usd", rec.get("tryout_abs_cap_usd", 75.0)) or 75.0),
+        "abs_cap_usd": float(src.get("abs_cap_usd", rec.get("tryout_abs_cap_usd", 75.0)) or 75.0),
+        "v2_dynamic": bool(qt.get("v2_dynamic") or v2.get("live_apply") or False),
     }
+
+
+def recovery_tryout_pairs_effective(rec: Dict[str, Any]) -> Set[str]:
+    """Tryout sleeve pairs for recovery: static list (v1) or ledger-qualified (v2)."""
+    qt = recovery_quality_tryout_cfg(rec)
+    mode = str(rec.get("new_alt_policy") or "")
+    use_v2 = mode.startswith("quality_tryout_v2") or bool(qt.get("v2_dynamic"))
+    if use_v2:
+        try:
+            from phase6.core.recovery_tryout_qualify import (
+                STATE_PATH,
+                evaluate_basket_tryout,
+            )
+
+            # Prefer fresh scoreboard file (≤30m) to avoid full ledger scan per buy
+            try:
+                if STATE_PATH.exists():
+                    age_s = datetime.now(timezone.utc).timestamp() - STATE_PATH.stat().st_mtime
+                    if age_s <= 1800:
+                        board = json.loads(STATE_PATH.read_text(encoding="utf-8"))
+                        if isinstance(board.get("eligible_tryout_pairs"), list):
+                            return _norm_pair_set(board.get("eligible_tryout_pairs") or [])
+            except Exception:
+                pass
+            board = evaluate_basket_tryout(rec=rec)
+            return _norm_pair_set(board.get("eligible_tryout_pairs") or [])
+        except Exception as e:
+            logger.warning("recovery_tryout v2 board failed; falling back to static: %s", e)
+    return set(qt.get("tryout_pairs") or set())
 
 
 def count_new_seat_buys_today(
@@ -404,7 +437,8 @@ def recovery_soft_down_blocks_pair(
 
     Modes (new_alt_policy):
       - block_unless_allowlist: only allowlist_pairs may open new seats
-      - quality_tryout: ballast allowlist OR quality tryout_pairs may open new seats
+      - quality_tryout: ballast allowlist OR static tryout_pairs may open new seats
+      - quality_tryout_v2: ballast OR ledger-qualified tier B(/C) tryout pairs
         (sentiment/RSI floors applied in evaluate_buy_entry)
     """
     pol = policy if isinstance(policy, dict) else {}
@@ -426,12 +460,25 @@ def recovery_soft_down_blocks_pair(
     policy_mode = str(rec.get("new_alt_policy") or "")
     allow = _norm_pair_set(rec.get("allowlist_pairs"))
 
-    # --- quality_tryout (Brad GO 2026-09-01): ballast + week-1 tryout set ---
+    # --- quality_tryout / v2 (Brad GO 2026-09-01 + 2026-09-05) ---
     if policy_mode.startswith("quality_tryout"):
-        qt = recovery_quality_tryout_cfg(rec)
-        eligible = set(allow) | set(qt["tryout_pairs"])
-        if p in eligible:
+        if p in allow:
             return None
+        tryout = recovery_tryout_pairs_effective(rec)
+        if p in tryout:
+            return None
+        # Richer v2 deny reasons (explainable board)
+        if policy_mode.startswith("quality_tryout_v2") or bool(
+            recovery_quality_tryout_cfg(rec).get("v2_dynamic")
+        ):
+            try:
+                from phase6.core.recovery_tryout_qualify import evaluate_pair_tryout
+
+                v = evaluate_pair_tryout(p, rec=rec)
+                cls = str(v.class_ or "not_eligible")
+                return f"recovery_soft_down quality_tryout_v2 {cls} {p}"
+            except Exception:
+                pass
         return f"recovery_soft_down quality_tryout not_eligible {p}"
 
     # --- legacy allowlist-only ---
@@ -521,9 +568,10 @@ def evaluate_buy_entry(
         mode = str(rec.get("new_alt_policy") or "")
         if mode.startswith("quality_tryout"):
             qt_cfg = recovery_quality_tryout_cfg(rec)
-            on_tryout = pair_n in set(qt_cfg["tryout_pairs"])
+            tryout_set = recovery_tryout_pairs_effective(rec)
+            ballast = _norm_pair_set(rec.get("allowlist_pairs"))
+            on_tryout = pair_n in tryout_set and pair_n not in ballast
             if on_tryout:
-                ballast = _norm_pair_set(rec.get("allowlist_pairs"))
                 already = count_new_seat_buys_today(exclude_pairs=ballast)
                 max_day = int(qt_cfg.get("max_new_seats_per_day") or 1)
                 if already >= max_day:
@@ -575,7 +623,11 @@ def evaluate_buy_entry(
     allowed = len(reasons) == 0
     if allowed:
         if qt_cfg is not None and on_tryout:
-            reasons.append("entry_ok quality_tryout")
+            tag = "quality_tryout_v2" if (
+                str(rec.get("new_alt_policy") or "").startswith("quality_tryout_v2")
+                or bool(qt_cfg.get("v2_dynamic"))
+            ) else "quality_tryout"
+            reasons.append(f"entry_ok {tag}")
         else:
             reasons.append("entry_ok")
     return EntryDecision(pair=pair, allowed=allowed, reasons=reasons, sentiment=sentiment, rsi=rsi)
@@ -1140,7 +1192,9 @@ def filter_trade_plan_regime_cash(
                 ):
                     qt = recovery_quality_tryout_cfg(rec_f)
                     pn = _normalize_pair_symbol(str(pair))
-                    if pn in set(qt["tryout_pairs"]):
+                    tryout_set = recovery_tryout_pairs_effective(rec_f)
+                    ballast = _norm_pair_set(rec_f.get("allowlist_pairs"))
+                    if pn in tryout_set and pn not in ballast:
                         caps = [float(qt.get("abs_cap_usd") or 75.0)]
                         if float(snap.rebalance_cap_usd or 0) > 0:
                             caps.append(float(snap.rebalance_cap_usd))
@@ -1153,6 +1207,10 @@ def filter_trade_plan_regime_cash(
                                         a[key] = round(cap, 2)
                                         a["quality_tryout_cap_usd"] = cap
                                         a["quality_tryout"] = True
+                                        if str(rec_f.get("new_alt_policy") or "").startswith(
+                                            "quality_tryout_v2"
+                                        ) or bool(qt.get("v2_dynamic")):
+                                            a["quality_tryout_v2"] = True
                                 except (TypeError, ValueError):
                                     pass
             except Exception:

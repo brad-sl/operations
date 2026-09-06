@@ -654,3 +654,179 @@ def fast_observability_metrics(db_path: Path, live_state: dict, timeout: float =
             pass
 
     return metrics
+
+
+def short_gate_label(
+    entry_reasons: Any,
+    *,
+    buy_blocked: bool = False,
+    block_max: bool = False,
+    add_block_reason: Any = None,
+    block_reason: Any = None,
+) -> Optional[str]:
+    """Plain-English gate label for Signals (not machine reason dumps).
+
+    Prefer one short phrase operators can read without hover. Full machine
+    strings stay in entry_reasons / tooltips.
+    """
+    reasons = [str(x) for x in (entry_reasons or []) if x is not None and str(x).strip()]
+    # entry_ok* is success noise — strip before matching blocks
+    reasons = [r for r in reasons if not str(r).lower().startswith("entry_ok")]
+    joined = " | ".join(reasons).lower()
+
+    def _first_match() -> Optional[str]:
+        if not reasons and not buy_blocked and not block_max:
+            return None
+        if any("quality_tryout_v2" in r.lower() for r in reasons):
+            for r in reasons:
+                rl = r.lower()
+                if "missfire" in rl:
+                    return "missfire probation"
+                if "ledger_fail" in rl or "ledger" in rl:
+                    return "ledger quality fail"
+                if "tier_c" in rl:
+                    return "tier C off"
+                if "hard_block" in rl or "block_list" in rl:
+                    return "hard block list"
+                if "outside" in rl:
+                    return "outside basket"
+                if "not_eligible" in rl or "thin_history" in rl:
+                    return "tryout v2 gated"
+            return "tryout v2 gated"
+        if any("not_eligible" in r.lower() for r in reasons) or "quality_tryout not_eligible" in joined:
+            return "not on tryout list"
+        if any("max_new_seats" in r.lower() for r in reasons):
+            return "tryout seat used today"
+        if any("block_list" in r.lower() or "buy_block_pairs" in r.lower() for r in reasons):
+            return "hard block list"
+        if any("allowlist" in r.lower() for r in reasons):
+            return "recovery allowlist only"
+        if any("missfire_probation" in r.lower() for r in reasons):
+            return "missfire probation"
+        if any("sentiment_missing" in r.lower() for r in reasons):
+            return "sentiment missing"
+        if any("rsi_missing" in r.lower() for r in reasons):
+            return "RSI missing"
+        for r in reasons:
+            rl = r.lower()
+            if "sentiment" in rl and "< min" in rl:
+                return "sent below floor"
+            if "rsi" in rl and "> max" in rl:
+                return "RSI too high"
+            if "rsi" in rl and "< min" in rl:
+                return "RSI too low"
+            if "lockout" in rl:
+                return "lockout / cooldown"
+            if "regime_cash_park" in rl or "allow_new_buys=false" in rl:
+                return "regime park"
+        if reasons:
+            raw = reasons[0]
+            if len(raw) <= 28:
+                return raw.replace("_", " ")
+            return "entry gated"
+        return None
+
+    label = _first_match()
+    if buy_blocked:
+        br = str(block_reason or "cooldown").replace("_", " ")
+        cool = br if len(br) <= 22 else "rebuy cooldown"
+        label = cool if not label else f"{label} · {cool}"
+    if block_max and not label:
+        # Prefer entry reasons above; only surface add-risk when that's the sole gate.
+        # Ignore placeholder detail_reason values like "ok".
+        ar_raw = str(add_block_reason or "").strip()
+        if ar_raw.lower() in ("", "ok", "none", "null"):
+            ar_s = "add-risk max"
+        else:
+            ar = ar_raw.replace("_", " ")
+            ar_s = ar if len(ar) <= 22 else "add-risk max"
+        label = ar_s
+    elif block_max and label:
+        ar_raw = str(add_block_reason or "").strip()
+        if ar_raw.lower() not in ("", "ok", "none", "null"):
+            ar = ar_raw.replace("_", " ")
+            ar_s = ar if len(ar) <= 22 else "add-risk max"
+            if ar_s not in label:
+                label = f"{label} · {ar_s}"
+    return label
+
+
+def recovery_policy_dashboard_summary() -> Dict[str, Any]:
+    """Compact recovery / quality_tryout state for Signals badge + API."""
+    out: Dict[str, Any] = {
+        "active": False,
+        "mode": None,
+        "tryout_pairs": [],
+        "tryout_bases": [],
+        "seats_today": None,
+        "max_new_seats_per_day": None,
+        "min_sentiment": None,
+        "max_rsi": None,
+        "abs_cap_usd": None,
+        "label": None,
+        "v2": False,
+        "delta_vs_legacy": None,
+    }
+    try:
+        from phase6.core.regime_cash_policy import (
+            _equity_health_hit_for_recovery,
+            _recovery_rec,
+            count_new_seat_buys_today,
+            load_policy,
+            recovery_quality_tryout_cfg,
+            recovery_tryout_pairs_effective,
+            resolve_regime_cash,
+        )
+
+        pol = load_policy()
+        rec = _recovery_rec(pol)
+        if not rec:
+            return out
+        snap = resolve_regime_cash()
+        if not _equity_health_hit_for_recovery(rec, snap=snap):
+            out["mode"] = str(rec.get("new_alt_policy") or "") or None
+            out["label"] = "recovery idle (health clear)"
+            return out
+        mode = str(rec.get("new_alt_policy") or "") or "recovery"
+        out["active"] = True
+        out["mode"] = mode
+        if mode.startswith("quality_tryout"):
+            qt = recovery_quality_tryout_cfg(rec)
+            is_v2 = mode.startswith("quality_tryout_v2") or bool(qt.get("v2_dynamic"))
+            out["v2"] = is_v2
+            pairs = sorted(recovery_tryout_pairs_effective(rec))
+            bases = [p.split("-")[0] for p in pairs]
+            ballast = set()
+            try:
+                from phase6.core.regime_cash_policy import _norm_pair_set
+
+                ballast = _norm_pair_set(rec.get("allowlist_pairs"))
+            except Exception:
+                ballast = set()
+            seats = count_new_seat_buys_today(exclude_pairs=ballast)
+            out["tryout_pairs"] = pairs
+            out["tryout_bases"] = bases
+            out["seats_today"] = int(seats)
+            out["max_new_seats_per_day"] = int(qt.get("max_new_seats_per_day") or 1)
+            out["min_sentiment"] = float(qt.get("min_sentiment") or 0.3)
+            out["max_rsi"] = float(qt.get("max_rsi") or 55.0)
+            out["abs_cap_usd"] = float(qt.get("abs_cap_usd") or 75.0)
+            seat_bit = f"seats {seats}/{out['max_new_seats_per_day']}"
+            names = "+".join(bases) if bases else "none"
+            tag = "tryout v2" if is_v2 else "tryout"
+            out["label"] = f"{tag} {names} · {seat_bit}"
+            if is_v2:
+                try:
+                    from phase6.core.recovery_tryout_qualify import evaluate_basket_tryout
+
+                    board = evaluate_basket_tryout(rec=rec)
+                    out["delta_vs_legacy"] = board.get("delta_vs_legacy")
+                except Exception:
+                    pass
+        elif mode.startswith("block_unless_allowlist"):
+            out["label"] = "recovery allowlist only"
+        else:
+            out["label"] = f"recovery {mode}"
+    except Exception:
+        return out
+    return out

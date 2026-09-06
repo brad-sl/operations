@@ -29,16 +29,22 @@
         .metric-label-wrap.is-open .metric-tip { display: block; pointer-events: auto; }
         .metric-label-wrap.justify-center .metric-tip { left: 50%; transform: translateX(-50%); }
         .metric-sub { font-size: 0.65rem; color: #64748b; margin-top: 0.15rem; line-height: 1.2; }
-        /* Trades: short reason + tap/click for full machine string (iPhone-friendly) */
-        .trade-reason-wrap { position: relative; display: inline-flex; align-items: center; flex-shrink: 0; max-width: 5.5rem; }
-        .trade-reason-btn {
+        /* Short label + tap/click popup for full detail (Trades reasons + Signals gates; iPhone-friendly) */
+        .trade-reason-wrap, .signal-gate-wrap {
+            position: relative; display: inline-flex; align-items: center; flex-shrink: 0; max-width: 5.5rem;
+        }
+        .signal-gate-wrap { max-width: none; }
+        .trade-reason-btn, .signal-gate-btn {
             background: transparent; border: none; padding: 0; margin: 0; cursor: pointer;
             font-size: 10px; line-height: 1.2; text-align: left;
             max-width: 5.5rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
             text-decoration: underline dotted; text-underline-offset: 2px;
         }
-        .trade-reason-btn:focus-visible { outline: 1px solid #64748b; outline-offset: 2px; border-radius: 2px; }
-        .trade-reason-tip {
+        .signal-gate-btn { max-width: none; font-size: inherit; line-height: inherit; }
+        .trade-reason-btn:focus-visible, .signal-gate-btn:focus-visible {
+            outline: 1px solid #64748b; outline-offset: 2px; border-radius: 2px;
+        }
+        .trade-reason-tip, .signal-gate-tip {
             display: none; position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 70;
             width: min(18rem, 85vw); max-width: 18rem; padding: 0.45rem 0.6rem;
             font-size: 0.65rem; line-height: 1.35; font-weight: 400; text-align: left;
@@ -46,8 +52,9 @@
             box-shadow: 0 8px 24px rgba(0,0,0,0.5); word-break: break-word; white-space: pre-wrap;
             pointer-events: auto;
         }
-        .trade-reason-wrap.is-open .trade-reason-tip { display: block; }
-        .trade-reason-tip::after {
+        .trade-reason-wrap.is-open .trade-reason-tip,
+        .signal-gate-wrap.is-open .signal-gate-tip { display: block; }
+        .trade-reason-tip::after, .signal-gate-tip::after {
             content: ''; position: absolute; left: 12px; top: 100%;
             border: 6px solid transparent; border-top-color: #475569;
         }
@@ -371,26 +378,44 @@
         }
         initMetricHelp();
 
-        // Trades panel: tap short reason → full machine string (works on iPhone; title= does not)
-        function initTradeReasonTaps() {
+        // Trades + Signals: tap short label → full detail popup (iPhone; title= alone is not enough)
+        function initDashTipTaps() {
             document.addEventListener('click', (e) => {
-                const btn = e.target && e.target.closest && e.target.closest('.trade-reason-btn');
+                const btn = e.target && e.target.closest && e.target.closest('.trade-reason-btn, .signal-gate-btn');
                 if (btn) {
                     e.preventDefault();
                     e.stopPropagation();
-                    const wrap = btn.closest('.trade-reason-wrap');
+                    const wrap = btn.closest('.trade-reason-wrap, .signal-gate-wrap');
                     if (!wrap) return;
                     const wasOpen = wrap.classList.contains('is-open');
-                    document.querySelectorAll('.trade-reason-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+                    document.querySelectorAll('.trade-reason-wrap.is-open, .signal-gate-wrap.is-open').forEach(w => w.classList.remove('is-open'));
                     document.querySelectorAll('.metric-label-wrap.is-open').forEach(w => w.classList.remove('is-open'));
                     if (!wasOpen) wrap.classList.add('is-open');
                     return;
                 }
-                // outside tap closes trade tips (metric help handler also closes metrics)
-                document.querySelectorAll('.trade-reason-wrap.is-open').forEach(w => w.classList.remove('is-open'));
+                // outside tap closes tips
+                document.querySelectorAll('.trade-reason-wrap.is-open, .signal-gate-wrap.is-open').forEach(w => w.classList.remove('is-open'));
             }, true);
         }
-        initTradeReasonTaps();
+        initDashTipTaps();
+
+        function escHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+        /** Short flag + click popup for gate/block detail (Signals). */
+        function signalGateBadge(shortLabel, tipText, colorClass) {
+            const safeShort = escHtml(shortLabel);
+            const safeTip = escHtml(tipText);
+            const cls = colorClass || 'text-amber-400';
+            return `<span class="signal-gate-wrap">` +
+                `<button type="button" class="signal-gate-btn ${cls}" title="${safeTip}" aria-label="Show gate detail">${safeShort}</button>` +
+                `<span class="signal-gate-tip" role="tooltip">${safeTip}</span>` +
+                `</span>`;
+        }
 
         // Stale-while-revalidate: keep last good payloads so a slow/null poll never
         // blanks the UI to N/A for seconds/minutes (esp. /api/performance).
@@ -1061,17 +1086,42 @@
                     || (signalsData.rows || []).filter(r => r && r.block_max).length;
                 const bits = [];
                 if (n) bits.push('basket ' + n);
+                const rec = signalsData.recovery || {};
+                if (rec.active && rec.label) {
+                    bits.push(rec.label);
+                } else if (rec.label && String(rec.label).indexOf('idle') >= 0) {
+                    bits.push(rec.label);
+                }
                 if (gatedN) bits.push('gated ' + gatedN);
                 if (blockedN) bits.push('blocked ' + blockedN);
                 if (maxN) bits.push('block-max ' + maxN);
                 if (mode) bits.push('sent: ' + mode);
+                const teeMeta = signalsData.sentiment_teed || {};
+                if (teeMeta.label) {
+                    bits.push(String(teeMeta.label));
+                } else if (teeMeta.next_x_refresh && teeMeta.next_x_refresh.next_pt) {
+                    bits.push('next X ' + String(teeMeta.next_x_refresh.next_pt));
+                }
                 const floors = signalsData.entry_floors || {};
                 if (floors.min_sentiment_new_pair != null) {
                     bits.push('new≥' + Number(floors.min_sentiment_new_pair).toFixed(2));
                 }
                 sigBadge.textContent = bits.join(' · ');
-                if (signalsData.formula) {
-                    sigBadge.title = signalsData.formula;
+                const tipBits = [];
+                if (signalsData.formula) tipBits.push(signalsData.formula);
+                if (teeMeta.note) tipBits.push(teeMeta.note);
+                if (teeMeta.next_x_refresh && teeMeta.next_x_refresh.next_pt) {
+                    tipBits.push('Next X refresh: ' + teeMeta.next_x_refresh.next_pt
+                        + (teeMeta.next_x_refresh.hours_until != null
+                            ? ' (~' + Number(teeMeta.next_x_refresh.hours_until).toFixed(1) + 'h)'
+                            : ''));
+                }
+                if (tipBits.length) sigBadge.title = tipBits.join('\n');
+                // Amber when recovery tryout is actively gating new seats
+                if (rec.active) {
+                    sigBadge.className = 'ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-950/60 text-amber-300 font-normal max-w-[min(28rem,70vw)] truncate';
+                } else {
+                    sigBadge.className = 'ml-auto text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 font-normal';
                 }
             }
             if (sigContainer && signalsData && signalsData.status === 'ok' && (signalsData.rows || []).length) {
@@ -1112,14 +1162,38 @@
                     } else if (r.is_new_seat) {
                         flags.push('<span class="text-slate-600" title="Empty seat — new-pair sentiment floor applies">·flat</span>');
                     }
+                    // Gate/block detail lives in tap popup (Trades pattern) — keep row short: ·gated only
                     if (r.entry_gated) {
                         const floor = (r.entry_sent_floor != null)
                             ? ` need sent≥${Number(r.entry_sent_floor).toFixed(2)}`
                             : '';
-                        const why = (r.entry_reasons && r.entry_reasons.length)
+                        const whyCore = (r.entry_reasons && r.entry_reasons.length)
                             ? r.entry_reasons.join('; ')
                             : 'entry gate';
-                        flags.push(`<span class="text-amber-400" title="BUY signal but deploy gated (${why}).${floor}. Not a clean rebalance buy.">·gated</span>`);
+                        const plain = r.gate_label ? String(r.gate_label) : '';
+                        const tip = [
+                            plain ? plain : null,
+                            `BUY signal but deploy gated (${whyCore}).${floor}`,
+                            'Not a clean rebalance buy.'
+                        ].filter(Boolean).join('\n');
+                        flags.push(signalGateBadge('·gated', tip, 'text-amber-400'));
+                    } else if (r.seat_closed) {
+                        const whyCore = (r.entry_reasons && r.entry_reasons.length)
+                            ? r.entry_reasons.join('; ')
+                            : (r.gate_label || 'new seat closed');
+                        const plain = r.gate_label ? String(r.gate_label) : '';
+                        const tip = [
+                            plain ? plain : null,
+                            `Empty seat cannot open under current deploy gates (${whyCore}).`
+                        ].filter(Boolean).join('\n');
+                        flags.push(signalGateBadge('·closed', tip, 'text-amber-400/90'));
+                    } else if (r.gate_label) {
+                        // HOLD/SELL path with a named gate but no ·gated/·closed flag
+                        const whyCore = (r.entry_reasons && r.entry_reasons.length)
+                            ? r.entry_reasons.join('; ')
+                            : (r.reason || r.gate_label);
+                        const tip = `${r.gate_label}\n${whyCore}`;
+                        flags.push(signalGateBadge('·why', tip, 'text-amber-300/90'));
                     }
                     if (r.buy_blocked) {
                         const hrs = (r.block_hours_remaining != null)
@@ -1129,31 +1203,65 @@
                             ? ` until ${String(r.block_expires_at).replace('T', ' ').slice(0, 16)} UTC`
                             : '';
                         const why = r.block_reason || 'rebuy_cooldown';
-                        flags.push(`<span class="text-amber-400" title="Auto-BUY blocked (${why})${exp}${hrs}. Signal may still show BUY.">·blocked</span>`);
+                        const tip = `Auto-BUY blocked (${why})${exp}${hrs}.\nSignal may still show BUY.`;
+                        flags.push(signalGateBadge('·blocked', tip, 'text-amber-400'));
                     }
                     if (r.block_max) {
                         const mad = (r.max_add_usd != null) ? ` max add $${Number(r.max_add_usd).toFixed(0)}` : '';
                         const wt = (r.held_weight_pct != null) ? ` · held ${Number(r.held_weight_pct).toFixed(0)}% eq` : '';
                         const tgt = (r.target_pair_weight != null) ? ` (target ≤${(Number(r.target_pair_weight)*100).toFixed(0)}%)` : '';
                         const why = r.add_block_reason || 'add_risk';
-                        flags.push(`<span class="text-rose-400" title="Add blocked at size: ${why}${mad}${wt}${tgt}. Same gate as AM rebalance ADD-RISK skip. Status can still be BUY.">·block-max</span>`);
+                        const tip = `Add blocked at size: ${why}${mad}${wt}${tgt}.\nSame gate as AM rebalance ADD-RISK skip. Status can still be BUY.`;
+                        flags.push(signalGateBadge('·block-max', tip, 'text-rose-400'));
                     }
                     if (r.deploy_ready) {
                         flags.push('<span class="text-emerald-500/80" title="BUY + entry gates clear + not cooldown-blocked + add-risk room. Still subject to cash/slot at rebalance.">·ready</span>');
                     }
                     const flagHtml = flags.length ? (' ' + flags.join(' ')) : '';
                     const rsiC = r.rsi_color ? ('text-' + r.rsi_color) : 'text-slate-400';
-                    const sC = r.sentiment_color ? ('text-' + r.sentiment_color) : 'text-slate-400';
-                    const stC = r.status_color ? ('text-' + r.status_color) : 'text-slate-300';
-                    const stW = (r.status === 'BUY' || r.status === 'SELL') ? 'font-semibold' : 'font-medium';
-                    // Status stays BUY/HOLD/SELL only — gate state is the ·gated / ·block-max flag
-                    const stText = r.status || 'HOLD';
-                    let tip = (r.reason || '') + (r.confidence != null ? ` · conf ${r.confidence}` : '');
-                    tip += ` · sent ${Number(r.sentiment).toFixed(3)} (${r.sentiment_label || ''})`;
+                    // Operator-facing sent: tee score when live aged-out, else live
+                    const sentShow = (r.sentiment_show != null) ? Number(r.sentiment_show) : Number(r.sentiment);
+                    const sentIsPrev = !!r.sentiment_show_is_preview;
+                    const sC = (r.sentiment_show_color || r.sentiment_color)
+                        ? ('text-' + (r.sentiment_show_color || r.sentiment_color))
+                        : 'text-slate-400';
+                    const sentLab = r.sentiment_show_label || r.sentiment_label || '';
+                    // Short label for row (full stays in tip)
+                    const sentLabShort = String(sentLab)
+                        .replace('Strong bull', 'Bull+')
+                        .replace('Strong bear', 'Bear+')
+                        .replace('Bull (new-ok)', 'Bull')
+                        .replace('Neutral', '')
+                        .trim();
+                    // Status the eye reads: preview BUY/SELL mid-cycle (amber) when aged-out
+                    const stShow = r.status_show || r.status || 'HOLD';
+                    const stIsPrev = !!r.status_show_is_preview;
+                    const stC = (r.status_show_color || r.status_color)
+                        ? ('text-' + (r.status_show_color || r.status_color))
+                        : 'text-slate-300';
+                    const stW = (stShow === 'BUY' || stShow === 'SELL') ? 'font-semibold' : 'font-medium';
+                    let tip = '';
+                    if (stIsPrev) {
+                        tip += `Status show ${stShow} from tee preview · live gates ${r.status || 'HOLD'}`;
+                        if (r.status_preview_reason) tip += ` · ${r.status_preview_reason}`;
+                        tip += ' · NOT deploy (preview only)';
+                    } else {
+                        tip += (r.reason || '') + (r.confidence != null ? ` · conf ${r.confidence}` : '');
+                    }
+                    tip += ` · sent show ${sentShow.toFixed(3)} (${sentLab || 'n/a'})`;
+                    if (sentIsPrev) {
+                        tip += ` · source ${r.sentiment_show_source || 'preview'} · live aged ${Number(r.sentiment).toFixed(3)} (gates)`;
+                    }
+                    if (r.sentiment_aged_out) tip += ' · live X aged-out';
+                    if (r.teed_free != null) tip += ` · free ${Number(r.teed_free).toFixed(3)}`;
+                    if (r.teed_reddit != null) tip += ` · reddit ${Number(r.teed_reddit).toFixed(3)}`;
+                    if (r.teed_adanos != null) tip += ` · adanos ${Number(r.teed_adanos).toFixed(3)}`;
+                    if (r.teed_x_raw != null) tip += ` · x_raw ${Number(r.teed_x_raw).toFixed(3)}`;
                     if (r.is_new_seat) tip += ` · new seat floor sent≥${Number(r.entry_sent_floor ?? 0.15).toFixed(2)}`;
                     else tip += ` · held floor sent≥${Number(r.entry_sent_floor ?? -0.1).toFixed(2)}`;
                     if (r.entry_gated) {
                         tip += ' · NOT deploy-ready (entry gated)';
+                        if (r.gate_label) tip += ` — ${r.gate_label}`;
                     }
                     if (r.buy_blocked) {
                         tip += ` · BLOCKED auto-BUY (${r.block_reason || 'cooldown'}`
@@ -1167,11 +1275,28 @@
                             + ')';
                     }
                     if (r.deploy_ready) tip += ' · deploy-ready';
+                    // Sent cell: real score + strength label (not a wall of 0.00)
+                    const sSign = sentShow > 0.004 ? '+' : '';
+                    let sentCell = `<div class="tabular-nums ${sC}">${sSign}${sentShow.toFixed(2)}</div>`;
+                    if (sentLabShort) {
+                        sentCell += `<div class="text-[10px] leading-tight ${sC} opacity-90">${sentLabShort}</div>`;
+                    }
+                    if (sentIsPrev) {
+                        const src = String(r.sentiment_show_source || 'free').replace('_', ' ');
+                        sentCell += `<div class="text-[10px] leading-tight text-slate-500">·prev ${src}</div>`;
+                    } else if (r.sentiment_aged_out) {
+                        sentCell += `<div class="text-[10px] leading-tight text-slate-500">aged out</div>`;
+                    }
+                    // Status cell: preview BUY/SELL mid-cycle, live HOLD under ·prev
+                    let stCell = `<div class="${stC} ${stW}">${stShow}</div>`;
+                    if (stIsPrev) {
+                        stCell += `<div class="text-[10px] leading-tight text-slate-500">·prev · live ${r.status || 'HOLD'}</div>`;
+                    }
                     return `<tr class="border-b border-slate-800/80 last:border-0">
                         <td class="py-2 pr-2 font-medium whitespace-nowrap">${r.pair}${flagHtml}</td>
                         <td class="py-2 px-2 text-right tabular-nums ${rsiC}" title="${r.rsi_label || ''}">${Number(r.rsi).toFixed(1)}</td>
-                        <td class="py-2 px-2 text-right tabular-nums ${sC}" title="${r.sentiment_label || ''} · ${Number(r.sentiment).toFixed(3)}">${Number(r.sentiment).toFixed(2)}</td>
-                        <td class="py-2 pl-2 text-right ${stC} ${stW}" title="${tip}">${stText}</td>
+                        <td class="py-2 px-2 text-right" title="${tip}">${sentCell}</td>
+                        <td class="py-2 pl-2 text-right" title="${tip}">${stCell}</td>
                     </tr>`;
                 }).join('');
                 sigContainer.innerHTML = `<table class="w-full text-xs">

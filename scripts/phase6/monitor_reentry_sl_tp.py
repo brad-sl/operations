@@ -44,6 +44,12 @@ SL_GRACE_MINUTES = 15
 CASH_HOLD_ALERT_EPS_USD = 1.0
 # Live dual-peak / extension failures: page once per fingerprint, then quiet.
 LIVE_EXIT_FAIL_DEDUPE_HOURS = 6.0
+# CR-03 suspend/reattach leaves bags briefly naked (~10–30s). Monitor is */10 and
+# collides with 09:00/21:00 PT rebalance → daily SL_MISSING_EXCHANGE false pages.
+# Suppress page when suspend is in-flight or inventory is stop-locked on venue.
+CR03_SUSPEND_GRACE_SEC = 180.0
+CR03_SCHEDULE_GRACE_SEC = 120.0  # ± around 09:00/09:06 and 21:00/21:06 PT
+HOLD_LOCKED_FRAC_MIN = 0.90  # hold/amount ≥ this ⇒ exchange stop is locking size
 
 
 def _utc_now() -> datetime:
@@ -222,6 +228,136 @@ def _exchange_stops(pairs: List[str]) -> Dict[str, List[dict]]:
         return {"__error__": [{"error": str(exc)[:200]}]}
 
 
+def _log_wall_to_utc(ts_part: str) -> Optional[datetime]:
+    """Parse runner log wall clock (America/Los_Angeles on this host) → UTC."""
+    try:
+        dt = datetime.strptime(ts_part[:19], "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return None
+    try:
+        from zoneinfo import ZoneInfo
+
+        return dt.replace(tzinfo=ZoneInfo("America/Los_Angeles")).astimezone(timezone.utc)
+    except Exception:
+        return dt.replace(tzinfo=timezone.utc)
+
+
+def _cr03_schedule_near(now: datetime, grace_sec: float = CR03_SCHEDULE_GRACE_SEC) -> bool:
+    """True near daily CR-03 rebalance slots (09:00/09:06 and 21:00/21:06 PT)."""
+    try:
+        from zoneinfo import ZoneInfo
+
+        local = now.astimezone(ZoneInfo("America/Los_Angeles"))
+    except Exception:
+        local = now
+    slots = ((9, 0), (9, 6), (21, 0), (21, 6))
+    for hh, mm in slots:
+        slot = local.replace(hour=hh, minute=mm, second=0, microsecond=0)
+        if abs((local - slot).total_seconds()) <= grace_sec:
+            return True
+    return False
+
+
+def _cr03_suspend_in_flight(
+    now: datetime,
+    log_path: Path = LOG,
+    grace_sec: float = CR03_SUSPEND_GRACE_SEC,
+    log_tail_bytes: int = 250_000,
+) -> Tuple[bool, str]:
+    """Detect open CR-03 suspend window from runner log.
+
+    Entered suspend without a later Re-attached (or still within grace of Entered)
+    ⇒ bags may be intentionally naked. Returns (active, reason).
+    """
+    if not log_path.exists():
+        return False, ""
+    try:
+        data = log_path.read_bytes()
+        if len(data) > log_tail_bytes:
+            data = data[-log_tail_bytes:]
+        text = data.decode("utf-8", errors="replace")
+    except Exception:
+        return False, ""
+
+    last_enter: Optional[datetime] = None
+    last_reattach: Optional[datetime] = None
+    for line in text.splitlines():
+        if "Entered suspend_reattach_context" in line:
+            ts = _log_wall_to_utc(line.split(" - ", 1)[0].strip())
+            if ts is not None:
+                last_enter = ts
+        elif "[CR-03] Re-attached stops" in line or "Restoration re-attach" in line:
+            ts = _log_wall_to_utc(line.split(" - ", 1)[0].strip())
+            if ts is not None:
+                last_reattach = ts
+
+    if last_enter is None:
+        return False, ""
+    age = (now - last_enter).total_seconds()
+    if age < 0 or age > grace_sec:
+        return False, ""
+    if last_reattach is None or last_reattach < last_enter:
+        return True, f"suspend_open age_s={age:.0f}"
+    # Reattach landed but exchange list can lag a few seconds
+    lag = (now - last_reattach).total_seconds()
+    if 0 <= lag <= 45.0:
+        return True, f"reattach_settle age_s={lag:.0f}"
+    return False, ""
+
+
+def _holdings_lock_fracs(pairs: List[str]) -> Dict[str, float]:
+    """pair → hold/amount from venue (stop-locked inventory). Empty on error."""
+    if not pairs:
+        return {}
+    try:
+        from phase6.core.exchange_client import CoinbaseExchangeClient
+
+        client = CoinbaseExchangeClient(mode="live")
+        hv = client.get_holdings_verified() or {}
+        positions = hv.get("positions") or {}
+        out: Dict[str, float] = {}
+        want = {p.replace("-USD", "").replace("-USDC", "") for p in pairs}
+        for raw_k, v in positions.items():
+            if not isinstance(v, dict):
+                continue
+            base = str(raw_k).upper().replace("-USD", "").replace("-USDC", "")
+            if base not in want:
+                continue
+            try:
+                amt = float(v.get("amount") or 0.0)
+                hold = float(v.get("hold") or 0.0)
+            except (TypeError, ValueError):
+                continue
+            if amt <= 0:
+                continue
+            pair = f"{base}-USD"
+            out[pair] = hold / amt
+        return out
+    except Exception:
+        return {}
+
+
+def classify_sl_missing(
+    *,
+    has_open_stop: bool,
+    hold_frac: Optional[float],
+    cr03_active: bool,
+    hold_locked_min: float = HOLD_LOCKED_FRAC_MIN,
+) -> str:
+    """Classify exchange SL check for a held bag.
+
+    Returns one of:
+      ok_orders | note_cr03 | note_hold_locked | alert_missing
+    """
+    if has_open_stop:
+        return "ok_orders"
+    if cr03_active:
+        return "note_cr03"
+    if hold_frac is not None and hold_frac >= hold_locked_min:
+        return "note_hold_locked"
+    return "alert_missing"
+
+
 def _recent_live_tp_from_log(since: datetime) -> List[Tuple[datetime, str, str]]:
     """Parse [LIVE-TP] lines from runner log."""
     if not LOG.exists():
@@ -371,11 +507,37 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
         notes.append(f"exchange_sl_check_error={stops['__error__'][0].get('error')}")
         stops = {}
 
+    cr03_flight, cr03_why = _cr03_suspend_in_flight(now)
+    cr03_active = cr03_flight or _cr03_schedule_near(now)
+    if cr03_active:
+        notes.append(
+            f"CR03_WINDOW active flight={cr03_flight} why={cr03_why or 'schedule_slot'}"
+        )
+    lock_fracs = _holdings_lock_fracs(check_pairs) if check_pairs else {}
+
     for pair in check_pairs:
         orders = stops.get(pair) or []
         entry = float((marks.get(pair) or {}).get("entry_px") or held[pair].get("entry_px") or 0.0)
-        if not orders:
-            alerts.append(f"SL_MISSING_EXCHANGE {pair} held_usd={held[pair].get('value_usd'):.2f}")
+        cls = classify_sl_missing(
+            has_open_stop=bool(orders),
+            hold_frac=lock_fracs.get(pair),
+            cr03_active=cr03_active,
+        )
+        if cls != "ok_orders":
+            if cls == "note_cr03":
+                notes.append(
+                    f"SL_MISSING_CR03_WINDOW {pair} held_usd={held[pair].get('value_usd'):.2f} "
+                    f"({cr03_why or 'schedule'})"
+                )
+            elif cls == "note_hold_locked":
+                notes.append(
+                    f"SL_HOLD_LOCKED_OK {pair} hold_frac={lock_fracs.get(pair):.3f} "
+                    f"held_usd={held[pair].get('value_usd'):.2f} (list lag; not naked)"
+                )
+            else:
+                alerts.append(
+                    f"SL_MISSING_EXCHANGE {pair} held_usd={held[pair].get('value_usd'):.2f}"
+                )
             continue
         # pick lowest stop for long
         stop_pxs = []

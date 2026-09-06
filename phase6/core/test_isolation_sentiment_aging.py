@@ -63,10 +63,20 @@ def test_loader_ages_x_and_keeps_raw():
         free_path.write_text("{}")
 
         old_x, old_c, old_f = ss.X_CACHE, ss.CANONICAL_CACHE, ss.FREE_CACHE
+        old_rr = getattr(ss, "REDDIT_READING_CACHE", None)
+        old_leg = getattr(ss, "REDDIT_LEGACY_CACHE", None)
         try:
             ss.X_CACHE = str(x_path)
             ss.CANONICAL_CACHE = str(can_path)
             ss.FREE_CACHE = str(free_path)
+            # Isolation: no live Reddit bridge (this suite is pure aging math)
+            ss.REDDIT_READING_CACHE = str(td_path / "no_reddit.json")
+            ss.REDDIT_LEGACY_CACHE = str(td_path / "no_legacy.json")
+            old_load_rr = ss.load_latest_reddit_scores
+            ss.load_latest_reddit_scores = lambda *a, **k: (
+                {p: 0.0 for p in (["LINK-USD", "BTC-USD"])},
+                {"available": False, "source": None, "non_zero": 0},
+            )
 
             detail = ss.load_sentiment_scores_detailed(
                 universe=["LINK-USD", "BTC-USD"],
@@ -94,12 +104,21 @@ def test_loader_ages_x_and_keeps_raw():
             aged2 = ss.get_aged_sentiment_scores(
                 universe=["LINK-USD"], cache_path=str(can_path)
             )
-            assert abs(aged2["LINK-USD"] - aged["LINK-USD"]) < 1e-6
+            # allow tiny drift if wall-clock age ticks between calls
+            assert abs(aged2["LINK-USD"] - aged["LINK-USD"]) < 1e-3
             print("loader_ages_x: PASS", "decay", link["decay_factor"], "aged", aged["LINK-USD"])
         finally:
             ss.X_CACHE = old_x
             ss.CANONICAL_CACHE = old_c
             ss.FREE_CACHE = old_f
+            if old_rr is not None:
+                ss.REDDIT_READING_CACHE = old_rr
+            if old_leg is not None:
+                ss.REDDIT_LEGACY_CACHE = old_leg
+            try:
+                ss.load_latest_reddit_scores = old_load_rr
+            except NameError:
+                pass
 
 
 def test_reddit_bridge_longer_than_x():

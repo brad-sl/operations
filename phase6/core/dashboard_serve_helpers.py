@@ -40,7 +40,7 @@ def _total_usd_at_ts(conn: sqlite3.Connection, ts: str) -> float:
         (ts,),
     ):
         cur, bal = (row[0] or "").upper(), float(row[1] or 0)
-        if cur in ("USD", "USDC"):
+        if cur in ("USD", "USDC", "USDT"):
             cash += bal
     holdings_val = 0.0
     # One holdings fetch; batch-friendly price lookup (pair-first when idx exists).
@@ -50,11 +50,15 @@ def _total_usd_at_ts(conn: sqlite3.Connection, ts: str) -> float:
             (ts,),
         )
     )
+    # Cash-like never counts as a holding (USDC row in holdings double-counts cash).
+    _CASH = {"USD", "USDC", "USDT", "DAI", "EURC", "GUSD", "PYUSD", "BUSD", "USDP"}
     for cur, amt in held:
         amt = float(amt or 0)
         if amt <= 0:
             continue
-        c = str(cur).replace("-USD", "")
+        c = str(cur).replace("-USD", "").upper()
+        if c in _CASH:
+            continue
         pair = f"{c}-USD"
         # Prefer pair-leading scan; falls back if only (ts,pair) PK exists.
         px_row = conn.execute(

@@ -12,7 +12,18 @@
       "skip_if_usdc_pct_above": 0.88,
       "redeploy_target_usdc_pct": 0.05,
       "redeploy_unwind_usdc_pct_above": 0.35,
-      "redeploy_min_usd_for_deploy_usd": 80.0
+      "redeploy_min_usd_for_deploy_usd": 80.0,
+      "powder_balancer": {
+        "enabled": false,
+        "auto_reserve_from_tryout": true,
+        "reserve_waves": 1.0,
+        "usd_reserve_floor_usd": 150.0,
+        "usd_reserve_buffer_usd": 50.0,
+        "usd_reserve_ceiling_usd": 400.0,
+        "min_action_usd": 25.0,
+        "hysteresis_usd": 20.0,
+        "do_not_sell_alts": true
+      }
     },
     "park_package": {
       "enabled": false,
@@ -39,7 +50,19 @@
       "live_usdc_park": {
         "enabled": true,
         "target_usdc_pct": 0.92,
-        "min_usd_reserve_usd": 50.0
+        "min_usd_reserve_usd": 50.0,
+        "powder_balancer": {
+          "enabled": true,
+          "auto_reserve_from_tryout": true,
+          "reserve_waves": 1.0,
+          "usd_reserve_floor_usd": 150.0,
+          "usd_reserve_buffer_usd": 50.0,
+          "usd_reserve_ceiling_usd": 400.0,
+          "min_action_usd": 25.0,
+          "hysteresis_usd": 20.0,
+          "do_not_sell_alts": true,
+          "note": "Brad GO 2026-09-06: park structural stub in USDC while micro-deploy; keep USD wave reserve for tryout buys"
+        }
       },
       "park_package": {
         "enabled": true,
@@ -68,7 +91,19 @@
       "trader_id": "default",
       "display_name": "Env/default account id",
       "live_usdc_park": {
-        "enabled": true
+        "enabled": true,
+        "powder_balancer": {
+          "enabled": true,
+          "auto_reserve_from_tryout": true,
+          "reserve_waves": 1.0,
+          "usd_reserve_floor_usd": 150.0,
+          "usd_reserve_buffer_usd": 50.0,
+          "usd_reserve_ceiling_usd": 400.0,
+          "min_action_usd": 25.0,
+          "hysteresis_usd": 20.0,
+          "do_not_sell_alts": true,
+          "note": "Brad GO 2026-09-06: park structural stub in USDC while micro-deploy; keep USD wave reserve for tryout buys"
+        }
       },
       "park_package": {
         "enabled": true,

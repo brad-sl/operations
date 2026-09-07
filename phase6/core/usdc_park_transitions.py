@@ -93,6 +93,9 @@ def record_toggle_change(account_id: str, enabled: bool) -> Dict[str, Any]:
     return {"event": event, "state": state}
 
 
+PHASE_POWDER_BALANCED = "powder_balanced"
+
+
 @dataclass
 class TransitionRebalancePlan:
     """What daily rebalance should do for USDC park layer."""
@@ -102,6 +105,8 @@ class TransitionRebalancePlan:
     park_summary: Optional[Dict[str, Any]] = None
     run_redeploy_unwind: bool = False
     unwind_summary: Optional[Dict[str, Any]] = None
+    run_powder_balance: bool = False
+    powder_summary: Optional[Dict[str, Any]] = None
     transition_note: Optional[str] = None
     operational_phase: str = PHASE_STANDDOWN
 
@@ -134,14 +139,12 @@ def execute_redeploy_unwind_usdc(
             "reason": "excess_usdc_below_min",
             "excess_usdc": round(excess_usdc, 2),
         }
-    pair = str(park_cfg.get("usdc_product_id", "USDC-USD"))
     try:
-        if getattr(runner, "use_platform_executor", False) and getattr(
-            runner, "trade_executor", None
-        ):
-            result = runner.trade_executor.execute_sell(pair, excess_usdc)
-        else:
-            result = runner.order_executor.execute_sell(pair, excess_usdc)
+        from phase6.core.usdc_convert import convert_via_runner
+
+        result = convert_via_runner(
+            runner, direction="usdc_to_usd", amount=excess_usdc
+        )
     except Exception as e:
         result = {"success": False, "error": str(e)}
     runner.portfolio.refresh()
@@ -213,7 +216,41 @@ def plan_usdc_park_for_daily_rebalance(runner: "Phase6Runner") -> TransitionReba
 
     # Toggle ON
     regime_flip_to_deploy = prev_park_sig and deploy_sig and not park_sig
+    powder_cfg = dict(park_cfg.get("powder_balancer") or {})
+    powder_on = bool(powder_cfg.get("enabled"))
 
+    # Full regime park (bear/usdc_park): legacy sell-alts → USDC path
+    if park_sig:
+        state["operational_phase"] = PHASE_PARKED
+        save_transition_state(account_id, state)
+        plan.run_park = True
+        plan.operational_phase = PHASE_PARKED
+        plan.park_summary = execute_usdc_park_cycle(
+            runner, park_cfg, account_id=account_id, reason="regime_usdc_park"
+        )
+        return plan
+
+    # Micro-deploy / tryout: maintain USD wave reserve + USDC stub (no alt sells)
+    if deploy_sig and powder_on:
+        from phase6.core.powder_balancer import execute_powder_balance
+
+        state["operational_phase"] = PHASE_POWDER_BALANCED
+        state["last_transition"] = "powder_balance"
+        state["powder_balance_at"] = datetime.now(timezone.utc).isoformat()
+        # Leaving full park under powder balancer: top-up reserve only (not dump all USDC)
+        if regime_flip_to_deploy:
+            state["last_transition"] = "park_to_powder_balance"
+            plan.transition_note = plan.transition_note or "park_to_powder_balance"
+        save_transition_state(account_id, state)
+        plan.run_powder_balance = True
+        plan.operational_phase = PHASE_POWDER_BALANCED
+        plan.powder_summary = execute_powder_balance(
+            runner, park_cfg, account_id=account_id
+        )
+        plan.transition_note = plan.transition_note or "powder_balance"
+        return plan
+
+    # Legacy full redeploy unwind when powder balancer OFF
     if deploy_sig and (phase == PHASE_PARKED or regime_flip_to_deploy):
         state["operational_phase"] = PHASE_REDEPLOY
         state["last_transition"] = "park_to_redeploy"
@@ -228,16 +265,6 @@ def plan_usdc_park_for_daily_rebalance(runner: "Phase6Runner") -> TransitionReba
         if plan.unwind_summary.get("ok"):
             state["operational_phase"] = PHASE_ARMED
             save_transition_state(account_id, state)
-        return plan
-
-    if park_sig:
-        state["operational_phase"] = PHASE_PARKED
-        save_transition_state(account_id, state)
-        plan.run_park = True
-        plan.operational_phase = PHASE_PARKED
-        plan.park_summary = execute_usdc_park_cycle(
-            runner, park_cfg, account_id=account_id, reason="regime_usdc_park"
-        )
         return plan
 
     state["operational_phase"] = PHASE_ARMED

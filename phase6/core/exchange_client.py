@@ -551,6 +551,90 @@ class CoinbaseExchangeClient:
             logger.error(f"Live limit buy failed: {e}")
             return {"success": False, "error": str(e), "post_only": post_only}
 
+    def place_limit_sell(
+        self,
+        product_id: str,
+        base_size: float,
+        limit_price: float,
+        *,
+        post_only: bool = False,
+    ) -> Dict[str, Any]:
+        """Limit sell (GTC). Default post_only=False so taker limits can cross on limit-only books."""
+        if self.shadow_mode:
+            self._order_log.append(
+                {
+                    "type": "limit_sell",
+                    "pair": product_id,
+                    "base_size": base_size,
+                    "limit_price": limit_price,
+                    "post_only": post_only,
+                    "timestamp": time.time(),
+                }
+            )
+            return {
+                "success": True,
+                "order_id": "shadow_limit_sell",
+                "post_only": post_only,
+                "shadow": True,
+            }
+
+        if not self.real_client:
+            if not self._ensure_live_client():
+                return {"success": False, "error": "No live client"}
+
+        try:
+            base_str = self.quantize_size(product_id, base_size)
+            px_str = self.quantize_price(product_id, limit_price)
+            limit_cfg: Dict[str, Any] = {
+                "base_size": base_str,
+                "limit_price": px_str,
+            }
+            if post_only:
+                limit_cfg["post_only"] = True
+            else:
+                limit_cfg["post_only"] = False
+            body = {
+                "client_order_id": secrets.token_hex(16),
+                "product_id": product_id,
+                "side": "SELL",
+                "order_configuration": {"limit_limit_gtc": limit_cfg},
+            }
+            resp = self.real_client._request("POST", "/api/v3/brokerage/orders", body)
+            if resp.get("success") is False or "error_response" in resp:
+                err = resp.get("error_response") or resp
+                return {"success": False, "error": str(err), "raw": resp, "post_only": post_only}
+            if "success_response" in resp or resp.get("success"):
+                oid = (resp.get("success_response") or {}).get("order_id") or resp.get("order_id")
+                return {
+                    "success": True,
+                    "order_id": oid,
+                    "post_only": post_only,
+                    "base_size": float(base_str),
+                    "limit_price": float(px_str),
+                    "raw": resp,
+                }
+            return {"success": False, "error": str(resp), "post_only": post_only}
+        except Exception as e:
+            logger.error(f"Live limit sell failed: {e}")
+            return {"success": False, "error": str(e), "post_only": post_only}
+
+    def product_is_limit_only(self, product_id: str) -> bool:
+        """True when venue rejects market orders (e.g. USDT-USDC)."""
+        try:
+            if not self.real_client:
+                self._ensure_live_client()
+            if not self.real_client:
+                return False
+            r = self.real_client._request("GET", f"/api/v3/brokerage/products/{product_id}")
+            if isinstance(r, dict) and r.get("limit_only") is True:
+                return True
+        except Exception:
+            pass
+        # known hop leg
+        if str(product_id).upper() == "USDT-USDC":
+            return True
+        return False
+
     def get_order(self, order_id: str) -> Dict[str, Any]:
         """Full order dict by id (status, fills). Shadow returns empty filled."""
         if self.shadow_mode:
@@ -978,8 +1062,21 @@ class CoinbaseExchangeClient:
 
         enriched = {}
         value_usd_map = {}
+        # Cash-like (USDC/USDT/…) is balance, never a trade seat — including as
+        # USDC-USD double-counts NAV with the USD/USDC cash legs (2026-09-06).
+        try:
+            from phase6.core.cash_buckets import is_cash_like_pair
+        except Exception:  # pragma: no cover
+            def is_cash_like_pair(p):  # type: ignore
+                return str(p or "").upper() in (
+                    "USD", "USDC", "USDT", "USDC-USD", "USDT-USD", "DAI",
+                )
+
         for currency, raw in raw_pos.items():
-            pair = f"{currency}-USD"
+            cur = str(currency or "").upper()
+            pair = cur if cur.endswith("-USD") else f"{cur}-USD"
+            if is_cash_like_pair(cur) or is_cash_like_pair(pair):
+                continue
             avail, hold, amount = _holding_parts(raw)
             if amount <= 0:
                 continue

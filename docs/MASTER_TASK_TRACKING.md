@@ -11922,6 +11922,7 @@ See full context in logs/ and phase6/core/ related files.
 ## KANBAN-OPS-FIX-20260904
 - t_14329ba7 / #27 P6-OPS-20260904-001 DONE: Hermes cron phase6-basket-pick-metrics-refresh — root cause fixed (naive vs aware dt in _scan_fills via legacy trades ts; _parse_ts now always returns tz-aware UTC, legacy naive assumed UTC). Direct parse site in refresh_open_picks unified to _parse_ts. Isolation test adjusted with parser tz regression coverage (naive/aware/Z). Verified live: refresh script runs clean on real data (no traceback, graduation output produced). GH#27 closed via ops_triage_tasks.py + evidence note. Registry marked done. (no live book impact)
 - t_01d0f856 / #28 P6-OPS-20260904-002 DONE: Hermes cron phase6-basket-pick-metrics-refresh — stale last_status=error (lingering from 09-04 12:30 run that hit the dt-compare before #27 patch applied); cleared jobs.json last_status=ok / last_error=null / failure_streak=0 after manual verify run succeeded; isolation test PASS; ops_triage_discover now clean (no actionable); GH#28 closed via `ops_triage_tasks.py close`. State hygiene post-fix; script+graduation verified on real data. (no live book impact)
+- t_445d4018 / #29 P6-OPS-20260906-001 DONE: Hermes cron recent error: phase6-reddit-reading-live-bridge — root cause fixed (shadow runner always exits 0 on transient reddit 429/403 (anon RSS rate/blocks); errors logged to cache meta.fetch_log + report for visibility; downstream treats as available if fresh; added runner isolation test covering fail->rc=0; live verify run rc=0 + cache status=ok + 40 posts; jobs.json cleared last_error/failure_streak; GH#29 closed via ops_triage_tasks.py; ops_triage.md marked done. (no live book impact)
 
 
 ---
@@ -11968,3 +11969,23 @@ Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to co
 Source sweep: 2026-09-06T11:01:03.178496+00:00 | score=5.7836
 Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
 
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260907** (opened 2026-09-07T00:00:16.589413)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260907`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

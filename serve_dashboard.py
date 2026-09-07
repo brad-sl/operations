@@ -49,16 +49,31 @@ def enrich_live_state(state: dict | None) -> dict | None:
     if not state:
         return state
     out = dict(state)
-    poss = out.get("positions") or []
-    if not out.get("cash_positions") and not out.get("trading_positions"):
-        out["cash_positions"] = [p for p in poss if p.get("pair") in ("USD", "USDC")]
-        out["trading_positions"] = [p for p in poss if p.get("pair") not in ("USD", "USDC")]
-    elif not out.get("trading_positions"):
-        out["trading_positions"] = [p for p in poss if p.get("pair") not in ("USD", "USDC")]
+    from phase6.core.cash_buckets import (
+        is_cash_like_pair,
+        merge_cash_rows,
+        split_cash_and_trading,
+        trading_holdings_usd,
+    )
     from phase6.core.display_dust import DEFAULT_DUST_HIDE_USD, split_dust_positions
     from phase6.core.position_cost_basis import recompute_trading_positions_pnl
     from phase6.core.paths import PRICE_HISTORY
     from phase6.core.price_freshness import DEFAULT_MAX_QUOTE_AGE_SEC
+
+    poss = list(out.get("positions") or [])
+    # Strip cash-like pair forms (USDC-USD, USDT-USD, …) out of any pre-split lists.
+    pre_cash, pre_trade = split_cash_and_trading(poss)
+    existing_cash = list(out.get("cash_positions") or [])
+    existing_trade = list(out.get("trading_positions") or [])
+    if existing_trade:
+        _ec, existing_trade = split_cash_and_trading(existing_trade)
+        pre_cash = pre_cash + _ec + existing_cash
+    elif existing_cash:
+        pre_cash = pre_cash + existing_cash
+    if not existing_trade:
+        existing_trade = pre_trade
+    out["trading_positions"] = existing_trade
+    out["cash_positions"] = merge_cash_rows(out.get("balances") or [], pre_cash)
 
     # Ensure Preserve sleeve (PAXG) is visible even if runner cache lagged basket-only prices
     try:
@@ -137,12 +152,15 @@ def enrich_live_state(state: dict | None) -> dict | None:
 
     state_as_of = out.get("last_updated") or out.get("data_as_of") or ""
 
-    trading_raw = list(out.get("trading_positions") or [p for p in poss if p.get("pair") not in ("USD", "USDC")])
+    trading_raw = [p for p in (out.get("trading_positions") or []) if not is_cash_like_pair(p.get("pair"))]
     if trading_raw:
         for p in trading_raw:
             pair = p.get("pair")
             if not pair:
                 continue
+            # PAXG is always preserve sleeve (gold ballast), even if runner omitted it
+            if str(pair).upper().startswith("PAXG") and not p.get("sleeve"):
+                p["sleeve"] = "preserve"
             pair_ts = price_quote_ts.get(pair)
             stale = resolve_position_price_stale(
                 p,
@@ -154,73 +172,53 @@ def enrich_live_state(state: dict | None) -> dict | None:
                 p["price_as_of"] = pair_ts or state_as_of or None
         trading_raw = recompute_trading_positions_pnl(trading_raw, LEDGER)
         out["trading_positions"] = trading_raw
-        # Keep combined positions list in sync for legacy consumers
-        cash_part = [p for p in poss if p.get("pair") in ("USD", "USDC")]
-        out["positions"] = cash_part + trading_raw
     trading_show, dust_hidden = split_dust_positions(trading_raw, DEFAULT_DUST_HIDE_USD)
     out["trading_positions"] = trading_show
     out["dust_positions_hidden"] = dust_hidden
     out["dust_hide_threshold_usd"] = DEFAULT_DUST_HIDE_USD
-    cash_rows = list(out.get("cash_positions") or [])
-    if not cash_rows:
-        for b in out.get("balances") or []:
-            cur = (b.get("currency") or "").upper()
-            if cur in ("USD", "USDC"):
-                bal = float(b.get("balance") or b.get("available") or 0)
-                if bal >= 0.01:
-                    cash_rows.append(
-                        {
-                            "pair": cur,
-                            "amount": bal,
-                            "available": bal,
-                            "hold": 0.0,
-                            "value_usd": bal,
-                            "unrealized_pnl_pct": 0,
-                        }
-                    )
-        out["cash_positions"] = cash_rows
-    total_usd = out.get("total_usd") or out.get("total_balance")
-    if not total_usd:
-        cash_sum = 0.0
-        for b in out.get("balances") or []:
-            cash_sum += float(b.get("balance") or b.get("available") or 0)
-        if not cash_sum and out.get("cash_usd") is not None:
-            cash_sum = float(out.get("cash_usd") or 0) + float(out.get("usdc") or 0)
-        hold_sum = sum(float(p.get("value_usd") or 0) for p in (out.get("trading_positions") or poss))
-        total_usd = cash_sum + hold_sum
-    # Always prefer cash+holdings when both present — refuses PAXG-only totals
-    # left on disk after a cash-API wipe (header $84 / −96% class).
+
+    # One row per cash currency; USDC tagged sleeve/bucket=preserve (park A-leg).
+    cash_rows = merge_cash_rows(out.get("balances") or [], out.get("cash_positions") or [])
+    out["cash_positions"] = cash_rows
+    out["positions"] = list(cash_rows) + list(trading_show)
+
+    # Always recompute NAV: cash (USD+USDC+USDT) + non-cash holdings only.
+    # Fixes USDC double-count when runner wrote USDC-USD as a trade row.
     try:
-        cash_sum = 0.0
-        for b in out.get("balances") or []:
-            cur = str(b.get("currency") or "").upper()
-            if cur in ("USD", "USDC"):
-                cash_sum += float(b.get("balance") or b.get("available") or 0)
-        if not cash_sum and out.get("cash_usd") is not None:
-            cash_sum = float(out.get("cash_usd") or 0) + float(out.get("usdc") or 0)
-        for row in out.get("cash_positions") or []:
-            cash_sum = max(cash_sum, float(row.get("value_usd") or row.get("amount") or 0))
-        hold_sum = sum(
-            float(p.get("value_usd") or 0)
-            for p in (out.get("trading_positions") or poss or [])
-            if str(p.get("pair") or "").upper() not in ("USD", "USDC")
-        )
+        cash_sum = sum(float(r.get("value_usd") or r.get("amount") or 0) for r in cash_rows)
+        if cash_sum < 0.01:
+            for b in out.get("balances") or []:
+                cur = str(b.get("currency") or "").upper()
+                if cur in ("USD", "USDC", "USDT"):
+                    cash_sum += float(b.get("balance") or b.get("available") or 0)
+            if cash_sum < 0.01 and out.get("cash_usd") is not None:
+                cash_sum = float(out.get("cash_usd") or 0) + float(out.get("usdc") or 0)
+        hold_sum = trading_holdings_usd(trading_show)
         recomputed = cash_sum + hold_sum
-        if recomputed > 0 and (
-            not total_usd
-            or float(total_usd or 0) <= 0
-            or (cash_sum >= 50 and float(total_usd or 0) < cash_sum * 0.5)
-        ):
-            total_usd = recomputed
+        prior_total = float(out.get("total_usd") or out.get("total_balance") or 0)
+        # Prefer honest recompute always when we have cash or holdings signal.
+        if recomputed > 0:
+            # If prior looked double-counted (cash+USDC-pair), force down to recompute.
+            if prior_total <= 0 or prior_total > recomputed * 1.05 or prior_total < cash_sum * 0.5:
+                out["total_usd"] = recomputed
+            else:
+                # Still snap holdings/total to cash+trade when within band — kill residual double-count
+                out["total_usd"] = recomputed
             out["total_holdings_value"] = hold_sum
-            if cash_sum and out.get("cash_usd") is None:
-                out["cash_usd"] = cash_sum
+            out["cash_usd"] = next(
+                (float(r.get("value_usd") or 0) for r in cash_rows if str(r.get("pair")) == "USD"),
+                float(out.get("cash_usd") or 0),
+            )
+            out["usdc"] = next(
+                (float(r.get("value_usd") or 0) for r in cash_rows if str(r.get("pair")) == "USDC"),
+                float(out.get("usdc") or 0),
+            )
+        else:
+            out["total_usd"] = float(prior_total or 0)
     except Exception:
-        pass
-    out["total_usd"] = float(total_usd or 0)
+        out["total_usd"] = float(out.get("total_usd") or out.get("total_balance") or 0)
     out["total_balance"] = out["total_usd"]
-    if not out.get("active_positions"):
-        out["active_positions"] = len(out.get("trading_positions") or [])
+    out["active_positions"] = len(out.get("trading_positions") or [])
     from datetime import datetime, timezone
 
     out["data_as_of"] = out.get("last_updated") or ""
@@ -228,7 +226,8 @@ def enrich_live_state(state: dict | None) -> dict | None:
     out["pnl_basis_note"] = (
         "Unrealized P&L vs average cost for current size. "
         "Prices and balances are from the latest runner refresh (data_as_of); "
-        "avg cost merges ledger + verified Coinbase fills each time you load this view."
+        "avg cost merges ledger + verified Coinbase fills each time you load this view. "
+        "USDC is cash preserve (park), not a trading pair."
     )
     return out
 
@@ -555,6 +554,8 @@ def fetch_from_db():
         cash, usdc, total, active, rec_att, rec_rate, sl_rate, rep_rate, brief_con, last_upd = scalars
         if total is None and not pos_rows:
             return None
+        from phase6.core.cash_buckets import is_cash_like_pair, merge_cash_rows, split_cash_and_trading
+
         positions = []
         cash_positions = []
         trading_positions = []
@@ -562,10 +563,15 @@ def fetch_from_db():
             pair, amt, cprice, val, entry, pnl, side = p
             pos = {"pair": pair, "amount": amt, "current_price": cprice, "value_usd": val, "entry_price": entry or 0.0, "unrealized_pnl_pct": pnl or 0.0, "side": side or "long"}
             positions.append(pos)
-            if pair in ("USD", "USDC"):
+            if is_cash_like_pair(pair) or pair in ("USD", "USDC"):
                 cash_positions.append(pos)
             else:
                 trading_positions.append(pos)
+        cash_positions = merge_cash_rows(
+            [{"currency": "USD", "balance": cash or 0}, {"currency": "USDC", "balance": usdc or 0}],
+            cash_positions,
+        )
+        _drop, trading_positions = split_cash_and_trading(trading_positions)
         if trading_positions:
             from phase6.core.position_cost_basis import recompute_trading_positions_pnl
 
@@ -1571,11 +1577,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             st = load_live_state() or {}
             perf = st.get("performance_metrics") or {}
             total = float(st.get("total_usd") or st.get("total_balance") or 0)
-            # Refuse cash-API-zero cliffs as period end NAV (2026-08-28: $84 PAXG-only → −96%)
+            # Refuse cash-API-zero cliffs AND USDC double-count spikes as period end NAV
             try:
-                from phase6.core.live_state_nav_guard import sanitize_current_total_for_kpis
+                from phase6.core.live_state_nav_guard import (
+                    honest_nav_from_state,
+                    sanitize_current_total_for_kpis,
+                )
                 from phase6.core.dashboard_serve_helpers import _total_usd_at_ts, _nearest_ts
                 import sqlite3 as _sqlite3
+
+                honest, _hmeta = honest_nav_from_state(st)
+                if honest > 0:
+                    # Always prefer honest book when enrich left a stale raw total
+                    if total <= 0 or abs(total - honest) > max(10.0, honest * 0.02):
+                        total = honest
 
                 if DB_PATH.exists() and total > 0:
                     _conn = _sqlite3.connect(
@@ -1588,13 +1603,25 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     finally:
                         _conn.close()
                     total_safe, s_meta = sanitize_current_total_for_kpis(
-                        total, _last_nav, external_flow_usd=0.0
+                        total,
+                        _last_nav,
+                        external_flow_usd=0.0,
+                        honest_cash_plus_holdings=honest if honest > 0 else None,
                     )
                     if s_meta.get("sanitized"):
                         total = total_safe
             except Exception:
                 pass
-            trading = st.get("trading_positions") or st.get("positions") or []
+            try:
+                from phase6.core.cash_buckets import is_cash_like_pair
+
+                trading = [
+                    p
+                    for p in (st.get("trading_positions") or st.get("positions") or [])
+                    if not is_cash_like_pair((p or {}).get("pair"))
+                ]
+            except Exception:
+                trading = st.get("trading_positions") or st.get("positions") or []
 
             # Short TTL cache: mobile refresh was hammering large DB → N/A tiles + starved balances.
             # Key is stable (not per-cent NAV) so TTL actually hits across polls.

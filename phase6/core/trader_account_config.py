@@ -179,6 +179,28 @@ def live_usdc_park_settings(account_id: str) -> Dict[str, Any]:
     park.setdefault("usdc_product_id", "USDC-USD")
     park.setdefault("min_sell_usd", 15.0)
     park.setdefault("skip_if_usdc_pct_above", 0.88)
+    park.setdefault("redeploy_target_usdc_pct", 0.05)
+    park.setdefault("redeploy_min_usd_for_deploy_usd", 80.0)
+    # Powder balancer: park structural stub while micro-deploy / tryout is open
+    pb = dict(park.get("powder_balancer") or {})
+    pb.setdefault("enabled", False)
+    pb.setdefault("auto_reserve_from_tryout", True)
+    pb.setdefault("reserve_waves", 1.0)
+    pb.setdefault("usd_reserve_floor_usd", 150.0)
+    pb.setdefault("usd_reserve_buffer_usd", 50.0)
+    pb.setdefault("usd_reserve_ceiling_usd", 400.0)
+    pb.setdefault("min_action_usd", 25.0)
+    pb.setdefault("hysteresis_usd", 20.0)
+    pb.setdefault("do_not_sell_alts", True)
+    park["powder_balancer"] = pb
+    # When powder balancer on, full-park path still uses a sane USD reserve floor
+    if pb.get("enabled"):
+        floor = float(pb.get("usd_reserve_floor_usd") or 150.0)
+        try:
+            cur = float(park.get("min_usd_reserve_usd") or 50.0)
+        except (TypeError, ValueError):
+            cur = 50.0
+        park["min_usd_reserve_usd"] = max(cur, floor)
     return park
 
 

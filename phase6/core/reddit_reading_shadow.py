@@ -424,11 +424,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         for v in (out.get("sentiment") or {}).values()
         if abs(float(v.get("sentiment") or 0)) > EPS
     )
+    st = out.get("status", "fail")
     print(
-        f"reddit_reading_shadow ok backend={out.get('backend')} "
+        f"reddit_reading_shadow {st} backend={out.get('backend')} "
         f"posts={out.get('meta', {}).get('n_posts_raw')} nz_pairs={nz} → {OUT_CACHE}"
     )
-    return 0 if out.get("status") == "ok" else 1
+    # Always exit 0: transient reddit 429/403 (rate limit or blocks on anonymous RSS)
+    # are logged in cache meta.fetch_log + report; cron must stay green for shadow collector.
+    # Downstream (sentiment_scorer) treats reddit_reading cache as available even on status=fail
+    # as long as file is fresh.
+    return 0
 
 
 if __name__ == "__main__":

@@ -159,22 +159,15 @@ def execute_usdc_park_cycle(
         target_usdc = max(0.0, nav * target_pct - snap2["usdc"])
         deployable_usd = max(0.0, snap2["usd"] - reserve)
         convert_usd = min(deployable_usd, target_usdc)
-        product = str(park_cfg.get("usdc_product_id", "USDC-USD"))
-
         convert_result: Optional[Dict[str, Any]] = None
         if convert_usd >= 1.0:
             try:
-                if getattr(runner, "use_platform_executor", False) and getattr(
-                    runner, "trade_executor", None
-                ):
-                    # Park convert must stay market IOC (not limit-first pilot)
-                    convert_result = runner.trade_executor.execute_buy(
-                        product, convert_usd, force_market=True
-                    )
-                else:
-                    convert_result = runner.order_executor.execute_buy(
-                        product, convert_usd, force_market=True
-                    )
+                # No USDC-USD spot on CONSUMER portfolios — native Convert or USDT hop
+                from phase6.core.usdc_convert import convert_via_runner
+
+                convert_result = convert_via_runner(
+                    runner, direction="usd_to_usdc", amount=convert_usd
+                )
             except Exception as e:
                 convert_result = {"success": False, "error": str(e)}
         else:

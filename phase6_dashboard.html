@@ -944,12 +944,28 @@
                     <th class="text-right py-2 font-normal">Value</th>
                     <th class="text-right py-2 font-normal" title="Unrealized vs bot cost basis (ledger avg cost for current size; may differ slightly from Coinbase).">PnL</th></tr></thead><tbody>`;
 
-                // Cash rows first
+                // Cash rows first — one row per currency; USDC tagged preserve (park A-leg)
                 cashPositions.forEach(pos => {
-                    const cur = (pos.pair || '').toUpperCase();
-                    const label = (cur === 'USD' || cur === 'USDC') ? (cur + ' · cash') : cur;
+                    const cur = (pos.pair || pos.currency || '').toUpperCase();
+                    // Never render pair forms (USDC-USD) as cash labels
+                    if (cur.includes('-')) return;
+                    const bucket = (pos.bucket || pos.sleeve || (
+                        cur === 'USDC' ? 'preserve' : (cur === 'USD' ? 'powder' : (cur === 'USDT' ? 'hop' : 'cash'))
+                    )).toLowerCase();
+                    let badge = '';
+                    let nameClass = 'text-amber-300';
+                    if (bucket === 'preserve') {
+                        badge = ' <span class="text-cyan-400 text-xs">preserve</span>';
+                        nameClass = 'text-cyan-200';
+                    } else if (bucket === 'powder') {
+                        badge = ' <span class="text-amber-400/80 text-xs">powder</span>';
+                    } else if (bucket === 'hop') {
+                        badge = ' <span class="text-slate-500 text-xs">hop</span>';
+                    } else {
+                        badge = ' <span class="text-slate-500 text-xs">cash</span>';
+                    }
                     html += `<tr class="border-b border-slate-800 last:border-0 bg-slate-900/40">
-                        <td class="py-2.5 font-medium text-amber-300">${label}</td>
+                        <td class="py-2.5 font-medium ${nameClass}">${cur}${badge}</td>
                         <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums text-slate-500">—</td>

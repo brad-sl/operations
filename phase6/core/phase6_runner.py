@@ -365,16 +365,27 @@ class Phase6Runner:
             conn.execute("INSERT OR REPLACE INTO account_balances (ts, currency, balance, available, hold, source) VALUES (?, 'USDC', ?, ?, 0, 'live')", (ts, usdc_balance, usdc_balance))
 
         # Holdings (flat currency->qty or pair->enriched dict from dashboard)
+        # Cash-like (USDC/USDT/…) must never land in holdings — double-counts with account_balances.
+        try:
+            from phase6.core.cash_buckets import is_cash_like_pair
+        except Exception:  # pragma: no cover
+            def is_cash_like_pair(p):  # type: ignore
+                return str(p or "").upper() in ("USD", "USDC", "USDT", "USDC-USD", "USDT-USD")
+
         for currency, amount in (holdings or {}).items():
-            if str(currency).upper() in ("USD", "USDC", "POSITIONS", "VERIFIED", "ERROR", "VALUE_USD"):
+            if str(currency).upper() in ("USD", "USDC", "USDT", "POSITIONS", "VERIFIED", "ERROR", "VALUE_USD"):
+                continue
+            if is_cash_like_pair(currency):
                 continue
             if isinstance(amount, dict):
                 cur = str(amount.get("pair") or currency).replace("-USD", "").upper()
-                if not cur or cur in ("USD", "USDC"):
-                    cur = str(currency).replace("-USD", "").upper()
+                if not cur or cur in ("USD", "USDC", "USDT") or is_cash_like_pair(cur) or is_cash_like_pair(f"{cur}-USD"):
+                    continue
                 amt = float(amount.get("amount", 0) or 0)
             else:
                 cur = str(currency).replace("-USD", "").upper()
+                if cur in ("USD", "USDC", "USDT") or is_cash_like_pair(cur) or is_cash_like_pair(f"{cur}-USD"):
+                    continue
                 try:
                     amt = float(amount or 0)
                 except (TypeError, ValueError):
@@ -1075,14 +1086,19 @@ class Phase6Runner:
                 pos_map = {}
 
             # Exchange qtys first so lot-aware basis can LIFO-slice to current size
+            # Cash-like (USD/USDC/USDT and USDC-USD pair forms) never become trade seats.
+            from phase6.core.cash_buckets import is_cash_like_pair, trading_holdings_usd
+
             qty_by_pair: Dict[str, float] = {}
             for key, data in pos_map.items():
-                if key in ("USD", "USDC", "positions", "verified", "error", "value_usd"):
+                if key in ("USD", "USDC", "USDT", "positions", "verified", "error", "value_usd"):
                     continue
                 if isinstance(key, str) and key.endswith("-USD"):
                     pair_name = key
                 else:
                     pair_name = f"{key}-USD"
+                if is_cash_like_pair(key) or is_cash_like_pair(pair_name):
+                    continue
                 if isinstance(data, (int, float)):
                     amt = float(data)
                 elif isinstance(data, dict):
@@ -1097,13 +1113,15 @@ class Phase6Runner:
             positions = []
             total_holdings_value = 0.0
             for key, data in pos_map.items():
-                if key in ("USD", "USDC", "positions", "verified", "error", "value_usd"):
+                if key in ("USD", "USDC", "USDT", "positions", "verified", "error", "value_usd"):
                     continue
                 # key may be base currency ("BTC") or full pair ("BTC-USD")
                 if isinstance(key, str) and key.endswith("-USD"):
                     pair_name = key
                 else:
                     pair_name = f"{key}-USD"
+                if is_cash_like_pair(key) or is_cash_like_pair(pair_name):
+                    continue
 
                 if isinstance(data, (int, float)):
                     amount = float(data)
@@ -1144,6 +1162,8 @@ class Phase6Runner:
                 })
                 if amount > 0 and value >= 0:
                     total_holdings_value += value
+            # Belt-and-suspenders: never let a cash-like row inflate holdings
+            total_holdings_value = trading_holdings_usd(positions)
 
             # Canonical lot math (merge fills + LIFO to exchange qty) — never trust
             # lifetime BUY-only averages left on state for open-book PnL / shadow TP.

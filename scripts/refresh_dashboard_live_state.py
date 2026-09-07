@@ -59,12 +59,15 @@ def refresh() -> dict:
     if not holdings and hasattr(ex, "get_crypto_holdings"):
         holdings = ex.get_crypto_holdings() or {}
 
+    from phase6.core.cash_buckets import is_cash_like_pair, trading_holdings_usd
+
     positions = []
     total_holdings = 0.0
     for key, amt in (holdings or {}).items():
-        if str(key).upper() in ("USD", "USDC"):
-            continue
         pair = key if str(key).endswith("-USD") else f"{key}-USD"
+        # USDC/USDT (and USDC-USD pair forms) are cash, not trade seats
+        if is_cash_like_pair(key) or is_cash_like_pair(pair):
+            continue
         try:
             if isinstance(amt, dict):
                 avail, hold_amt, amount = _holding_parts(amt)
@@ -97,9 +100,11 @@ def refresh() -> dict:
                 "entry_price": entry,
                 "unrealized_pnl_pct": round(pnl, 4),
                 "side": "long",
+                "sleeve": "preserve" if str(pair).upper().startswith("PAXG") else "trade",
             }
         )
         total_holdings += value
+    total_holdings = trading_holdings_usd(positions)
 
     try:
         from phase6.core.position_qty import normalize_positions_list

@@ -99,22 +99,47 @@ def sanitize_current_total_for_kpis(
     last_db_total: Optional[float],
     *,
     external_flow_usd: float = 0.0,
+    honest_cash_plus_holdings: Optional[float] = None,
 ) -> Tuple[float, Dict[str, Any]]:
-    """Refuse end-NAV cliffs for period % when DB last sample disagrees.
+    """Refuse end-NAV cliffs/spikes for period % when DB last sample disagrees.
 
     external_flow_usd: net deposits−withdrawals since last sample (negative = out).
     A real withdrawal can justify a lower current_total.
+
+    honest_cash_plus_holdings: optional recomputed NAV from cash balances + non-cash
+    holdings only (strips USDC-USD double-count). Preferred when present.
     """
     cur = _f(current_total)
     last = _f(last_db_total) if last_db_total is not None else 0.0
     flow = _f(external_flow_usd)
+    honest = (
+        _f(honest_cash_plus_holdings)
+        if honest_cash_plus_holdings is not None
+        else None
+    )
     meta: Dict[str, Any] = {
         "sanitized": False,
         "reason": None,
         "raw_current": cur,
         "last_db_total": last or None,
         "external_flow_usd": flow,
+        "honest_cash_plus_holdings": honest,
     }
+
+    # Prefer explicit cash+non-cash holdings when it clearly undoes double-count
+    if honest is not None and honest > MIN_PRIOR_TOTAL_USD:
+        if cur <= 0 or abs(cur - honest) > max(25.0, honest * 0.05):
+            # Spike/double-count or cliff vs honest book
+            if cur > honest * 1.15 or cur < honest * 0.85 or cur <= 0:
+                meta.update(
+                    {
+                        "sanitized": True,
+                        "reason": "prefer_honest_cash_plus_holdings",
+                        "drop_or_spike_usd": round(cur - honest, 2),
+                    }
+                )
+                cur = honest
+
     if cur <= 0 and last > 0:
         meta.update({"sanitized": True, "reason": "nonpositive_current"})
         return last, meta
@@ -126,6 +151,20 @@ def sanitize_current_total_for_kpis(
     # If flow explains most of the drop (withdrawal), allow current
     drop = last - cur
     if drop <= 0:
+        # Spike without deposit flow (USDC double-count class: ~2× book overnight)
+        spike = cur - last
+        if spike >= last * 0.35 and flow <= last * 0.1:
+            # Prefer honest if we have it; else last DB
+            fixed = honest if (honest is not None and honest > MIN_PRIOR_TOTAL_USD) else last
+            meta.update(
+                {
+                    "sanitized": True,
+                    "reason": "nav_spike_vs_db_without_deposit",
+                    "spike_usd": round(spike, 2),
+                    "justified_end": round(justified, 2),
+                }
+            )
+            return fixed, meta
         return cur, meta
     if drop < last * (1.0 - CLIFF_FRAC):
         # drop less than 50% — normal
@@ -145,3 +184,52 @@ def sanitize_current_total_for_kpis(
         }
     )
     return last, meta
+
+
+def honest_nav_from_state(state: Optional[Dict[str, Any]]) -> Tuple[float, Dict[str, Any]]:
+    """Recompute NAV = cash (USD+USDC+USDT) + non-cash trading holdings only."""
+    st = state or {}
+    meta: Dict[str, Any] = {"cash": 0.0, "holdings": 0.0, "method": None}
+    try:
+        from phase6.core.cash_buckets import (
+            is_cash_like_pair,
+            merge_cash_rows,
+            trading_holdings_usd,
+        )
+
+        cash_rows = merge_cash_rows(st.get("balances") or [], st.get("cash_positions") or [])
+        # Also fold any cash-like rows that leaked into positions
+        leaked = [
+            p
+            for p in (st.get("positions") or []) + (st.get("trading_positions") or [])
+            if is_cash_like_pair((p or {}).get("pair"))
+        ]
+        if leaked:
+            cash_rows = merge_cash_rows(st.get("balances") or [], list(cash_rows) + leaked)
+        cash = sum(float(r.get("value_usd") or r.get("amount") or 0) for r in cash_rows)
+        trade = [
+            p
+            for p in (st.get("trading_positions") or st.get("positions") or [])
+            if not is_cash_like_pair((p or {}).get("pair"))
+        ]
+        hold = trading_holdings_usd(trade)
+        meta.update({"cash": cash, "holdings": hold, "method": "cash_buckets"})
+        return cash + hold, meta
+    except Exception as e:
+        meta["error"] = str(e)
+        # Fallback: balances USD+USDC only + non USDC-USD positions
+        cash = 0.0
+        for b in st.get("balances") or []:
+            cur = str(b.get("currency") or "").upper()
+            if cur in ("USD", "USDC", "USDT"):
+                cash += _f(b.get("balance") or b.get("available"))
+        hold = 0.0
+        for p in st.get("positions") or []:
+            pair = str((p or {}).get("pair") or "").upper()
+            if pair in ("USD", "USDC", "USDT", "USDC-USD", "USDT-USD"):
+                continue
+            if pair.endswith("-USD") and pair.split("-")[0] in ("USDC", "USDT", "DAI"):
+                continue
+            hold += _f((p or {}).get("value_usd"))
+        meta.update({"cash": cash, "holdings": hold, "method": "fallback"})
+        return cash + hold, meta

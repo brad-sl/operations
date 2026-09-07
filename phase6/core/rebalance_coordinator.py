@@ -52,6 +52,35 @@ class RebalanceCoordinator:
                         },
                     )
 
+                # Powder balancer: USD wave reserve vs USDC stub (no alt sells; continue to ARCH-4)
+                if park_plan.run_powder_balance and park_plan.powder_summary is not None:
+                    from phase6.core.decision_context import record_rebalance_decision
+
+                    ps = park_plan.powder_summary
+                    acted = not ps.get("skipped") and bool(ps.get("ok"))
+                    record_rebalance_decision(
+                        runner,
+                        path="powder_balance",
+                        actions_taken=[ps.get("trade") or {}] if acted else [],
+                        proposals=None,
+                        plan=None,
+                        executed_count=1 if acted else 0,
+                        skipped=[] if acted else [ps.get("reason") or "hold"],
+                        extra={
+                            **{k: v for k, v in ps.items() if k != "plan"},
+                            "plan": ps.get("plan"),
+                            "transition": park_plan.transition_note,
+                            "operational_phase": park_plan.operational_phase,
+                        },
+                    )
+                    logger.info(
+                        "[POWDER] rebalance hook action=%s target_reserve=$%s stub=$%s",
+                        ps.get("action"),
+                        ps.get("target_usd_reserve"),
+                        ps.get("structural_stub_usd"),
+                    )
+                    # Do NOT return — ARCH-4 / tryout buys need same-cycle powder
+
                 if park_plan.run_park and park_plan.park_summary is not None:
                     from phase6.core.decision_context import record_rebalance_decision
 

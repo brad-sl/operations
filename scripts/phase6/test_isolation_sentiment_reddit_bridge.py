@@ -8,6 +8,11 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+try:
+    from unittest import mock
+except ImportError:
+    import mock  # type: ignore
+
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
@@ -188,9 +193,38 @@ def test_fresh_x_not_bridged():
             ) = old
 
 
+def test_reddit_reading_shadow_runner_always_exits_zero():
+    """Runner must return 0 (cron green) even when reddit fetch fails (429/403 on anon RSS).
+    Transient errors are recorded in cache.fetch_log but do not fail the shadow job.
+    """
+    from phase6.core import reddit_reading_shadow as mod
+
+    fake_fail = {
+        "timestamp": "2026-09-06T12:00:00+00:00",
+        "status": "fail",
+        "backend": "anonymous-atom",
+        "oauth": False,
+        "sentiment": {"BTC-USD": {"sentiment_score": 0.0, "n_posts": 0}},
+        "meta": {
+            "n_posts_raw": 0,
+            "fetch_log": [
+                {"sub": "CryptoCurrency", "n": 0, "ok": False, "error": "HTTP 403"}
+            ],
+        },
+    }
+
+    with mock.patch("argparse.ArgumentParser.parse_args") as pa:
+        pa.return_value = type("Args", (), {"deep": False, "limit": 5, "doctor": False})()
+        with mock.patch.object(mod, "collect", return_value=fake_fail):
+            rc = mod.main([])
+            assert rc == 0, f"expected rc=0 on status=fail, got {rc}"
+    print("test_reddit_reading_shadow_runner_always_exits_zero: PASS")
+
+
 if __name__ == "__main__":
     test_x_aged_out_hands_to_reddit()
     test_fresh_x_not_bridged()
+    test_reddit_reading_shadow_runner_always_exits_zero()
     # keep prior aging suite green
     from phase6.core.test_isolation_sentiment_aging import (
         test_decay_math,

@@ -95,12 +95,17 @@ class TradeLedger:
             if hasattr(exchange, "get_order_fill_details"):
                 try:
                     fill = exchange.get_order_fill_details(oid) or {}
+                    if not isinstance(fill, dict):
+                        fill = {}
                     fp = float(fill.get("average_filled_price") or 0)
                     fs = float(fill.get("filled_size") or 0)
                     if fp > 0:
                         trade["entry_price"] = trade.get("entry_price") or fp
                         if trade.get("side", "").upper() == "BUY":
                             trade["entry_price"] = fp
+                        if str(trade.get("side", "")).upper() == "SELL":
+                            trade["exit_price"] = trade.get("exit_price") or fp
+                            trade["average_filled_price"] = fp
                     if fs > 0:
                         trade["qty"] = fs
                         trade["fill_verified"] = True
@@ -114,6 +119,12 @@ class TradeLedger:
             trade["timestamp"] = _normalize_trade_timestamp(trade.get("timestamp"))
 
         pair = trade.get("pair") or trade.get("product_id")
+
+        # Idempotent by order_id: defense-in-depth double-writes must not double inventory.
+        oid = str(trade.get("order_id") or "").strip()
+        if oid and self._order_id_already_logged(oid):
+            return
+
         # Durable RSI+sent on BUY and SELL (entry/exit + lag). Research SSOT also
         # written to data/state/trade_signal_events.jsonl for attribution digs.
         try:
@@ -170,6 +181,28 @@ class TradeLedger:
         with open(csv_path, "a") as f:
             f.write(line)
 
+    def _order_id_already_logged(self, order_id: str, lookback: int = 500) -> bool:
+        """True if order_id already appears in the recent JSONL tail."""
+        oid = str(order_id or "").strip()
+        if not oid or not self.jsonl_path.exists():
+            return False
+        try:
+            with open(self.jsonl_path, "r") as f:
+                lines = f.readlines()[-max(lookback, 50) :]
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if str(row.get("order_id") or "").strip() == oid:
+                    return True
+        except OSError:
+            return False
+        return False
+
     def log_execution_result(
         self,
         result: Dict[str, Any],
@@ -186,15 +219,26 @@ class TradeLedger:
 
         result = enrich_buy_sl_truth(result, stop_loss_manager)
         side = str(result.get("side") or result.get("action") or "BUY").upper()
-        entry = result.get("price") or result.get("entry_price")
-        if side == "SELL" and result.get("exit_price"):
-            entry = result.get("exit_price")
+        fill_px = (
+            result.get("average_filled_price")
+            or result.get("fill_price")
+            or result.get("price")
+            or result.get("entry_price")
+            or result.get("exit_price")
+        )
+        exit_px = result.get("exit_price")
+        if side == "SELL":
+            exit_px = exit_px or fill_px
+            entry = exit_px  # CSV column; inventory readers use exit_price first
+        else:
+            entry = fill_px
         trade_record = {
             "pair": result.get("pair"),
             "side": side,
-            "qty": result.get("size") or result.get("qty"),
+            "qty": result.get("size") or result.get("qty") or result.get("filled_size"),
             "entry_price": entry,
-            "exit_price": result.get("exit_price"),
+            "exit_price": exit_px if side == "SELL" else result.get("exit_price"),
+            "average_filled_price": fill_px,
             "pnl": result.get("pnl", 0.0),
             "pnl_pct": result.get("pnl_pct", 0.0),
             "order_id": result.get("order_id"),

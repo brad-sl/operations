@@ -155,6 +155,92 @@ def entry_from_ledger_last_buy(pair: str) -> Optional[Tuple[float, str]]:
     return last
 
 
+# Live TP may only exit on lot-bound entry (Brad 2026-09-07 LINK dump).
+# Soft dash / shadow may still show untrusted sources for observability.
+_LIVE_TRUSTED_BASIS_TOKENS = frozenset(
+    {
+        "ledger_avg_cost",
+        "test_fixture",
+        "fill_verified",
+        "verified_fill",
+        "protective_registry",
+    }
+)
+_LIVE_UNTRUSTED_SUBSTRINGS = (
+    "last_buy",
+    "unknown",
+    "mismatch",
+    "ledger_flat",
+    "flat_or",
+    "state_fallback",
+    "ledger_lifo",
+    "ledger_last_buy",
+)
+
+
+def entry_source_trusted_for_live(src: Optional[str]) -> bool:
+    """Fail-closed: live market TP only when entry identity is lot-bound."""
+    if not src:
+        return False
+    s = str(src).strip()
+    if not s:
+        return False
+    low = s.lower()
+    for bad in _LIVE_UNTRUSTED_SUBSTRINGS:
+        if bad in low:
+            return False
+    # Bare position.entry_price without a trusted basis stamp — not lot-bound.
+    if low in (
+        "position.entry_price",
+        "position.avg_entry",
+        "position.cost_basis",
+        "position.basis",
+    ):
+        return False
+    for tok in _LIVE_TRUSTED_BASIS_TOKENS:
+        if tok in low:
+            return True
+    # position.entry_price+ledger_avg_cost etc. already matched tokens above
+    return False
+
+
+def filter_live_exit_signals_by_entry_trust(
+    signals: List[ShadowSignal],
+    marks: Optional[List[PositionMark]] = None,
+) -> Tuple[List[ShadowSignal], List[Dict[str, Any]]]:
+    """Drop live-exit candidates whose entry_source is untrusted. Log blocks."""
+    src_by_pair: Dict[str, str] = {}
+    if marks:
+        for m in marks:
+            src_by_pair[m.pair] = str(m.entry_source or "")
+    kept: List[ShadowSignal] = []
+    blocked: List[Dict[str, Any]] = []
+    for s in signals:
+        src = src_by_pair.get(s.pair) or ""
+        # Signal itself carries entry_px; trust comes from mark source.
+        if entry_source_trusted_for_live(src):
+            kept.append(s)
+            continue
+        blocked.append(
+            {
+                "pair": s.pair,
+                "kind": s.kind,
+                "r": s.r,
+                "entry_px": s.entry_px,
+                "entry_source": src or "unknown",
+                "reason": "untrusted_entry",
+            }
+        )
+        logger.info(
+            "[LIVE-TP] blocked %s reason=untrusted_entry src=%s kind=%s r=%.4f",
+            s.pair,
+            src or "unknown",
+            s.kind,
+            float(s.r or 0),
+        )
+    return kept, blocked
+
+
 def resolve_entry(
     pair: str,
     position: Optional[Dict[str, Any]] = None,
@@ -167,7 +253,9 @@ def resolve_entry(
       1. position.entry_price when entry_basis is set (lot recompute already ran)
       2. FIFO/LIFO ledger lot basis (same as dashboard) — beats bare lying entry
       3. bare position.entry_price fallback
-      4. protective registry / last buy
+      4. protective registry / last buy (soft only — live TP refuses last_buy)
+
+    Live execute trust is gated separately via entry_source_trusted_for_live.
     """
     # qty from arg or position
     q = qty
@@ -209,11 +297,15 @@ def resolve_entry(
         from phase6.core.position_cost_basis import average_cost_for_pair
         from phase6.core.trade_ledger import TradeLedger
 
+        untrusted_tag: Optional[str] = None
         entry, basis = average_cost_for_pair(TradeLedger(), pair, expected_qty=q)
         if entry and float(entry) > 0:
             return float(entry), str(basis or "ledger_lot")
+        if basis and str(basis) not in ("unknown",):
+            untrusted_tag = str(basis)
     except Exception as e:
         logger.debug("shadow_tp lot basis %s: %s", pair, e)
+        untrusted_tag = None
 
     if position:
         for k in ("entry_price", "avg_entry", "cost_basis", "basis"):
@@ -231,6 +323,8 @@ def resolve_entry(
     led = entry_from_ledger_last_buy(pair)
     if led:
         return led
+    if untrusted_tag:
+        return None, untrusted_tag
     return None, "unknown"
 
 
@@ -911,9 +1005,12 @@ def run_shadow_tp_cycle(
             result["would_fire_count_total"] = int(result["would_fire_count_total"]) + len(signals)
             append_events(signals, mode=mode)
 
-    # Live market exits: trail primary, fixed fallback
+    # Live market exits: trail primary, fixed fallback — only lot-bound entries
     if mode == "live" and bool(tp.get("live_market_exit")) and signals:
-        chosen = select_live_exit_signals(signals)
+        trusted, blocked = filter_live_exit_signals_by_entry_trust(signals, marks)
+        if blocked:
+            result["live_exit_blocked"] = blocked
+        chosen = select_live_exit_signals(trusted)
         result["live_exit_candidates"] = [asdict(s) for s in chosen]
         if chosen and exchange is not None and persist:
             try:
@@ -941,6 +1038,8 @@ def run_shadow_tp_cycle(
                 result["live_exit_error"] = str(le)[:200]
         elif chosen and exchange is None:
             result["live_exit_note"] = "candidates_present_but_no_exchange_handle"
+        elif blocked and not chosen:
+            result["live_exit_note"] = "all_candidates_blocked_untrusted_entry"
 
     # Promotion hint (settings flip — not per-trade)
     prom = dict(cfg.get("promotion") or {})

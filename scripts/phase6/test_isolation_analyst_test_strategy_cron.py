@@ -16,6 +16,17 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 SCRIPT = ROOT / "run_analyst_test_strategy_weekly.sh"
+HERMES_SCRIPT = Path("/home/brad/.hermes/scripts/run_analyst_test_strategy_weekly.sh")
+
+
+def test_hermes_no_agent_wrapper_is_thin_delegator():
+    """Enforce thin wrapper pattern (see docs/testing/ANALYST_TEST_CYCLE.md) so full logic stays in git-tracked project source; prevents script-not-found and drift."""
+    assert HERMES_SCRIPT.exists(), f"missing hermes entrypoint {HERMES_SCRIPT} — copy thin wrapper after edit"
+    assert os.access(HERMES_SCRIPT, os.X_OK), "hermes script not executable"
+    content = HERMES_SCRIPT.read_text()
+    assert "Thin wrapper" in content or "exec bash" in content, "hermes script must be thin delegator to project, not full copy"
+    # size check: thin should be << full (~50 lines)
+    assert len(content) < 500, "hermes wrapper too large; use thin exec pattern"
 
 
 def test_cron_script_runs_and_produces_summary():
@@ -69,6 +80,7 @@ def test_no_live_trading_mutation(tmp_path, monkeypatch=None):
 
 
 if __name__ == "__main__":
+    test_hermes_no_agent_wrapper_is_thin_delegator()
     test_cron_script_runs_and_produces_summary()
     test_no_live_trading_mutation(None)
     print("PASS: analyst test strategy cron isolation")

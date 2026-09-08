@@ -60,7 +60,11 @@ def _trade_fill_price(trade: Dict[str, Any]) -> Optional[float]:
 def _fifo_layers_from_trades(
     ordered: List[Dict[str, Any]],
 ) -> Tuple[List[List[float]], Optional[float]]:
-    """FIFO inventory layers [qty, unit_cost] after processing sells."""
+    """FIFO inventory layers [qty, unit_cost] after processing sells.
+
+    Inventory is qty-first: a SELL with qty>0 always reduces layers even when
+    fill price is missing (operator trims historically omitted exit_price).
+    """
     layers: List[List[float]] = []
     last_buy_price: Optional[float] = None
     for t in ordered:
@@ -75,9 +79,9 @@ def _fifo_layers_from_trades(
             last_buy_price = px
             layers.append([n, px])
         elif side == "SELL":
-            px = _trade_fill_price(t)
-            if not px:
-                continue
+            # Qty truth first — never skip SELL solely because exit px missing.
+            # Price fallback only matters if we later need per-leg realized cost.
+            _ = _trade_fill_price(t)
             rem = n
             while rem > 1e-12 and layers:
                 take = min(rem, layers[0][0])
@@ -94,7 +98,11 @@ def average_cost_from_trades(
     expected_qty: Optional[float] = None,
 ) -> Tuple[Optional[float], str]:
     """
-    Average cost for open inventory: FIFO walk, then LIFO slice to exchange qty when ledger drifts.
+    Average cost for open inventory: FIFO walk, then careful drift handling.
+
+    Live TP must only trust ledger_avg_cost (qty match). Drift / flat paths
+    return explicit untrusted basis tags — never invent last_buy as open-lot
+    truth when exchange still holds inventory.
     """
     ordered = sorted(trades, key=lambda t: str(t.get("timestamp") or ""))
     layers, last_buy_price = _fifo_layers_from_trades(ordered)
@@ -104,6 +112,16 @@ def average_cost_from_trades(
         if expected_qty and expected_qty > 0:
             drift = abs(ledger_qty - expected_qty) / expected_qty
             if drift > _QTY_MISMATCH_RATIO:
+                # Newest remaining layer alone matches exchange bag → that lot is SSOT
+                # (ghost older layers may still inflate ledger_qty until D repair).
+                q_last, px_last = layers[-1]
+                if (
+                    px_last > 0
+                    and q_last > 0
+                    and abs(q_last - expected_qty) / expected_qty <= 0.05
+                ):
+                    return float(px_last), "ledger_avg_cost"
+                # Soft dash estimate via LIFO slice — tagged untrusted for live TP.
                 cost = 0.0
                 need = expected_qty
                 for q, px in reversed(layers):
@@ -114,11 +132,15 @@ def average_cost_from_trades(
                     need -= take
                 if need / expected_qty < 0.02:
                     return cost / expected_qty, "ledger_lifo_exchange_qty"
-                if last_buy_price:
-                    return last_buy_price, "last_buy_ledger_drift"
+                # Do NOT fall through to last_buy_ledger_drift — refuse.
+                return None, "ledger_exchange_qty_mismatch"
         cost_total = sum(q * px for q, px in layers)
         return cost_total / ledger_qty, "ledger_avg_cost"
 
+    # Flat ledger
+    if expected_qty and expected_qty > 0:
+        # Exchange open but journal flat — never last_buy_flat (LINK 2026-09-07).
+        return None, "ledger_flat_exchange_open"
     if last_buy_price:
         return last_buy_price, "last_buy_flat"
     return None, "unknown"

@@ -37,6 +37,7 @@ class TradeExecutor:
         logger: Optional[logging.Logger] = None,
         config_dict: Optional[Dict[str, Any]] = None,
         order_executor: Optional[Any] = None,
+        trade_ledger: Optional[Any] = None,
     ):
         self.client = client
         self.stop_loss_coordinator = stop_loss_coordinator
@@ -47,6 +48,32 @@ class TradeExecutor:
         # Phase D: limit-first lives on OrderExecutor; wire when present
         self.config_dict = config_dict if isinstance(config_dict, dict) else {}
         self.order_executor = order_executor
+        # Ledger SSOT (2026-09-07): journal every successful live fill
+        self.trade_ledger = trade_ledger
+
+    def _record_to_ledger(self, result: Dict[str, Any], signal_source: str) -> None:
+        """Append successful fill to TradeLedger. Never raise into the fill path."""
+        if not self.trade_ledger or not result or not result.get("success"):
+            return
+        try:
+            mode = "shadow" if self.shadow_mode else str(
+                getattr(self.client, "mode", None) or "live"
+            )
+            slm = None
+            if self.stop_loss_coordinator is not None:
+                slm = getattr(self.stop_loss_coordinator, "sl_manager", self.stop_loss_coordinator)
+            exchange = getattr(self.client, "exchange", None) or getattr(
+                self.client, "client", None
+            )
+            self.trade_ledger.log_execution_result(
+                result,
+                mode=mode,
+                exchange=exchange,
+                signal_source=signal_source,
+                stop_loss_manager=slm,
+            )
+        except Exception as e:
+            self.logger.error("[LEDGER] record failed (%s): %s", signal_source, e)
 
     def _retry(self, func, *args, **kwargs) -> Dict[str, Any]:
         last_error = None
@@ -94,13 +121,20 @@ class TradeExecutor:
                 self.logger.info(
                     "[P4-04/D] BUY via OrderExecutor limit-first path %s $%.2f", pair, usd_amount
                 )
-                return self.order_executor.execute_buy(
+                oe_res = self.order_executor.execute_buy(
                     pair,
                     usd_amount,
                     config_dict=cfg,
                     force_market=False,
                     elevated_tape=elevated_tape,
                 )
+                # Defense: if OE lacked trade_ledger, TE still journals (order_id dedupe).
+                if isinstance(oe_res, dict) and oe_res.get("success"):
+                    oe_res.setdefault("pair", pair)
+                    oe_res.setdefault("side", "BUY")
+                    oe_res.setdefault("action", "BUY")
+                    self._record_to_ledger(oe_res, signal_source="trade_executor_buy_via_oe")
+                return oe_res
             except Exception as e:
                 self.logger.warning(
                     "[P4-04/D] limit-first delegate failed (%s) — market fallback", e
@@ -209,6 +243,7 @@ class TradeExecutor:
             result["sl_attached"] = bool(sl_ok)
             result["pair"] = pair
             result["action"] = "BUY"
+            result["side"] = "BUY"
             result["usd_amount"] = usd_amount
             result["size"] = size
             result["qty"] = size
@@ -219,7 +254,10 @@ class TradeExecutor:
 
         if not result.get("classified"):
             result["classified"] = classified
-        return dict(result)  # return plain for compat
+        out = dict(result)
+        if out.get("success"):
+            self._record_to_ledger(out, signal_source="trade_executor_buy")
+        return out  # return plain for compat
 
     def execute_sell(self, pair: str, size: float) -> Dict[str, Any]:
         def _do():
@@ -231,9 +269,30 @@ class TradeExecutor:
         result = AttrDict(result)
         result["pair"] = pair
         result["action"] = "SELL"
+        result["side"] = "SELL"
         result["size"] = size
         result["qty"] = size
-        return dict(result)
+        # Prefer fill-verified exit px so FIFO / dash never see a blank SELL.
+        exit_px = (
+            result.get("exit_price")
+            or result.get("average_filled_price")
+            or result.get("fill_price")
+            or result.get("price")
+        )
+        if not exit_px:
+            try:
+                exit_px = self.client.get_price(pair) or 0.0
+            except Exception:
+                exit_px = 0.0
+        if exit_px:
+            result["exit_price"] = float(exit_px)
+            result["average_filled_price"] = float(
+                result.get("average_filled_price") or exit_px
+            )
+        out = dict(result)
+        if out.get("success"):
+            self._record_to_ledger(out, signal_source="trade_executor_sell")
+        return out
 
     def execute_rebalance_plan(self, plan: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """

@@ -292,6 +292,7 @@ class Phase6Runner:
             stop_loss_manager=self.stop_loss_manager,
             mode=self.mode,
             logger=logger,
+            trade_ledger=self.trade_ledger,
         )
         self.logger = logger
 
@@ -311,9 +312,10 @@ class Phase6Runner:
                     logger=logger,
                     config_dict=self.config_dict,
                     order_executor=self.order_executor,  # Phase D limit-first path
+                    trade_ledger=self.trade_ledger,
                 )
                 self.logger.info(
-                    "[P4-04] Platform TradeExecutor initialized (OrderExecutor wired for limit-first D)"
+                    "[P4-04] Platform TradeExecutor initialized (OrderExecutor + ledger wired)"
                 )
             except Exception as e:
                 self.logger.warning(f"[P4-04] Failed to init TradeExecutor (falling back to OrderExecutor): {e}")
@@ -1402,6 +1404,12 @@ class Phase6Runner:
             self._recent_buy_order_ids = cycle_ids
             if getattr(self, "stop_loss_coordinator", None):
                 self.stop_loss_coordinator.set_buy_order_ids(cycle_ids)
+            # Ledger SSOT defense-in-depth: any successful fill missing from journal
+            # gets recorded once (order_id idempotent). Covers TradeExecutor holes.
+            try:
+                self._ensure_results_ledgered(results)
+            except Exception as led_e:
+                self.logger.error("[LEDGER] post-plan ensure failed: %s", led_e)
             # Persist raw rebalance fact (DASH-VIEWS-01) - ensure for both paths
             try:
                 self.persist_rebalance_to_db({"actions": exec_plan, "results": [r.get("pair") for r in results if r.get("success")]}, executed)
@@ -1411,6 +1419,54 @@ class Phase6Runner:
         except Exception as e:
             self.logger.exception(f"[ARCH-4] Execution error: {e}")
             return 0, [{"error": str(e)}]
+
+    def _ensure_results_ledgered(self, results: list) -> None:
+        """Journal any successful BUY/SELL whose order_id is not yet in TradeLedger."""
+        ledger = getattr(self, "trade_ledger", None)
+        if not ledger or not results:
+            return
+        recent = []
+        try:
+            recent = ledger.get_recent_trades(limit=200) or []
+        except Exception:
+            recent = []
+        seen = {str(t.get("order_id") or "") for t in recent if t.get("order_id")}
+        for r in results:
+            if not isinstance(r, dict) or not r.get("success"):
+                continue
+            side = str(r.get("side") or r.get("action") or "").upper()
+            if side not in ("BUY", "SELL"):
+                continue
+            oid = str(r.get("order_id") or r.get("id") or "").strip()
+            if oid and oid in seen:
+                continue
+            try:
+                row = dict(r)
+                row.setdefault("side", side)
+                row.setdefault("action", side)
+                if side == "SELL" and not row.get("exit_price"):
+                    row["exit_price"] = (
+                        row.get("average_filled_price")
+                        or row.get("price")
+                        or row.get("entry_price")
+                    )
+                ledger.log_execution_result(
+                    row,
+                    mode=getattr(self, "mode", "live"),
+                    exchange=getattr(self, "exchange", None),
+                    signal_source="runner_ensure_ledger",
+                    stop_loss_manager=getattr(self, "stop_loss_manager", None),
+                )
+                if oid:
+                    seen.add(oid)
+                self.logger.info(
+                    "[LEDGER] ensure journaled %s %s oid=%s",
+                    side,
+                    row.get("pair"),
+                    oid or "none",
+                )
+            except Exception as e:
+                self.logger.error("[LEDGER] ensure row failed: %s", e)
 
 
     def _get_latest_signal_mtime(self) -> float:

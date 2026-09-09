@@ -295,6 +295,18 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
+# Quality gate (money-path class bugs). Daily cron may set SAFE_CODE_SKIP_QUALITY=1
+# so a flake cannot block offsite backup; agents must run pre_ship_quality.sh before
+# bouncing the runner.
+if [[ "${SAFE_CODE_SKIP_QUALITY:-0}" != "1" ]]; then
+  echo "--- pre-ship quality ---"
+  if ! bash "${PROJECT_ROOT}/scripts/hermes/pre_ship_quality.sh"; then
+    echo "ERROR: pre-ship quality failed; unstaging."
+    git reset HEAD -- . >/dev/null 2>&1 || true
+    exit 2
+  fi
+fi
+
 STAGED_N=$(git diff --cached --name-only | wc -l | tr -d ' ')
 echo "Staged files: $STAGED_N"
 

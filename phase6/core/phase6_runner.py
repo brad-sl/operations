@@ -470,7 +470,8 @@ class Phase6Runner:
                     if pair:
                         stopped.append(pair)
             return list(set(stopped))
-        except Exception:
+        except Exception as e:
+            logger.warning("[_get_recently_stopped_pairs] %s", e)
             return []
 
     def _save_state(self):

@@ -77,10 +77,11 @@ else
 fi
 
 # --- 3) Safe allowlisted code backup ---
+# Quality gate is nightly TG (fail-only). Do not block offsite backup on isolation flake.
 CODE_ARGS=()
 if [[ "$DRY" == true ]]; then CODE_ARGS+=(--dry); fi
 if [[ -x "${PROJECT_ROOT}/scripts/hermes/git/commit-safe-code.sh" ]]; then
-  bash "${PROJECT_ROOT}/scripts/hermes/git/commit-safe-code.sh" "${CODE_ARGS[@]}" || CODE_RC=$?
+  SAFE_CODE_SKIP_QUALITY=1 bash "${PROJECT_ROOT}/scripts/hermes/git/commit-safe-code.sh" "${CODE_ARGS[@]}" || CODE_RC=$?
   CODE_RC=${CODE_RC:-0}
 else
   echo "ERROR: commit-safe-code.sh missing"

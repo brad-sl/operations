@@ -1,3 +1,22 @@
+## HERMES-QUALITY-LOOP-20260909 — DONE (gate live)
+
+**Type:** hermes / reliability  
+**Date:** 2026-09-09  
+**Status:** **DONE** — pre-ship gate + nightly fail-only TG  
+**Handoff:** `docs/AGENT_QUALITY_GATES.md`  
+**Reviewer packet:** `docs/templates/CODE_REVIEWER_PACKET_SL_LEDGER_CONFIG.md`  
+**Script:** `scripts/hermes/pre_ship_quality.sh`
+
+### Plain English
+Catch class bugs (swallowed TypeError, 72h hole, unlimited waivers) **before** runner bounce. Nightly Telegram **only on FAIL**.
+
+### Verify
+```bash
+bash scripts/hermes/pre_ship_quality.sh
+```
+
+---
+
 ## P6-5PCT-MONTH-PATH-20260909 — IN_PROGRESS (Brad GO 2026-09-09)
 
 **Type:** platform / profitability path  

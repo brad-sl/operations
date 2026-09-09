@@ -37,13 +37,10 @@ Closed months: Jun −25%, Jul −28%, Aug −3.3%. SL banks red faster than TP 
 
 ```bash
 cd /home/brad/projects/crypto-trading-bot
-PYTHONPATH=. python3 scripts/phase6/test_isolation_process_tax_lockout.py
-PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_floor_ratchet.py
-PYTHONPATH=. python3 phase6/core/test_isolation_ledger_write_path.py
-PYTHONPATH=. python3 phase6/core/test_isolation_buy_block_pairs.py
+bash scripts/hermes/pre_ship_quality.sh
 ```
 
-Restart runner after code/config: `bash scripts/phase6/start_phase6_runner.sh`
+Quality SSOT: `docs/AGENT_QUALITY_GATES.md`. Bounce runner only after PASS.
 
 ## 14-day watch (then talk size, not before)
 

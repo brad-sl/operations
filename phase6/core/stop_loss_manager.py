@@ -272,13 +272,47 @@ class StopLossManager:
                 rm = self.config_dict.get("risk_management") or {}
             # Prefer original runner entry for multiple math
             ratchet_entry = float(anchor_entry or entry_price or calc_base or 0)
+            # Reject absurd stale-low anchors (fake multi-bagger → ratchet wound)
+            try:
+                if (
+                    market_px
+                    and float(market_px) > 0
+                    and ratchet_entry > 0
+                    and float(market_px) / ratchet_entry >= 1.12
+                ):
+                    logger.warning(
+                        "[SL-RATCHET] %s stale-low anchor $%.4f vs mark $%.4f — using mark",
+                        pair,
+                        ratchet_entry,
+                        float(market_px),
+                    )
+                    ratchet_entry = float(market_px)
+            except Exception:
+                pass
             existing_stop = None
+            registry_entry = None
+            continuous_bag = False
             try:
                 from phase6.core.runner_capital_events import _latest_registry_stop_for_pair
 
-                row = _latest_registry_stop_for_pair(pair)
+                row = _latest_registry_stop_for_pair(pair, open_only=True)
                 if isinstance(row, dict) and row.get("stop_price"):
+                    # Only inherit when row looks like THIS continuous bag
                     existing_stop = float(row["stop_price"])
+                    try:
+                        registry_entry = float(row.get("entry_price") or 0) or None
+                    except (TypeError, ValueError):
+                        registry_entry = None
+                    # Live open stop under mark with matching entry ⇒ continuous
+                    if (
+                        not fresh_buy
+                        and market_px
+                        and existing_stop < float(market_px) * 0.999
+                        and registry_entry
+                        and ratchet_entry > 0
+                        and abs(registry_entry - ratchet_entry) / ratchet_entry <= 0.08
+                    ):
+                        continuous_bag = True
             except Exception:
                 pass
             add_px = None
@@ -295,6 +329,9 @@ class StopLossManager:
                 existing_stop=existing_stop,
                 add_price=add_px,
                 risk_management=rm if isinstance(rm, dict) else {},
+                fresh_buy=bool(fresh_buy),
+                continuous_bag=bool(continuous_bag),
+                registry_entry=registry_entry,
             )
             if rdec.applied and stop_price != pre_ratchet_stop:
                 stop_price_str = self.exchange.quantize_price(pair, stop_price)

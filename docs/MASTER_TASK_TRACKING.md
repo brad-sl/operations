@@ -1,3 +1,52 @@
+## P6-5PCT-MONTH-PATH-20260909 — IN_PROGRESS (Brad GO 2026-09-09)
+
+**Type:** platform / profitability path  
+**Date:** 2026-09-09  
+**Role:** crypto-engineer (future agents: read this first for live stance)  
+**Status:** **IN_PROGRESS** — code+config shipped this session; 14d watch  
+**Priority:** P0  
+**auto_pickup:** false  
+**Handoff:** `docs/AGENT_5PCT_MONTH_PATH.md`  
+**Plan:** `docs/plans/2026-09-09-platform-opt-after-3w-patches.md`
+
+### Plain English
+North star **~5%/mo deposit-adj take-home** (~+$115 on ~$2.3k). Not a SLA. Path = **cut process tax** (SL churn, post-SL/TP reseat, ratchet ghosts, 72h hole), not more alts / not new indicators.
+
+### Live book
+**Leave-as-is.** Do not flatten LINK or PAXG. LINK **buy_block** until 2026-09-12T04:07Z (72h after SL). Cap SSOT **$75**. Limit-first unfilled=skip.
+
+### Shipped this GO
+- SL ratchet: ignore ghost existing_stop on fresh buys (`phase6/core/sl_floor_ratchet.py`)
+- Ledger hours= on `get_recent_trades` (fixes empty 72h cooldown)
+- `pair_process_tax_lockout_reasons` wired into `evaluate_buy_entry`
+- Same-day pair BUY block
+- `market_fallback_max_usd=0`; `rebalance_cap_usd=75`; LINK on deny lists
+- Ghost registry closer `close_open_stops_for_flat_pair`
+- Trades UI: crypto first / cash separate / dust hidden
+- Isolation: `scripts/phase6/test_isolation_process_tax_lockout.py` + ratchet + ledger write path
+
+### 14d watch (do not promote / thaw)
+- month_path process_tax MTD near 0
+- fleet wound 7d no new manufactured LINK episode
+- no LINK BUY while blocked
+- If 14d red AND tax≈0 → staff util/size with Brad; else keep gates
+
+### Commands
+```bash
+cd /home/brad/projects/crypto-trading-bot
+PYTHONPATH=. python3 scripts/phase6/test_isolation_process_tax_lockout.py
+PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_floor_ratchet.py
+```
+
+### Must not
+- Auto-promote sweet CF / cream / ladder
+- enforce:false
+- Same-day seat pile-on
+- Grind Advanced 1 volume
+- Force-rebalance to "test" logging
+
+---
+
 ## ANALYST-TRADE-COMPARISON-STANDARD-20260904 — QUEUED
 
 **Type:** test  

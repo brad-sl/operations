@@ -172,9 +172,17 @@ def compute_ratchet_stop(
                 floor = target
                 reasons.append(f"air_pocket_gap>{gap_max:g}")
 
-    # Never loosen vs existing live stop
-    if existing > 0:
-        floor = max(floor, existing)
+    # Never loosen vs existing live stop — only if still usable on THIS bag.
+    # Ghost registry / prior-episode stops must not floor a fresh attach
+    # (that path caused LINK same-session buy→stop wounds).
+    usable_existing = existing
+    if existing > 0 and mark_f > 0 and existing >= mark_f * 0.999:
+        # Already at/above mark → would only clamp; treat as stale
+        detail["existing_ignored"] = "at_or_above_mark"
+        usable_existing = 0.0
+        reasons.append("ignore_existing_at_mark")
+    if usable_existing > 0:
+        floor = max(floor, usable_existing)
 
     # Never place stop at/above mark
     if mark_f > 0 and floor >= mark_f:
@@ -182,7 +190,9 @@ def compute_ratchet_stop(
         reasons.append("clamped_below_mark")
 
     min_raise = _f(cfg.get("min_raise_pct"), 0.001)
-    raised = floor > prop * (1.0 + min_raise) or (existing > 0 and floor > prop + 1e-12 and floor >= existing)
+    raised = floor > prop * (1.0 + min_raise) or (
+        usable_existing > 0 and floor > prop + 1e-12 and floor >= usable_existing
+    )
     # applied if we improved vs pure proposed genesis stop
     applied = floor > prop + max(prop * min_raise, 1e-12)
 
@@ -190,7 +200,7 @@ def compute_ratchet_stop(
         reasons = reasons or ["raised"]
     else:
         reasons = reasons or ["no_raise"]
-        floor = max(prop, existing) if existing > 0 else prop
+        floor = max(prop, usable_existing) if usable_existing > 0 else prop
 
     # Implied calc_base for % SL logging: stop / (1 - sl_pct)
     slp = _f(cfg.get("stop_loss_pct"), 0.03)
@@ -208,6 +218,45 @@ def compute_ratchet_stop(
     )
 
 
+def usable_existing_stop_for_ratchet(
+    *,
+    existing_stop: Optional[float],
+    entry: float,
+    mark: float,
+    registry_entry: Optional[float] = None,
+    fresh_buy: bool = False,
+    continuous_bag: bool = False,
+    entry_match_tol: float = 0.08,
+    sl_pct: float = 0.03,
+) -> Optional[float]:
+    """
+    Gate registry/exchange prior stops before never-loosen floor.
+
+    Fresh buys and prior-episode ghosts must not import a high floor onto a new bag.
+    Continuous bags (reattach after cancel of a live stop) may keep existing.
+    """
+    ex = _f(existing_stop) if existing_stop is not None else 0.0
+    if ex <= 0:
+        return None
+    entry_f = _f(entry)
+    mark_f = _f(mark)
+    if fresh_buy and not continuous_bag:
+        return None
+    if mark_f > 0 and ex >= mark_f * 0.999:
+        return None
+    # Registry row from a different lot (entry drifted) → ignore
+    re = _f(registry_entry) if registry_entry is not None else 0.0
+    if entry_f > 0 and re > 0 and abs(re - entry_f) / max(entry_f, 1e-12) > entry_match_tol:
+        return None
+    # No real open run on THIS entry: do not floor above genesis SL
+    if entry_f > 0 and mark_f > 0:
+        mult = mark_f / entry_f
+        genesis = entry_f * (1.0 - max(0.0, min(0.5, sl_pct)))
+        if mult < 1.08 and ex > genesis * 1.002 and not continuous_bag:
+            return None
+    return ex
+
+
 def apply_ratchet_to_stop_bundle(
     *,
     pair: str,
@@ -218,14 +267,26 @@ def apply_ratchet_to_stop_bundle(
     existing_stop: Optional[float] = None,
     add_price: Optional[float] = None,
     risk_management: Optional[Dict[str, Any]] = None,
+    fresh_buy: bool = False,
+    continuous_bag: bool = False,
+    registry_entry: Optional[float] = None,
 ) -> tuple[float, float, RatchetDecision]:
     """Adjust stop/limit upward only. Limit stays ~0.5% under stop when raised."""
     settings = load_ratchet_settings(risk_management)
+    gated = usable_existing_stop_for_ratchet(
+        existing_stop=existing_stop,
+        entry=entry,
+        mark=mark,
+        registry_entry=registry_entry,
+        fresh_buy=fresh_buy,
+        continuous_bag=continuous_bag,
+        sl_pct=_f(settings.get("stop_loss_pct"), 0.03),
+    )
     dec = compute_ratchet_stop(
         entry=entry,
         mark=mark,
         proposed_stop=proposed_stop,
-        existing_stop=existing_stop,
+        existing_stop=gated,
         add_price=add_price,
         settings=settings,
     )
@@ -235,14 +296,15 @@ def apply_ratchet_to_stop_bundle(
         if limit >= stop:
             limit = stop * 0.995
         logger.info(
-            "[SL-RATCHET] %s stop $%.6f → $%.6f reasons=%s multiple=%s",
+            "[SL-RATCHET] %s stop $%.6f → $%.6f reasons=%s multiple=%s gated_existing=%s",
             pair,
             dec.old_stop,
             stop,
             dec.reasons,
             (dec.detail or {}).get("multiple"),
+            gated,
         )
     else:
         limit = proposed_limit
-        stop = proposed_stop if not existing_stop else max(proposed_stop, _f(existing_stop))
+        stop = proposed_stop if not gated else max(proposed_stop, _f(gated))
     return stop, limit, dec

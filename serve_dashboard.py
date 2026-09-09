@@ -333,6 +333,36 @@ def short_trade_reason(raw: Any) -> str:
     return token[:12].capitalize() if token else ""
 
 
+_CASH_BASES = frozenset({"USD", "USDC", "USDT", "DAI", "EUR", "GBP"})
+
+
+def classify_trade_row(t: Any) -> str:
+    """
+    Partition ledger rows for Trades panel.
+    Returns: 'trade' | 'cash' | 'noise'
+    - cash: stable powder/park (USDT/USDC/USD legs)
+    - noise: dust sweeps (hide from main tape)
+    - trade: crypto sleeve buys/sells/SL/TP
+    """
+    if not isinstance(t, dict):
+        return "noise"
+    pair = str(t.get("pair") or "").upper().strip()
+    reason = str(t.get("reason") or t.get("exit_reason") or t.get("reason_label") or "").lower()
+    label = str(t.get("reason_label") or t.get("reason_short") or "").lower()
+    if "dust" in reason or label == "dust" or reason.startswith("dust"):
+        return "noise"
+    if not pair:
+        return "noise"
+    parts = [p for p in pair.replace("_", "-").split("-") if p]
+    if not parts:
+        return "noise"
+    if all(p in _CASH_BASES for p in parts):
+        return "cash"
+    if parts[0] in _CASH_BASES and (len(parts) == 1 or parts[-1] in _CASH_BASES):
+        return "cash"
+    return "trade"
+
+
 def _annotate_trade_reason_short(t: Any) -> Any:
     if not isinstance(t, dict):
         return t
@@ -342,6 +372,7 @@ def _annotate_trade_reason_short(t: Any) -> Any:
     if label:
         out["reason_label"] = label
         out["reason_short"] = label  # alias for UI
+    out["tape"] = classify_trade_row(out)
     return out
 
 
@@ -948,7 +979,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         elif path == '/api/positions':
             self.send_json(fetch_positions())
         elif path == '/api/trades':
-            trades = LEDGER.get_recent_trades(limit=20)
+            # Pull enough rows so crypto tape isn't buried under powder churn
+            trades = LEDGER.get_recent_trades(limit=80)
             # newest-first (ledger sorts; keep explicit for API contract)
             trades = sorted(
                 trades or [],
@@ -960,6 +992,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 trades = [_annotate_trade_reason_short(t) for t in trades]
             except Exception:
                 pass
+            crypto_trades = [t for t in trades if t.get("tape") == "trade"]
+            cash_moves = [t for t in trades if t.get("tape") == "cash"]
+            # dust etc. intentionally omitted from main payloads (noise)
             # Per-trader display TZ (storage stays UTC / Coinbase standard)
             try:
                 from phase6.core.trader_account_config import (
@@ -973,13 +1008,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "locale": "en-US",
                 }
             self.send_json({
-                "trades": trades,
+                # Primary tape = crypto sleeve only (cash/dust stripped)
+                "trades": crypto_trades[:15],
+                "cash_moves": cash_moves[:10],
+                "all_annotated": trades[:40],  # debug/compat
                 "mode": MODE,
-                "count": len(trades),
+                "count": len(crypto_trades),
+                "cash_count": len(cash_moves),
                 "source": "TradeLedger",
                 "timestamp_storage": "UTC",
                 "display_timezone": ui.get("display_timezone") or "America/Los_Angeles",
                 "locale": ui.get("locale") or "en-US",
+                "grouping": "trades_then_cash_dust_hidden",
             })
         elif path == '/api/ui-prefs':
             try:

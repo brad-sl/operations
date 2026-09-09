@@ -298,6 +298,7 @@
   },
   "buy_block_pairs": [
     "RAVE-USD",
-    "UNI-USD"
+    "UNI-USD",
+    "LINK-USD"
   ]
 }

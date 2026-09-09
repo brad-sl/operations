@@ -113,6 +113,47 @@ def lookup_entry_for_pair(sl_order_id: Optional[str], pair: str) -> Optional[Dic
     return best
 
 
+def close_open_stops_for_flat_pair(pair: str, *, reason: str = "flat_ghost_close") -> int:
+    """Append closed markers for leftover open registry rows on a flat pair."""
+    if not pair or not REGISTRY_PATH.exists():
+        return 0
+    rows = load_all_registry_rows()
+    open_ids = []
+    closed_ids = set()
+    for row in rows:
+        if row.get("pair") != pair:
+            continue
+        oid = str(row.get("sl_order_id") or "")
+        if not oid:
+            continue
+        if row.get("status") == "closed":
+            closed_ids.add(oid)
+        else:
+            open_ids.append(oid)
+    ghosts = [oid for oid in dict.fromkeys(open_ids) if oid not in closed_ids]
+    if not ghosts:
+        return 0
+    _ensure_parent()
+    n = 0
+    now = datetime.now(timezone.utc).isoformat()
+    with open(REGISTRY_PATH, "a", encoding="utf-8") as f:
+        for oid in ghosts:
+            f.write(
+                json.dumps(
+                    {
+                        "timestamp": now,
+                        "pair": pair,
+                        "sl_order_id": oid,
+                        "status": "closed",
+                        "close_reason": reason,
+                    }
+                )
+                + "\n"
+            )
+            n += 1
+    return n
+
+
 def load_all_registry_rows() -> List[Dict[str, Any]]:
     if not REGISTRY_PATH.exists():
         return []

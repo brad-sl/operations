@@ -54,6 +54,13 @@ class TradeExecutor:
     def _record_to_ledger(self, result: Dict[str, Any], signal_source: str) -> None:
         """Append successful fill to TradeLedger. Never raise into the fill path."""
         if not self.trade_ledger or not result or not result.get("success"):
+            if result and result.get("success") and not self.trade_ledger:
+                self.logger.error(
+                    "[LEDGER] success fill but trade_ledger=None (%s) pair=%s oid=%s",
+                    signal_source,
+                    (result or {}).get("pair"),
+                    (result or {}).get("order_id"),
+                )
             return
         try:
             mode = "shadow" if self.shadow_mode else str(
@@ -62,15 +69,33 @@ class TradeExecutor:
             slm = None
             if self.stop_loss_coordinator is not None:
                 slm = getattr(self.stop_loss_coordinator, "sl_manager", self.stop_loss_coordinator)
-            exchange = getattr(self.client, "exchange", None) or getattr(
-                self.client, "client", None
-            )
+            # Prefer client that can resolve fills (often the exchange client itself)
+            exchange = None
+            for cand in (
+                self.client,
+                getattr(self.client, "exchange", None),
+                getattr(self.client, "client", None),
+            ):
+                if cand is not None and (
+                    hasattr(cand, "get_order_fill_details") or hasattr(cand, "get_order")
+                ):
+                    exchange = cand
+                    break
+            if exchange is None:
+                exchange = self.client
             self.trade_ledger.log_execution_result(
                 result,
                 mode=mode,
                 exchange=exchange,
                 signal_source=signal_source,
                 stop_loss_manager=slm,
+            )
+            self.logger.info(
+                "[LEDGER] journaled %s %s oid=%s via %s",
+                str(result.get("side") or result.get("action") or "?").upper(),
+                result.get("pair"),
+                result.get("order_id") or result.get("id") or "none",
+                signal_source,
             )
         except Exception as e:
             self.logger.error("[LEDGER] record failed (%s): %s", signal_source, e)

@@ -301,10 +301,13 @@ def _parse_trade_ts(raw: str) -> Optional[float]:
         return None
 
 
-def _load_recent_ledger_sells(hours: float, jsonl_path: Path = TRADES_JSONL) -> List[dict]:
+def _load_recent_ledger_rows(
+    hours: float, jsonl_path: Path = TRADES_JSONL, *, side: Optional[str] = None
+) -> List[dict]:
     if not jsonl_path.exists():
         return []
     cutoff = datetime.now(timezone.utc).timestamp() - hours * 3600.0
+    want = str(side or "").upper()
     out: List[dict] = []
     for line in jsonl_path.read_text().splitlines():
         line = line.strip()
@@ -314,13 +317,21 @@ def _load_recent_ledger_sells(hours: float, jsonl_path: Path = TRADES_JSONL) -> 
             t = json.loads(line)
         except json.JSONDecodeError:
             continue
-        if str(t.get("side", "")).upper() != "SELL":
+        if want and str(t.get("side", "")).upper() != want:
             continue
         ts = _parse_trade_ts(str(t.get("timestamp", "")))
         if ts is None or ts < cutoff:
             continue
         out.append(t)
     return out
+
+
+def _load_recent_ledger_sells(hours: float, jsonl_path: Path = TRADES_JSONL) -> List[dict]:
+    return _load_recent_ledger_rows(hours, jsonl_path, side="SELL")
+
+
+def _load_recent_ledger_buys(hours: float, jsonl_path: Path = TRADES_JSONL) -> List[dict]:
+    return _load_recent_ledger_rows(hours, jsonl_path, side="BUY")
 
 
 def split_disposition_pairs_by_ledger(
@@ -541,6 +552,66 @@ def get_deployment_cooldown_pairs(runner: Any, hours: Optional[int] = None) -> L
     return sorted(set(manual + stopped))
 
 
+def pair_process_tax_lockout_reasons(
+    pair: str,
+    *,
+    jsonl_path: Optional[Path] = None,
+    now_ts: Optional[float] = None,
+) -> List[str]:
+    """
+    Evaluate-path lockouts so ARCH-4 / quality_tryout cannot bypass capital_events.
+
+    - post-SL 72h / post-TP 24h via load_buy_block_status (ledger SSOT)
+    - same UTC-day second BUY on the same pair (no same-day flip pile-on)
+    """
+    pair_n = str(pair or "").upper().strip()
+    if not pair_n:
+        return []
+    reasons: List[str] = []
+    path = jsonl_path or TRADES_JSONL
+    runtime = path == TRADES_JSONL
+    try:
+        status = load_buy_block_status(
+            jsonl_path=path, include_runtime_controls=runtime
+        )
+        meta = status.get(pair_n) or status.get(pair) or {}
+        if meta.get("blocked"):
+            src = str(meta.get("source") or "ledger")
+            why = str(meta.get("reason") or "process_tax_lockout")
+            hours_left = meta.get("hours_remaining")
+            tail = f" ~{float(hours_left):.1f}h left" if hours_left is not None else ""
+            reasons.append(f"{why} {src}{tail}".strip())
+    except Exception:
+        pass
+
+    now = float(now_ts) if now_ts is not None else datetime.now(timezone.utc).timestamp()
+    day_start = datetime.fromtimestamp(now, tz=timezone.utc).replace(
+        hour=0, minute=0, second=0, microsecond=0
+    ).timestamp()
+    try:
+        for t in _load_recent_ledger_buys(30.0, jsonl_path=path):
+            p = str(t.get("pair") or "").upper().strip()
+            if p != pair_n:
+                continue
+            if str(t.get("side") or "").upper() != "BUY":
+                continue
+            ts = _parse_trade_ts(str(t.get("timestamp") or t.get("ts") or ""))
+            if ts is None or ts < day_start:
+                continue
+            reasons.append("same_day_pair_buy")
+            break
+    except Exception:
+        pass
+    # de-dupe preserve order
+    out: List[str] = []
+    seen = set()
+    for r in reasons:
+        if r not in seen:
+            seen.add(r)
+            out.append(r)
+    return out
+
+
 def _exp_to_ts(raw: Any) -> Optional[float]:
     """Parse cooldown expiry: unix float/int or ISO string → epoch seconds."""
     if raw is None:
@@ -583,6 +654,7 @@ def load_buy_block_status(
     state_file: Optional[Path] = None,
     jsonl_path: Path = TRADES_JSONL,
     account_id: Optional[str] = None,
+    include_runtime_controls: bool = True,
 ) -> Dict[str, Dict[str, Any]]:
     """Active auto-BUY blocks for dashboard / gates (no runner required).
 
@@ -636,34 +708,35 @@ def load_buy_block_status(
 
     # 1) Durable manual / registered cooldowns
     cooldown_maps: List[Tuple[Dict[str, Any], str]] = []
-    try:
-        from phase6.core import capital_controls_store as store
+    if include_runtime_controls:
+        try:
+            from phase6.core import capital_controls_store as store
 
-        if account_id:
-            st = store.load_account_capital_state(account_id)
-        else:
-            st = store.load_for_runner(None, runner_state_path=state_file or DEFAULT_STATE_FILE)
-        if isinstance(st, dict):
-            cooldown_maps.append((st.get("manual_sell_cooldown") or {}, "capital_controls"))
-    except Exception:
-        pass
-    try:
-        cc = STATE_DIR / "capital_user_controls.json"
-        if cc.exists():
-            raw = json.loads(cc.read_text())
-            cooldown_maps.append(
-                (raw.get("manual_sell_cooldown_active") or raw.get("manual_sell_cooldown") or {},
-                 "capital_user_controls")
-            )
-    except Exception:
-        pass
-    sf = Path(state_file or DEFAULT_STATE_FILE)
-    try:
-        if sf.exists():
-            data = json.loads(sf.read_text())
-            cooldown_maps.append((data.get("manual_sell_cooldown") or {}, "runner_state"))
-    except Exception:
-        pass
+            if account_id:
+                st = store.load_account_capital_state(account_id)
+            else:
+                st = store.load_for_runner(None, runner_state_path=state_file or DEFAULT_STATE_FILE)
+            if isinstance(st, dict):
+                cooldown_maps.append((st.get("manual_sell_cooldown") or {}, "capital_controls"))
+        except Exception:
+            pass
+        try:
+            cc = STATE_DIR / "capital_user_controls.json"
+            if cc.exists():
+                raw = json.loads(cc.read_text())
+                cooldown_maps.append(
+                    (raw.get("manual_sell_cooldown_active") or raw.get("manual_sell_cooldown") or {},
+                     "capital_user_controls")
+                )
+        except Exception:
+            pass
+        sf = Path(state_file or DEFAULT_STATE_FILE)
+        try:
+            if sf.exists():
+                data = json.loads(sf.read_text())
+                cooldown_maps.append((data.get("manual_sell_cooldown") or {}, "runner_state"))
+        except Exception:
+            pass
 
     for cmap, src in cooldown_maps:
         if not isinstance(cmap, dict):
@@ -766,27 +839,36 @@ def load_buy_block_status(
     # Operator waivers (e.g. clear bug-driven blocks so pairs can re-enter)
     # data/state/buy_block_waivers.json:
     #   {"pairs": {"UNI-USD": {"note": "...", "expires_ts": null}}}
-    try:
-        wpath = STATE_DIR / "buy_block_waivers.json"
-        if wpath.exists():
-            wraw = json.loads(wpath.read_text())
-            wpairs = (wraw.get("pairs") or {}) if isinstance(wraw, dict) else {}
-            for pair, meta in (wpairs.items() if isinstance(wpairs, dict) else []):
-                p = str(pair)
-                if p not in out:
-                    continue
-                exp_w = None
-                if isinstance(meta, dict) and meta.get("expires_ts") is not None:
-                    try:
-                        exp_w = float(meta["expires_ts"])
-                    except (TypeError, ValueError):
-                        exp_w = None
-                if exp_w is not None and exp_w <= now:
-                    continue  # waiver expired
-                # Drop block while waiver active
-                out.pop(p, None)
-    except Exception:
-        pass
+    if include_runtime_controls:
+        try:
+            wpath = STATE_DIR / "buy_block_waivers.json"
+            if wpath.exists():
+                wraw = json.loads(wpath.read_text())
+                wpairs = (wraw.get("pairs") or {}) if isinstance(wraw, dict) else {}
+                for pair, meta in (wpairs.items() if isinstance(wpairs, dict) else []):
+                    p = str(pair)
+                    if p not in out:
+                        continue
+                    exp_w = None
+                    if isinstance(meta, dict) and meta.get("expires_ts") is not None:
+                        try:
+                            exp_w = float(meta["expires_ts"])
+                        except (TypeError, ValueError):
+                            exp_w = None
+                    if exp_w is not None and exp_w <= now:
+                        continue  # waiver expired
+                    # Default scope = post-TP only. A TP-ghost waiver must NOT
+                    # erase post-SL 72h (LINK 2026-09-09 same-session wound).
+                    scope = "post_tp"
+                    if isinstance(meta, dict) and meta.get("scope"):
+                        scope = str(meta.get("scope") or "post_tp").lower()
+                    reason = str((out.get(p) or {}).get("reason") or "")
+                    if scope not in ("all", "*"):
+                        if reason not in ("post_tp_rebuy_block", "post_lifecycle_rebuy_block"):
+                            continue
+                    out.pop(p, None)
+        except Exception:
+            pass
 
     # EXIT-H4: structure-aware early release of post_tp blocks only
     try:
@@ -1017,11 +1099,15 @@ def _enriched_position_maps(
     return values, entries, currents
 
 
-def _latest_registry_stop_for_pair(pair: str) -> Optional[Dict[str, Any]]:
+def _latest_registry_stop_for_pair(
+    pair: str, *, open_only: bool = False
+) -> Optional[Dict[str, Any]]:
     """
     Best-effort protective stop meta for pair.
     Prefer currently-open registry rows (open-id set, closed pops).
-    Fall back to newest row with stop_price (suspend/cancel often leaves stale opens).
+
+    open_only=True: never fall back to closed/ghost rows (required for SL ratchet
+    so a prior bag's stop cannot floor a fresh attach).
     """
     try:
         from phase6.core.protective_orders_registry import load_all_registry_rows
@@ -1049,6 +1135,8 @@ def _latest_registry_stop_for_pair(pair: str) -> Optional[Dict[str, Any]]:
             return str(r.get("timestamp") or "")
 
         return max(open_by_id.values(), key=_ts)
+    if open_only:
+        return None
     if newest_any and newest_any.get("stop_price"):
         return newest_any
     return None

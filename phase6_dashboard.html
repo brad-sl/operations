@@ -330,16 +330,24 @@
                 <div id="rebalances-list" class="space-y-3 text-sm min-h-[80px]"></div>
             </div>
 
-            <!-- Recent Trades -->
+            <!-- Recent Trades (crypto first) + cash moves -->
             <div class="bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
                 <h2 class="font-semibold mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-exchange-alt"></i> Trades
                     <span class="metric-label-wrap font-normal">
                         <button type="button" class="metric-help-btn" aria-label="Trades"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
-                        <div class="metric-tip" role="tooltip">Recent ledger rows (buys and sells). Realized PnL appears on closes; used for Exit WR when non-zero.</div>
+                        <div class="metric-tip" role="tooltip">Crypto sleeve buys/sells only (SL/TP/rebal). Dust hidden. Cash/powder moves listed separately below.</div>
                     </span>
                 </h2>
                 <div id="trades-list" class="space-y-3 text-sm min-h-[80px]"></div>
+                <h3 class="font-medium mt-5 mb-2 text-xs text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-wallet text-[10px]"></i> Cash moves
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Cash moves"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">USDT/USDC/USD powder park and top-up (not crypto tape).</div>
+                    </span>
+                </h3>
+                <div id="cash-moves-list" class="space-y-2 text-sm min-h-[40px]"></div>
             </div>
         </div>
     
@@ -1329,49 +1337,41 @@
             }
 
 
-            // Trades - newest first (pair, side, qty, short date + time in trader local TZ)
+            // Trades - crypto sleeve first; cash moves separate; dust omitted server-side
             const tradesContainer = document.getElementById('trades-list');
-            if (tradesContainer && tradesData && tradesData.trades && tradesData.trades.length) {
-                applyUiPrefs(tradesData);
-                const sortedTrades = (tradesData.trades || []).slice().sort((a, b) => {
-                    const ta = (parseUtcTs(a.timestamp || a.ts) || new Date(0)).getTime();
-                    const tb = (parseUtcTs(b.timestamp || b.ts) || new Date(0)).getTime();
-                    return tb - ta; // descending: most recent first
-                });
-                tradesContainer.innerHTML = sortedTrades.slice(0, 5).map(t => {
-                    let timeStr = '';
-                    if (t.timestamp || t.ts) {
-                        try {
-                            timeStr = fmtTraderLocal(t.timestamp || t.ts);
-                        } catch(e) {
-                            timeStr = String(t.timestamp || t.ts).slice(11,16) || '';
-                        }
+            const cashContainer = document.getElementById('cash-moves-list');
+            const renderTradeRow = (t) => {
+                let timeStr = '';
+                if (t.timestamp || t.ts) {
+                    try {
+                        timeStr = fmtTraderLocal(t.timestamp || t.ts);
+                    } catch(e) {
+                        timeStr = String(t.timestamp || t.ts).slice(11,16) || '';
                     }
-                    const qty = t.qty ? parseFloat(t.qty).toFixed(4) : '';
-                    const side = (t.side || '').toUpperCase();
-                    const sideClass = side === 'BUY' ? 'text-emerald-400' : 'text-red-400';
-                    const rawReason = String(t.reason_short || t.reason || t.exit_reason || '').trim();
-                    // Prefer API short label if present; else compact machine reason for the column
-                    const mapped = t.reason_label
-                        ? { short: String(t.reason_label), full: String(t.reason || t.exit_reason || t.reason_label) }
-                        : formatTradeReasonShort(rawReason);
-                    const reason = mapped.short;
-                    const reasonFull = mapped.full || rawReason;
-                    const reasonClass = (reason === 'Preserve' || reason === 'Disarm')
-                        ? 'text-cyan-400/90'
-                        : 'text-amber-400/90';
-                    const safeFull = reasonFull
-                        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-                    const safeShort = String(reason)
-                        .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-                    // Tap/click badge → full reason (iPhone); title kept for desktop hover fallback
-                    const reasonBadge = reason
-                        ? `<span class="trade-reason-wrap">
-                            <button type="button" class="trade-reason-btn ${reasonClass}" title="${safeFull}" aria-label="Show full exit reason">${safeShort}</button>
-                            <span class="trade-reason-tip" role="tooltip">${safeFull}</span>
-                           </span>`
-                        : '';
-                    return `
+                }
+                const qty = t.qty ? parseFloat(t.qty).toFixed(4) : '';
+                const side = (t.side || '').toUpperCase();
+                const sideClass = side === 'BUY' ? 'text-emerald-400' : 'text-red-400';
+                const rawReason = String(t.reason_short || t.reason || t.exit_reason || '').trim();
+                const mapped = t.reason_label
+                    ? { short: String(t.reason_label), full: String(t.reason || t.exit_reason || t.reason_label) }
+                    : formatTradeReasonShort(rawReason);
+                const reason = mapped.short;
+                const reasonFull = mapped.full || rawReason;
+                const reasonClass = (reason === 'Preserve' || reason === 'Disarm')
+                    ? 'text-cyan-400/90'
+                    : 'text-amber-400/90';
+                const safeFull = reasonFull
+                    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                const safeShort = String(reason)
+                    .replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+                const reasonBadge = reason
+                    ? `<span class="trade-reason-wrap">
+                        <button type="button" class="trade-reason-btn ${reasonClass}" title="${safeFull}" aria-label="Show full exit reason">${safeShort}</button>
+                        <span class="trade-reason-tip" role="tooltip">${safeFull}</span>
+                       </span>`
+                    : '';
+                return `
                     <div class="flex justify-between items-center text-xs bg-slate-800/30 p-2 rounded gap-2 min-w-0">
                         <span class="font-medium shrink-0">${t.pair || '??'}</span>
                         <span class="${sideClass} shrink-0">${side}</span>
@@ -1379,9 +1379,33 @@
                         <span class="text-slate-400 tabular-nums shrink-0">${qty}</span>
                         <span class="text-slate-500 shrink-0" title="UTC ${t.timestamp || t.ts || ''} · shown ${DASH_TZ}">${timeStr}</span>
                     </div>`;
-                }).join('');
+            };
+            if (tradesContainer && tradesData) {
+                applyUiPrefs(tradesData);
+                const crypto = (tradesData.trades || []).slice().sort((a, b) => {
+                    const ta = (parseUtcTs(a.timestamp || a.ts) || new Date(0)).getTime();
+                    const tb = (parseUtcTs(b.timestamp || b.ts) || new Date(0)).getTime();
+                    return tb - ta;
+                });
+                if (crypto.length) {
+                    tradesContainer.innerHTML = crypto.slice(0, 8).map(renderTradeRow).join('');
+                } else if (!tradesContainer.children.length) {
+                    tradesContainer.innerHTML = '<div class="text-slate-500 text-xs">No crypto trades yet</div>';
+                }
             } else if (tradesContainer && !tradesContainer.children.length) {
                 tradesContainer.innerHTML = '<div class="text-slate-500 text-xs">No trades recorded yet</div>';
+            }
+            if (cashContainer && tradesData) {
+                const cash = (tradesData.cash_moves || []).slice().sort((a, b) => {
+                    const ta = (parseUtcTs(a.timestamp || a.ts) || new Date(0)).getTime();
+                    const tb = (parseUtcTs(b.timestamp || b.ts) || new Date(0)).getTime();
+                    return tb - ta;
+                });
+                if (cash.length) {
+                    cashContainer.innerHTML = cash.slice(0, 5).map(renderTradeRow).join('');
+                } else {
+                    cashContainer.innerHTML = '<div class="text-slate-600 text-xs">No cash moves</div>';
+                }
             }
 
             // Recent Rebalances - pure from server pre-filtered executed list

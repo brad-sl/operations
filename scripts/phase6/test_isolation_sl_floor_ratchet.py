@@ -64,12 +64,70 @@ def test_bundle():
     assert limit < stop
 
 
+def test_fresh_buy_ignores_ghost_existing():
+    """LINK wound: prior bag stop must not floor a new bag."""
+    from phase6.core.sl_floor_ratchet import usable_existing_stop_for_ratchet
+
+    gated = usable_existing_stop_for_ratchet(
+        existing_stop=12.228,
+        entry=12.55,
+        mark=12.55,
+        registry_entry=12.658,
+        fresh_buy=True,
+        continuous_bag=False,
+    )
+    assert gated is None
+    stop, limit, dec = apply_ratchet_to_stop_bundle(
+        pair="LINK-USD",
+        entry=12.55,
+        mark=12.55,
+        proposed_stop=12.55 * 0.97,
+        proposed_limit=12.55 * 0.97 * 0.995,
+        existing_stop=12.228,
+        fresh_buy=True,
+    )
+    assert abs(stop - 12.55 * 0.97) < 1e-6, (stop, dec)
+
+
+def test_existing_at_mark_ignored():
+    """Ghost stop above mark must not force clamp-only ratchet on fresh attach."""
+    stop, limit, dec = apply_ratchet_to_stop_bundle(
+        pair="LINK-USD",
+        entry=12.004,
+        mark=12.004,
+        proposed_stop=12.004 * 0.97,
+        proposed_limit=11.5,
+        existing_stop=12.228,  # prior bag, above mark
+        fresh_buy=True,
+    )
+    assert abs(stop - 12.004 * 0.97) < 1e-4, (stop, dec.reasons)
+    assert "clamped_below_mark" not in (dec.reasons or [])
+
+
+def test_continuous_bag_keeps_existing():
+    stop, limit, dec = apply_ratchet_to_stop_bundle(
+        pair="PAXG-USD",
+        entry=4055.92,
+        mark=4398.0,
+        proposed_stop=4055.92 * 0.97,
+        proposed_limit=3900.0,
+        existing_stop=3937.6,
+        registry_entry=4055.92,
+        fresh_buy=False,
+        continuous_bag=True,
+    )
+    assert stop >= 3937.6 - 1e-6, (stop, dec)
+
+
 def main() -> int:
     test_xlm_style_hard_multiple()
     test_small_r_no_raise()
     test_never_loosen_existing()
     test_link_air_pocket()
     test_bundle()
+    test_fresh_buy_ignores_ghost_existing()
+    test_existing_at_mark_ignored()
+    test_continuous_bag_keeps_existing()
     print("PASS sl_floor_ratchet isolation")
     return 0
 

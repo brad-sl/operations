@@ -150,9 +150,10 @@ def _soft_snap(**kw):
     return RegimeCashSnapshot(**base)
 
 
-def test_quality_tryout_allows_link_blocks_sol():
-    """Brad GO thaw A: LINK/ETH tryout ok; SOL still not eligible."""
+def test_quality_tryout_allows_eth_blocks_sol():
+    """Brad GO thaw A: ETH tryout ok; SOL still not eligible. LINK is on live deny list (P6-5PCT)."""
     pol = json.loads(json.dumps(load_policy()))
+    pol["_isolation_skip_process_tax"] = True
     pol["buy_block_pairs"] = []
     oo = pol.setdefault("operator_override", {})
     rec = oo.setdefault("recovery_soft_down_20260828", {})
@@ -176,16 +177,16 @@ def test_quality_tryout_allows_link_blocks_sol():
         "SOL-USD", policy=pol, is_new_pair=True, snap=snap
     )
     assert rcp.recovery_soft_down_blocks_pair(
-        "LINK-USD", policy=pol, is_new_pair=True, snap=snap
+        "ETH-USD", policy=pol, is_new_pair=True, snap=snap
     ) is None
     # quality floors
     bad_sent = evaluate_buy_entry(
-        "LINK-USD", snap, sentiment=0.20, rsi=40.0, is_new_pair=True, policy=pol
+        "ETH-USD", snap, sentiment=0.20, rsi=40.0, is_new_pair=True, policy=pol
     )
     assert bad_sent.allowed is False
     assert any("sentiment" in r for r in bad_sent.reasons), bad_sent.reasons
     good = evaluate_buy_entry(
-        "LINK-USD", snap, sentiment=0.50, rsi=40.0, is_new_pair=True, policy=pol
+        "ETH-USD", snap, sentiment=0.50, rsi=40.0, is_new_pair=True, policy=pol
     )
     assert good.allowed is True, good.reasons
     assert any("quality_tryout" in r for r in good.reasons), good.reasons
@@ -220,6 +221,6 @@ if __name__ == "__main__":
     test_evaluate_blocks_rave()
     test_btc_not_on_explicit_block_list()
     test_recovery_allowlist_blocks_new_alt_when_soft_down_snap()
-    test_quality_tryout_allows_link_blocks_sol()
+    test_quality_tryout_allows_eth_blocks_sol()
     test_recovery_cap_clamps_bull_sleeve()
     print("PASS isolation buy_block_pairs")

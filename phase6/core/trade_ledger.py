@@ -336,18 +336,24 @@ class TradeLedger:
                     pass
         return snaps
 
-    def get_recent_trades(self, limit: int = 20) -> list:
+    def get_recent_trades(self, limit: int = 20, hours: float | None = None) -> list:
         """
         Return the most recent trades from the JSONL file, newest first.
 
         Reads a tail window then sorts by timestamp descending so out-of-order
         appends (backfills/reconcile) still surface the latest activity first.
+
+        hours: if set, keep rows with timestamp within that window (UTC).
+        Runner cooldown used to pass hours= which this method previously
+        rejected (TypeError → empty stop list → 72h hole).
         """
         if not self.jsonl_path.exists():
             return []
 
         # Over-read slightly so sort+limit still covers late backfills in the tail
         read_n = max(int(limit or 20) * 5, 100) if limit else 500
+        if hours is not None:
+            read_n = max(read_n, 2000)
         trades = []
         with open(self.jsonl_path, "r") as f:
             lines = f.readlines()[-read_n:]
@@ -362,6 +368,23 @@ class TradeLedger:
 
         def _ts_key(t: dict) -> str:
             return str(t.get("timestamp") or t.get("ts") or "")
+
+        if hours is not None:
+            try:
+                cutoff = datetime.now(timezone.utc).timestamp() - float(hours) * 3600.0
+            except (TypeError, ValueError):
+                cutoff = 0.0
+            kept = []
+            for t in trades:
+                raw = str(t.get("timestamp") or t.get("ts") or "")
+                ts = None
+                try:
+                    ts = datetime.fromisoformat(raw.replace("Z", "+00:00")).timestamp()
+                except Exception:
+                    ts = None
+                if ts is None or ts >= cutoff:
+                    kept.append(t)
+            trades = kept
 
         trades.sort(key=_ts_key, reverse=True)
         if limit is not None and limit > 0:

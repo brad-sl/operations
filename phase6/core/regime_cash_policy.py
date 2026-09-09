@@ -550,6 +550,19 @@ def evaluate_buy_entry(
     if pair_n in blocks:
         reasons.append(f"buy_block_pairs {pair_n}")
         return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
+    # Process-tax lockouts (72h post-SL, 24h post-TP, same-day pair) — evaluate SSOT
+    # so ARCH-4 / quality_tryout cannot bypass capital_events filter.
+    skip_tax = bool(isinstance(pol, dict) and pol.get("_isolation_skip_process_tax"))
+    if not skip_tax:
+        try:
+            from phase6.core.runner_capital_events import pair_process_tax_lockout_reasons
+
+            tax = pair_process_tax_lockout_reasons(pair_n)
+            if tax:
+                reasons.extend(tax)
+                return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
+        except Exception:
+            pass
     rec_reason = recovery_soft_down_blocks_pair(
         pair,
         policy=pol if isinstance(pol, dict) else {},

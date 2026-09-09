@@ -127,7 +127,7 @@ class StopLossCoordinator:
                 pair, ledger_px, current_p,
             )
 
-        # Fallback to live_state only if mark-plausible
+        # Fallback to live_state only if mark-plausible (reject stale-high AND stale-low)
         try:
             live_state_path = str(PHASE6_LIVE_STATE)
             if os.path.exists(live_state_path):
@@ -153,7 +153,14 @@ class StopLossCoordinator:
                                 mark = 0.0
                         if mark > 0 and epf * 0.97 >= mark:
                             logger.warning(
-                                "[SL-ANCHOR] %s live_state entry $%.4f stale vs mark $%.4f — skip",
+                                "[SL-ANCHOR] %s live_state entry $%.4f stale-high vs mark $%.4f — skip",
+                                pair, epf, mark,
+                            )
+                            continue
+                        # Stale-low (e.g. $10 vs $12 mark) invents fake multi-bagger ratchet
+                        if mark > 0 and mark / epf >= 1.12:
+                            logger.warning(
+                                "[SL-ANCHOR] %s live_state entry $%.4f stale-low vs mark $%.4f — skip",
                                 pair, epf, mark,
                             )
                             continue

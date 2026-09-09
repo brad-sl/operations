@@ -4,6 +4,7 @@
 **Date:** 2026-09-09  
 **Role:** crypto-engineer (future agents: read this first for live stance)  
 **Status:** **IN_PROGRESS** — code+config shipped this session; 14d watch  
+**SHA:** `2fa5a3cf` (`phase-6.1`)  
 **Priority:** P0  
 **auto_pickup:** false  
 **Handoff:** `docs/AGENT_5PCT_MONTH_PATH.md`  

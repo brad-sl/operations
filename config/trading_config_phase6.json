@@ -13,7 +13,7 @@
       "UNI-USD",
       "ADA-USD",
       "ZEC-USD",
-      "STX-USD"
+      "WLD-USD"
     ],
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 150.0,
@@ -172,7 +172,8 @@
       "PENGU-USD",
       "NEAR-USD",
       "ZEC-USD",
-      "STX-USD"
+      "STX-USD",
+      "WLD-USD"
     ]
   },
   "withdrawal_reserve": {

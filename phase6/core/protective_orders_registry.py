@@ -25,6 +25,7 @@ def register_protective_order(
     stop_price: float,
     limit_price: Optional[float] = None,
     buy_order_id: Optional[str] = None,
+    bag_id: Optional[str] = None,
     mode: str = "live",
     sleeve: str = "crypto",
     reason: Optional[str] = None,
@@ -32,6 +33,8 @@ def register_protective_order(
     if not sl_order_id or not pair:
         return
     _ensure_parent()
+    if not bag_id and buy_order_id:
+        bag_id = f"{pair}:{buy_order_id}"
     row = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "pair": pair,
@@ -41,6 +44,7 @@ def register_protective_order(
         "stop_price": float(stop_price),
         "limit_price": float(limit_price) if limit_price is not None else None,
         "buy_order_id": buy_order_id,
+        "bag_id": bag_id,
         "mode": mode,
         "sleeve": sleeve or "crypto",
         "reason": reason,

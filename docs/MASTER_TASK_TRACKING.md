@@ -1,3 +1,15 @@
+## PLATFORM-MISSION-20260909 — DONE (agent SSOT)
+
+**Type:** docs / intent  
+**Date:** 2026-09-09  
+**Status:** **DONE**  
+**Handoff:** `docs/PLATFORM_MISSION.md`
+
+### Plain English
+Mission for every agent: build a **reliable automated when/what/how** investor; trial-and-error is platform R&D, not a spending gamble; **scale only after net profitability**. Wired into `.hermes.md` + `docs/AGENT_5PCT_MONTH_PATH.md`.
+
+---
+
 ## HERMES-QUALITY-LOOP-20260909 — DONE (gate live)
 
 **Type:** hermes / reliability  
@@ -64,6 +76,30 @@ PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_floor_ratchet.py
 - Same-day seat pile-on
 - Grind Advanced 1 volume
 - Force-rebalance to "test" logging
+
+---
+
+## PLATFORM-MISSION-P0-CLOSEOUT-20260910 — IN_PROGRESS
+
+**Type:** code / reliability / P0  
+**Date:** 2026-09-10  
+**Status:** **IN_PROGRESS** (A1/A3/A4 code+isolation green; A2 full episode-id deferred — thin bag_id slice only)  
+**Handoff:** `docs/plans/2026-09-10-settlement-naked-bag-and-episode-id.md`  
+
+### Plain English
+Address P0 reliability issues related to immediate post-fill protection (naked bag), consistent tracking of trading "episodes" (bag identity), full ledger attribution for all fills, and continuous cleanup of ghost stop-loss registry entries. These are critical "process tax" fixes.
+
+### Verification (2026-09-10)
+```bash
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_naked_bag_p0.py          # 4/4 OK
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_fill_recon_p0_closeout.py # 5/5 OK
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_sl_floor_ratchet.py       # PASS
+```
+- **A1** naked-bag settle poll + fail-closed flatten in `stop_loss_manager.py`
+- **A3** limit-first buy attribution + `phase6-` client_order_id in fill-recon
+- **A4** flat ghost registry close on sell/SL recon paths
+- **A2** registry `bag_id={pair}:{buy_order_id}` only — full episode refactor still open
+- Live knobs: **unchanged**. Reload runner for SL manager path.
 
 ---
 

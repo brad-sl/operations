@@ -192,6 +192,35 @@ class StopLossManager:
                                 requested_size = float(verified["filled_size"])
                                 anchor_entry = entry_price
                                 size = requested_size
+                                # A1 naked-bag P0: after verified fresh buy, wait until
+                                # tradable size is actually available before attach.
+                                if fresh_buy_order_id and not self.shadow_mode:
+                                    settle_timeout = float(
+                                        (self.config or {}).get("risk_management", {}).get(
+                                            "naked_bag_settle_timeout_s", 15.0
+                                        )
+                                        if isinstance(self.config, dict)
+                                        else 15.0
+                                    )
+                                    # Keep several polls even when tests shorten timeout.
+                                    settle_interval = min(0.5, max(0.05, settle_timeout / 6.0))
+                                    available = self._check_available_balance_for_attach(
+                                        pair,
+                                        requested_size,
+                                        timeout=settle_timeout,
+                                        interval=settle_interval,
+                                    )
+                                    if available < requested_size * 0.999:
+                                        logger.critical(
+                                            "[NAKED-BAG-P0] %s verified fill but available=%.8f "
+                                            "< expected=%.8f after settle poll — fail-closed",
+                                            pair,
+                                            available,
+                                            requested_size,
+                                        )
+                                        # Flatten if possible; either way refuse unprotected bag.
+                                        self._fail_closed_unprotected_bag(pair, requested_size)
+                                        return False
                             elif fresh_buy_order_id:
                                 logger.error(
                                     f"[PRE-FLIGHT] Settlement ok but fill unverified for {pair} "
@@ -200,6 +229,14 @@ class StopLossManager:
                                 return False
         except Exception as e:
             logger.warning(f"[PRE-FLIGHT] poll skipped or failed for {pair}: {e}")
+            if fresh_buy_order_id and not self.shadow_mode:
+                logger.critical(
+                    "[NAKED-BAG-P0] Critical pre-flight failure for fresh buy %s "
+                    "(order_id=%s). Aborting SL attach.",
+                    pair,
+                    order_id,
+                )
+                return False
             if order_id and not self.shadow_mode:
                 return False
 
@@ -208,6 +245,20 @@ class StopLossManager:
             if pre_size <= 0 and pre_meta.get("holds_entire_balance"):
                 cancel_open_stops_for_pair(self.exchange, pair)
                 poll_available_after_cancel(self.exchange, pair, timeout=4.0)
+            # Fresh buy still showing zero tradable size → fail-closed, do not leave bag naked.
+            if (
+                fresh_buy_order_id
+                and pre_size <= 0
+                and not pre_meta.get("holds_entire_balance")
+            ):
+                logger.critical(
+                    "[NAKED-BAG-P0] %s fresh buy attach size resolved to 0 "
+                    "(meta=%s) — fail-closed",
+                    pair,
+                    pre_meta,
+                )
+                self._fail_closed_unprotected_bag(pair, requested_size)
+                return False
 
         meta = self.exchange.get_product_metadata(pair)
         price_inc = float(meta.get("price_increment", 0.0001))
@@ -439,6 +490,9 @@ class StopLossManager:
                                     reg_entry,
                                     sp,
                                 )
+                            bag_id = None
+                            if fresh_buy_order_id:
+                                bag_id = f"{pair}:{fresh_buy_order_id}"
                             register_protective_order(
                                 pair=pair,
                                 sl_order_id=str(sl_order_id),
@@ -447,6 +501,7 @@ class StopLossManager:
                                 stop_price=float(stop_price),
                                 limit_price=float(limit_price),
                                 buy_order_id=fresh_buy_order_id,
+                                bag_id=bag_id,
                                 mode="live",
                             )
                         except Exception as reg_exc:
@@ -469,6 +524,109 @@ class StopLossManager:
                 time.sleep(sleep_time)
 
         logger.error(f"Failed to attach stop-loss for {pair} after {max_retries} attempts")
+        if fresh_buy_order_id and not self.shadow_mode:
+            logger.critical(
+                "[NAKED-BAG-P0] %s fresh buy SL attach exhausted retries — fail-closed",
+                pair,
+            )
+            self._fail_closed_unprotected_bag(pair, float(requested_size or size or 0.0))
+        return False
+
+    def _check_available_balance_for_attach(
+        self,
+        pair: str,
+        expected_size: float,
+        timeout: float = 8.0,
+        interval: float = 0.5,
+    ) -> float:
+        """Poll exchange for tradable base size after a fresh buy fill."""
+        asset = str(pair or "").split("-")[0]
+        deadline = time.time() + max(0.0, float(timeout))
+        available_qty = 0.0
+        expected = float(expected_size or 0.0)
+        while True:
+            try:
+                if hasattr(self.exchange, "get_crypto_available"):
+                    available_qty = float(self.exchange.get_crypto_available(asset) or 0.0)
+                elif hasattr(self.exchange, "get_available_balance"):
+                    available_qty = float(self.exchange.get_available_balance(asset) or 0.0)
+                if expected <= 0 or available_qty >= expected * 0.999:
+                    logger.debug(
+                        "[NAKED-BAG] Balance available for %s: %s >= %s",
+                        pair,
+                        available_qty,
+                        expected,
+                    )
+                    return available_qty
+            except Exception as exc:
+                logger.warning("[NAKED-BAG] Error checking balance for %s: %s", pair, exc)
+            if time.time() >= deadline:
+                break
+            time.sleep(max(0.05, float(interval)))
+        logger.warning(
+            "[NAKED-BAG] Timeout/insufficient balance for %s. available=%s expected=%s",
+            pair,
+            available_qty,
+            expected,
+        )
+        return available_qty
+
+    def _fail_closed_unprotected_bag(self, pair: str, size: float) -> bool:
+        """
+        Attempt immediate market flatten of an unprotected fresh-buy bag.
+        Returns True if flattened (or would flatten in shadow), else False.
+        """
+        qty = float(size or 0.0)
+        logger.critical(
+            "[NAKED-BAG-P0] Unprotected bag detected for %s size=%s — attempting market sell",
+            pair,
+            qty,
+        )
+        if qty <= 0:
+            return False
+        if self.shadow_mode:
+            logger.info("[SHADOW] Would market sell %s of %s to flatten unprotected bag", qty, pair)
+            return True
+        # Best-effort: free any open stop holds first so sell can land.
+        try:
+            from phase6.core.sl_preflight import cancel_open_stops_for_pair, poll_available_after_cancel
+
+            cancel_open_stops_for_pair(self.exchange, pair)
+            poll_available_after_cancel(self.exchange, pair, timeout=3.0)
+        except Exception as exc:
+            logger.warning("[NAKED-BAG-P0] pre-flatten cancel failed for %s: %s", pair, exc)
+        try:
+            sell_result = None
+            if hasattr(self.exchange, "place_market_sell"):
+                try:
+                    sell_result = self.exchange.place_market_sell(product_id=pair, size=qty)
+                except TypeError:
+                    # Legacy wrappers use qty=
+                    sell_result = self.exchange.place_market_sell(product_id=pair, qty=qty)
+            if isinstance(sell_result, dict) and sell_result.get("success"):
+                logger.critical(
+                    "[NAKED-BAG-P0] Flattened unprotected bag for %s via market sell: %s",
+                    pair,
+                    sell_result,
+                )
+                try:
+                    from phase6.core.protective_orders_registry import close_open_stops_for_flat_pair
+
+                    close_open_stops_for_flat_pair(pair, reason="naked_bag_fail_closed")
+                except Exception:
+                    pass
+                return True
+            logger.critical(
+                "[NAKED-BAG-P0] FAILED to flatten unprotected bag for %s. result=%s",
+                pair,
+                sell_result,
+            )
+        except Exception as exc:
+            logger.critical(
+                "[NAKED-BAG-P0] Exception during market sell for unprotected bag %s: %s",
+                pair,
+                exc,
+            )
         return False
 
     def attach_take_profit(self, pair: str, entry_price: float, size: float, tp_pct: float = None) -> bool:

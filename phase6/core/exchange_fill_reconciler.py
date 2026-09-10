@@ -31,14 +31,41 @@ TRADING_BOT_DATA_SOURCE = "ORDER_DATA_SOURCE_TRADING_PROXY"
 
 
 def is_coinbase_trading_bot_order(order: Dict[str, Any]) -> bool:
-    """True when order matches Coinbase ledger filter 'Trading Bot transactions only'."""
+    """True when order matches Coinbase ledger filter 'Trading Bot transactions only'.
+
+    Also accepts bot-attributed fills when Coinbase omits proxy source on limit-first
+    orders but client_order_id still carries our phase6- prefix.
+    """
     src = str(order.get("order_data_source") or "")
     if src == TRADING_BOT_DATA_SOURCE:
         return True
-    # Future: dedicated placement source values from CDP.
-    return str(order.get("order_placement_source") or "").upper() in (
-        "RETAIL_ADVANCED",
-    ) and src in ("", "ORDER_DATA_SOURCE_TRADING_PROXY")
+    placement = str(order.get("order_placement_source") or "").upper()
+    if placement in ("RETAIL_ADVANCED",) and src in ("", TRADING_BOT_DATA_SOURCE):
+        return True
+    # Limit-first / executor path: client_order_id = phase6-<hex>
+    coid = str(order.get("client_order_id") or order.get("client_oid") or "")
+    if coid.startswith("phase6-") or coid.startswith("phase6_"):
+        return True
+    return False
+
+
+def _is_bot_limit_or_market_buy(order: Dict[str, Any]) -> bool:
+    """BUY fills eligible for ledger backfill (market + limit-first)."""
+    if str(order.get("side", "")).upper() != "BUY":
+        return False
+    oc = order.get("order_configuration") or {}
+    # Never treat stop-entry configs as ordinary buys
+    if order_configuration_is_stop(oc):
+        return False
+    ot = str(order.get("order_type") or "").upper()
+    if not ot:
+        return True
+    if ot in ("MARKET", "LIMIT", "LIMIT_LIMIT_GTC", "LIMIT_LIMIT_GTD", "LIMIT_LIMIT_FOK"):
+        return True
+    # Coinbase sometimes uses descriptive strings
+    if "LIMIT" in ot or "MARKET" in ot:
+        return True
+    return False
 
 
 def _parse_ts(order: Dict[str, Any]) -> str:
@@ -399,12 +426,10 @@ def build_ledger_row_from_market_buy(
     *,
     backfill: bool = False,
 ) -> Optional[Dict[str, Any]]:
+    """FILLED BUY from Trading Bot (market or limit-first)."""
     if not is_coinbase_trading_bot_order(order):
         return None
-    if str(order.get("side", "")).upper() != "BUY":
-        return None
-    ot = str(order.get("order_type") or "").upper()
-    if ot and ot != "MARKET":
+    if not _is_bot_limit_or_market_buy(order):
         return None
     oid = _order_id(order)
     pair = order.get("product_id") or order.get("pair")
@@ -421,6 +446,10 @@ def build_ledger_row_from_market_buy(
             pass
     if fill_px <= 0 or fill_sz <= 0:
         return None
+    ot = str(order.get("order_type") or "").upper() or "MARKET"
+    reason = "preserve_arm" if str(pair).upper().startswith("PAXG") else "rebalance_buy"
+    if "LIMIT" in ot:
+        reason = "limit_first_buy" if not str(pair).upper().startswith("PAXG") else reason
     return {
         "timestamp": _parse_ts(order),
         "pair": pair,
@@ -432,9 +461,7 @@ def build_ledger_row_from_market_buy(
         "pnl_pct": 0.0,
         "order_id": oid,
         # PAXG is the Preserve ballast asset — never a basket rebalance buy
-        "reason": (
-            "preserve_arm" if str(pair).upper().startswith("PAXG") else "rebalance_buy"
-        ),
+        "reason": reason,
         "signal_source": "coinbase_fill_reconcile",
         "mode": "live",
         "fill_verified": True,
@@ -442,6 +469,7 @@ def build_ledger_row_from_market_buy(
         "exchange_status": order.get("status"),
         "order_type": order.get("order_type"),
         "order_data_source": order.get("order_data_source"),
+        "client_order_id": order.get("client_order_id") or order.get("client_oid"),
         "coinbase_trading_bot": True,
         "sleeve": "preserve" if str(pair).upper().startswith("PAXG") else "trade",
     }
@@ -487,6 +515,12 @@ def _ingest_row(
                     row.get("pair"),
                     dust_exc,
                 )
+        # A4: close leftover open registry rows when sell leaves pair flat
+        if str(row.get("side") or "").upper() == "SELL":
+            try:
+                _maybe_close_flat_registry(exchange, str(row.get("pair") or ""), reason="fill_recon_sell")
+            except Exception as flat_exc:
+                logger.debug("[FILL-RECON] flat ghost close skipped: %s", flat_exc)
         # Shadow partial-redeploy would-fire (rotation + stop reasons); never orders
         if str(row.get("side") or "").upper() == "SELL":
             try:
@@ -516,6 +550,60 @@ def _ingest_row(
         row.get("exit_price") or row.get("entry_price"),
         row.get("reason"),
     )
+
+
+def _pair_base_qty(exchange: Any, pair: str) -> Optional[float]:
+    """Best-effort remaining base size for pair; None if unknown."""
+    if not exchange or not pair:
+        return None
+    asset = str(pair).split("-")[0]
+    try:
+        if hasattr(exchange, "get_crypto_available"):
+            avail = float(exchange.get_crypto_available(asset) or 0.0)
+        else:
+            avail = None
+        total = None
+        if hasattr(exchange, "get_crypto_balance"):
+            try:
+                total = float(exchange.get_crypto_balance(asset) or 0.0)
+            except Exception:
+                total = None
+        if hasattr(exchange, "get_holdings"):
+            try:
+                h = exchange.get_holdings() or {}
+                if isinstance(h, dict):
+                    positions = h.get("positions") if "positions" in h else h
+                    if isinstance(positions, dict) and asset in positions:
+                        raw = positions[asset]
+                        if isinstance(raw, dict):
+                            total = float(raw.get("qty") or raw.get("size") or raw.get("balance") or 0.0)
+                        else:
+                            total = float(raw or 0.0)
+            except Exception:
+                pass
+        vals = [v for v in (avail, total) if v is not None]
+        if not vals:
+            return None
+        return max(vals)
+    except Exception:
+        return None
+
+
+def _maybe_close_flat_registry(exchange: Any, pair: str, *, reason: str) -> int:
+    """A4: if exchange shows flat (or unknown but sell path), close open registry ghosts."""
+    if not pair:
+        return 0
+    from phase6.core.protective_orders_registry import close_open_stops_for_flat_pair
+
+    qty = _pair_base_qty(exchange, pair)
+    # Unknown holdings: still close ghosts after a verified full SL/market sell path —
+    # mark_sl_filled already closed the filled id; this catches *other* open rows.
+    if qty is not None and qty > 1e-12:
+        return 0
+    n = close_open_stops_for_flat_pair(pair, reason=reason)
+    if n:
+        logger.info("[FILL-RECON] closed %s ghost registry stop(s) for flat %s (%s)", n, pair, reason)
+    return n
 
 
 def reconcile_all_filled_sells(
@@ -721,6 +809,12 @@ def reconcile_filled_stops(
                     row.get("pair"),
                     dust_exc,
                 )
+            try:
+                _maybe_close_flat_registry(
+                    exchange, str(row.get("pair") or ""), reason="fill_recon_sl"
+                )
+            except Exception as flat_exc:
+                logger.debug("[FILL-RECON] flat ghost close after SL skipped: %s", flat_exc)
             try:
                 from phase6.core.liquidation_redeploy_shadow import (
                     record_from_ledger_sell_row,

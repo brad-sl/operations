@@ -1,5 +1,7 @@
 # 5%/mo take-home path (agent SSOT)
 
+**Mission (read first):** `docs/PLATFORM_MISSION.md` — reliable automated when/what/how → net profitability → scale. Lab R&D, not quick-cash gambling.
+
 **MASTER card:** `P6-5PCT-MONTH-PATH-20260909` in `docs/MASTER_TASK_TRACKING.md`  
 **Plan:** `docs/plans/2026-09-09-platform-opt-after-3w-patches.md`  
 **Brad GO:** 2026-09-09 (this session)

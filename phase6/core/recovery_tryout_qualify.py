@@ -102,6 +102,14 @@ def load_v2_cfg(rec: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     if not tier_b:
         tier_b = set(DEFAULT_TIER_B)
 
+    # Brad GO: explicit pairs that bypass ledger fail (still hard/missfire blocked).
+    force_eligible = _norm_set(
+        src.get("force_eligible_pairs")
+        or qt.get("force_eligible_pairs")
+        or rec.get("force_eligible_pairs")
+        or []
+    )
+
     return {
         "lookback_days": float(src.get("lookback_days", DEFAULT_LOOKBACK_DAYS) or DEFAULT_LOOKBACK_DAYS),
         "tier_a": tier_a,
@@ -110,6 +118,7 @@ def load_v2_cfg(rec: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "allow_first_fill_tier_b": bool(
             src.get("allow_first_fill_tier_b", DEFAULT_ALLOW_FIRST_FILL_TIER_B)
         ),
+        "force_eligible_pairs": force_eligible,
         "min_net_pnl": float(src.get("min_net_pnl", DEFAULT_MIN_NET) or 0.0),
         "min_rt_graduated": int(src.get("min_rt_graduated", DEFAULT_MIN_RT_GRAD) or DEFAULT_MIN_RT_GRAD),
         "max_sl_rate": float(src.get("max_sl_rate", DEFAULT_MAX_SL_RATE) or DEFAULT_MAX_SL_RATE),
@@ -417,7 +426,9 @@ def evaluate_pair_tryout(
             in_legacy_list=p in cfg["legacy_tryout_pairs"],
         )
 
-    if tier == "C" and not cfg["allow_tier_c"]:
+    force_go = p in cfg.get("force_eligible_pairs", set())
+
+    if tier == "C" and not cfg["allow_tier_c"] and not force_go:
         return TryoutVerdict(
             pair=p,
             tier=tier,
@@ -450,6 +461,12 @@ def evaluate_pair_tryout(
         out_cls = "first_fill_tier_b"
         score = max(score, 0.40)
         reasons.append("first_fill_path_tier_B")
+    elif force_go and tier in ("B", "C"):
+        # Explicit Brad GO seat — ledger still recorded in reasons/stats, not a free-for-all.
+        eligible = True
+        out_cls = "brad_go_force_eligible"
+        score = max(score, 0.45)
+        reasons.append("brad_go_force_eligible")
     else:
         eligible = False
         out_cls = cls if cls != "thin_history" else "ledger_fail_or_thin"
@@ -460,7 +477,7 @@ def evaluate_pair_tryout(
         tier=tier,
         eligible_tryout=bool(eligible),
         ledger_ok=bool(ok),
-        first_fill_path=bool(first_fill and eligible),
+        first_fill_path=bool(first_fill and eligible and not force_go),
         score=float(score),
         class_=out_cls,
         reasons=reasons,

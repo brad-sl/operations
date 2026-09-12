@@ -227,12 +227,70 @@ def test_v1_static_unchanged_when_not_v2():
     print("PASS v1_static_unchanged")
 
 
+def test_brad_go_force_eligible_bypasses_ledger_fail():
+    """Brad GO force_eligible_pairs opens a tier-B seat even with SL-heavy ledger."""
+    now = datetime.now(timezone.utc)
+    rows = []
+    for i in range(8):
+        rows.append(
+            {
+                "pair": "AVAX-USD",
+                "side": "SELL",
+                "timestamp": (now - timedelta(days=i + 1)).isoformat(),
+                "pnl": -1.0,
+                "reason": "stop_loss",
+            }
+        )
+
+    def _mf_clear(p, enforce=True):
+        return type("V", (), {"blocked": False, "class_": "clear", "reasons": []})()
+
+    rec = _rec_v2()
+    rec["quality_tryout"]["v2"]["tier_b"] = ["ETH-USD", "AVAX-USD"]
+    rec["quality_tryout"]["v2"]["force_eligible_pairs"] = ["AVAX-USD"]
+
+    v_fail = evaluate_pair_tryout(
+        "AVAX-USD",
+        rec=_rec_v2(),
+        basket=["AVAX-USD", "ETH-USD"],
+        ledger_rows=rows,
+        missfire_fn=_mf_clear,
+    )
+    assert not v_fail.eligible_tryout, v_fail
+
+    v_go = evaluate_pair_tryout(
+        "AVAX-USD",
+        rec=rec,
+        basket=["AVAX-USD", "ETH-USD"],
+        ledger_rows=rows,
+        missfire_fn=_mf_clear,
+    )
+    assert v_go.eligible_tryout, v_go
+    assert v_go.tier == "B", v_go
+    assert v_go.class_ == "brad_go_force_eligible", v_go
+    assert "brad_go_force_eligible" in (v_go.reasons or [])
+    # hard block still wins over force
+    rec_hard = _rec_v2()
+    rec_hard["quality_tryout"]["v2"]["force_eligible_pairs"] = ["UNI-USD"]
+    rec_hard["quality_tryout"]["v2"]["tier_b"] = ["UNI-USD"]
+    v_uni = evaluate_pair_tryout(
+        "UNI-USD",
+        rec=rec_hard,
+        basket=["UNI-USD"],
+        ledger_rows=[],
+        missfire_fn=_mf_clear,
+    )
+    assert v_uni.hard_blocked and not v_uni.eligible_tryout
+    print("PASS brad_go_force_eligible_bypasses_ledger_fail")
+
+
 def main():
     test_ledger_pass_fail()
     test_hard_block_and_missfire()
     test_gate_wiring_v2()
     test_short_labels()
     test_v1_static_unchanged_when_not_v2()
+    test_brad_go_force_eligible_bypasses_ledger_fail()
     print("ALL PASS isolation_recovery_tryout_v2")
 
 

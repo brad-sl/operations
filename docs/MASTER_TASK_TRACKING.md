@@ -1,3 +1,15 @@
+## PC-02-EXIT-STACK-PROOF-20260911 — DONE (2026-09-12T01:45:20Z)
+**Status:** DONE (measure-only packet)
+**Artifacts:** `phase6/core/exit_stack_proof.py`, `scripts/phase6/run_exit_stack_proof.py`, `scripts/phase6/test_isolation_exit_stack_proof_pc02.py`, `data/state/exit_stack_proof_latest.json`, `reports/EXIT_STACK_PROOF_LATEST.md`
+**Verdict:** TP live KEEP; hard_exit global auto NO-GO; disposition tags OK (0 blank/30d); 30d TP bank vs SL bank on ledger RTs. No live knob flips.
+**Kanban:** t_72c99174
+
+## PC-03-TRYOUT-SLEEVE-REAL-20260911 — DONE (2026-09-12T01:45:20Z)
+**Status:** DONE (builder + drought-honest board)
+**Artifacts:** `phase6/core/tryout_readiness.py`, `scripts/phase6/run_tryout_readiness.py`, `scripts/phase6/test_isolation_tryout_readiness_pc03.py`, refreshed `tryout_readiness_latest.json` / `TRYOUT_READINESS_LATEST.md`
+**Verdict:** Floor SSOT live=0.35; sensor aged-out not broken; can_buy=false (eng drought). Free/tee never clears gates. No floor bypass / no force_rebalance.
+**Kanban:** t_535d28d1
+
 ## PLATFORM-COMPLETENESS-20260911 — OPEN (epic hub)
 
 **Type:** platform / completeness / reliability→edge path  

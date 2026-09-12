@@ -237,9 +237,9 @@
     "protect": true,
     "recovery_soft_down_20260828": {
       "enabled": true,
-      "reason": "Brad GO 2026-09-05: quality_tryout_v2 — ledger tier B; $75; max2 seats/day (was 1 — pace not armor); tier C off; UNI/RAVE hard block",
-      "as_of": "20260905T230000Z",
-      "prior_as_of": "20260905T220000Z",
+      "reason": "Brad GO 2026-09-11: promote AVAX tryout $75 via force_eligible (ledger SL-heavy); tier C still off; UNI/RAVE hard block",
+      "as_of": "20260911T234500Z",
+      "prior_as_of": "20260905T230000Z",
       "block_new_buy_pairs": [
         "UNI-USD",
         "RAVE-USD"
@@ -262,7 +262,8 @@
       "quality_tryout": {
         "tryout_pairs": [
           "ETH-USD",
-          "LINK-USD"
+          "LINK-USD",
+          "AVAX-USD"
         ],
         "min_sentiment": 0.30,
         "max_rsi": 55.0,
@@ -280,20 +281,24 @@
             "ETH-USDC",
             "LINK-USD",
             "SOL-USD",
-            "XRP-USD"
+            "XRP-USD",
+            "AVAX-USD"
+          ],
+          "force_eligible_pairs": [
+            "AVAX-USD"
           ],
           "min_net_pnl": 0.0,
           "min_rt_graduated": 3,
           "max_sl_rate": 0.50,
           "min_tp_rate": 0.15,
           "min_rt_for_rates": 5,
-          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors above. Tier C requires Brad GO allow_tier_c."
+          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors. force_eligible_pairs = Brad GO seat bypass of ledger fail only (still $75 / sent / RSI)."
         },
-        "note": "v2 live: dynamic eligible set from ledger scoreboard. Static tryout_pairs = legacy compare only."
+        "note": "v2 live: dynamic eligible set from ledger scoreboard + force_eligible. Static tryout_pairs = legacy compare only."
       },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "set new_alt_policy=quality_tryout (static ETH+LINK) OR block_unless_allowlist; or quality_tryout.v2_dynamic=false"
+      "rollback": "Remove AVAX from tier_b + force_eligible_pairs + tryout_pairs; rewrite scoreboard; prior_as_of 20260905T230000Z"
     }
   },
   "buy_block_pairs": [

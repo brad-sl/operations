@@ -78,6 +78,11 @@ def main() -> int:
         action="store_true",
         help="Allow promote of ADD pairs blocked by miss-fire probation (ledger dig/fast hole)",
     )
+    ap.add_argument(
+        "--override-novelty-class",
+        action="store_true",
+        help="Allow promote of ADD pairs blocked by novelty class gate (restricted/hard pin)",
+    )
     args = ap.parse_args()
 
     if not args.from_proposed and not args.refresh and not (args.manual_add and args.manual_remove):
@@ -229,6 +234,28 @@ def main() -> int:
                 )
         except Exception as e:  # noqa: BLE001
             print(f"NOTE: missfire_probation check skipped ({type(e).__name__}: {e})")
+
+        # Novelty class gate (meme/narrative restricted until graduation; reversible)
+        try:
+            from phase6.core.novelty_class_gate import evaluate_pair_novelty
+
+            nv = evaluate_pair_novelty(str(add), enforce=True, persist_first_seen=True)
+            sw["novelty_class"] = nv.to_dict()
+            if nv.blocked and not args.override_novelty_class:
+                print(
+                    f"REFUSE: novelty class blocks ADD {add} "
+                    f"[{nv.class_}] {'; '.join(nv.reasons[:3])}. "
+                    f"Pass --override-novelty-class to force (Brad only), "
+                    f"or graduate via run_novelty_class_gate.py --promote."
+                )
+                return 7
+            if nv.blocked and args.override_novelty_class:
+                print(
+                    f"WARN: overriding novelty class for {add} "
+                    f"[{nv.class_}] {'; '.join(nv.reasons[:3])}"
+                )
+        except Exception as e:  # noqa: BLE001
+            print(f"NOTE: novelty_class check skipped ({type(e).__name__}: {e})")
 
         # First-fill tag (membership only; live BUY will be tryout-sized)
         try:

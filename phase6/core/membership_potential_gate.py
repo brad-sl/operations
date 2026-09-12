@@ -364,6 +364,41 @@ def evaluate_membership_swap(
     except Exception as e:  # noqa: BLE001 — never break membership on ledger glitch
         reasons.append(f"M4:skip:{type(e).__name__}")
 
+    # M5 — novelty class (meme/narrative restricted until graduation; reversible)
+    try:
+        from phase6.core.novelty_class_gate import evaluate_pair_novelty
+
+        nv = evaluate_pair_novelty(
+            add,
+            enforce=True,
+            quote_vol_24h=quote_vol_24h,
+            ret_24h=ret_24h,
+            ret_7d=mom_7d,
+            persist_first_seen=True,
+            auto_graduate=False,
+            auto_demote=False,
+        )
+        if nv.blocked:
+            reasons.extend([f"M5:{r}" for r in (nv.reasons or [nv.class_])[:6]])
+            return MembershipSwapVerdict(
+                ok=False,
+                bag_ok=True,
+                inbound_ok=True,
+                outbound_ok=True,
+                delta_ok=True,
+                inbound_potential=inbound_potential if inbound_potential is not None else in_score,
+                outbound_potential=outbound_potential,
+                delta=delta,
+                layer_failed="M5",
+                reasons=reasons,
+                add=add,
+                remove=remove,
+                require_deploy_ready=REQUIRE_DEPLOY_READY_FOR_MEMBERSHIP,
+            )
+        reasons.append(f"M5:novelty_clear:{nv.class_}")
+    except Exception as e:  # noqa: BLE001 — never break membership on novelty glitch
+        reasons.append(f"M5:skip:{type(e).__name__}")
+
     reasons.append("membership_potential_ok")
     reasons.append("deploy_ready_not_required")
     return MembershipSwapVerdict(

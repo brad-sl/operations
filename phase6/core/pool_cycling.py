@@ -332,6 +332,19 @@ def propose_swaps(
         add_candidates = filtered
     except Exception:
         pass
+    # Novelty class: drop restricted/blocked meme-narrative ADDs (graduate later)
+    try:
+        from phase6.core.novelty_class_gate import evaluate_pair_novelty
+
+        filtered2: List = []
+        for s in add_candidates:
+            nv = evaluate_pair_novelty(s.pair, enforce=True, persist_first_seen=True)
+            if nv.blocked:
+                continue
+            filtered2.append(s)
+        add_candidates = filtered2
+    except Exception:
+        pass
     add_candidates.sort(key=lambda s: s.score, reverse=True)
 
     swaps: List[SwapProposal] = []

@@ -12403,3 +12403,12 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+## Platform completeness progress — runner + PC-04/05/06 (2026-09-12)
+
+- Runner restart (no knobs): new PID loaded A1/A2 code path (see ops).
+- **PC-04** L2 deployability: `phase6/core/l2_deployability.py` · `reports/L2_DEPLOYABILITY_LATEST.md` · isolation OK · live **L2_BLOCKED** 0/12 on preferred arm.
+- **PC-05** Limit-first evidence: `phase6/core/limit_first_evidence.py` · `reports/LIMIT_FIRST_EVIDENCE_LATEST.md` · isolation OK · honest counters (attempts=7, fill~71%, promote bar N≥30 not met).
+- **PC-06** Attribution RT weekly: `phase6/core/attribution_rt_weekly.py` · `reports/ATTRIBUTION_RT_WEEKLY_LATEST.md` · isolation OK · edge_claim_allowed=false.
+- **Hold PC-07/08** until above green/stable.
+

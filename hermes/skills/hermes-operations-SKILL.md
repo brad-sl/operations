@@ -1,7 +1,7 @@
 ---
 name: hermes-operations
-description: Best practices for working with Hermes CLI, cron jobs, gateway, and persistent agent workflows. Captures execution preferences and common pitfalls.
-version: 1.0.0
+description: Use when Hermes CLI, cron, gateway, Desktop voice/TTS, or persistent agent workflows. Execution prefs, config knobs, pitfalls.
+version: 1.1.0
 ---
 
 # Hermes Operations
@@ -13,7 +13,52 @@ version: 1.0.0
 
 **Aggressive go-ahead:** If Brad says kick off / no need to wait for approval on a planned gate chain, **execute** end-to-end (e.g. venue probe → economics → MVP docs) without re-asking mid-stream. Still no silent live product enable or large capital moves beyond agreed probe micro-caps.
 
+**Install-ahead, switch on GO:** When Brad wants a new TTS/voice engine prepared but says keep current provider first (e.g. install Piper, stay on xAI until switch), install + smoke-verify the alternate **without** flipping `tts.provider`. Switch only on explicit go.
+
+**Spoken primary only (Brad):** With Desktop `voice.auto_tts` on, the whole final assistant message is spoken (markdown stripped; no first-paragraph-only knob). Prefer short primary-answer prose in the chat reply; put side notes, MEDIA paths, tool narration, and trailing meta off the spoken path (or omit). If using the `text_to_speech` tool, pass only the primary line — never the full verbose reply. Do not double-speak when auto_tts already covers the turn.
+
 **Plain English for gates/PRDs:** Lead with implications (Hold vs DeRisk, E1, venue A/B/C, G1–G3) — opaque shorthand without translation frustrates Brad.
+
+## Desktop voice / TTS latency
+
+**Trigger:** Text shows on screen seconds before spoken audio; “read aloud” / voice chat feels laggy; questions about local TTS vs local LLM.
+
+**Procedure (in order):**
+1. Read live knobs — never guess from memory:
+   ```bash
+   hermes config get tts
+   hermes config get voice
+   hermes config get tts.xai   # when provider is xai
+   ```
+2. **xAI first-audio gap:** If `tts.xai.auto_speech_tags` is true, set it **false** — it runs a hidden auxiliary LLM rewrite before synthesis while chat text already streams. That alone often explains multi-second text→voice lag.
+3. Raise `tts.xai.optimize_streaming_latency` toward **2** (range 0–2; higher = lower time-to-first-audio, slight quality trade).
+4. Confirm `voice.client_direct: true` (default) for Desktop lowest-hop STT/TTS when the provider supports client-direct. OAuth-only xAI may still relay server-side — prefer an explicit API key path for TTS when chasing latency.
+5. Apply only via `hermes config set` (never hand-edit `config.yaml`). After knob changes, end/restart the open voice session once so the speak path reloads config.
+6. Set expectations: Hermes speaks **sentence-by-sentence** (buffer ~20+ chars). Residual ~0.3–1.5s text-lead after the above is normal provider TTFB, not a stuck UI.
+
+**Local engines (Piper / KittenTTS / NeuTTS):**
+- Do **not** require a local chat LLM (no Ollama / llama.cpp). They are small speech models + a package install.
+- Install into the **Hermes venv**, download the voice, smoke-synth, leave `tts.provider` on the current cloud engine until Brad GO:
+  ```bash
+  cd ~/.hermes/hermes-agent && uv pip install piper-tts
+  # venv python:
+  python -m piper.download_voices en_US-lessac-medium --download-dir ~/.hermes/cache/piper-voices
+  hermes config get tts.provider   # leave as-is until switch
+  hermes config set tts.provider piper   # only on explicit go
+  ```
+- On Win Desktop → Linux host, local TTS runs on the **Linux Hermes host**, not inside Windows.
+- First cold load can take seconds; Desktop “Read replies aloud” / voice chat warm-lease preloads so later replies stay fast.
+- **Change Piper voice (not just provider):** `hermes config set tts.piper.voice <name>` (e.g. `en_US-ryan-medium`, `en_US-amy-medium`, `en_US-lessac-high`). First speak auto-downloads into `~/.hermes/cache/piper-voices/`. Catalog/samples: rhasspy.github.io/piper-samples. Absolute `.onnx` path also works.
+
+**Desktop Space bar “broken” only inside Hermes (not OS/hardware):**
+- **Class cause:** full **voice conversation** mode (not Piper itself). While conversation is enabled and status is `listening`, Desktop registers a **window capture** keydown that `preventDefault`s bare `Space` to end the utterance (`use-voice-conversation.ts`). Other apps keep working; Hermes composer cannot type spaces.
+- **Do not** chase keyboard drivers, Filter Keys, or blame the TTS engine install when Space fails **only** in Desktop after voice use.
+- **Fix:** end voice conversation — click the mic/conversation end control, type bare `stop` + Enter (typed stop phrase; no space needed), or say the configured stop phrase. Prefer **read-aloud / auto-TTS** when Brad wants spoken replies **and** normal typing; leave the conversation loop off.
+- **Diagnose STT vs TTS split:** host logs often show xAI STT transcripts + Piper `TTS audio saved` while the user hears nothing or interrupts mid-reply — treat input and playback as separate legs. Check `gui.log` for `speak-stream synthesis failed` (e.g. `extra_headers`) and interrupted turns / barge-in before declaring host synth dead.
+
+**Expressive tags without the lag tax:** If re-enabling `auto_speech_tags`, pin a cheap fast model under `auxiliary.tts_audio_tags` so the rewrite is not flagship-speed.
+
+Detail: `references/voice-tts-latency-and-local-engines.md`.
 
 ## Terminal backend (local vs SSH) — agent shell broken
 

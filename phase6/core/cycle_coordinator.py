@@ -73,6 +73,7 @@ class CycleCoordinator:
         self._maybe_preserve_hold(runner)
         self._maybe_park_package(runner)
         runner._write_dashboard_cache()
+        self._maybe_tryout_readiness_board(runner)
 
     def _maybe_preserve_hold(self, runner: Phase6Runner) -> None:
         """Preserve Hold tick: no-op unless preserve_mode.enabled; never auto-arms."""
@@ -116,6 +117,21 @@ class CycleCoordinator:
                     )
         except Exception as exc:
             logger.debug("[PARK-PACKAGE] skipped: %s", exc)
+
+    def _maybe_tryout_readiness_board(self, runner: Phase6Runner) -> None:
+        """PC-03: refresh tryout sleeve readiness board (floors SSOT, eng clock, can_buy) each cycle."""
+        try:
+            from phase6.core.tryout_readiness import build_live_tryout_readiness
+
+            payload = build_live_tryout_readiness(write=True)
+            if payload.get("can_buy_before_next_rebalance"):
+                logger.info(
+                    "[TRYOUT-READINESS] can_buy=True eligible=%s",
+                    payload.get("eligible_tryout_pairs"),
+                )
+            # drought is honest output; no log spam
+        except Exception as exc:
+            logger.debug("[TRYOUT-READINESS] refresh skipped: %s", exc)
 
     def _reconcile_exchange_fills(self, runner: Phase6Runner) -> None:
         """Ingest Coinbase FILLED orders + optional param audit (P6-FILL-RECON / P6-PARAM-AUDIT)."""

@@ -1,3 +1,8 @@
+## PLATFORM-E2E-VALIDATION-20260911 — DONE
+**Status:** DONE measure-only after PC-01..03
+**Artifacts:** `reports/PLATFORM_E2E_VALIDATION_20260911.md`, `scripts/phase6/run_platform_e2e_validation.py`, `data/state/platform_e2e_validation_latest.json`
+**Verdict:** CONDITIONAL lab GO / money-path NO-GO scale. Top inhibitors: G-EXIT-TAX, G-FUNNEL-SENT, G-RUNNER-RESTART, G-BAGID-ADOPTION, PC-04..06.
+
 ## PC-02-EXIT-STACK-PROOF-20260911 — DONE (2026-09-12T01:45:20Z)
 **Status:** DONE (measure-only packet)
 **Artifacts:** `phase6/core/exit_stack_proof.py`, `scripts/phase6/run_exit_stack_proof.py`, `scripts/phase6/test_isolation_exit_stack_proof_pc02.py`, `data/state/exit_stack_proof_latest.json`, `reports/EXIT_STACK_PROOF_LATEST.md`
@@ -7,8 +12,9 @@
 ## PC-03-TRYOUT-SLEEVE-REAL-20260911 — DONE (2026-09-12T01:45:20Z)
 **Status:** DONE (builder + drought-honest board)
 **Artifacts:** `phase6/core/tryout_readiness.py`, `scripts/phase6/run_tryout_readiness.py`, `scripts/phase6/test_isolation_tryout_readiness_pc03.py`, refreshed `tryout_readiness_latest.json` / `TRYOUT_READINESS_LATEST.md`
-**Verdict:** Floor SSOT live=0.35; sensor aged-out not broken; can_buy=false (eng drought). Free/tee never clears gates. No floor bypass / no force_rebalance.
+**Verdict:** Floor SSOT live=0.35; sensor aged-out not broken; can_buy=false (eng drought). Free/tee never clears gates. No floor bypass / no force_rebalance. Live board refresh wired into CycleCoordinator every cycle.
 **Kanban:** t_535d28d1
+**Post-ship verify (kanban t_535d28d1 run 238):** isolation 7/7, pre_ship PASS, cycle integration exercised, artifacts re-refreshed 2026-09-11T18:48, eng clock + X→reddit bridge proven mid-cycle.
 
 ## PLATFORM-COMPLETENESS-20260911 — OPEN (epic hub)
 

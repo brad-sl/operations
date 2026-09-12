@@ -343,9 +343,18 @@ class StopLossManager:
             existing_stop = None
             registry_entry = None
             continuous_bag = False
+            registry_bag_id = None
+            current_bag_id = None
             try:
+                from phase6.core.episode_identity import (
+                    bag_id_from_registry_row,
+                    bag_ids_conflict,
+                    make_bag_id,
+                )
                 from phase6.core.runner_capital_events import _latest_registry_stop_for_pair
 
+                if fresh_buy_order_id:
+                    current_bag_id = make_bag_id(pair, fresh_buy_order_id)
                 row = _latest_registry_stop_for_pair(pair, open_only=True)
                 if isinstance(row, dict) and row.get("stop_price"):
                     # Only inherit when row looks like THIS continuous bag
@@ -354,9 +363,12 @@ class StopLossManager:
                         registry_entry = float(row.get("entry_price") or 0) or None
                     except (TypeError, ValueError):
                         registry_entry = None
-                    # Live open stop under mark with matching entry ⇒ continuous
+                    registry_bag_id = bag_id_from_registry_row(row)
+                    # Live open stop under mark with matching entry/bag ⇒ continuous
+                    bag_ok = not bag_ids_conflict(registry_bag_id, current_bag_id)
                     if (
                         not fresh_buy
+                        and bag_ok
                         and market_px
                         and existing_stop < float(market_px) * 0.999
                         and registry_entry
@@ -364,6 +376,8 @@ class StopLossManager:
                         and abs(registry_entry - ratchet_entry) / ratchet_entry <= 0.08
                     ):
                         continuous_bag = True
+                        if registry_bag_id and not current_bag_id:
+                            current_bag_id = registry_bag_id
             except Exception:
                 pass
             add_px = None
@@ -383,6 +397,8 @@ class StopLossManager:
                 fresh_buy=bool(fresh_buy),
                 continuous_bag=bool(continuous_bag),
                 registry_entry=registry_entry,
+                registry_bag_id=registry_bag_id,
+                current_bag_id=current_bag_id,
             )
             if rdec.applied and stop_price != pre_ratchet_stop:
                 stop_price_str = self.exchange.quantize_price(pair, stop_price)
@@ -490,16 +506,16 @@ class StopLossManager:
                                     reg_entry,
                                     sp,
                                 )
-                            bag_id = None
-                            if fresh_buy_order_id:
-                                bag_id = f"{pair}:{fresh_buy_order_id}"
+                            from phase6.core.episode_identity import make_bag_id
+
+                            bag_id = make_bag_id(pair, fresh_buy_order_id)
                             register_protective_order(
                                 pair=pair,
                                 sl_order_id=str(sl_order_id),
                                 entry_price=float(reg_entry or calc_base or entry_price or 0),
                                 qty=float(size),
                                 stop_price=float(stop_price),
-                                limit_price=float(limit_price),
+                                limit_price=float(limit_price) if limit_price else None,
                                 buy_order_id=fresh_buy_order_id,
                                 bag_id=bag_id,
                                 mode="live",

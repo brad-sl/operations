@@ -3,7 +3,7 @@
 **Date:** 2026-09-10  
 **Owner:** Grok  
 **Audience:** Hermes agents, Implementers  
-**Status:** **A1/A3/A4 shipped (code+isolation); A2 thin slice only**  
+**Status:** **A1/A2/A3/A4 shipped (code+isolation)**  
 **Objective:** Close remaining P0 reliability holes that introduce process tax by ensuring:
 1.  A buy fill is never immediately followed by an unattached SL ("naked bag").
 2.  Every lot has a clear identity through its lifecycle ("episode identity").
@@ -23,15 +23,25 @@
 
 **Files:** `phase6/core/stop_loss_manager.py`
 
-## A2. Episode Identity — **THIN SLICE ONLY**
+## A2. Episode Identity — **DONE (full)**
 
-**Full architectural bag_id propagation (ratchet/live_state/ledger filter) remains open.**
+**Design (short grill, 2026-09-11):**
+- Canonical `bag_id = {PAIR}:{buy_order_id}` via `phase6/core/episode_identity.py`.
+- Missing bag_id stays valid (legacy rows) → fall back to entry/fresh_buy heuristics.
+- When **both** sides know bag_id and they **differ** → hard reject prior-bag stop/peak.
+- No live-state key rewrite; peak_lot gains optional `bag_id` field on pair key.
 
-**Shipped thin slice:**
-- `register_protective_order(..., bag_id=)` — defaults to `{pair}:{buy_order_id}` when buy id present.
-- Fresh-buy attach registers `bag_id` on protective registry row.
+**Shipped:**
+- `episode_identity.py` helpers (`make_bag_id`, `coerce_bag_id`, `bag_ids_conflict`, `stamp_bag_id_on_trade`).
+- Ledger BUY rows stamp `bag_id` + `buy_order_id`; SELL rows resolve from protective registry or last BUY.
+- `TradeLedger.log_trade` stamps bag_id defense-in-depth.
+- Ratchet `usable_existing_stop_for_ratchet` / `apply_ratchet_to_stop_bundle` gate on bag_id mismatch.
+- `stop_loss_manager` passes registry/current bag_id; continuous_bag requires no bag conflict.
+- `peak_lot` binds `bag_id`; `sanitize_peak_r_for_lots` resets on `bag_id_changed` even when entry_px identical (UNI-class).
+- `PositionMark.bag_id` + registry open-row resolve.
+- Isolation: `scripts/phase6/test_isolation_episode_identity_a2.py` (5/5 PASS).
 
-**Not done (deferred design/implement):** ratchet filter by bag_id, ledger schema bag_id on every leg, live_state keyed by bag_id. Do not half-refactor those without a dedicated grill.
+**Files:** `episode_identity.py`, `trade_ledger.py`, `exchange_fill_reconciler.py`, `sl_floor_ratchet.py`, `stop_loss_manager.py`, `protective_orders_registry.py`, `shadow_tp.py`
 
 ## A3. Fill-recon Order Attribution (P0 residual) — **DONE**
 
@@ -59,13 +69,15 @@
 
 ```bash
 cd /home/brad/projects/crypto-trading-bot
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_episode_identity_a2.py
 PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_naked_bag_p0.py
 PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_fill_recon_p0_closeout.py
 PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_sl_floor_ratchet.py
+bash scripts/hermes/pre_ship_quality.sh
 ```
 
 ## Live notes
 
 - **No live knobs changed.** Fail-closed market sell only fires on **fresh_buy** attach failure paths.
-- Runner restart not required for fill-recon paths picked up on next cycle import; SL manager change needs process reload to take effect.
-- A2 full episode identity stays queued — not a same-day multi-file rewrite.
+- Runner restart picks up SL manager + peak/ratchet bag_id gates.
+- A2 full shipped under `PC-01-EPISODE-IDENTITY-A2-20260911` / PLATFORM-COMPLETENESS.

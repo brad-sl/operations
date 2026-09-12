@@ -33,8 +33,13 @@ def register_protective_order(
     if not sl_order_id or not pair:
         return
     _ensure_parent()
-    if not bag_id and buy_order_id:
-        bag_id = f"{pair}:{buy_order_id}"
+    try:
+        from phase6.core.episode_identity import coerce_bag_id
+
+        bag_id = coerce_bag_id(bag_id=bag_id, pair=pair, buy_order_id=buy_order_id)
+    except Exception:
+        if not bag_id and buy_order_id:
+            bag_id = f"{pair}:{buy_order_id}"
     row = {
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "pair": pair,

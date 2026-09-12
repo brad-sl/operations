@@ -75,6 +75,7 @@ class PositionMark:
     entry_px: Optional[float]
     entry_source: str
     r: Optional[float]  # (mark-entry)/entry
+    bag_id: Optional[str] = None
 
 
 @dataclass
@@ -97,6 +98,36 @@ def _parse_ts(raw: Any) -> Optional[datetime]:
         if t.tzinfo is None:
             t = t.replace(tzinfo=timezone.utc)
         return t
+    except Exception:
+        return None
+
+
+def bag_id_from_open_registry(pair: str) -> Optional[str]:
+    """Latest open protective bag_id for pair (A2 episode identity)."""
+    if not REGISTRY_PATH.exists():
+        return None
+    try:
+        from phase6.core.episode_identity import bag_id_from_registry_row
+
+        last_open = None
+        last_any = None
+        for line in REGISTRY_PATH.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            try:
+                r = json.loads(line)
+            except Exception:
+                continue
+            if r.get("pair") != pair:
+                continue
+            last_any = r
+            if r.get("status") == "closed":
+                # append-only close marker for this sl_order_id — keep scanning
+                continue
+            if r.get("status") != "closed":
+                last_open = r
+        row = last_open or last_any
+        return bag_id_from_registry_row(row)
     except Exception:
         return None
 
@@ -367,6 +398,11 @@ def marks_from_holdings(
         r = None
         if entry and entry > 0 and px_f > 0:
             r = (px_f - entry) / entry
+        bag = None
+        if isinstance(pos, dict):
+            bag = pos.get("bag_id")
+        if not bag:
+            bag = bag_id_from_open_registry(pair)
         out.append(
             PositionMark(
                 pair=pair,
@@ -376,6 +412,7 @@ def marks_from_holdings(
                 entry_px=entry,
                 entry_source=src,
                 r=r,
+                bag_id=str(bag).strip() if bag else None,
             )
         )
     return out
@@ -461,10 +498,12 @@ def sanitize_peak_r_for_lots(
 
     Rules (ordered):
       1. Drop peaks for pairs not currently marked (flat book / full exit).
-      2. If lot entry_px moved by more than entry_rel_tol vs peak_lot → reset peak := r.
-      3. First sighting of a pair (no peak_lot row) with a leftover peak_r → treat as new
+      2. If lot bag_id known and differs from peak_lot bag_id → reset peak := r (A2).
+      3. If lot entry_px moved by more than entry_rel_tol vs peak_lot → reset peak := r.
+      4. First sighting of a pair (no peak_lot row) with a leftover peak_r → treat as new
          lot; reset peak := r (do not inherit unbound orphan peaks).
-      4. Same lot (entry within tol): keep peak_r so real trail pullbacks still fire.
+      5. Same lot (entry within tol + bag match/unknown): keep peak_r so real trail
+         pullbacks still fire.
     """
     # tp_cfg reserved for future trail-aware knobs; lot identity is the SSOT.
     _ = tp_cfg
@@ -503,6 +542,8 @@ def sanitize_peak_r_for_lots(
         lot = peak_lot.get(pair) if isinstance(peak_lot.get(pair), dict) else None
         prev_peak = peak_r.get(pair)
         reset_reason = None
+        mark_bag = getattr(m, "bag_id", None)
+        mark_bag = str(mark_bag).strip() if mark_bag else None
 
         if lot is None:
             # Unbound peak from a prior episode / promote seed without lot meta.
@@ -510,15 +551,24 @@ def sanitize_peak_r_for_lots(
                 reset_reason = "unbound_peak_new_lot"
         else:
             try:
-                lot_entry = float(lot.get("entry_px") or 0)
-            except (TypeError, ValueError):
-                lot_entry = 0.0
-            if lot_entry > 0:
-                rel = abs(entry_f - lot_entry) / lot_entry
-                if rel > entry_rel_tol:
-                    reset_reason = f"entry_changed rel={rel:.4f}"
-            else:
-                reset_reason = "lot_entry_missing"
+                from phase6.core.episode_identity import bag_ids_conflict
+
+                lot_bag = lot.get("bag_id")
+                if bag_ids_conflict(lot_bag, mark_bag):
+                    reset_reason = "bag_id_changed"
+            except Exception:
+                pass
+            if reset_reason is None:
+                try:
+                    lot_entry = float(lot.get("entry_px") or 0)
+                except (TypeError, ValueError):
+                    lot_entry = 0.0
+                if lot_entry > 0:
+                    rel = abs(entry_f - lot_entry) / lot_entry
+                    if rel > entry_rel_tol:
+                        reset_reason = f"entry_changed rel={rel:.4f}"
+                else:
+                    reset_reason = "lot_entry_missing"
 
         if reset_reason is not None:
             old = float(prev_peak) if prev_peak is not None else None
@@ -532,15 +582,17 @@ def sanitize_peak_r_for_lots(
                     "entry_px": entry_f,
                     "mark_r": r_f,
                     "reason": reset_reason,
+                    "bag_id": mark_bag,
                 }
             )
             logger.info(
-                "[SHADOW-TP] reset peak_r %s %s -> %.4f (%s entry=%.6f)",
+                "[SHADOW-TP] reset peak_r %s %s -> %.4f (%s entry=%.6f bag=%s)",
                 pair,
                 f"{old:.4f}" if old is not None else "None",
                 r_f,
                 reset_reason,
                 entry_f,
+                mark_bag or "-",
             )
 
         # Always refresh lot binding to current mark basis after sanitize.
@@ -549,6 +601,7 @@ def sanitize_peak_r_for_lots(
             "qty": qty_f,
             "entry_source": m.entry_source,
             "bound_at": _iso(),
+            "bag_id": mark_bag,
         }
         # Ensure peak key exists even when no prior
         if pair not in peak_r:

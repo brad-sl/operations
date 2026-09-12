@@ -228,18 +228,29 @@ def usable_existing_stop_for_ratchet(
     continuous_bag: bool = False,
     entry_match_tol: float = 0.08,
     sl_pct: float = 0.03,
+    registry_bag_id: Optional[str] = None,
+    current_bag_id: Optional[str] = None,
 ) -> Optional[float]:
     """
     Gate registry/exchange prior stops before never-loosen floor.
 
     Fresh buys and prior-episode ghosts must not import a high floor onto a new bag.
     Continuous bags (reattach after cancel of a live stop) may keep existing.
+    When both bag_ids are known and differ, always reject (A2 episode identity).
     """
     ex = _f(existing_stop) if existing_stop is not None else 0.0
     if ex <= 0:
         return None
     entry_f = _f(entry)
     mark_f = _f(mark)
+    # Hard bag_id mismatch → prior episode ghost
+    try:
+        from phase6.core.episode_identity import bag_ids_conflict
+
+        if bag_ids_conflict(registry_bag_id, current_bag_id):
+            return None
+    except Exception:
+        pass
     if fresh_buy and not continuous_bag:
         return None
     if mark_f > 0 and ex >= mark_f * 0.999:
@@ -270,6 +281,8 @@ def apply_ratchet_to_stop_bundle(
     fresh_buy: bool = False,
     continuous_bag: bool = False,
     registry_entry: Optional[float] = None,
+    registry_bag_id: Optional[str] = None,
+    current_bag_id: Optional[str] = None,
 ) -> tuple[float, float, RatchetDecision]:
     """Adjust stop/limit upward only. Limit stays ~0.5% under stop when raised."""
     settings = load_ratchet_settings(risk_management)
@@ -281,6 +294,8 @@ def apply_ratchet_to_stop_bundle(
         fresh_buy=fresh_buy,
         continuous_bag=continuous_bag,
         sl_pct=_f(settings.get("stop_loss_pct"), 0.03),
+        registry_bag_id=registry_bag_id,
+        current_bag_id=current_bag_id,
     )
     dec = compute_ratchet_stop(
         entry=entry,

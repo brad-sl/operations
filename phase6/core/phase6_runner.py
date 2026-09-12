@@ -843,7 +843,8 @@ class Phase6Runner:
                             "exit_price": None,
                             "pnl": 0.0,
                             "pnl_pct": 0.0,
-                            "signal_source": "phase6_fresh_start"
+                            "signal_source": "phase6_fresh_start",
+                            "order_id": result.get("order_id") or result.get("oid"),
                         }
                         self.trade_ledger.log_trade(trade_record)
                     except Exception as e:

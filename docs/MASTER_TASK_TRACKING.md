@@ -1,3 +1,214 @@
+## PLATFORM-COMPLETENESS-20260911 — OPEN (epic hub)
+
+**Type:** platform / completeness / reliability→edge path  
+**Date:** 2026-09-11  
+**Status:** **OPEN** — pack landed (plan + handoffs + Kanban); execution not started  
+**Priority:** P0 hub (children P0–P2)  
+**auto_pickup:** false  
+**Role:** crypto-orchestrator (hub); staff children intentionally  
+**Plan:** `docs/plans/2026-09-11-platform-completeness.md`  
+**Handoff:** `handoffs/platform/Handoff_PLATFORM_COMPLETENESS_20260911.md`  
+**Readiness:** `reports/PLATFORM_COMPLETENESS_READINESS_20260911.md`  
+**Board:** `crypto-bot-project`
+
+### Plain English
+Lab subsystems exist (basket → qualify → manage → monitor → dash → OPT). **Core gap is not a missing box** — it is leak-free lot-true cycles + exit proof + sleeve→fill realism + L2 before promote + process-book proof. Mission still trust → edge → scale. Multi-book OUT.
+
+### Completeness snapshot (2026-09-11)
+| Layer | Grade |
+|-------|-------|
+| Scaffolding (named subsystems) | ~85% |
+| Money/trust path (closed leak-free episodes) | ~40–50% |
+| Scale / multi-book | 0% (correct) |
+
+### Children (MASTER ids)
+| ID | Tag | Pri | Title | Staff |
+|----|-----|-----|-------|-------|
+| PC-01-EPISODE-IDENTITY-A2-20260911 | STAGED | P0 | Full episode/lot identity (A2) | default next eng |
+| PC-02-EXIT-STACK-PROOF-20260911 | STAGED | P0 | Exit stack proof / TP bank | eng (+ analyst) |
+| PC-03-TRYOUT-SLEEVE-REAL-20260911 | STAGED | P0 | Tryout sleeve real (sent+fills) | eng/ops |
+| PC-04-L2-DEPLOYABILITY-20260911 | STAGED | P1 | L2 deployability on paper ADDs | eng |
+| PC-05-LIMIT-FIRST-EVIDENCE-20260911 | STAGED | P1 | Limit-first fill evidence | eng |
+| PC-06-ATTRIBUTION-RT-LOOP-20260911 | SHADOW | P1 | Stamped RT attribution loop | analyst |
+| PC-07-PORTFOLIO-RISK-KERNEL-20260911 | PARKED | P2 | Portfolio risk kernel SSOT | later |
+| PC-08-PROMOTE-GATE-20260911 | GATED | P2 | Shadow→live promote gate | Brad GO |
+| PC-09-PROCESS-BOOK-14D-20260911 | WATCH | — | Process tax 14d proof | measure only |
+| PC-REV-COMPLETENESS-SIGNOFF-20260911 | — | — | Sign-off after children | orchestrator |
+
+### Related open cards (do not duplicate work)
+- `PLATFORM-MISSION-P0-CLOSEOUT-20260910` — A1/A3/A4 done; **A2 residual = PC-01**
+- `P6-5PCT-MONTH-PATH-20260909` — 14d watch aligns **PC-09**
+- `[GATED] Profit-exit live path` / hard-exit — align **PC-02**, do not bypass
+- Paper-primary `rel_btc_stable` already flipped 2026-09-11; live swaps OFF
+
+### Must not (epic)
+- Auto-promote / live basket swap from shadows
+- Lower sent floors to force green days without Brad GO
+- STAMPEDE / on-chain / tier-C flood / fee volume grind
+- Staff PC-07/08 early; assign workers to PC-09
+
+### Staff next (default)
+1. **PC-01** episode identity (structural P0)  
+2. or **PC-03** if ops priority is green-day funnel  
+3. **PC-02** exit proof in parallel only if eng capacity
+
+
+### Kanban task ids (2026-09-11 verified)
+| Card | id |
+|------|----|
+| HUB | `t_a38f8108` |
+| PC-01 | `t_7d1d15c6` |
+| PC-02 | `t_72c99174` |
+| PC-03 | `t_535d28d1` |
+| PC-04 | `t_5e5a4036` |
+| PC-05 | `t_80f337a8` |
+| PC-06 | `t_339e6da5` |
+| PC-07 | `t_0e47a720` |
+| PC-08 | `t_fcb87969` |
+| PC-09 | `t_f6e2a8cf` |
+| PC-REV | `t_9cabbb6f` |
+
+### Verify pack
+```bash
+hermes kanban --board crypto-bot-project list | rg 'COMPLETENESS|PC-0'
+test -f docs/plans/2026-09-11-platform-completeness.md
+test -f reports/PLATFORM_COMPLETENESS_READINESS_20260911.md
+```
+
+---
+
+## PC-01-EPISODE-IDENTITY-A2-20260911 — DONE (2026-09-11)
+
+**Type:** code / reliability / P0  
+**Status:** **DONE** (isolation 5/5 + pre_ship PASS; full ledger+ratchet+peaks bag_id)  
+**Priority:** P0  
+**Handoff:** `handoffs/platform/Handoff_PC-01_EPISODE_IDENTITY_A2_20260911.md` (updated)  
+**Kanban:** t_7d1d15c6 (crypto-engineer)  
+**Report:** `reports/PC01_EPISODE_IDENTITY_A2_20260911.md`  
+**Continues:** A2 from `PLATFORM-MISSION-P0-CLOSEOUT-20260910` (A1/A3/A4 prior)  
+
+### Plain English
+Full bag_id lifecycle so new lot never inherits prior-bag SL/peak/ledger state. `{pair}:{buy_order_id}` now wired end-to-end.
+
+### Success (verified)
+- `test_isolation_episode_identity_a2.py` 5/5 (ledger rows, ratchet conflict gate, peak reset on bag change even same entry)
+- naked_bag + sl_ratchet still green
+- pre_ship_quality.sh PASS
+- design note + handoff + MASTER updated
+- No live knobs / no park
+
+### Commands
+```bash
+PYTHONPATH=. .venv/bin/python3 scripts/phase6/test_isolation_episode_identity_a2.py
+bash scripts/hermes/pre_ship_quality.sh
+```
+
+---
+
+## PC-02-EXIT-STACK-PROOF-20260911 — STAGED (P0)
+
+**Type:** code + analysis / exits  
+**Status:** **STAGED**  
+**Priority:** P0  
+**Handoff:** `handoffs/platform/Handoff_PC-02_EXIT_STACK_PROOF_20260911.md`  
+**Kanban tag:** `[STAGED]`  
+
+### Plain English
+TP bank vs SL tax on ledger RTs; disposition honesty; no live exit promote without Brad.
+
+---
+
+## PC-03-TRYOUT-SLEEVE-REAL-20260911 — STAGED (P0)
+
+**Type:** ops / sensors / tryout path  
+**Status:** **STAGED**  
+**Priority:** P0  
+**Handoff:** `handoffs/platform/Handoff_PC-03_TRYOUT_SLEEVE_REAL_20260911.md`  
+**Kanban tag:** `[STAGED]`  
+**Baseline:** `reports/TRYOUT_READINESS_LATEST.md` (2026-09-11: can_buy=false, eng drought)
+
+### Plain English
+Membership open; need eng heat + honest fill→protect cycle. Do not lower floors without GO.
+
+---
+
+## PC-04-L2-DEPLOYABILITY-20260911 — STAGED (P1)
+
+**Type:** code / CF join  
+**Status:** **STAGED**  
+**Priority:** P1  
+**Handoff:** `handoffs/platform/Handoff_PC-04_L2_DEPLOYABILITY_20260911.md`  
+**Kanban tag:** `[STAGED]`  
+
+### Plain English
+L2 = would runner buy ADD under live gates? Required before promote talk.
+
+---
+
+## PC-05-LIMIT-FIRST-EVIDENCE-20260911 — STAGED (P1)
+
+**Type:** execution instrumentation  
+**Status:** **STAGED**  
+**Priority:** P1  
+**Handoff:** `handoffs/platform/Handoff_PC-05_LIMIT_FIRST_EVIDENCE_20260911.md`  
+**Kanban tag:** `[STAGED]`  
+**Depends:** buy attempts (often PC-03)
+
+---
+
+## PC-06-ATTRIBUTION-RT-LOOP-20260911 — SHADOW (P1)
+
+**Type:** analyst / measure  
+**Status:** **SHADOW**  
+**Priority:** P1  
+**Handoff:** `handoffs/platform/Handoff_PC-06_ATTRIBUTION_RT_LOOP_20260911.md`  
+**Kanban tag:** `[SHADOW]`  
+**Assignee when staffed:** crypto-analyst  
+
+---
+
+## PC-07-PORTFOLIO-RISK-KERNEL-20260911 — PARKED (P2)
+
+**Type:** architecture  
+**Status:** **PARKED**  
+**Priority:** P2  
+**Handoff:** `handoffs/platform/Handoff_PC-07_PORTFOLIO_RISK_KERNEL_20260911.md`  
+**Kanban tag:** `[PARKED]`  
+**Gate:** PC-01..03 + PC-09 not failing
+
+---
+
+## PC-08-PROMOTE-GATE-20260911 — GATED (P2)
+
+**Type:** policy / automation scaffold  
+**Status:** **GATED** — needs Brad GO  
+**Priority:** P2  
+**Handoff:** `handoffs/platform/Handoff_PC-08_PROMOTE_GATE_20260911.md`  
+**Kanban tag:** `[GATED]`  
+**Note:** live_membership_swaps stays false; paper-primary rel_btc_stable collect-only
+
+---
+
+## PC-09-PROCESS-BOOK-14D-20260911 — WATCH
+
+**Type:** measure-only  
+**Status:** **WATCH**  
+**Handoff:** `handoffs/platform/Handoff_PC-09_PROCESS_BOOK_14D_20260911.md`  
+**Kanban tag:** `[WATCH]`  
+**Aligns:** `P6-5PCT-MONTH-PATH-20260909`  
+**No coding worker**
+
+---
+
+## PC-REV-COMPLETENESS-SIGNOFF-20260911 — QUEUED (reviewer)
+
+**Type:** review  
+**Status:** **QUEUED** until children claim done  
+**Handoff:** `handoffs/platform/Handoff_PC-REV_COMPLETENESS_SIGNOFF_20260911.md`  
+**Assignee:** crypto-orchestrator / code-reviewer  
+
+---
+
 ## PLATFORM-MISSION-20260909 — DONE (agent SSOT)
 
 **Type:** docs / intent  
@@ -83,7 +294,7 @@ PYTHONPATH=. python3 scripts/phase6/test_isolation_sl_floor_ratchet.py
 
 **Type:** code / reliability / P0  
 **Date:** 2026-09-10  
-**Status:** **IN_PROGRESS** (A1/A3/A4 code+isolation green; A2 full episode-id deferred — thin bag_id slice only)  
+**Status:** **DONE** (A1/A3/A4 + A2 full episode identity shipped; isolation green on kanban t_7d1d15c6)  
 **Handoff:** `docs/plans/2026-09-10-settlement-naked-bag-and-episode-id.md`  
 
 ### Plain English

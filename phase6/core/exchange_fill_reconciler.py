@@ -173,6 +173,51 @@ def _entry_from_ledger_buys(ledger: TradeLedger, pair: str, before_ts: str) -> T
     return None, "none"
 
 
+def _bag_id_from_ledger_buys(
+    ledger: TradeLedger, pair: str, before_ts: str
+) -> Optional[str]:
+    """bag_id of last BUY for pair before fill time (best-effort)."""
+    from phase6.core.episode_identity import coerce_bag_id, make_bag_id
+
+    path = ledger.jsonl_path
+    if not path.exists():
+        return None
+    try:
+        fill_dt = datetime.fromisoformat(before_ts.replace("Z", "+00:00"))
+    except Exception:
+        fill_dt = None
+    best: Optional[Dict[str, Any]] = None
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if row.get("pair") != pair or str(row.get("side", "")).upper() != "BUY":
+                continue
+            ts = row.get("timestamp")
+            if fill_dt and ts:
+                try:
+                    tdt = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+                    if tdt > fill_dt:
+                        continue
+                except Exception:
+                    pass
+            ep = float(row.get("entry_price") or row.get("price") or 0)
+            if ep > 0:
+                best = row
+    if not best:
+        return None
+    return coerce_bag_id(
+        bag_id=best.get("bag_id"),
+        pair=pair,
+        buy_order_id=best.get("buy_order_id") or best.get("order_id"),
+    ) or make_bag_id(pair, best.get("order_id"))
+
+
 def _infer_entry_from_stop(stop_price: float, sl_pct: float = DEFAULT_SL_PCT) -> Tuple[Optional[float], str]:
     if stop_price <= 0 or sl_pct <= 0:
         return None, "none"
@@ -309,6 +354,14 @@ def build_ledger_row_from_fill(
         pnl = (fill_px - entry_px) * fill_sz
         pnl_pct = (fill_px - entry_px) / entry_px
 
+    from phase6.core.episode_identity import bag_id_from_registry_row, coerce_bag_id
+
+    reg_row = lookup_entry_for_pair(str(oid), str(pair))
+    bag_id = bag_id_from_registry_row(reg_row) or _bag_id_from_ledger_buys(
+        ledger, str(pair), ts
+    )
+    bag_id = coerce_bag_id(bag_id=bag_id, pair=pair)
+
     row = {
         "timestamp": ts,
         "pair": pair,
@@ -330,6 +383,8 @@ def build_ledger_row_from_fill(
         "order_type": order.get("order_type"),
         "order_data_source": order.get("order_data_source"),
         "coinbase_trading_bot": is_coinbase_trading_bot_order(order),
+        "bag_id": bag_id,
+        "buy_order_id": (bag_id.split(":", 1)[1] if bag_id and ":" in bag_id else None),
     }
     fees = order.get("total_fees")
     if fees is not None:
@@ -380,6 +435,14 @@ def build_ledger_row_from_market_sell(
         pnl = (fill_px - entry_px) * fill_sz
         pnl_pct = (fill_px - entry_px) / entry_px
 
+    from phase6.core.episode_identity import bag_id_from_registry_row, coerce_bag_id
+
+    reg_row = lookup_entry_for_pair(None, str(pair))
+    bag_id = bag_id_from_registry_row(reg_row) or _bag_id_from_ledger_buys(
+        ledger, str(pair), ts
+    )
+    bag_id = coerce_bag_id(bag_id=bag_id, pair=pair)
+
     row = {
         "timestamp": ts,
         "pair": pair,
@@ -410,6 +473,8 @@ def build_ledger_row_from_market_sell(
         "order_data_source": order.get("order_data_source"),
         "coinbase_trading_bot": True,
         "sleeve": "preserve" if str(pair).upper().startswith("PAXG") else "trade",
+        "bag_id": bag_id,
+        "buy_order_id": (bag_id.split(":", 1)[1] if bag_id and ":" in bag_id else None),
     }
     fees = order.get("total_fees")
     if fees is not None:
@@ -450,6 +515,9 @@ def build_ledger_row_from_market_buy(
     reason = "preserve_arm" if str(pair).upper().startswith("PAXG") else "rebalance_buy"
     if "LIMIT" in ot:
         reason = "limit_first_buy" if not str(pair).upper().startswith("PAXG") else reason
+    from phase6.core.episode_identity import make_bag_id
+
+    bag_id = make_bag_id(pair, oid)
     return {
         "timestamp": _parse_ts(order),
         "pair": pair,
@@ -472,6 +540,8 @@ def build_ledger_row_from_market_buy(
         "client_order_id": order.get("client_order_id") or order.get("client_oid"),
         "coinbase_trading_bot": True,
         "sleeve": "preserve" if str(pair).upper().startswith("PAXG") else "trade",
+        "bag_id": bag_id,
+        "buy_order_id": oid,
     }
 
 

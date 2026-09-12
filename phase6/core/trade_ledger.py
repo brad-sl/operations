@@ -125,6 +125,14 @@ class TradeLedger:
         if oid and self._order_id_already_logged(oid):
             return
 
+        # A2: stamp bag_id on BUY (and preserve on SELL when provided)
+        try:
+            from phase6.core.episode_identity import stamp_bag_id_on_trade
+
+            trade = stamp_bag_id_on_trade(trade)
+        except Exception:
+            pass
+
         # Durable RSI+sent on BUY and SELL (entry/exit + lag). Research SSOT also
         # written to data/state/trade_signal_events.jsonl for attribution digs.
         try:

@@ -50,7 +50,8 @@ daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst
 | `phase6-discovery-retro-board-daily` | Lookback: gainers × frozen contenders + T-7 forward book (research only) |
 | `phase6-basket-pick-metrics-refresh` | Open promote pick still `status=open` |
 | `phase6-basket-seat-idle-refresh` | Soft idle flags; observe_only |
-| `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred=`risk_adj_mom` →2026-09-28 |
+| `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred from decision file (regime switch may flip) →2026-09-28 |
+| `phase6-regime-arm-switch` `353a8ca93150` | BTC 7d tape → paper-primary arm (`up/chop→rel_btc_stable`, `down→risk_adj_mom`) · **11:40/23:40 PT** · apply shadow · TG **only on flip** · live swaps forced OFF |
 | `phase6-tcs-shadow-would-block` `dd16da710656` | Trade-comparison CF + would-block replay · **12:25 PT daily** · local · own state only · live cooldown OFF |
 | `phase6-vol-risk-scalar-shadow` | Keep collecting (not enough data for promote) |
 | `bear-ladder-promote-watch` | **Not** done — 1 bear day / 0 episodes (need real bear) |

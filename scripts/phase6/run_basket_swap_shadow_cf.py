@@ -40,9 +40,49 @@ def main() -> int:
         action="store_true",
         help="Force full plain-English summary to stdout (manual/debug).",
     )
+    p.add_argument(
+        "--regime-arm-switch",
+        action="store_true",
+        help=(
+            "After CF, run BTC-regime preferred-arm switch (shadow, dry-run). "
+            "Does not write decision unless also --regime-arm-switch-apply."
+        ),
+    )
+    p.add_argument(
+        "--regime-arm-switch-apply",
+        action="store_true",
+        help=(
+            "With --regime-arm-switch: apply preferred_arm update. "
+            "live_membership_swaps stays forced false."
+        ),
+    )
+    p.add_argument(
+        "--regime-arm-switch-mode",
+        choices=("shadow", "production"),
+        default="shadow",
+        help="Regime switch mode (default shadow).",
+    )
     args = p.parse_args()
 
     bundle = run_full(propose=not args.no_propose)
+    if args.regime_arm_switch or args.regime_arm_switch_apply:
+        from phase6.core.regime_arm_switch import run as run_regime_arm_switch
+
+        regime = run_regime_arm_switch(
+            mode=args.regime_arm_switch_mode,
+            apply=bool(args.regime_arm_switch_apply),
+            use_network=True,
+        )
+        bundle["regime_arm_switch"] = {
+            "mode": regime.get("mode"),
+            "apply": regime.get("apply"),
+            "preferred_arm": regime.get("after_preferred_arm"),
+            "changed": regime.get("changed"),
+            "decision_written": regime.get("decision_written"),
+            "sticky_tape": (regime.get("snapshot") or {}).get("sticky_tape"),
+            "btc_ret_7d_pct": (regime.get("snapshot") or {}).get("btc_ret_7d_pct"),
+            "live_membership_swaps": False,
+        }
     if args.json:
         # compact serializable
         cf = bundle.get("cf") or {}
@@ -53,6 +93,7 @@ def main() -> int:
             "aggregate_by_arm": cf.get("aggregate_by_arm"),
             "new_proposals": (bundle.get("arms_prop") or {}).get("written") or [],
             "serious_consider": serious_consider_message(bundle) is not None,
+            "regime_arm_switch": bundle.get("regime_arm_switch"),
         }
         print(json.dumps(out, indent=2, default=str))
         return 0

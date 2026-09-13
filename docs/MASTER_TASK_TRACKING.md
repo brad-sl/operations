@@ -12432,3 +12432,9 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+**CASH-20260913-001** — Cash policy suggestion: detector grid (score 5.7836)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-09-13T11:01:18.002367+00:00 | score=5.7836
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+

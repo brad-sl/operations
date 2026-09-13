@@ -3,7 +3,9 @@ Tryout sleeve readiness board (PC-03).
 
 SSOT for "can we seat a tryout BUY before next rebalance?"
 - Eng-aged sentiment drives gates; free/tee never clears BUY.
-- Live floor = max(quality_tryout min_sent, regime min_sentiment_new_pair).
+- Live floor (tryout): quality_tryout min_sent only (B1 2026-09-13).
+  Non-tryout new-pair still uses regime min_sentiment_new_pair.
+- A2 tryout_sent_latch may clear aged eng through rebalance window.
 - No knobs, no force_rebalance.
 """
 from __future__ import annotations
@@ -23,10 +25,10 @@ STATE_PATH = PROJECT_ROOT / "data" / "state" / "tryout_readiness_latest.json"
 REPORT_PATH = PROJECT_ROOT / "reports" / "TRYOUT_READINESS_LATEST.md"
 PT = ZoneInfo("America/Los_Angeles")
 
-# Default X refresh slots (PT)
-DEFAULT_X_REFRESH_HHMM = ((8, 50), (20, 50))
+# Default X refresh slots (PT) — A1 2026-09-13: align with rebalance hour
+DEFAULT_X_REFRESH_HHMM = ((9, 0), (21, 0))
 # Default rebalance approx (PT)
-DEFAULT_REBALANCE_HHMM = ((9, 0), (21, 0))
+DEFAULT_REBALANCE_HHMM = ((9, 5), (21, 5))
 
 
 def _utc_now() -> datetime:
@@ -43,10 +45,16 @@ def live_entry_floor(
     min_sentiment_new_pair: float = 0.35,
     quality_tryout_min_sentiment: float = 0.30,
     is_new_pair: bool = True,
+    on_tryout: bool = False,
 ) -> float:
-    """Floor SSOT: recovery new-pair floor can beat tryout doc min."""
-    base = float(min_sentiment_new_pair if is_new_pair else min_sentiment)
-    return max(base, float(quality_tryout_min_sentiment or 0.0))
+    """Floor SSOT.
+
+    B1 2026-09-13: tryout sleeve uses quality_tryout min only (not max with
+    min_sentiment_new_pair). Non-tryout new pairs still use regime new-pair floor.
+    """
+    if on_tryout:
+        return float(quality_tryout_min_sentiment or 0.30)
+    return float(min_sentiment_new_pair if is_new_pair else min_sentiment)
 
 
 def next_slot_pt(
@@ -486,12 +494,14 @@ def build_live_tryout_readiness(*, write: bool = True) -> Dict[str, Any]:
         min_sentiment_new_pair=min_new,
         quality_tryout_min_sentiment=qt_min,
         is_new_pair=True,
+        on_tryout=True,
     )
     floors = {
         "min_sentiment": min_s,
         "min_sentiment_new_pair": min_new,
         "quality_tryout_min_sentiment": qt_min,
         "live_floor_used": floor,
+        "live_floor_rule": "tryout_qt_only_b1",
         "max_rsi": max_rsi,
     }
 

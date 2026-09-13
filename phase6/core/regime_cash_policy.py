@@ -613,17 +613,34 @@ def evaluate_buy_entry(
     min_s = float(eg.get("min_sentiment_new_pair" if is_new_pair else "min_sentiment") or -1.0)
     max_rsi = float(eg.get("max_rsi") or 100.0)
     min_rsi = 0.0
-    # Stricter quality bar for week-1 tryout names under recovery
+    # B1 2026-09-13: tryout sleeve uses quality_tryout min only (do NOT stack
+    # max with regime min_sentiment_new_pair — that forced 0.35 over tryout 0.30).
     if qt_cfg is not None and on_tryout:
-        min_s = max(min_s, float(qt_cfg["min_sentiment"]))
+        min_s = float(qt_cfg["min_sentiment"])
         max_rsi = min(max_rsi, float(qt_cfg["max_rsi"]))
         min_rsi = float(qt_cfg.get("min_rsi") or 0.0)
 
-    if sentiment is None:
+    # A2: tryout sent latch — eng may have aged under floor after X refresh clear
+    sent_eff = sentiment
+    latch_note: Optional[str] = None
+    if qt_cfg is not None and on_tryout and not bool(
+        isinstance(pol, dict) and pol.get("_isolation_skip_tryout_latch")
+    ):
+        try:
+            from phase6.core.tryout_sent_latch import apply_latch_to_sentiment
+
+            sent_eff, latch_note = apply_latch_to_sentiment(
+                pair_n, sentiment, floor=float(min_s)
+            )
+        except Exception:
+            sent_eff, latch_note = sentiment, None
+
+    if sent_eff is None:
         reasons.append("sentiment_missing")
         return EntryDecision(pair=pair, allowed=False, reasons=reasons, sentiment=sentiment, rsi=rsi)
-    if float(sentiment) < min_s:
-        reasons.append(f"sentiment {sentiment:.3f} < min {min_s}")
+    if float(sent_eff) < min_s:
+        reasons.append(f"sentiment {float(sent_eff):.3f} < min {min_s}")
+    # latch_note is informational only — never a deny reason (allowed = len(reasons)==0)
 
     if rsi is None:
         reasons.append("rsi_missing")

@@ -57,3 +57,6 @@ cb_key.pem
 secrets/
 *.p12
 *.pfx
+
+# A2 tryout sent latch runtime
+data/state/tryout_sent_latch.json

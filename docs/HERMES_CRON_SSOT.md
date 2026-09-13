@@ -23,7 +23,7 @@ Full audit: `reports/CRON_ARCHIVE_AND_SSOT_2026-08-29.md`.
 
 | Was Linux | Hermes job | Schedule (PT) | Notes |
 |-----------|------------|---------------|--------|
-| `refresh_sentiment.py` 50 8,20 | `phase6-x-sentiment-live-2x` `e17a43bfbed6` | 08:50 / 20:50 | X live + free fallback |
+| `refresh_sentiment.py` 0 9,21 | `phase6-x-sentiment-live-2x` `e17a43bfbed6` | 09:00 / 21:00 | X live + free fallback |
 | `run_adanos_shadow.sh` 35 8,20 | `phase6-adanos-reddit-shadow-2x` `539424468b36` | 08:35 / 20:35 | Adanos Reddit free shadow + multi-corr; **not** live |
 | `run_free_sentiment_shadow.sh` 40 */2 | `phase6-free-sentiment-shadow-2h` `655188d1df61` | every 2h @:40 (incl 08:40/20:40) | Free shadow denser samples; **not** live |
 | `monitor_phase6_runner.py` */15 | `phase6-runner-monitor-15m` `f14dc4b04e34` | */15 | Watchdog |
@@ -35,7 +35,7 @@ Full audit: `reports/CRON_ARCHIVE_AND_SSOT_2026-08-29.md`.
 ## Keep active (default gateway) — classes
 
 ### A — Live trading spine
-Rebalance 09:05/21:05 · RSI */15 · X 08:50/20:50 · Adanos Reddit shadow **08:35/20:35** · free sentiment **every 2h @:40** (shadow) · runner monitor */15 · reentry SL/TP monitor */10 · dashboard live */5
+Rebalance 09:05/21:05 · RSI */15 · X 09:00/21:00 · Adanos Reddit shadow **08:35/20:35** · free sentiment **every 2h @:40** (shadow) · runner monitor */15 · reentry SL/TP monitor */10 · dashboard live */5
 
 ### B — Ops / hygiene
 ops-triage 06:00 TG **only when actionable** (empty stdout on OK) · **pre-ship quality nightly 04:15 TG fail-only** · ops-issue-loop 07/13/19 local · ops-engineer */30 · kanban backup */15 + daily 03:00 · git-daily 04:30 · llm-token rollup 05:05 · master-test pickup/scan TG only when work · analyst-test-strategy Mon 10:00

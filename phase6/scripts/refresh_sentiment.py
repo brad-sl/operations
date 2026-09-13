@@ -366,6 +366,18 @@ def main():
     else:
         print("  No fetchers succeeded — skipping merge (preserve last canonical cache)")
 
+    # A2 2026-09-13: latch tryout pairs that cleared floor on fresh X (rebalance window)
+    if x_ok:
+        try:
+            from phase6.core.tryout_sent_latch import refresh_tryout_latches_from_x_cache
+
+            latch_out = refresh_tryout_latches_from_x_cache()
+            n = int((latch_out.get("meta") or {}).get("last_write_count") or 0)
+            pairs = list((latch_out.get("pairs") or {}).keys())
+            print(f"  Tryout sent latch: wrote={n} active={len(pairs)} {pairs[:8]}")
+        except Exception as le:
+            print(f"  Tryout sent latch warning: {le}")
+
     print("=== Refresh complete ===")
 
 

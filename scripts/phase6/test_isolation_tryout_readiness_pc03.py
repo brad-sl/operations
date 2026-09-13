@@ -28,23 +28,36 @@ PT = ZoneInfo("America/Los_Angeles")
 
 
 class TestTryoutReadinessPC03(unittest.TestCase):
-    def test_live_floor_ssot_max(self):
-        # recovery new-pair 0.35 beats tryout 0.30
+    def test_live_floor_ssot_tryout_vs_new_pair(self):
+        # B1: non-tryout new-pair still uses regime 0.35
         self.assertEqual(
             live_entry_floor(
                 min_sentiment=0.25,
                 min_sentiment_new_pair=0.35,
                 quality_tryout_min_sentiment=0.30,
                 is_new_pair=True,
+                on_tryout=False,
             ),
             0.35,
         )
-        # tryout can win if higher
+        # B1: tryout sleeve uses quality_tryout min only (0.30), not stacked 0.35
+        self.assertEqual(
+            live_entry_floor(
+                min_sentiment=0.25,
+                min_sentiment_new_pair=0.35,
+                quality_tryout_min_sentiment=0.30,
+                is_new_pair=True,
+                on_tryout=True,
+            ),
+            0.30,
+        )
+        # tryout can still raise if qt min is higher
         self.assertEqual(
             live_entry_floor(
                 min_sentiment_new_pair=0.25,
                 quality_tryout_min_sentiment=0.40,
                 is_new_pair=True,
+                on_tryout=True,
             ),
             0.40,
         )

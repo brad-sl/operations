@@ -367,6 +367,96 @@
             </div>
         </div>
 
+        <!-- P2 Promote graduation (measure-only) -->
+        <div class="mt-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+                <h2 class="font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-filter-circle-dollar"></i> Promote lifecycle
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Promote lifecycle"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Seat → signal → fill → win for Brad-promoted picks. Measure-only — never auto-promotes or ejects. claim_allowed stays OFF until N clears the bar. Not a live order board.</div>
+                    </span>
+                </h2>
+                <span id="promote-claim-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">claim --</span>
+                <span id="promote-path-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">path --</span>
+                <span id="promote-choke-badge" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300">choke --</span>
+            </div>
+            <p id="promote-plain" class="text-xs text-slate-400 mb-4">Loading promote board…</p>
+            <div id="promote-tiles" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4 text-center"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
+                <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-2 overflow-hidden">
+                    <div class="text-[10px] text-slate-500 mb-1 px-1">Funnel</div>
+                    <img id="promote-chart-funnel" alt="Promote funnel" class="w-full h-auto rounded-lg bg-slate-950" loading="lazy"/>
+                </div>
+                <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-2 overflow-hidden">
+                    <div class="text-[10px] text-slate-500 mb-1 px-1">Outcomes</div>
+                    <img id="promote-chart-outcomes" alt="Promote outcomes" class="w-full h-auto rounded-lg bg-slate-950" loading="lazy"/>
+                </div>
+                <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-2 overflow-hidden">
+                    <div class="text-[10px] text-slate-500 mb-1 px-1">Paper 7d</div>
+                    <img id="promote-chart-paper" alt="Paper 7d bars" class="w-full h-auto rounded-lg bg-slate-950" loading="lazy"/>
+                </div>
+            </div>
+            <div class="overflow-auto text-xs">
+                <table class="w-full text-left">
+                    <thead class="text-slate-500 border-b border-slate-800">
+                        <tr>
+                            <th class="py-1 pr-2 font-medium">Add</th>
+                            <th class="py-1 pr-2 font-medium">Stage</th>
+                            <th class="py-1 pr-2 font-medium">Outcome</th>
+                            <th class="py-1 pr-2 font-medium">Paper 7d</th>
+                            <th class="py-1 pr-2 font-medium">PnL</th>
+                            <th class="py-1 font-medium">h→fill</th>
+                        </tr>
+                    </thead>
+                    <tbody id="promote-episodes"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- P3 Regime arm switch metrics (measure-only) -->
+        <div class="mt-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+                <h2 class="font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-arrows-rotate"></i> Regime arm switch
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Regime arm switch"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Paper-primary arm flips from BTC 7d tape. Success = forward tape alignment + HC board preferred vs alt — not live book PnL. live_membership_swaps stay OFF. Thin N keeps claim OFF.</div>
+                    </span>
+                </h2>
+                <span id="regime-claim-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">claim --</span>
+                <span id="regime-arm-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-sky-950 text-sky-300">arm --</span>
+                <span id="regime-hint-badge" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">hint --</span>
+            </div>
+            <p id="regime-plain" class="text-xs text-slate-400 mb-4">Loading regime arm metrics…</p>
+            <div id="regime-tiles" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 mb-4 text-center"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 mb-4">
+                <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-2 overflow-hidden">
+                    <div class="text-[10px] text-slate-500 mb-1 px-1">Flip timeline</div>
+                    <img id="regime-chart-timeline" alt="Flip timeline" class="w-full h-auto rounded-lg bg-slate-950" loading="lazy"/>
+                </div>
+                <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-2 overflow-hidden">
+                    <div class="text-[10px] text-slate-500 mb-1 px-1">Preferred vs alt HC</div>
+                    <img id="regime-chart-compare" alt="Arm compare" class="w-full h-auto rounded-lg bg-slate-950" loading="lazy"/>
+                </div>
+            </div>
+            <div class="overflow-auto text-xs">
+                <table class="w-full text-left">
+                    <thead class="text-slate-500 border-b border-slate-800">
+                        <tr>
+                            <th class="py-1 pr-2 font-medium">Day</th>
+                            <th class="py-1 pr-2 font-medium">Arm</th>
+                            <th class="py-1 pr-2 font-medium">Tape</th>
+                            <th class="py-1 pr-2 font-medium">ret7</th>
+                            <th class="py-1 pr-2 font-medium">3d btc</th>
+                            <th class="py-1 font-medium">Winner</th>
+                        </tr>
+                    </thead>
+                    <tbody id="regime-episodes"></tbody>
+                </table>
+            </div>
+        </div>
+
     <script>
         function initMetricHelp() {
             document.querySelectorAll('.metric-help-btn').forEach(btn => {
@@ -759,6 +849,8 @@
                 fetchData('/api/rebalances'),
                 fetchData('/api/metrics', 1500),
                 fetchData('/api/brief'),
+                fetchData('/api/promote-graduation', 4000),
+                fetchData('/api/regime-arm-metrics', 4000),
             ];
             const settled = await Promise.allSettled(endpoints);
             const balData = pickPayload('balances', settledValue(settled[0]));
@@ -772,8 +864,12 @@
             const rebalData = pickPayload('rebalances', settledValue(settled[5]), (p) => !!(p && Array.isArray(p.rebalances)));
             const metricsData = pickPayload('metrics', settledValue(settled[6]), (p) => !!(p && p.metrics));
             const briefData = pickPayload('brief', settledValue(settled[7]));
+            const promoteData = pickPayload('promote', settledValue(settled[8]), (p) => !!(p && p.status === 'ok' && p.schema));
+            const regimeData = pickPayload('regimeArm', settledValue(settled[9]), (p) => !!(p && p.status === 'ok' && p.schema));
             // Update recovery with current position count
             if (typeof updateRecoveryStatus === 'function') updateRecoveryStatus(posData);
+            if (typeof updatePromoteGraduation === 'function') updatePromoteGraduation(promoteData);
+            if (typeof updateRegimeArmMetrics === 'function') updateRegimeArmMetrics(regimeData);
 
             // Header/Balance - runner live_state.json (ground truth); DB views are fallback only
             const totalEl = document.getElementById('total-balance');
@@ -1524,6 +1620,163 @@
         }
         setInterval(() => updateRecoveryStatus(), 30000);
         // Will be called from updateDashboard with posData
+
+        function _fmtPct01(v) {
+            if (v == null || v === '' || Number.isNaN(Number(v))) return '--';
+            const n = Number(v);
+            if (Math.abs(n) <= 1.5) return (n * 100).toFixed(0) + '%';
+            return n.toFixed(1) + '%';
+        }
+        function _fmtNum(v, d) {
+            if (v == null || v === '' || Number.isNaN(Number(v))) return '--';
+            return Number(v).toFixed(d == null ? 1 : d);
+        }
+        function _badge(el, text, ok) {
+            if (!el) return;
+            el.textContent = text;
+            el.className = 'text-[10px] px-2 py-0.5 rounded-full ' + (
+                ok === true ? 'bg-emerald-950 text-emerald-300' :
+                ok === false ? 'bg-rose-950 text-rose-300' :
+                'bg-slate-800 text-slate-400'
+            );
+        }
+        function _tile(label, value, sub) {
+            return `<div class="bg-slate-800/50 rounded-xl p-2">
+                <div class="text-[10px] text-slate-500 uppercase tracking-wide">${label}</div>
+                <div class="text-sm font-semibold tabular-nums text-slate-100 mt-0.5">${value}</div>
+                ${sub ? `<div class="text-[10px] text-slate-500 mt-0.5">${sub}</div>` : ''}
+            </div>`;
+        }
+        function _bust(url) {
+            if (!url) return '';
+            const sep = url.indexOf('?') >= 0 ? '&' : '?';
+            return url + sep + 't=' + Date.now();
+        }
+
+        function updatePromoteGraduation(data) {
+            const plain = document.getElementById('promote-plain');
+            const tiles = document.getElementById('promote-tiles');
+            const body = document.getElementById('promote-episodes');
+            if (!data || data.status === 'missing') {
+                if (plain) plain.textContent = 'Promote board not built yet (run promote graduation chart). Measure-only.';
+                return;
+            }
+            const go = data.go_nogo || {};
+            const fun = data.funnel || {};
+            const paper = data.paper || {};
+            const choke = data.choke_point || {};
+            _badge(document.getElementById('promote-claim-badge'),
+                'claim ' + (go.claim_allowed ? 'ON' : 'OFF'), go.claim_allowed === true);
+            _badge(document.getElementById('promote-path-badge'),
+                String(go.money_path_hint || 'path --'), go.money_path_hint === 'GO_SCALE');
+            const chokeEl = document.getElementById('promote-choke-badge');
+            if (chokeEl) {
+                chokeEl.textContent = 'choke ' + (choke.id || go.choke_point || '--');
+                chokeEl.title = choke.why || go.choke_why || '';
+            }
+            if (plain) plain.textContent = go.plain_english || 'Promote lifecycle (measure-only).';
+            if (tiles) {
+                tiles.innerHTML = [
+                    _tile('Seated', fun.n_seated ?? '--'),
+                    _tile('Signaled', fun.n_signaled ?? '--', _fmtPct01(fun.rate_signal_given_seat) + ' of seat'),
+                    _tile('Filled', fun.n_filled ?? '--', _fmtPct01(fun.rate_fill_given_signal) + ' of sig'),
+                    _tile('Win|fill', fun.n_filled_win ?? 0, _fmtPct01(fun.rate_win_given_fill_closed)),
+                    _tile('Paper hit7', _fmtPct01(paper.hit_rate_positive_7d), 'n=' + (paper.n_picks ?? '--')),
+                    _tile('Talk', go.promote_talk_ok ? 'OK' : 'NO', 'auto-promote off'),
+                ].join('');
+            }
+            const cacheBust = Date.now();
+            const setImg = (id, path) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.src = path + (path.indexOf('?') >= 0 ? '&' : '?') + 't=' + cacheBust;
+            };
+            setImg('promote-chart-funnel', '/charts/promote-graduation/funnel.svg');
+            setImg('promote-chart-outcomes', '/charts/promote-graduation/outcomes.svg');
+            setImg('promote-chart-paper', '/charts/promote-graduation/paper.svg');
+            if (body) {
+                const eps = (data.episodes || []).slice().sort((a, b) => String(b.promoted_at || '').localeCompare(String(a.promoted_at || '')));
+                if (!eps.length) {
+                    body.innerHTML = '<tr><td colspan="6" class="py-2 text-slate-500">No promote episodes</td></tr>';
+                } else {
+                    body.innerHTML = eps.map(e => {
+                        const pair = (e.add_pair || '').replace('-USD', '');
+                        const ret = e.paper_ret_7d_pct;
+                        const retCls = ret == null ? 'text-slate-400' : (Number(ret) >= 0 ? 'text-emerald-400' : 'text-rose-400');
+                        const pnl = e.realized_pnl_sum;
+                        return `<tr class="border-b border-slate-800/80">
+                            <td class="py-1.5 pr-2 text-slate-200">${pair}</td>
+                            <td class="py-1.5 pr-2 text-slate-400">${e.stage || '--'}</td>
+                            <td class="py-1.5 pr-2 text-slate-300">${(e.outcome_class || '').replace(/_/g, ' ') || '--'}</td>
+                            <td class="py-1.5 pr-2 tabular-nums ${retCls}">${ret == null ? '--' : (Number(ret) >= 0 ? '+' : '') + _fmtNum(ret, 1) + '%'}</td>
+                            <td class="py-1.5 pr-2 tabular-nums text-slate-300">${pnl == null ? '--' : '$' + _fmtNum(pnl, 2)}</td>
+                            <td class="py-1.5 tabular-nums text-slate-400">${e.hours_to_first_fill == null ? '--' : _fmtNum(e.hours_to_first_fill, 0) + 'h'}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        }
+
+        function updateRegimeArmMetrics(data) {
+            const plain = document.getElementById('regime-plain');
+            const tiles = document.getElementById('regime-tiles');
+            const body = document.getElementById('regime-episodes');
+            if (!data || data.status === 'missing') {
+                if (plain) plain.textContent = 'Regime arm metrics not built yet. Paper-primary only; swaps stay OFF.';
+                return;
+            }
+            const go = data.go_nogo || {};
+            const s = data.summary || {};
+            const cur = data.current || {};
+            const cmp = data.hc_compare || {};
+            _badge(document.getElementById('regime-claim-badge'),
+                'claim ' + (go.claim_allowed || s.claim_allowed ? 'ON' : 'OFF'),
+                !!(go.claim_allowed || s.claim_allowed));
+            const armEl = document.getElementById('regime-arm-badge');
+            if (armEl) armEl.textContent = 'arm ' + (cur.preferred_arm || '--');
+            const hintEl = document.getElementById('regime-hint-badge');
+            if (hintEl) hintEl.textContent = String(go.success_hint || 'ATTENTION_ONLY');
+            if (plain) plain.textContent = go.plain_english || 'Regime arm switch metrics (measure-only).';
+            if (tiles) {
+                const m3 = s.match_rate_3d;
+                tiles.innerHTML = [
+                    _tile('Paper arm', cur.preferred_arm || '--', cur.sticky_tape || ''),
+                    _tile('Flips', s.n_flips ?? '--', s.N_tag || ''),
+                    _tile('3d match', m3 == null ? '--' : _fmtPct01(m3), 'complete ' + (s.n_complete_3d ?? 0)),
+                    _tile('ex7 leader', cmp.ex7_leader || '--', 'HC pref ' + (cmp.preferred_is_hc ? 'Y' : 'N')),
+                    _tile('Live swaps', 'OFF', 'forced'),
+                ].join('');
+            }
+            const cacheBust = Date.now();
+            const setImg = (id, path) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.src = path + '?t=' + cacheBust;
+            };
+            setImg('regime-chart-timeline', '/charts/regime-arm/timeline.svg');
+            setImg('regime-chart-compare', '/charts/regime-arm/compare.svg');
+            if (body) {
+                const eps = data.episodes || [];
+                if (!eps.length) {
+                    body.innerHTML = '<tr><td colspan="6" class="py-2 text-slate-500">No flip episodes yet</td></tr>';
+                } else {
+                    body.innerHTML = eps.map(e => {
+                        const a3 = (e.alignment || {})['3d'] || {};
+                        const w = e.winner_vs_alt || '--';
+                        const wCls = (w === 'chosen' || w === 'chosen_tie_chop') ? 'text-emerald-400'
+                            : (w === 'alt' || w === 'miss') ? 'text-rose-400' : 'text-amber-300';
+                        return `<tr class="border-b border-slate-800/80">
+                            <td class="py-1.5 pr-2 text-slate-300">${e.day || '--'}</td>
+                            <td class="py-1.5 pr-2 text-slate-200">${(e.preferred_arm || '').replace(/_/g, ' ')}</td>
+                            <td class="py-1.5 pr-2 text-slate-400">${e.sticky_tape || '--'}</td>
+                            <td class="py-1.5 pr-2 tabular-nums text-slate-300">${_fmtNum(e.btc_ret_7d_pct, 2)}</td>
+                            <td class="py-1.5 pr-2 tabular-nums text-slate-300">${a3.fwd_btc_ret_pct == null ? '--' : _fmtNum(a3.fwd_btc_ret_pct, 2) + '%'}</td>
+                            <td class="py-1.5 ${wCls}">${String(w).replace(/_/g, ' ')}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        }
 
 </script>
 </body>

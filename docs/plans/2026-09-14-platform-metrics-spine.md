@@ -2,14 +2,13 @@
 
 **North star:** ~5%/mo deposit-adjusted take-home. Metrics exist to **justify** (go/no-go) and **optimize** (which lever moves month_path) — not to decorate dashboards.
 
-**Status 2026-09-14:** **P0+P1+P2 SHIPPED** — lifecycle spine + promote graduation charts  
+**Status 2026-09-14:** **P0–P3 SHIPPED** — lifecycle spine + promote charts + dash panes + regime flip metrics  
 - P0+P1 Core: `phase6/core/platform_metrics_spine.py`  
-- P2 Core: `phase6/core/promote_graduation_chart.py` (SVG funnel/outcomes/paper; claim bar)  
-- CLI: `run_platform_metrics_spine.py`, `run_promote_graduation_chart.py`  
-- Isolation: both suites green  
-- Artifacts: spine latest + `promote_graduation_chart_latest.json` + `reports/charts/promote_graduation_*.svg`  
-- Cron: spine `63cc2c821018` 07:45 PT; promote chart `af423d285b52` **12:40 PT daily** (after pick-metrics)  
-- Dashboard (API only, no full pane yet): `/api/promote-graduation`, `/api/platform-metrics-spine`, `/charts/promote-graduation/{funnel,outcomes,paper}.svg`  
+- P2 Core: `phase6/core/promote_graduation_chart.py` + **Promote lifecycle pane**  
+- P3 Core: `phase6/core/regime_arm_switch_metrics.py` + **Regime arm switch pane**  
+- CLI/isolation: promote + regime metrics green  
+- Dashboard: `/api/promote-graduation`, `/api/regime-arm-metrics`, chart SVG routes  
+- Cron: promote `af423d285b52` 12:40 PT; regime metrics (after switch cron)  
 - **Hard rule:** measure-only — never flips `live_membership_swaps`, never auto-promotes, never hard-ejects.
 
 **Rules (non-negotiable):**

@@ -1989,6 +1989,41 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     self.send_error(404)
                 else:
                     self.serve_file(str(fp), "image/svg+xml")
+        elif path == '/api/regime-arm-metrics':
+            try:
+                p = BASE / "data" / "state" / "regime_arm_switch_metrics_latest.json"
+                if not p.exists():
+                    self.send_json(
+                        {
+                            "status": "missing",
+                            "message": "Run scripts/phase6/run_regime_arm_switch_metrics.py",
+                            "measure_only": True,
+                        }
+                    )
+                else:
+                    data = json.loads(p.read_text())
+                    if not isinstance(data, dict):
+                        data = {"status": "error", "message": "invalid payload"}
+                    else:
+                        data = {**data, "status": "ok"}
+                    self.send_json(data)
+            except Exception as e:
+                self.send_json({"status": "error", "message": str(e)[:200], "measure_only": True})
+        elif path.startswith('/charts/regime-arm/'):
+            name = path.rsplit('/', 1)[-1]
+            allowed = {
+                "timeline.svg": "regime_arm_switch_timeline_latest.svg",
+                "compare.svg": "regime_arm_switch_compare_latest.svg",
+            }
+            fname = allowed.get(name)
+            if not fname:
+                self.send_error(404)
+            else:
+                fp = BASE / "reports" / "charts" / fname
+                if not fp.exists():
+                    self.send_error(404)
+                else:
+                    self.serve_file(str(fp), "image/svg+xml")
         elif path == '/api/capital/controls':
             try:
                 qs = urllib.parse.parse_qs(parsed.query or "")

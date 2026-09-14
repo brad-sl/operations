@@ -857,6 +857,27 @@ def build_spine(
     except Exception:
         pass
 
+    # P3 regime arm switch metrics join
+    try:
+        ra_path = root / "data" / "state" / "regime_arm_switch_metrics_latest.json"
+        if ra_path.exists():
+            ra = json.loads(ra_path.read_text())
+            if isinstance(ra, dict) and ra.get("schema"):
+                payload["regime_arm_switch"] = {
+                    "as_of": ra.get("as_of"),
+                    "current": ra.get("current"),
+                    "summary": ra.get("summary"),
+                    "hc_compare": {
+                        k: (ra.get("hc_compare") or {}).get(k)
+                        for k in ("ex7_leader", "preferred_is_hc", "alt_is_hc")
+                    },
+                    "go_nogo": ra.get("go_nogo"),
+                    "charts": ra.get("charts"),
+                    "dashboard_ready": (ra.get("dashboard") or {}).get("ready_for_pane"),
+                }
+    except Exception:
+        pass
+
     if write:
         _write_artifacts(payload, root=root)
         payload["actions_taken"] = [

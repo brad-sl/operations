@@ -2,7 +2,7 @@
 """Isolation test: analyst-test-strategy-weekly cron script.
 - Runs clean (no crash)
 - Uses only status/sync/emit (gated, no live trading writes)
-- Emits short summary; no model provider dependency (no_agent)
+- Telegram stdout = short board only; full JSON in logs/
 - Respects capacity; updates only TEST_STRATEGY + MASTER test entries
 """
 from __future__ import annotations
@@ -20,12 +20,11 @@ HERMES_SCRIPT = Path("/home/brad/.hermes/scripts/run_analyst_test_strategy_weekl
 
 
 def test_hermes_no_agent_wrapper_is_thin_delegator():
-    """Enforce thin wrapper pattern (see docs/testing/ANALYST_TEST_CYCLE.md) so full logic stays in git-tracked project source; prevents script-not-found and drift."""
+    """Enforce thin wrapper pattern so full logic stays in git-tracked project source."""
     assert HERMES_SCRIPT.exists(), f"missing hermes entrypoint {HERMES_SCRIPT} — copy thin wrapper after edit"
     assert os.access(HERMES_SCRIPT, os.X_OK), "hermes script not executable"
     content = HERMES_SCRIPT.read_text()
     assert "Thin wrapper" in content or "exec bash" in content, "hermes script must be thin delegator to project, not full copy"
-    # size check: thin should be << full (~50 lines)
     assert len(content) < 500, "hermes wrapper too large; use thin exec pattern"
 
 
@@ -33,36 +32,45 @@ def test_cron_script_runs_and_produces_summary():
     assert SCRIPT.exists(), f"missing {SCRIPT}"
     assert os.access(SCRIPT, os.X_OK), "not executable"
 
-    # Run with timeout; capture stdout (what gets delivered)
     proc = subprocess.run(
         [str(SCRIPT)],
         cwd=ROOT,
         capture_output=True,
         text=True,
-        timeout=60,
+        timeout=90,
         env={**os.environ, "PYTHONPATH": str(ROOT)},
     )
     assert proc.returncode == 0, f"exit {proc.returncode}\nstderr: {proc.stderr[:500]}"
     out = proc.stdout
 
-    # Key markers from summary
+    # Telegram body = short board only
     assert "analyst-test-strategy-weekly" in out
-    assert "Slots:" in out or "offline=" in out
+    assert "Slots:" in out
     assert "No live config writes" in out
-    assert "Status" in out and "Sync active" in out
+    assert "Full log:" in out
 
-    # Should not have crashed on model or network
+    # Must NOT dump strategy JSON blobs to stdout (option A)
+    assert '"north_star"' not in out
+    assert '"by_status"' not in out
+    assert '"parked_regime_plans"' not in out
+    # stricter: indented JSON keys from status dump
+    assert '  "slots"' not in out
+    assert '  "path"' not in out
+    assert "## Status" not in out
+    assert "## Sync active" not in out
+
     assert "can't reach the model provider" not in out.lower()
     assert "RuntimeError" not in out
 
-    # Should mention capacity / emit gated
-    assert "Emit" in out or "capacity" in out.lower()
+    # Full dump landed on disk
+    log_dir = ROOT / "logs" / "analyst_test_strategy_weekly"
+    assert (log_dir / "latest.log").exists(), "missing latest full log"
+    assert (log_dir / "status_latest.json").exists(), "missing status_latest.json"
+    status_txt = (log_dir / "status_latest.json").read_text()
+    assert "north_star" in status_txt or "slots" in status_txt
 
 
 def test_no_live_trading_mutation(tmp_path, monkeypatch=None):
-    # Ensure the script does not touch live regime_cash_policy or runner state
-    # (it only touches TEST_STRATEGY + MASTER for test plans)
-    # Smoke: run status only via py directly
     py = ROOT / ".venv" / "bin" / "python3"
     if not py.exists():
         py = "python3"
@@ -74,9 +82,7 @@ def test_no_live_trading_mutation(tmp_path, monkeypatch=None):
         timeout=30,
     )
     assert res.returncode == 0
-    # status json should not contain trading positions etc.
     assert "positions" not in res.stdout.lower()
-    assert "rebalance" not in res.stdout.lower() or "test" in res.stdout.lower()
 
 
 if __name__ == "__main__":

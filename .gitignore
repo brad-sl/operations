@@ -60,3 +60,7 @@ secrets/
 
 # A2 tryout sent latch runtime
 data/state/tryout_sent_latch.json
+data/state/promote_graduation_chart_latest.json
+data/state/promote_graduation_crumbs.jsonl
+reports/charts/promote_graduation_*.svg
+reports/PROMOTE_GRADUATION_CHART_LATEST.md

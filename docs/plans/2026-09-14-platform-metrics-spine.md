@@ -2,13 +2,15 @@
 
 **North star:** ~5%/mo deposit-adjusted take-home. Metrics exist to **justify** (go/no-go) and **optimize** (which lever moves month_path) — not to decorate dashboards.
 
-**Status 2026-09-14:** **P0+P1 SHIPPED** — full pair lifecycle spine live  
-- Core: `phase6/core/platform_metrics_spine.py`  
-- CLI: `scripts/phase6/run_platform_metrics_spine.py`  
-- Isolation: `scripts/phase6/test_isolation_platform_metrics_spine.py`  
-- Artifacts: `data/state/platform_metrics_spine_latest.json`, `reports/PLATFORM_METRICS_SPINE_LATEST.md`  
-- Cron: `phase6-platform-metrics-spine` `63cc2c821018` daily 07:45 PT TG short board  
-- **Hard rule:** spine never flips `live_membership_swaps`, never auto-promotes, never hard-ejects. Automation readiness is measured, not executed.
+**Status 2026-09-14:** **P0+P1+P2 SHIPPED** — lifecycle spine + promote graduation charts  
+- P0+P1 Core: `phase6/core/platform_metrics_spine.py`  
+- P2 Core: `phase6/core/promote_graduation_chart.py` (SVG funnel/outcomes/paper; claim bar)  
+- CLI: `run_platform_metrics_spine.py`, `run_promote_graduation_chart.py`  
+- Isolation: both suites green  
+- Artifacts: spine latest + `promote_graduation_chart_latest.json` + `reports/charts/promote_graduation_*.svg`  
+- Cron: spine `63cc2c821018` 07:45 PT; promote chart `af423d285b52` **12:40 PT daily** (after pick-metrics)  
+- Dashboard (API only, no full pane yet): `/api/promote-graduation`, `/api/platform-metrics-spine`, `/charts/promote-graduation/{funnel,outcomes,paper}.svg`  
+- **Hard rule:** measure-only — never flips `live_membership_swaps`, never auto-promotes, never hard-ejects.
 
 **Rules (non-negotiable):**
 - No live config / membership / knobs from metric jobs.

@@ -1931,6 +1931,64 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_json(fetch_dashboard_metrics())
         elif path == '/api/brief':
             self.send_json(fetch_strategic_brief())
+        elif path == '/api/promote-graduation':
+            # P2 promote lifecycle board — measure-only JSON (dashboard-ready)
+            try:
+                p = BASE / "data" / "state" / "promote_graduation_chart_latest.json"
+                if not p.exists():
+                    self.send_json(
+                        {
+                            "status": "missing",
+                            "message": "Run scripts/phase6/run_promote_graduation_chart.py",
+                            "measure_only": True,
+                        }
+                    )
+                else:
+                    data = json.loads(p.read_text())
+                    if not isinstance(data, dict):
+                        data = {"status": "error", "message": "invalid payload"}
+                    else:
+                        data = {**data, "status": "ok"}
+                    self.send_json(data)
+            except Exception as e:
+                self.send_json({"status": "error", "message": str(e)[:200], "measure_only": True})
+        elif path == '/api/platform-metrics-spine':
+            try:
+                p = BASE / "data" / "state" / "platform_metrics_spine_latest.json"
+                if not p.exists():
+                    self.send_json(
+                        {
+                            "status": "missing",
+                            "message": "Run scripts/phase6/run_platform_metrics_spine.py",
+                            "measure_only": True,
+                        }
+                    )
+                else:
+                    data = json.loads(p.read_text())
+                    if not isinstance(data, dict):
+                        data = {"status": "error", "message": "invalid payload"}
+                    else:
+                        data = {**data, "status": "ok"}
+                    self.send_json(data)
+            except Exception as e:
+                self.send_json({"status": "error", "message": str(e)[:200], "measure_only": True})
+        elif path.startswith('/charts/promote-graduation/'):
+            # Serve P2 SVG charts (funnel|outcomes|paper)
+            name = path.rsplit('/', 1)[-1]
+            allowed = {
+                "funnel.svg": "promote_graduation_funnel_latest.svg",
+                "outcomes.svg": "promote_graduation_outcomes_latest.svg",
+                "paper.svg": "promote_graduation_paper_latest.svg",
+            }
+            fname = allowed.get(name)
+            if not fname:
+                self.send_error(404)
+            else:
+                fp = BASE / "reports" / "charts" / fname
+                if not fp.exists():
+                    self.send_error(404)
+                else:
+                    self.serve_file(str(fp), "image/svg+xml")
         elif path == '/api/capital/controls':
             try:
                 qs = urllib.parse.parse_qs(parsed.query or "")

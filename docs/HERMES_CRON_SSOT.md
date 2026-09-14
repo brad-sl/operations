@@ -50,6 +50,7 @@ daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst
 | `phase6-discovery-retro-board-daily` | Lookback: gainers × frozen contenders + T-7 forward book (research only) |
 | `phase6-basket-pick-metrics-refresh` | Open promote pick still `status=open` |
 | `phase6-platform-metrics-spine` `63cc2c821018` | Full pair lifecycle + runner ops board · **07:45 PT daily** · TG short board · measure-only · never auto-promote/eject |
+| `phase6-promote-graduation-chart` `af423d285b52` | P2 promote funnel SVG + claim bar · **12:40 PT daily** (after pick-metrics) · TG short · dash `/api/promote-graduation` |
 | `phase6-basket-seat-idle-refresh` | Soft idle flags; observe_only |
 | `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred from decision file (regime switch may flip) →2026-09-28 |
 | `phase6-regime-arm-switch` `353a8ca93150` | BTC 7d tape → paper-primary arm (`up/chop→rel_btc_stable`, `down→risk_adj_mom`) · **11:40/23:40 PT** · apply shadow · TG **only on flip** · live swaps forced OFF |

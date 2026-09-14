@@ -824,8 +824,38 @@ def build_spine(
             "pick_summary": "data/state/basket_pick_metrics_summary.json",
             "tryout": "data/state/tryout_readiness_latest.json",
             "hc_board": "data/state/basket_swap_confidence_board_latest.json",
+            "promote_chart": "data/state/promote_graduation_chart_latest.json",
+            "promote_chart_md": "reports/PROMOTE_GRADUATION_CHART_LATEST.md",
         },
     }
+
+    # P2 promote chart summary (read-only join when present)
+    try:
+        pc_path = root / "data" / "state" / "promote_graduation_chart_latest.json"
+        if pc_path.exists():
+            pc = json.loads(pc_path.read_text())
+            if isinstance(pc, dict) and pc.get("schema"):
+                payload["promote_graduation"] = {
+                    "as_of": pc.get("as_of"),
+                    "funnel": pc.get("funnel"),
+                    "paper": {
+                        k: (pc.get("paper") or {}).get(k)
+                        for k in (
+                            "n_picks",
+                            "hit_rate_positive_7d",
+                            "avg_ret_7d_pct",
+                            "avg_excess_7d_pct",
+                            "claim_allowed",
+                        )
+                    },
+                    "choke_point": pc.get("choke_point"),
+                    "go_nogo": pc.get("go_nogo"),
+                    "charts": pc.get("charts"),
+                    "dashboard_ready": (pc.get("dashboard") or {}).get("ready_for_pane"),
+                    "series_n": (pc.get("series") or {}).get("n_points"),
+                }
+    except Exception:
+        pass
 
     if write:
         _write_artifacts(payload, root=root)

@@ -686,8 +686,10 @@ def short_gate_label(
                 rl = r.lower()
                 if "missfire" in rl:
                     return "missfire probation"
-                if "ledger_fail" in rl or "ledger" in rl:
+                if "ledger_fail" in rl or ("ledger" in rl and "fail" in rl):
                     return "ledger quality fail"
+                if "basket_thaw" in rl or "basket_tryout_thaw" in rl:
+                    return "basket thaw gated"
                 if "tier_c" in rl:
                     return "tier C off"
                 if "hard_block" in rl or "block_list" in rl:

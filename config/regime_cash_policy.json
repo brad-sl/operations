@@ -237,9 +237,9 @@
     "protect": true,
     "recovery_soft_down_20260828": {
       "enabled": true,
-      "reason": "Brad GO 2026-09-11: promote AVAX tryout $75 via force_eligible (ledger SL-heavy); tier C still off; UNI/RAVE hard block",
-      "as_of": "20260911T234500Z",
-      "prior_as_of": "20260905T230000Z",
+      "reason": "Brad GO 2026-09-14 option D: temporary basket tryout thaw through 2026-09-17 21:00 PT (same $75/2-seat). Prior AVAX force_eligible 2026-09-11 kept.",
+      "as_of": "20260914T210000Z",
+      "prior_as_of": "20260911T234500Z",
       "block_new_buy_pairs": [
         "UNI-USD",
         "RAVE-USD"
@@ -287,18 +287,26 @@
           "force_eligible_pairs": [
             "AVAX-USD"
           ],
+          "basket_tryout_thaw": {
+            "enabled": true,
+            "brad_go": "2026-09-14",
+            "expires_at": "2026-09-17T21:00:00-07:00",
+            "allow_first_fill_basket": true,
+            "bypass_tier_c_off_for_basket": true,
+            "note": "Brad GO option D: temporary thaw — active basket seats may try under same $75 / max 2 seats / sent≥0.30 / RSI≤55. Clears tier_c_off + first-fill for basket names (NEAR/ADA-class). Does NOT bypass hard_block (UNI/RAVE), buy_block (LINK), missfire, or ugly ledger (SOL stays closed). Auto-expires 2026-09-17 21:00 PT."
+          },
           "min_net_pnl": 0.0,
           "min_rt_graduated": 3,
           "max_sl_rate": 0.50,
           "min_tp_rate": 0.15,
           "min_rt_for_rates": 5,
-          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors. force_eligible_pairs = Brad GO seat bypass of ledger fail only (still $75 / sent / RSI)."
+          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors. force_eligible_pairs = Brad GO seat bypass of ledger fail only (still $75 / sent / RSI). basket_tryout_thaw = temporary D path."
         },
-        "note": "v2 live: dynamic eligible set from ledger scoreboard + force_eligible. Static tryout_pairs = legacy compare only."
+        "note": "v2 live: dynamic eligible set from ledger scoreboard + force_eligible + optional basket_tryout_thaw. Static tryout_pairs = legacy compare only."
       },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "Remove AVAX from tier_b + force_eligible_pairs + tryout_pairs; rewrite scoreboard; prior_as_of 20260905T230000Z"
+      "rollback": "Set quality_tryout.v2.basket_tryout_thaw.enabled=false (or delete block); rewrite scoreboard; restart runner. Optional: remove AVAX from force_eligible_pairs/tier_b if rolling that too."
     }
   },
   "buy_block_pairs": [

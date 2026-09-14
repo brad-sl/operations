@@ -284,6 +284,98 @@ def test_brad_go_force_eligible_bypasses_ledger_fail():
     print("PASS brad_go_force_eligible_bypasses_ledger_fail")
 
 
+def test_basket_tryout_thaw_option_d():
+    """Option D: temporary thaw opens basket tier-C first-fill; not ledger-fail or hard block."""
+    from phase6.core.recovery_tryout_qualify import basket_tryout_thaw_active, load_v2_cfg
+
+    def _mf_clear(p, enforce=True):
+        return type("V", (), {"blocked": False, "class_": "clear", "reasons": []})()
+
+    now = datetime.now(timezone.utc)
+    exp = (now + timedelta(days=2)).isoformat()
+    rec = _rec_v2()
+    rec["quality_tryout"]["v2"]["basket_tryout_thaw"] = {
+        "enabled": True,
+        "expires_at": exp,
+        "allow_first_fill_basket": True,
+        "bypass_tier_c_off_for_basket": True,
+        "brad_go": "test",
+    }
+    cfg = load_v2_cfg(rec)
+    assert basket_tryout_thaw_active(cfg, now=now)
+
+    # NEAR-class: tier C, empty ledger → first fill under thaw
+    v_near = evaluate_pair_tryout(
+        "NEAR-USD",
+        rec=rec,
+        basket=["NEAR-USD", "ETH-USD", "SOL-USD", "UNI-USD"],
+        ledger_rows=[],
+        missfire_fn=_mf_clear,
+    )
+    assert v_near.eligible_tryout, v_near
+    assert v_near.tier == "C", v_near
+    assert v_near.class_ == "basket_thaw_first_fill", v_near
+
+    # Without thaw still tier_c_off
+    v_off = evaluate_pair_tryout(
+        "NEAR-USD",
+        rec=_rec_v2(),
+        basket=["NEAR-USD", "ETH-USD"],
+        ledger_rows=[],
+        missfire_fn=_mf_clear,
+    )
+    assert not v_off.eligible_tryout and v_off.class_ == "tier_c_off", v_off
+
+    # SOL-like ledger fail on tier B — thaw does NOT open ugly ledger
+    rows = []
+    for i in range(8):
+        rows.append(
+            {
+                "pair": "SOL-USD",
+                "side": "SELL",
+                "timestamp": (now - timedelta(days=i + 1)).isoformat(),
+                "pnl": -5.0,
+                "reason": "stop_loss",
+            }
+        )
+    v_sol = evaluate_pair_tryout(
+        "SOL-USD",
+        rec=rec,
+        basket=["NEAR-USD", "ETH-USD", "SOL-USD"],
+        ledger_rows=rows,
+        missfire_fn=_mf_clear,
+    )
+    assert not v_sol.eligible_tryout, v_sol
+
+    # UNI hard block still wins
+    v_uni = evaluate_pair_tryout(
+        "UNI-USD",
+        rec=rec,
+        basket=["UNI-USD", "NEAR-USD"],
+        ledger_rows=[],
+        missfire_fn=_mf_clear,
+    )
+    assert v_uni.hard_blocked and not v_uni.eligible_tryout
+
+    # Expired thaw refuses
+    rec_exp = _rec_v2()
+    rec_exp["quality_tryout"]["v2"]["basket_tryout_thaw"] = {
+        "enabled": True,
+        "expires_at": (now - timedelta(hours=1)).isoformat(),
+        "allow_first_fill_basket": True,
+        "bypass_tier_c_off_for_basket": True,
+    }
+    v_exp = evaluate_pair_tryout(
+        "NEAR-USD",
+        rec=rec_exp,
+        basket=["NEAR-USD"],
+        ledger_rows=[],
+        missfire_fn=_mf_clear,
+    )
+    assert not v_exp.eligible_tryout and v_exp.class_ == "tier_c_off", v_exp
+    print("PASS basket_tryout_thaw_option_d")
+
+
 def main():
     test_ledger_pass_fail()
     test_hard_block_and_missfire()
@@ -291,6 +383,7 @@ def main():
     test_short_labels()
     test_v1_static_unchanged_when_not_v2()
     test_brad_go_force_eligible_bypasses_ledger_fail()
+    test_basket_tryout_thaw_option_d()
     print("ALL PASS isolation_recovery_tryout_v2")
 
 

@@ -475,7 +475,10 @@ def recovery_soft_down_blocks_pair(
                 from phase6.core.recovery_tryout_qualify import evaluate_pair_tryout
 
                 v = evaluate_pair_tryout(p, rec=rec)
-                cls = str(v.class_ or "not_eligible")
+                if bool(getattr(v, "eligible_tryout", False)):
+                    # Live qualify can pass even if scoreboard file is stale
+                    return None
+                cls = str(getattr(v, "class_", None) or "not_eligible")
                 return f"recovery_soft_down quality_tryout_v2 {cls} {p}"
             except Exception:
                 pass

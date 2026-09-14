@@ -110,6 +110,19 @@ def load_v2_cfg(rec: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         or []
     )
 
+    # Option D — temporary basket tryout thaw (Brad GO).
+    # Active basket seats may clear tier_c_off + first-fill path under same
+    # $75 / seats / sent / RSI. Does NOT bypass hard_block, missfire, buy_block,
+    # or ugly ledger (ledger_fail still closed unless force_eligible).
+    thaw_raw = (
+        src.get("basket_tryout_thaw")
+        or qt.get("basket_tryout_thaw")
+        or rec.get("basket_tryout_thaw")
+        or {}
+    )
+    if not isinstance(thaw_raw, dict):
+        thaw_raw = {}
+
     return {
         "lookback_days": float(src.get("lookback_days", DEFAULT_LOOKBACK_DAYS) or DEFAULT_LOOKBACK_DAYS),
         "tier_a": tier_a,
@@ -119,6 +132,16 @@ def load_v2_cfg(rec: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
             src.get("allow_first_fill_tier_b", DEFAULT_ALLOW_FIRST_FILL_TIER_B)
         ),
         "force_eligible_pairs": force_eligible,
+        "basket_tryout_thaw": {
+            "enabled": bool(thaw_raw.get("enabled", False)),
+            "expires_at": str(thaw_raw.get("expires_at") or "").strip() or None,
+            "allow_first_fill_basket": bool(thaw_raw.get("allow_first_fill_basket", True)),
+            "bypass_tier_c_off_for_basket": bool(
+                thaw_raw.get("bypass_tier_c_off_for_basket", True)
+            ),
+            "note": str(thaw_raw.get("note") or ""),
+            "brad_go": str(thaw_raw.get("brad_go") or ""),
+        },
         "min_net_pnl": float(src.get("min_net_pnl", DEFAULT_MIN_NET) or 0.0),
         "min_rt_graduated": int(src.get("min_rt_graduated", DEFAULT_MIN_RT_GRAD) or DEFAULT_MIN_RT_GRAD),
         "max_sl_rate": float(src.get("max_sl_rate", DEFAULT_MAX_SL_RATE) or DEFAULT_MAX_SL_RATE),
@@ -338,6 +361,39 @@ def _ledger_ok(st: PairLedgerStats, cfg: Dict[str, Any]) -> Tuple[bool, float, s
     return ok, score, cls, reasons
 
 
+def _parse_iso_ts(s: Any) -> Optional[datetime]:
+    if s is None:
+        return None
+    t = str(s).strip()
+    if not t:
+        return None
+    try:
+        if t.endswith("Z"):
+            t = t[:-1] + "+00:00"
+        dt = datetime.fromisoformat(t)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(timezone.utc)
+    except Exception:
+        return None
+
+
+def basket_tryout_thaw_active(cfg: Optional[Dict[str, Any]] = None, *, now: Optional[datetime] = None) -> bool:
+    """True when temporary basket tryout thaw is enabled and not expired."""
+    cfg = cfg or {}
+    thaw = cfg.get("basket_tryout_thaw") if isinstance(cfg.get("basket_tryout_thaw"), dict) else {}
+    if not bool(thaw.get("enabled")):
+        return False
+    exp = _parse_iso_ts(thaw.get("expires_at"))
+    if exp is None:
+        # enabled without expiry = refuse (fail-closed; must set expires_at)
+        return False
+    n = now or _utc_now()
+    if n.tzinfo is None:
+        n = n.replace(tzinfo=timezone.utc)
+    return n <= exp
+
+
 def evaluate_pair_tryout(
     pair: str,
     *,
@@ -427,8 +483,16 @@ def evaluate_pair_tryout(
         )
 
     force_go = p in cfg.get("force_eligible_pairs", set())
+    thaw_on = basket_tryout_thaw_active(cfg)
+    thaw_cfg = cfg.get("basket_tryout_thaw") if isinstance(cfg.get("basket_tryout_thaw"), dict) else {}
+    in_basket = p in basket_set
+    thaw_tier_c = (
+        thaw_on
+        and in_basket
+        and bool(thaw_cfg.get("bypass_tier_c_off_for_basket", True))
+    )
 
-    if tier == "C" and not cfg["allow_tier_c"] and not force_go:
+    if tier == "C" and not cfg["allow_tier_c"] and not force_go and not thaw_tier_c:
         return TryoutVerdict(
             pair=p,
             tier=tier,
@@ -440,6 +504,8 @@ def evaluate_pair_tryout(
             reasons=["tier_C_requires_brad_go_or_allow_tier_c"],
             in_legacy_list=p in cfg["legacy_tryout_pairs"],
         )
+    if tier == "C" and thaw_tier_c and not force_go:
+        reasons.append("basket_tryout_thaw_tier_c")
 
     # Ledger
     rows = list(ledger_rows) if ledger_rows is not None else _load_ledger_rows()
@@ -461,6 +527,18 @@ def evaluate_pair_tryout(
         out_cls = "first_fill_tier_b"
         score = max(score, 0.40)
         reasons.append("first_fill_path_tier_B")
+    elif (
+        first_fill
+        and thaw_on
+        and in_basket
+        and tier in ("B", "C")
+        and bool(thaw_cfg.get("allow_first_fill_basket", True))
+    ):
+        # Option D: basket seat with thin ledger may try (still $75/sent/RSI).
+        eligible = True
+        out_cls = "basket_thaw_first_fill"
+        score = max(score, 0.42)
+        reasons.append("basket_tryout_thaw_first_fill")
     elif force_go and tier in ("B", "C"):
         # Explicit Brad GO seat — ledger still recorded in reasons/stats, not a free-for-all.
         eligible = True
@@ -566,8 +644,13 @@ def _plain_english(
             + ", ".join(f"{v.pair}({v.class_})" for v in fails[:6])
         )
     bits.append(
-        f"tier_C={'on' if cfg.get('allow_tier_c') else 'off'} · "
-        f"live_apply={bool(cfg.get('live_apply'))}"
+        f"tier_C={'on' if cfg.get('allow_tier_c') else 'off'}"
+        + (
+            "+basket_thaw"
+            if basket_tryout_thaw_active(cfg)
+            else ""
+        )
+        + f" · live_apply={bool(cfg.get('live_apply'))}"
     )
     return " · ".join(bits)
 
@@ -598,7 +681,38 @@ def write_scoreboard(
     state_path: Path = STATE_PATH,
     report_path: Path = REPORT_PATH,
 ) -> Dict[str, Any]:
+    if rec is None:
+        try:
+            from phase6.core.regime_cash_policy import load_policy
+
+            pol = load_policy() or {}
+            oo = pol.get("operator_override") if isinstance(pol.get("operator_override"), dict) else {}
+            # preferred recovery soft_down block
+            rec = None
+            for k, v in oo.items():
+                if str(k).startswith("recovery_soft_down") and isinstance(v, dict) and v.get("enabled"):
+                    rec = v
+                    break
+            if rec is None:
+                rec = {}
+        except Exception:
+            rec = {}
     board = evaluate_basket_tryout(rec=rec)
+    # annotate thaw status on board for ops
+    try:
+        cfg = load_v2_cfg(rec)
+        thaw = cfg.get("basket_tryout_thaw") if isinstance(cfg.get("basket_tryout_thaw"), dict) else {}
+        board["basket_tryout_thaw"] = {
+            **thaw,
+            "active": basket_tryout_thaw_active(cfg),
+        }
+        if board["basket_tryout_thaw"]["active"]:
+            board["plain_english"] = (
+                str(board.get("plain_english") or "")
+                + f" · basket_thaw ON until {thaw.get('expires_at')}"
+            )
+    except Exception:
+        pass
     state_path.parent.mkdir(parents=True, exist_ok=True)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     state_path.write_text(json.dumps(board, indent=2, default=str) + "\n", encoding="utf-8")

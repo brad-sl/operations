@@ -1,3 +1,54 @@
+## LUCK-LADDER-20260915 — OPEN (epic hub)
+
+**Type:** platform / refine-while-idle / manufactured-luck reduction  
+**Date:** 2026-09-15  
+**Status:** **OPEN** — plan landed; R0 OBSERVE; R1 SHIPPED shadow  
+**Priority:** P0 hub  
+**auto_pickup:** false  
+**Plan:** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`  
+**Status board:** `reports/LUCK_LADDER_STATUS_LATEST.md`  
+**Board:** `crypto-bot-project`  
+**Related:** R0 `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`; PC-02 exit; PC-05 limit-first
+
+### Plain English
+Idle armor is not wasted time: attack luck factors we control (clock → knife → exit → fee → seat → size → regime) so tryouts and TP path improve with evidence. No live knobs / no auto-buy / no promote without Brad GO.
+
+### Children
+| ID | Tag | Pri | Title | Schedule |
+|----|-----|-----|-------|----------|
+| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE | P0 | RSI-event X tryout shadow 24h | ends ~2026-09-16 15:21 PT |
+| LUCK-R1-KNIFE-FILTER-20260915 | SHIPPED | P0 | Knife vs wash shadow CF | cron 07:30/19:30 PT; Kanban `t_caa744ee` |
+| LUCK-R2-EXIT-CF-20260915 | SCHEDULED | P1 | Exit geometry CF scoreboard | after R0 decision |
+| LUCK-R3-LIMIT-TAX-20260915 | SCHEDULED | P1 | Limit-first / fee path | with/after R2 |
+| LUCK-R4-DOOR-RANK-20260915 | BLOCKED | P2 | Tryout door rank quality | after R1 crumbs |
+| LUCK-R5-SIZE-GRAD-20260915 | BLOCKED | P2 | Size graduation packet | after fills/N |
+| LUCK-R6-REGIME-TRYOUT-20260915 | BLOCKED | P2 | Regime tryout allow shadow | after R1 stable |
+
+### Must not
+- Paid X without R0 high bar + Brad GO
+- Live exit/TP promote without GO
+- live_membership_swaps on
+- Lower sent floors / widen armor from this epic alone
+
+### Staff next
+1. R0 observe to closeout (~2026-09-16 15:21 PT)  
+2. R1 crumbs collect (shipped)  
+3. R2/R3 after R0 decision packet  
+
+### Kanban task ids (2026-09-15)
+| Card | id |
+|------|-----|
+| HUB | `t_529fe799` |
+| R0 | `t_1f6450d7` |
+| R1 | `t_caa744ee` |
+| R2 | `t_38978231` |
+| R3 | `t_c4cdbb75` |
+| R4 | `t_dd19b4f6` |
+| R5 | `t_ed05d5fb` |
+| R6 | `t_b21b3108` |
+
+---
+
 ## PLATFORM-E2E-VALIDATION-20260911 — DONE
 **Status:** DONE measure-only after PC-01..03
 **Artifacts:** `reports/PLATFORM_E2E_VALIDATION_20260911.md`, `scripts/phase6/run_platform_e2e_validation.py`, `data/state/platform_e2e_validation_latest.json`
@@ -376,7 +427,7 @@ python phase6/research/run_trade_comparison_dig.py
 **Type:** test  
 **Date:** 2026-09-02  
 **Role:** Crypto-Analyst  
-**Status:** **REPORT_READY** — trial `ANALYST-METHOD-ROTATION-21D-20260902-TRIAL` awaiting Brad `decide` (2026-09-02T19:51Z)
+**Status:** **DONE** — trial `ANALYST-METHOD-ROTATION-21D-20260902-TRIAL` decision=`continue_observe_only`  
 **auto_pickup:** true  
 **trial_kind:** offline_analysis  
 **family:** method_rotation_21d  

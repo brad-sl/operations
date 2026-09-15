@@ -47,3 +47,10 @@ Reduce clock luck between 09:00/21:00 X slots: when a **tryout-eligible** door i
 1. Optional `--spend-x` single-pair probe with hard daily budget (Brad GO)
 2. Live mid-cycle tryout seat only after shadow N days + no process-tax spike
 3. Align any live path with existing $75 / 2-seat / SL stack — no side door
+
+## 24h observe (Brad 2026-09-15)
+- Mode: **observe only** through ~2026-09-16 15:21 PT
+- Recurring shadow cron remains 4×/day; no paid X; no orders
+- Closeout one-shot: `phase6-rsi-event-x-shadow-observe-24h-close` `63b055a00372`
+- Bar to *discuss* X probe (not promote): ≥3 ticks, ≥2 trigger hits, ≥2 top-K hits
+- Graduate ladder: shadow evidence → single-pair X probe (GO) → live tryout only with evidence

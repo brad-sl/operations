@@ -68,3 +68,4 @@ data/state/regime_arm_switch_metrics_latest.json
 data/state/regime_arm_switch_metrics_crumbs.jsonl
 reports/charts/regime_arm_switch_*.svg
 reports/REGIME_ARM_SWITCH_METRICS_LATEST.md
+data/ohlcv/

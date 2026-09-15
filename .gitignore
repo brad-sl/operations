@@ -69,3 +69,9 @@ data/state/regime_arm_switch_metrics_crumbs.jsonl
 reports/charts/regime_arm_switch_*.svg
 reports/REGIME_ARM_SWITCH_METRICS_LATEST.md
 data/ohlcv/
+
+# RSI-event X tryout shadow
+data/state/rsi_event_x_tryout_shadow_latest.json
+data/state/rsi_event_x_tryout_shadow_events.jsonl
+reports/RSI_EVENT_X_TRYOUT_SHADOW_LATEST.md
+logs/rsi_event_x_tryout_shadow/

@@ -50,7 +50,7 @@ Times America/Los_Angeles. Adjust only with Brad note.
 |------|------|--------|--------------|
 | **2026-09-15 → 09-16 15:21** | R0 | 24h observe (cron 4×/day + closeout) | High bar: ≥3 ticks, ≥2 trigger>0, ≥2 top-K |
 | **2026-09-15 start (parallel)** | R1 | Knife-filter shadow + offline CF on would-buys / hist tryouts | Isolation green; 7d shadow crumbs |
-| **2026-09-16 after R0 closeout** | R0→decision | Pass → discuss X probe GO; fail → extend observe | Brad GO for any X spend |
+| **2026-09-17 19:35 after R0 closeout** | R0→decision | Pass → arm switch plan `2026-09-16-rebalance-book-vs-rsi-buy-x-split.md`; fail → extend observe | Brad GO for cutover + any X spend |
 | **2026-09-16–17** | R2 | Exit CF scoreboard v2 (extend PC-02): sl_only / shadow_tp / time / trail | Honest board; no live_apply |
 | **2026-09-17–18** | R3 | Limit-first counters refresh (PC-05 spine); tryout-path focus | Cost evidence only |
 | **After R1 ≥7d crumbs OR clear knife winner** | R4 | Rank quality shadow (last_x_ok, ledger, beta, post-SL age) | Beats RSI-depth-only on mark@H |

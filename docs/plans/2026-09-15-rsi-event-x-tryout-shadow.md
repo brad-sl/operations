@@ -48,6 +48,15 @@ Reduce clock luck between 09:00/21:00 X slots: when a **tryout-eligible** door i
 2. Live mid-cycle tryout seat only after shadow N days + no process-tax spike
 3. Align any live path with existing $75 / 2-seat / SL stack — no side door
 
+## Post-PASS switch plan (Brad 2026-09-16)
+**Armed:** after this observe **completes and passes**, switch per  
+`docs/plans/2026-09-16-rebalance-book-vs-rsi-buy-x-split.md`
+
+- Rebalance → **book only** (not new buys)
+- New buys → **RSI-event path**
+- X → RSI-filtered prospects + rebalance candidates only (**replace** full-pool 2×, do not stack)
+- Live cutover still needs explicit Brad GO after PASS — plan save ≠ cutover GO
+
 ## 24h observe (Brad 2026-09-15)
 - Mode: **observe only** through ~2026-09-16 15:21 PT
 - Recurring shadow cron remains 4×/day; no paid X; no orders

@@ -42,6 +42,12 @@
 | R5 | `t_ed05d5fb` |
 | R6 | `t_b21b3108` |
 
+## Post-R0 switch (PROPOSED — armed)
+**Plan:** `docs/plans/2026-09-16-rebalance-book-vs-rsi-buy-x-split.md`  
+**Brad GO save:** 2026-09-16 · **Cutover GO:** only after R0 PASS + explicit GO  
+**Target:** rebalance = book only · new buys = RSI-event · X = prospects + rebalance candidates (replace full-pool 2×)
+
 ## Decisions log
 - 2026-09-15: Brad GO save full ladder + Kanban + execute on schedule; R0 24h observe; R1 shipped shadow.
 - 2026-09-16: Brad GO extend R0 observe through tomorrow (~48h total) for pattern reliability; paid X / live gate still OFF.
+- 2026-09-16: Brad GO **save** post-R0 switch plan (rebalance/X split). Switch only if shadow passes closeout; cutover not yet authorized.

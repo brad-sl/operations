@@ -8,7 +8,7 @@
 **Plan:** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`  
 **Status board:** `reports/LUCK_LADDER_STATUS_LATEST.md`  
 **Board:** `crypto-bot-project`  
-**Related:** R0 `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`; PC-02 exit; PC-05 limit-first
+**Related:** R0 `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`; **post-R0 switch** `docs/plans/2026-09-16-rebalance-book-vs-rsi-buy-x-split.md` (PROPOSED — arm after R0 PASS); PC-02 exit; PC-05 limit-first
 
 ### Plain English
 Idle armor is not wasted time: attack luck factors we control (clock → knife → exit → fee → seat → size → regime) so tryouts and TP path improve with evidence. No live knobs / no auto-buy / no promote without Brad GO.
@@ -16,8 +16,9 @@ Idle armor is not wasted time: attack luck factors we control (clock → knife �
 ### Children
 | ID | Tag | Pri | Title | Schedule |
 |----|-----|-----|-------|----------|
-| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE EXT | P0 | RSI-event X tryout shadow ~48h | ends **2026-09-17 19:35 PT** |
-| LUCK-R1-KNIFE-FILTER-20260915 | SHIPPED | P0 | Knife vs wash shadow CF | cron 07:30/19:30 PT; Kanban `t_caa744ee` |
+|| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE EXT | P0 | RSI-event X tryout shadow ~48h | ends **2026-09-17 19:35 PT** |
+|| LUCK-R0-SWITCH-REBAL-X-20260916 | PROPOSED | P0 | Rebalance=book · RSI=buys · X split | arm after R0 PASS; cutover needs GO |
+|| LUCK-R1-KNIFE-FILTER-20260915 | SHIPPED | P0 | Knife vs wash shadow CF | cron 07:30/19:30 PT; Kanban `t_caa744ee` |
 | LUCK-R2-EXIT-CF-20260915 | SCHEDULED | P1 | Exit geometry CF scoreboard | after R0 decision |
 | LUCK-R3-LIMIT-TAX-20260915 | SCHEDULED | P1 | Limit-first / fee path | with/after R2 |
 | LUCK-R4-DOOR-RANK-20260915 | BLOCKED | P2 | Tryout door rank quality | after R1 crumbs |
@@ -32,8 +33,9 @@ Idle armor is not wasted time: attack luck factors we control (clock → knife �
 
 ### Staff next
 1. R0 observe to closeout (**2026-09-17 19:35 PT**, extended for pattern reliability)  
-2. R1 crumbs collect (shipped)  
-3. R2/R3 after R0 decision packet  
+2. On R0 **PASS** → staff `docs/plans/2026-09-16-rebalance-book-vs-rsi-buy-x-split.md` (cutover still needs Brad GO)  
+3. R1 crumbs collect (shipped)  
+4. R2/R3 after R0 decision packet  
 
 ### Kanban task ids (2026-09-15)
 | Card | id |

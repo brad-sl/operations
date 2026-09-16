@@ -72,9 +72,11 @@ def main() -> int:
     if not bar_pass and n_ticks < 3:
         verdict = "OBSERVE_INCOMPLETE_rerun_window"
 
+    window_label = str(obs.get("target_window_label") or "observe window")
     plain = (
-        f"24h RSI-event shadow: ticks={n_ticks} trigger_hits={trigger_hits} "
-        f"topK_hits={topk_hits} would_buy_hits={would_buy_hits}. "
+        f"RSI-event shadow closeout ({window_label}): ticks={n_ticks} "
+        f"trigger_hits={trigger_hits} topK_hits={topk_hits} "
+        f"would_buy_hits={would_buy_hits}. "
         f"Top pairs: {pair_counts or '{}'}. "
         f"Verdict **{verdict}** — still no paid X / no orders unless Brad GO."
     )
@@ -120,11 +122,13 @@ def main() -> int:
         )
 
     lines = [
-        "# RSI-event X tryout shadow — 24h observe closeout",
+        "# RSI-event X tryout shadow — observe closeout",
         "",
         f"- closed: `{out['closed_at_utc']}`",
+        f"- window: `{obs.get('target_window_label') or 'observe'}`",
         f"- started: `{obs.get('started_at_pt') or obs.get('started_at_utc')}`",
         f"- ends target: `{obs.get('ends_at_pt') or obs.get('ends_at_utc')}`",
+        f"- extended: `{obs.get('extended_at_pt') or 'n/a'}`",
         f"- verdict: **{verdict}**",
         f"- edge_class: `ATTENTION_ONLY_sensor_clock`",
         f"- live_gate: **OFF**",

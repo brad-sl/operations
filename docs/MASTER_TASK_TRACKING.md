@@ -2,7 +2,7 @@
 
 **Type:** platform / refine-while-idle / manufactured-luck reduction  
 **Date:** 2026-09-15  
-**Status:** **OPEN** — plan landed; R0 OBSERVE; R1 SHIPPED shadow  
+**Status:** **OPEN** — plan landed; R0 OBSERVE EXTENDED through 2026-09-17; R1 SHIPPED shadow  
 **Priority:** P0 hub  
 **auto_pickup:** false  
 **Plan:** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`  
@@ -16,7 +16,7 @@ Idle armor is not wasted time: attack luck factors we control (clock → knife �
 ### Children
 | ID | Tag | Pri | Title | Schedule |
 |----|-----|-----|-------|----------|
-| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE | P0 | RSI-event X tryout shadow 24h | ends ~2026-09-16 15:21 PT |
+| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE EXT | P0 | RSI-event X tryout shadow ~48h | ends **2026-09-17 19:35 PT** |
 | LUCK-R1-KNIFE-FILTER-20260915 | SHIPPED | P0 | Knife vs wash shadow CF | cron 07:30/19:30 PT; Kanban `t_caa744ee` |
 | LUCK-R2-EXIT-CF-20260915 | SCHEDULED | P1 | Exit geometry CF scoreboard | after R0 decision |
 | LUCK-R3-LIMIT-TAX-20260915 | SCHEDULED | P1 | Limit-first / fee path | with/after R2 |
@@ -31,7 +31,7 @@ Idle armor is not wasted time: attack luck factors we control (clock → knife �
 - Lower sent floors / widen armor from this epic alone
 
 ### Staff next
-1. R0 observe to closeout (~2026-09-16 15:21 PT)  
+1. R0 observe to closeout (**2026-09-17 19:35 PT**, extended for pattern reliability)  
 2. R1 crumbs collect (shipped)  
 3. R2/R3 after R0 decision packet  
 

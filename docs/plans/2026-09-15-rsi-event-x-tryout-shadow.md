@@ -51,6 +51,7 @@ Reduce clock luck between 09:00/21:00 X slots: when a **tryout-eligible** door i
 ## 24h observe (Brad 2026-09-15)
 - Mode: **observe only** through ~2026-09-16 15:21 PT
 - Recurring shadow cron remains 4×/day; no paid X; no orders
-- Closeout one-shot: `phase6-rsi-event-x-shadow-observe-24h-close` `63b055a00372`
+- Closeout one-shot: `phase6-rsi-event-x-shadow-observe-close` `17289c281af6` @ **2026-09-17 19:35 PT**
+- Observe window **extended** Brad GO 2026-09-16 → through tomorrow (~48h total); prior 24h closeout `63b055a00372` removed
 - Bar to *discuss* X probe (not promote): ≥3 ticks, ≥2 trigger hits, ≥2 top-K hits
 - Graduate ladder: shadow evidence → single-pair X probe (GO) → live tryout only with evidence

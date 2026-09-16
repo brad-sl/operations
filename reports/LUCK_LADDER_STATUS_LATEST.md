@@ -1,14 +1,14 @@
 # Luck Ladder Status — LATEST
 
 **Plan:** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`  
-**Updated:** 2026-09-15  
+**Updated:** 2026-09-16  
 **Mode:** measure-only · no live knobs · no auto-buy · no promote
 
 ## Board
 
 | Rung | Factor | Status | Gate / next |
 |------|--------|--------|-------------|
-| **R0** | Sensor clock | **OBSERVE 24h** | Closeout ~2026-09-16 15:21 PT; high bar → X probe discuss only |
+| **R0** | Sensor clock | **OBSERVE EXTENDED** | Closeout **2026-09-17 19:35 PT**; reliability check through tomorrow |
 | **R1** | Knife vs wash | **SHIPPED shadow** | 7d crumbs → then R4/R6 unlock review |
 | **R2** | Exit geometry | SCHEDULED | After R0 decision; extend PC-02 CF arms |
 | **R3** | Fee / path tax | SCHEDULED | With/after R2; PC-05 tryout slice |
@@ -18,8 +18,11 @@
 
 ## R0 snapshot
 - Cron: `phase6-rsi-event-x-tryout-shadow` 07:20/11:20/15:20/19:20 PT
-- Closeout job: `phase6-rsi-event-x-shadow-observe-24h-close`
+- Window: **2026-09-15 15:21 PT → 2026-09-17 19:35 PT** (~48h extended)
+- Closeout job: `phase6-rsi-event-x-shadow-observe-close` @ 2026-09-17 19:35 PT
 - Live_gate: OFF · paid_x: OFF
+- Mid-extend (2026-09-16): ticks with pool/topK present early; quiet when RSI left wash band — looks viable as clock alternative, not yet reliability-proven
+- Brad GO 2026-09-16: extend through tomorrow for pattern reliability (still discuss-only after closeout)
 
 ## R1 snapshot
 - **SHIPPED** measure-only: `phase6/core/knife_filter_shadow.py`
@@ -41,3 +44,4 @@
 
 ## Decisions log
 - 2026-09-15: Brad GO save full ladder + Kanban + execute on schedule; R0 24h observe; R1 shipped shadow.
+- 2026-09-16: Brad GO extend R0 observe through tomorrow (~48h total) for pattern reliability; paid X / live gate still OFF.

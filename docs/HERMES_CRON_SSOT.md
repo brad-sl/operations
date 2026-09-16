@@ -67,6 +67,7 @@ daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst
 | Job | When | Note |
 |-----|------|------|
 | `stoch-30d-reeval` | 2026-09-03 09:00 PT | remove after fire |
+| `phase6-rsi-event-x-shadow-observe-close` `17289c281af6` | **2026-09-17 19:35 PT** | R0 extended observe closeout; remove after fire; paid X still OFF |
 | `basket-swap-30d-revisit` | 2026-09-28 09:00 PT | preferred arm vs dual_agree re-score |
 
 ### F — Paused / ARCHIVED (reactivate with `hermes cron resume <id>` when needed)

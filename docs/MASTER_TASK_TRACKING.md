@@ -16,9 +16,9 @@ Idle armor is not wasted time: attack luck factors we control (clock → knife �
 ### Children
 | ID | Tag | Pri | Title | Schedule |
 |----|-----|-----|-------|----------|
-|| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE EXT | P0 | RSI-event X tryout shadow ~48h | ends **2026-09-17 19:35 PT** |
-|| LUCK-R0-SWITCH-REBAL-X-20260916 | PROPOSED | P0 | Rebalance=book · RSI=buys · X split | arm after R0 PASS; cutover needs GO |
-|| LUCK-R1-KNIFE-FILTER-20260915 | SHIPPED | P0 | Knife vs wash shadow CF | cron 07:30/19:30 PT; Kanban `t_caa744ee` |
+| LUCK-R0-SENSOR-CLOCK-20260915 | OBSERVE EXT | P0 | RSI-event X tryout shadow ~48h | ends **2026-09-17 19:35 PT** |
+| LUCK-R0-SWITCH-REBAL-X-20260916 | PROPOSED | P0 | Rebalance=book · RSI=buys · X split | arm after R0 PASS; cutover needs GO |
+| LUCK-R1-KNIFE-FILTER-20260915 | SHIPPED | P0 | Knife vs wash shadow CF | cron 07:30/19:30 PT; Kanban `t_caa744ee` |
 | LUCK-R2-EXIT-CF-20260915 | SCHEDULED | P1 | Exit geometry CF scoreboard | after R0 decision |
 | LUCK-R3-LIMIT-TAX-20260915 | SCHEDULED | P1 | Limit-first / fee path | with/after R2 |
 | LUCK-R4-DOOR-RANK-20260915 | BLOCKED | P2 | Tryout door rank quality | after R1 crumbs |

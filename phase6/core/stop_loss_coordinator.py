@@ -225,6 +225,34 @@ class StopLossCoordinator:
             else:
                 pair = f"{key}-USD"
 
+            # Preserve / Smart Park: never cancel+crypto-reattach E1 (CR-03 vs E1).
+            # Mirror suspend_active_protective_orders sleeve skip.
+            try:
+                from phase6.core.preserve_hold import (
+                    load_preserve_config,
+                    load_state,
+                    should_protect_preserve_sleeve,
+                )
+
+                if should_protect_preserve_sleeve(
+                    pair=pair,
+                    state=load_state(),
+                    cfg=load_preserve_config(
+                        self.config if isinstance(self.config, dict) else {}
+                    ),
+                ):
+                    logger.info(
+                        "[CR-03] SKIP reattach preserve sleeve pair=%s (keep E1)",
+                        pair,
+                    )
+                    results[pair] = {
+                        "status": "skipped",
+                        "reason": "preserve_sleeve_e1",
+                    }
+                    continue
+            except Exception as pe:
+                logger.debug("[CR-03] preserve reattach skip check failed: %s", pe)
+
             # Extract data from enriched dict or simple value
             if isinstance(value, dict):
                 amount = value.get("amount", value.get("qty", 0))

@@ -96,17 +96,56 @@ def test_inspect_id_drift_sync(tmp_path, monkeypatch):
     st.update({"armed": True, "asset": "PAXG-USD", "arm_vwap": 4000.0, "e1_order_id": "old"})
     ph.save_state(st)
     ex = MagicMock()
+    # E1-class depth at arm 4000 * 0.68 = 2720
     ex.get_open_stop_orders.return_value = [
-        {"order_id": "new-stop", "product_id": "PAXG-USD"}
+        {"order_id": "new-stop", "product_id": "PAXG-USD", "stop_price": 2720.0}
     ]
     monkeypatch.setattr(ph, "_holding_qty", lambda *a, **k: (0.02, 0.02))
     cfg = ph.load_preserve_config({"preserve_mode": {"enabled": True}})
     h = ph.inspect_e1_health(ex, cfg, st)
     assert h["e1_open"] is True
     assert h.get("id_drift") is True
+    assert h.get("match_mode") == "e1_depth"
     r = ph.repair_e1_if_missing(ex, cfg, ph.load_state())
     assert r.get("reason") == "e1_present_id_synced"
     assert ph.load_state()["e1_order_id"] == "new-stop"
+
+
+def test_inspect_shallow_crypto_not_e1(tmp_path, monkeypatch):
+    monkeypatch.setattr(ph, "STATE_PATH", tmp_path / "st.json")
+    monkeypatch.setattr(ph, "E1_ALERT_PATH", tmp_path / "alert.json")
+    st = ph.default_state()
+    st.update(
+        {
+            "armed": True,
+            "asset": "PAXG-USD",
+            "arm_vwap": 4586.82,
+            "e1_order_id": "crypto-shallow",
+        }
+    )
+    ph.save_state(st)
+    ex = MagicMock()
+    # ~3% crypto stop (~3937) is not E1 (~3119)
+    ex.get_open_stop_orders.return_value = [
+        {
+            "order_id": "crypto-shallow",
+            "product_id": "PAXG-USD",
+            "stop_price": 3937.60,
+        }
+    ]
+    monkeypatch.setattr(ph, "_holding_qty", lambda *a, **k: (0.018, 0.018))
+    cfg = ph.load_preserve_config({"preserve_mode": {"enabled": True}})
+    h = ph.inspect_e1_health(ex, cfg, st)
+    assert h["e1_open"] is False
+    assert h["naked"] is True
+    assert h.get("match_mode") == "shallow_crypto_only"
+    assert h.get("shallow_stop_count", 0) >= 1
+
+
+def test_is_e1_class_stop_price_bounds():
+    assert ph.is_e1_class_stop_price(3119.0, 4586.82, -0.32) is True
+    assert ph.is_e1_class_stop_price(3937.60, 4586.82, -0.32) is False
+    assert ph.is_e1_class_stop_price(None, 4586.82, -0.32) is False
 
 
 def test_status_naked_badge(tmp_path, monkeypatch):

@@ -222,7 +222,32 @@ def extract_stop_price_from_order(order: Dict[str, Any]) -> Optional[float]:
 
 
 def cancel_open_stops_for_pair(exchange: Any, pair: str) -> int:
-    """Cancel open protective stops so base balance is released for re-attach."""
+    """Cancel open protective stops so base balance is released for re-attach.
+
+    Preserve / Smart Park: when the sleeve is armed, do **not** cancel the pair's
+    stops here (E1 must stay). Callers that need to strip shallow crypto stops
+    on PAXG must use preserve_hold.cancel_non_e1_stops_for_pair.
+    """
+    try:
+        from phase6.core.preserve_hold import (
+            load_preserve_config,
+            load_state,
+            should_protect_preserve_sleeve,
+        )
+
+        if should_protect_preserve_sleeve(
+            pair=pair,
+            state=load_state(),
+            cfg=load_preserve_config(),
+        ):
+            logger.info(
+                "[SL-RELEASE] SKIP cancel stops on preserve sleeve %s (E1 protected)",
+                pair,
+            )
+            return 0
+    except Exception as pe:
+        logger.debug("[SL-RELEASE] preserve skip check failed: %s", pe)
+
     canceled = 0
     if not hasattr(exchange, "get_open_stop_orders"):
         orders = exchange.get_open_orders(pair) or []

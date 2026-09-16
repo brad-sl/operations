@@ -127,6 +127,28 @@ class StopLossManager:
             # #3 adaptive
             pct = self.get_sl_pct(pair) if hasattr(self, "get_sl_pct") else self.default_sl_pct
 
+        # Preserve / Smart Park ballast: crypto ~3% SL must not replace E1.
+        try:
+            from phase6.core.preserve_hold import (
+                load_preserve_config,
+                load_state,
+                should_protect_preserve_sleeve,
+            )
+
+            cfg_attach = self.config if isinstance(getattr(self, "config", None), dict) else {}
+            if should_protect_preserve_sleeve(
+                pair=pair,
+                state=load_state(),
+                cfg=load_preserve_config(cfg_attach),
+            ):
+                logger.info(
+                    "[SL] SKIP attach crypto stop on preserve sleeve %s (E1 owns protection)",
+                    pair,
+                )
+                return False
+        except Exception as pe:
+            logger.debug("[SL] preserve attach skip check failed: %s", pe)
+
         # Pre-flight settlement poll (ANALYST-20260705-005 / 007)
         from phase6.core.sl_preflight import (
             settlement_poll_params,

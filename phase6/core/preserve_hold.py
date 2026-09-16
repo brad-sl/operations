@@ -298,8 +298,107 @@ def cash_plus_preserve_mtm(exchange: Any, asset_pair: str) -> Dict[str, float]:
 def compute_e1_prices(arm_vwap: float, e1_dd: float, slip: float) -> Tuple[float, float]:
     """Return (stop_price, limit_price). e1_dd is negative e.g. -0.32."""
     stop = float(arm_vwap) * (1.0 + float(e1_dd))
-    limit = stop * (1.0 - abs(float(slip)))
+    limit = float(stop) * (1.0 - abs(float(slip)))
     return stop, limit
+
+
+def is_e1_class_stop_price(
+    stop_px: Optional[float],
+    arm_vwap: float,
+    e1_dd: float = -0.32,
+    *,
+    band: float = 0.06,
+) -> bool:
+    """True if stop is deep enough to count as Preserve E1 (not crypto ~3% SL).
+
+    E1 is ~arm_vwap*(1+e1_dd). A stop shallower than expected+band (default ~−26%)
+    is treated as crypto-class and must not satisfy e1_open health.
+    """
+    try:
+        sp = float(stop_px) if stop_px is not None else 0.0
+        av = float(arm_vwap or 0)
+    except (TypeError, ValueError):
+        return False
+    if sp <= 0 or av <= 0:
+        return False
+    # Max allowed stop (shallower bound): still nearly as deep as designed E1
+    max_stop = av * (1.0 + float(e1_dd) + float(band))
+    return sp <= max_stop
+
+
+def extract_stop_price_loose(order: Dict[str, Any]) -> Optional[float]:
+    """Stop trigger from exchange order shapes used by preserve health."""
+    if not isinstance(order, dict):
+        return None
+    for key in ("stop_price", "stop_trigger_price"):
+        if order.get(key) is not None:
+            try:
+                return float(order[key])
+            except (TypeError, ValueError):
+                pass
+    oc = order.get("order_configuration") or {}
+    if isinstance(oc, dict):
+        for _k, cfg in oc.items():
+            if not isinstance(cfg, dict):
+                continue
+            for key in ("stop_price", "stop_trigger_price"):
+                if cfg.get(key) is not None:
+                    try:
+                        return float(cfg[key])
+                    except (TypeError, ValueError):
+                        pass
+    return None
+
+
+def cancel_non_e1_stops_for_pair(
+    exchange: Any,
+    pair: str,
+    *,
+    arm_vwap: float,
+    e1_dd: float = -0.32,
+    tracked_e1_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """Cancel shallow/crypto stops on preserve pair; leave E1-class stops alone."""
+    out: Dict[str, Any] = {"canceled": [], "kept": [], "errors": []}
+    try:
+        if hasattr(exchange, "get_open_stop_orders"):
+            stops = exchange.get_open_stop_orders(pair) or []
+        else:
+            stops = exchange.get_open_orders(pair) or []
+    except Exception as e:
+        out["errors"].append(str(e)[:200])
+        return out
+    for o in stops or []:
+        if not isinstance(o, dict):
+            continue
+        oid = o.get("order_id") or o.get("id")
+        if not oid:
+            continue
+        sp = extract_stop_price_loose(o)
+        keep = False
+        if tracked_e1_id and str(oid) == str(tracked_e1_id) and (
+            sp is None or is_e1_class_stop_price(sp, arm_vwap, e1_dd)
+        ):
+            # tracked id only kept if depth ok or unknown (legacy)
+            if sp is None or is_e1_class_stop_price(sp, arm_vwap, e1_dd):
+                keep = True
+        elif sp is not None and is_e1_class_stop_price(sp, arm_vwap, e1_dd):
+            keep = True
+        if keep:
+            out["kept"].append({"order_id": oid, "stop_price": sp})
+            continue
+        try:
+            ok = bool(exchange.cancel_order(str(oid)))
+            out["canceled"].append({"order_id": oid, "stop_price": sp, "ok": ok})
+            logger.warning(
+                "[PRESERVE] canceled non-E1 stop %s stop_px=%s on %s",
+                oid,
+                sp,
+                pair,
+            )
+        except Exception as e:
+            out["errors"].append(f"{oid}:{e}"[:200])
+    return out
 
 
 def place_e1_stop(
@@ -699,11 +798,15 @@ def inspect_e1_health(
     """
     Truthful E1 presence for armed Preserve sleeves.
 
-    e1_open: any open stop on the preserve pair OR exact e1_order_id match.
-    naked: armed + inventory > 0 + no open stop.
+    e1_open: open stop that is E1-class depth (~arm_vwap * (1+e1_dd)) and/or
+    exact tracked id when depth is unknown. Shallow crypto ~3% stops do NOT count.
+    naked: armed + inventory > 0 + no E1-class stop.
     """
     pair = str(state.get("asset") or cfg.get("asset") or "PAXG-USD")
     oid = state.get("e1_order_id")
+    hold = cfg.get("hold") or {}
+    e1_dd = float(hold.get("e1_dd_pct", -0.32))
+    arm_vwap = float(state.get("arm_vwap") or 0)
     health: Dict[str, Any] = {
         "pair": pair,
         "tracked_order_id": oid,
@@ -711,12 +814,16 @@ def inspect_e1_health(
         "matched_order_id": None,
         "match_mode": None,
         "open_stop_count": 0,
+        "e1_class_count": 0,
+        "shallow_stop_count": 0,
         "qty_total": 0.0,
         "qty_avail": 0.0,
         "naked": False,
         "flat": False,
         "list_ok": True,
         "list_error": None,
+        "arm_vwap": arm_vwap,
+        "e1_dd_pct": e1_dd,
         "as_of": _now(),
     }
     if not state.get("armed"):
@@ -726,39 +833,55 @@ def inspect_e1_health(
     try:
         stops = _list_pair_stops(exchange, pair)
         health["open_stop_count"] = len(stops)
-        exact = False
-        any_pair = False
-        matched = None
+        exact_e1 = False
+        class_match = None
+        class_mode = None
+        shallow_ids: List[str] = []
         for o in stops:
             ooid = o.get("order_id") or o.get("id")
-            if oid and str(ooid) == str(oid):
-                exact = True
-                matched = ooid
-                break
-            # any stop on preserve pair counts as protection present
-            if is_preserve_pair(o.get("product_id") or o.get("pair") or pair, cfg):
-                any_pair = True
-                matched = ooid
-        if exact:
-            health["e1_open"] = True
-            health["matched_order_id"] = matched
-            health["match_mode"] = "exact_id"
-        elif any_pair or (stops and not oid):
-            health["e1_open"] = True
-            health["matched_order_id"] = matched or (
-                (stops[0].get("order_id") or stops[0].get("id")) if stops else None
+            sp = extract_stop_price_loose(o)
+            depth_ok = (
+                is_e1_class_stop_price(sp, arm_vwap, e1_dd)
+                if (sp is not None and arm_vwap > 0)
+                else None
             )
-            health["match_mode"] = "pair_stop" if any_pair else "any_listed_stop"
-            if oid and health["matched_order_id"] and str(health["matched_order_id"]) != str(oid):
-                health["id_drift"] = True
-        elif stops:
-            # listed stops on pair endpoint — trust presence
+            if depth_ok is True:
+                health["e1_class_count"] += 1
+            elif depth_ok is False:
+                health["shallow_stop_count"] += 1
+                if ooid:
+                    shallow_ids.append(str(ooid))
+
+            if oid and str(ooid) == str(oid):
+                # Exact tracked id: require depth when known; unknown depth trusted
+                if depth_ok is False:
+                    health["shallow_tracked_id"] = True
+                    continue
+                exact_e1 = True
+                class_match = ooid
+                class_mode = "exact_id"
+                break
+
+            if depth_ok is True and class_match is None:
+                class_match = ooid
+                class_mode = "e1_depth"
+
+        if exact_e1:
             health["e1_open"] = True
-            health["matched_order_id"] = stops[0].get("order_id") or stops[0].get("id")
-            health["match_mode"] = "pair_endpoint"
-            # sync tracked id if drifted
-            if health["matched_order_id"] and str(health["matched_order_id"]) != str(oid or ""):
+            health["matched_order_id"] = class_match
+            health["match_mode"] = class_mode or "exact_id"
+        elif class_match is not None:
+            health["e1_open"] = True
+            health["matched_order_id"] = class_match
+            health["match_mode"] = class_mode or "e1_depth"
+            if oid and str(class_match) != str(oid):
                 health["id_drift"] = True
+        elif stops and health["shallow_stop_count"] > 0:
+            health["e1_open"] = False
+            health["match_mode"] = "shallow_crypto_only"
+            health["shallow_order_ids"] = shallow_ids[:8]
+            health["id_drift"] = True if oid else False
+        # else: no stops → e1_open stays False
     except Exception as e:
         health["list_ok"] = False
         health["list_error"] = str(e)[:200]
@@ -781,7 +904,10 @@ def inspect_e1_health(
         health["reason"] = "e1_present"
     else:
         health["naked"] = True
-        health["reason"] = "naked_armed_inventory"
+        if health.get("match_mode") == "shallow_crypto_only":
+            health["reason"] = "naked_shallow_crypto_stop"
+        else:
+            health["reason"] = "naked_armed_inventory"
     return health
 
 
@@ -825,7 +951,7 @@ def repair_e1_if_missing(exchange: Any, cfg: Dict[str, Any], state: Dict[str, An
         out["reason"] = health.get("reason") or "list_failed"
         return out
 
-    # Sync drifted stop id into state when a pair stop exists
+    # Sync drifted stop id into state when a true E1-class stop exists
     if health.get("e1_open") and health.get("id_drift") and health.get("matched_order_id"):
         state["e1_order_id"] = health["matched_order_id"]
         state["last_action"] = "e1_id_sync"
@@ -868,17 +994,67 @@ def repair_e1_if_missing(exchange: Any, cfg: Dict[str, Any], state: Dict[str, An
         return out
 
     hold = cfg.get("hold") or {}
+    e1_dd = float(hold.get("e1_dd_pct", -0.32))
+    # Strip shallow crypto stops so inventory is free for real E1
+    try:
+        stripped = cancel_non_e1_stops_for_pair(
+            exchange,
+            pair,
+            arm_vwap=arm_vwap,
+            e1_dd=e1_dd,
+            tracked_e1_id=str(state.get("e1_order_id") or "") or None,
+        )
+        out["stripped_non_e1"] = stripped
+        if stripped.get("canceled"):
+            # Hold release can lag several seconds after cancel
+            for _ in range(12):
+                time.sleep(0.5)
+                try:
+                    a_poll, t_poll = _holding_qty(exchange, asset_base(pair))
+                except Exception:
+                    a_poll, t_poll = 0.0, 0.0
+                if t_poll > 0 and a_poll >= max(t_poll * 0.85, 1e-8):
+                    break
+            health = inspect_e1_health(exchange, cfg, state)
+            if health.get("e1_open"):
+                out["reason"] = "e1_present_after_strip"
+                out["health_after_strip"] = {
+                    k: health.get(k) for k in ("e1_open", "match_mode", "matched_order_id")
+                }
+                write_e1_alert(health)
+                return out
+    except Exception as se:
+        out["strip_error"] = str(se)[:200]
+
     safety = float(cfg.get("attach_safety_ratio") or 0.98)
     avail = float(health.get("qty_avail") or 0)
     total = float(health.get("qty_total") or 0)
-    e1_qty = (avail if avail > 0 else total) * safety
+    # Re-read available after cancel — prefer total*safety if avail still tiny (lag)
+    try:
+        a2, t2 = _holding_qty(exchange, asset_base(pair))
+        if t2 > 0:
+            total = float(t2)
+        if a2 > 0:
+            avail = float(a2)
+        if total > 0 and avail < total * 0.5:
+            # still held / lagging — wait once more then re-read
+            time.sleep(1.0)
+            a3, t3 = _holding_qty(exchange, asset_base(pair))
+            if t3 > 0:
+                total = float(t3)
+            if a3 > 0:
+                avail = float(a3)
+    except Exception:
+        pass
+    size_base = avail if (avail > 0 and (total <= 0 or avail >= total * 0.5)) else total
+    e1_qty = float(size_base or 0) * safety
     try:
         if hasattr(exchange, "quantize_size"):
             e1_qty = float(exchange.quantize_size(pair, e1_qty))
     except Exception:
         pass
     stop_px, limit_px = compute_e1_prices(
-        arm_vwap, float(hold.get("e1_dd_pct", -0.32)), float(hold.get("e1_limit_slip_pct", 0.006))
+        arm_vwap, e1_dd, float(hold.get("e1_limit_slip_pct", 0.006))
     )
     placed = place_e1_stop(
         exchange,

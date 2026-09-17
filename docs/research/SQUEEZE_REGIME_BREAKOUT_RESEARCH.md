@@ -119,3 +119,10 @@ Do **not** swap primary to S3 on N≈10. M2 stays default paper path until chall
 ## Non-goals
 
 Live orders; replace layered spec silently; pattern ML; claim 60–80% fail-rate as our calibrated number.
+
+## Related parked lab (different coil recipe)
+
+**ATR20&lt;ATR30 + buy-stop at open+2.5×ATR20** — not this doc’s BB/TTM path.  
+Parked 2026-09-17 for possible future offline test only:  
+`docs/plans/2026-09-17-atr-coil-buystop-breakout-lab.md` · seed `phase6/research/atr_coil_buystop_breakout.py`.  
+No live wire. Do not merge into squeeze arms without separate bake-off + Brad GO.

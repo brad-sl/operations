@@ -199,6 +199,13 @@ def size_first_fill(
         "abs_cap": abs_cap,
         "equity": round(_f(equity_usd), 2),
     }
+    # Recovery/quality tryout already caps BUYs (often $75) before this filter.
+    # Applying size_mult again dust-drops every seat: 0.4×$75=$30 < min_move $40.
+    # If upstream already sized into the tryout band, keep proposed (equity-clipped).
+    if min_move - 1e-9 <= prop <= abs_cap + 1e-9:
+        final = min(prop, eq_cap if eq_cap > 0 else prop)
+        reasons.append("upstream_tryout_sized")
+        detail["upstream_tryout_sized"] = True
     if final + 1e-9 < min_move:
         reasons.append(f"below_min_move ${min_move:.0f}")
         return FirstFillDecision(p, "drop", prop, 0.0, reasons, detail)

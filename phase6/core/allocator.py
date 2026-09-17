@@ -252,7 +252,9 @@ class RotationStrategy:
             
             # Aggressive RECOVERY: relax BUY gates
             min_buy_score = (0.3 if emergency_recovery else 0.55) / max(regime_mult, 0.7)
-            if p.side in ("ROTATE_IN", "BUY") and p.score > min_buy_score:
+            # >= so emergency min_buy_score=0.3 includes exact 0.3 ROTATE_IN
+            # (LINK-USD force-rebal 2026-09-17: score 0.3 lost to strict >)
+            if p.side in ("ROTATE_IN", "BUY") and p.score >= min_buy_score:
                 adj_score = p.score * (regime_mult if regime_bias > 0.5 else 1.0)
                 strong_pairs.append((p.pair, adj_score))
 

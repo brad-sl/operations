@@ -272,9 +272,19 @@ def apply_buy_size_gates(
     frac = _f(c.get("sentiment_only_size_frac"), 0.35)
     frac = max(0.0, min(1.0, frac))
     if drivers.sentiment_only and frac < 1.0:
-        usd = usd * frac
-        haircut = True
-        notes.append(f"sent_only_haircut×{frac:.2f}")
+        # Quality/recovery tryout already caps tickets (often $75) before this gate.
+        # 0.35×$75=$26.25 always dust-drops under min_move $50 — empty funnel.
+        # If upstream already sized into the tryout band, keep proposed size.
+        already_tryout = (
+            rebalance_cap_usd is not None
+            and min_move - 1e-9 <= usd0 <= _f(rebalance_cap_usd, -1.0) + 1e-9
+        )
+        if already_tryout:
+            notes.append("upstream_tryout_sized_skip_sent_only")
+        else:
+            usd = usd * frac
+            haircut = True
+            notes.append(f"sent_only_haircut×{frac:.2f}")
 
     # 2) Hard rebalance ticket cap
     if c.get("enforce_rebalance_cap", True) and rebalance_cap_usd is not None:

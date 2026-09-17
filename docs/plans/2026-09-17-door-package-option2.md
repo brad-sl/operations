@@ -47,4 +47,17 @@ missfire, or ugly ledger (SOL stays closed).
 - buy_block = UNI + RAVE only (no LINK)  
 - effective max_rsi = 65, latch TTL = 180  
 - X refresh latched LINK ~0.56  
-- tryout_readiness: **can_buy=True**, **LINK-USD allowed** (RSI ~57, eng clear)  
+- tryout_readiness: **can_buy=True**, **LINK-USD allowed** (RSI ~57, eng clear)
+
+
+## Force rebalance 2026-09-17 (~14:32 PT)
+
+**GO executed.** Funnel bugs found and fixed so tryout tickets can reach the executor:
+
+1. `allocator.py`: emergency `min_buy_score` now `>=` (LINK score 0.30 was losing to strict `>`).
+2. `first_fill_probation.py`: already-tryout-sized tickets ($75 band) no longer double-haircut into dust (`0.4×75 < 40`).
+3. `rsi_primary_deploy.py`: already-tryout-sized tickets skip `sent_only×0.35` dust-drop under min_move $50.
+
+**Live attempt:** LINK-USD BUY $62.50 limit-first post-only (bid, 45s) → `limit_unfilled_skip` (order `a5bbf539-…`, residual cancelled). `market_fallback=False` per 2026-09-09 Brad GO. **No position opened.** NEAR blocked run-phase exhaustion; ADA lost free-cash share after LINK clip.
+
+**Still open for Brad:** one-shot market/IOC tryout to force a filled sample, or accept limit-only and wait for a natural bid touch (incl. 21:00 slot).

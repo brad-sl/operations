@@ -13,7 +13,7 @@
       "UNI-USD",
       "ADA-USD",
       "ARB-USD",
-      "WLD-USD"
+      "ZEC-USD"
     ],
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 75.0,

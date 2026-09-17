@@ -4,7 +4,7 @@
 Brad decisions 2026-08-31:
   unfilled → skip (no market fallback) for normal size
   pilot universe → full basket (when enabled)
-  fill_wait_s → 45
+  fill_wait_s → 120 (Brad 2026-09-17 fill evidence)
   Phase A/B only — enabled flag default False
 
 Brad 2026-09-04:
@@ -22,11 +22,11 @@ from typing import Any, Dict, Optional, Sequence
 
 
 # Locked defaults (design §4.2 + Brad answers)
-DEFAULT_FILL_WAIT_S = 45.0
+DEFAULT_FILL_WAIT_S = 120.0
 DEFAULT_POLL_INTERVAL_S = 2.0
 DEFAULT_MIN_FILL_USD = 10.0
 DEFAULT_POST_ONLY = True
-DEFAULT_PRICE_REF = "bid"
+DEFAULT_PRICE_REF = "mid"
 DEFAULT_MARKET_FALLBACK = False  # skip large / default
 DEFAULT_MARKET_FALLBACK_MAX_USD = 0.0  # 0 = tryout fallback off
 DEFAULT_MAX_REQUOTES = 0

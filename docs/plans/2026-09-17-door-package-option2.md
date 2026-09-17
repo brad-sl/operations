@@ -61,3 +61,23 @@ missfire, or ugly ledger (SOL stays closed).
 **Live attempt:** LINK-USD BUY $62.50 limit-first post-only (bid, 45s) → `limit_unfilled_skip` (order `a5bbf539-…`, residual cancelled). `market_fallback=False` per 2026-09-09 Brad GO. **No position opened.** NEAR blocked run-phase exhaustion; ADA lost free-cash share after LINK clip.
 
 **Still open for Brad:** one-shot market/IOC tryout to force a filled sample, or accept limit-only and wait for a natural bid touch (incl. 21:00 slot).
+
+
+## Force fill outcome (2026-09-17 ~14:46 PT)
+
+**FILLED.** Brad GO option 2: limit retry with `price_ref=mid` + `fill_wait_s=120` (was bid/45).
+
+| Field | Value |
+|-------|-------|
+| pair | LINK-USD |
+| size | $75 tryout (full seat) |
+| fill | $74.98 / 6.61 @ $11.344 |
+| style | limit_post_only mid |
+| order_id | `479ce80b-3c6f-4445-92c4-d67f7105283a` |
+| SL | attached True (settlement poll OK) |
+| pilot | attempts=2 filled=1 unfilled=1 |
+| rebalance | Executed=1 Skipped=0 |
+
+Prior miss (14:32): bid + 45s → `limit_unfilled_skip`. Retry filled in ~33s on mid.
+
+**Default knobs locked:** `entry_execution.limit_first.price_ref=mid`, `fill_wait_s=120`. market_fallback still OFF.

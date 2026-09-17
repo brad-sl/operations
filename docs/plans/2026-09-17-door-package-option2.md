@@ -1,0 +1,50 @@
+# Door package Option 2 (Brad GO 2026-09-17)
+
+## Goal
+Get A-player tryout fills under the same safety shell so promote/graduation
+can leave the empty-fill choke. Not auto-promote. Not size up.
+
+## Doors (all three)
+1. **LINK doghouse exit (permanent until Brad re-blocks)**  
+   Remove `LINK-USD` from static `buy_block_pairs` / `pair_buy_blocklist` in
+   `config/trading_config_phase6.json` and `config/regime_cash_policy.json`.
+2. **RSI proof window (expires 2026-09-19 21:00 PT)**  
+   Tryout `max_rsi` effective **65** while `max_rsi_proof_window` is active.
+   Baseline remains **55** after expiry. Code SSOT: tryout sleeve uses
+   `quality_tryout.max_rsi` only (no `min()` with regime entry max).
+3. **Sensor latch window (same expiry)**  
+   After X clears floor, latch TTL **180m** (was 45m) so mid-cycle aged eng
+   still seats. Written into `tryout_sent_latch.json` on X refresh.
+
+## Caps unchanged
+- `$75` abs tryout cap  
+- max **2** new seats/day  
+- sent floor **0.30** (tryout B1)  
+- full SL + trail attach  
+- **no** auto-promote / live membership swaps  
+
+## Thaw
+`basket_tryout_thaw` extended to **2026-09-19 21:00 PT** so basket A-names
+stay doors under the same caps. Does **not** bypass UNI/RAVE hard block,
+missfire, or ugly ledger (SOL stays closed).
+
+## Code touch
+- `phase6/core/regime_cash_policy.py` — effective max_rsi / latch TTL helpers;
+  tryout max_rsi SSOT (no regime min-cap).
+- `phase6/core/recovery_tryout_qualify.py` — load_v2_cfg max_rsi via helper.
+- `phase6/core/tryout_sent_latch.py` — TTL from `tryout_sent_latch_ttl_min`.
+
+## Rollback
+```text
+# After expiry (auto) or early:
+# 1) disable max_rsi_proof_window + sensor_latch_window (or wait expires_at)
+# 2) optional: basket_tryout_thaw.enabled = false
+# 3) LINK stays unblocked unless Brad re-adds buy_block
+# 4) rewrite scoreboard + restart runner
+```
+
+## Prove (2026-09-17 post-apply)
+- buy_block = UNI + RAVE only (no LINK)  
+- effective max_rsi = 65, latch TTL = 180  
+- X refresh latched LINK ~0.56  
+- tryout_readiness: **can_buy=True**, **LINK-USD allowed** (RSI ~57, eng clear)  

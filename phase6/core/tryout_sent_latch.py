@@ -237,6 +237,12 @@ def refresh_tryout_latches_from_x_cache(
     rec = _recovery_rec(pol) or {}
     qt = recovery_quality_tryout_cfg(rec) if rec else {"min_sentiment": 0.30}
     floor = float(qt.get("min_sentiment") or 0.30)
+    # Door package: longer latch TTL while sensor_latch_window active
+    if ttl_min == DEFAULT_TTL_MIN:
+        try:
+            ttl_min = float(qt.get("tryout_sent_latch_ttl_min") or DEFAULT_TTL_MIN)
+        except Exception:
+            ttl_min = DEFAULT_TTL_MIN
     try:
         tryout = recovery_tryout_pairs_effective(rec) if rec else set()
     except Exception:

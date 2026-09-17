@@ -237,9 +237,9 @@
     "protect": true,
     "recovery_soft_down_20260828": {
       "enabled": true,
-      "reason": "Brad GO 2026-09-14 option D: temporary basket tryout thaw through 2026-09-17 21:00 PT (same $75/2-seat). Prior AVAX force_eligible 2026-09-11 kept.",
-      "as_of": "20260914T210000Z",
-      "prior_as_of": "20260911T234500Z",
+      "reason": "Brad GO 2026-09-17 door package (option 2 all 3): (1) LINK off static buy_block (permanent doghouse exit); (2) tryout max_rsi 55\u219265 proof window until 2026-09-19 21:00 PT; (3) sensor latch TTL 45\u2192180m same window. Keep $75 / max 2 seats / sent\u22650.30 / SL+trail / no auto-promote. Thaw extended to same expiry so basket A-names stay doors. Rollback RSI+latch: disable proof windows (max_rsi back 55, TTL 45). LINK stays unblocked unless Brad re-blocks.",
+      "as_of": "20260917T203000Z",
+      "prior_as_of": "20260917T203000Z",
       "block_new_buy_pairs": [
         "UNI-USD",
         "RAVE-USD"
@@ -265,7 +265,7 @@
           "LINK-USD",
           "AVAX-USD"
         ],
-        "min_sentiment": 0.30,
+        "min_sentiment": 0.3,
         "max_rsi": 55.0,
         "min_rsi": 0.0,
         "max_new_seats_per_day": 2,
@@ -289,29 +289,75 @@
           ],
           "basket_tryout_thaw": {
             "enabled": true,
-            "brad_go": "2026-09-14",
-            "expires_at": "2026-09-17T21:00:00-07:00",
+            "brad_go": "2026-09-17",
+            "expires_at": "2026-09-19T21:00:00-07:00",
             "allow_first_fill_basket": true,
             "bypass_tier_c_off_for_basket": true,
-            "note": "Brad GO option D: temporary thaw — active basket seats may try under same $75 / max 2 seats / sent≥0.30 / RSI≤55. Clears tier_c_off + first-fill for basket names (NEAR/ADA-class). Does NOT bypass hard_block (UNI/RAVE), buy_block (LINK), missfire, or ugly ledger (SOL stays closed). Auto-expires 2026-09-17 21:00 PT."
+            "note": "Extended with door package through 2026-09-19 21:00 PT. Same $75/2 seats. Does NOT bypass hard_block UNI/RAVE, missfire, ugly ledger. LINK now unblocked via buy_block removal (not thaw)."
           },
           "min_net_pnl": 0.0,
           "min_rt_graduated": 3,
-          "max_sl_rate": 0.50,
+          "max_sl_rate": 0.5,
           "min_tp_rate": 0.15,
           "min_rt_for_rates": 5,
-          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors. force_eligible_pairs = Brad GO seat bypass of ledger fail only (still $75 / sent / RSI). basket_tryout_thaw = temporary D path."
+          "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors. force_eligible_pairs = Brad GO seat bypass of ledger fail only (still $75 / sent / RSI). basket_tryout_thaw = temporary D path.",
+          "max_rsi_baseline": 55.0,
+          "max_rsi_proof_window": {
+            "enabled": true,
+            "brad_go": "2026-09-17",
+            "expires_at": "2026-09-19T21:00:00-07:00",
+            "max_rsi": 65.0,
+            "note": "Short RSI proof window \u2014 tryout max_buy 65 until expiry, then 55."
+          },
+          "sensor_latch_window": {
+            "enabled": true,
+            "brad_go": "2026-09-17",
+            "expires_at": "2026-09-19T21:00:00-07:00",
+            "ttl_min": 180.0,
+            "note": "Longer tryout_sent_latch after X clear (3h) so mid-cycle aged eng still seats."
+          },
+          "door_package_20260917": {
+            "enabled": true,
+            "brad_go": "2026-09-17",
+            "expires_at": "2026-09-19T21:00:00-07:00",
+            "doors": [
+              "link_unblock",
+              "rsi_65_window",
+              "sensor_latch_180m"
+            ],
+            "caps_unchanged": [
+              "abs_cap_usd_75",
+              "max_new_seats_2",
+              "sent_floor_0.30",
+              "no_auto_promote"
+            ],
+            "note": "Brad GO 2026-09-17 door package (option 2 all 3): (1) LINK off static buy_block (permanent doghouse exit); (2) tryout max_rsi 55\u219265 proof window until 2026-09-19 21:00 PT; (3) sensor latch TTL 45\u2192180m same window. Keep $75 / max 2 seats / sent\u22650.30 / SL+trail / no auto-promote. Thaw extended to same expiry so basket A-names stay doors. Rollback RSI+latch: disable proof windows (max_rsi back 55, TTL 45). LINK stays unblocked unless Brad re-blocks."
+          }
         },
-        "note": "v2 live: dynamic eligible set from ledger scoreboard + force_eligible + optional basket_tryout_thaw. Static tryout_pairs = legacy compare only."
+        "note": "v2 live: dynamic eligible set from ledger scoreboard + force_eligible + optional basket_tryout_thaw. Static tryout_pairs = legacy compare only.",
+        "max_rsi_baseline": 55.0,
+        "max_rsi_proof_window": {
+          "enabled": true,
+          "brad_go": "2026-09-17",
+          "expires_at": "2026-09-19T21:00:00-07:00",
+          "max_rsi": 65.0,
+          "note": "Short RSI proof window \u2014 tryout max_buy 65 until expiry, then 55."
+        },
+        "sensor_latch_window": {
+          "enabled": true,
+          "brad_go": "2026-09-17",
+          "expires_at": "2026-09-19T21:00:00-07:00",
+          "ttl_min": 180.0,
+          "note": "Longer tryout_sent_latch after X clear (3h) so mid-cycle aged eng still seats."
+        }
       },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "Set quality_tryout.v2.basket_tryout_thaw.enabled=false (or delete block); rewrite scoreboard; restart runner. Optional: remove AVAX from force_eligible_pairs/tier_b if rolling that too."
+      "rollback": "Disable quality_tryout.max_rsi_proof_window + sensor_latch_window (or wait expires_at). Thaw: set basket_tryout_thaw.enabled=false. LINK: only re-add to buy_block_pairs on explicit Brad GO. Rewrite scoreboard; restart runner."
     }
   },
   "buy_block_pairs": [
     "RAVE-USD",
-    "UNI-USD",
-    "LINK-USD"
+    "UNI-USD"
   ]
 }

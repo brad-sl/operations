@@ -1,35 +1,39 @@
-# Tryout readiness — 2026-09-11T18:45:00.830537-07:00
+# Tryout readiness — 2026-09-17T13:40:21.328650-07:00
 
-**can_buy_before_next_rebalance:** `False`
+**can_buy_before_next_rebalance:** `True`
 
-> Sleeve membership open but no eng-cleared door (AVAX-USD, ETH-USD, XRP-USD). Free/tee is not a green light.
+> Tryout can seat before next rebalance: LINK-USD clear eng floor.
 
 ## Book
 - Cash: `$200.00589129516365` · tryout cap `$75.0`
 - Seats today: 0/2
-- Eligible: AVAX-USD, ETH-USD, XRP-USD
+- Eligible: ADA-USD, AVAX-USD, ETH-USD, LINK-USD, NEAR-USD, XRP-USD, ZEC-USD
 - Regime: flat · equity_health: unknown
-- Runner PID: 654873
+- Runner PID: 3452760
 
 ## Floors (SSOT)
 - min_sentiment: 0.25
 - min_sentiment_new_pair: 0.35
 - quality_tryout_min_sentiment: 0.3
-- **live_floor_used:** 0.35 (max of new-pair + tryout)
-- max_rsi: 55.0
+- **live_floor_used:** 0.3 (max of new-pair + tryout)
+- max_rsi: 65.0
 
 ## Sensor
-- mode: `x_reddit_bridge`
-- broken: `False` · class: `aged_out_primary_plus_thin_bridge`
-- detail: X age ~9.9h (15m HL) → bridge to reddit; eng low/zero expected mid-cycle. mode=x_reddit_bridge; reddit_nz=0; free_nz=0 (tee only, shadow). Not a stuck-zero bug; X→reddit clock working. Live floor 0.35.
-- next X refresh PT: 20:50 · next rebalance PT: ~21:00
+- mode: `x`
+- broken: `False` · class: `eng_heat_present`
+- detail: mode=x; eng above floor for 1/7 doors; floor=0.30.
+- next X refresh PT: 21:00 · next rebalance PT: ~21:05
 
 ## Doors
 | Pair | elig | force | allowed | eng | RSI | reasons |
 |------|------|-------|---------|-----|-----|---------|
-| AVAX-USD | True | True | False | 0.0 | 49.9 | sentiment 0.000 < min 0.35 |
-| ETH-USD | True | False | False | 0.0388 | 41.51 | sentiment 0.039 < min 0.35 |
-| XRP-USD | True | False | False | 0.0 | 53.79 | sentiment 0.000 < min 0.35 |
+| ADA-USD | True | False | False | 0.0947 | 59.08 | sentiment 0.095 < min 0.3 |
+| AVAX-USD | True | True | False | 0.036 | 58.05 | sentiment 0.036 < min 0.3 |
+| ETH-USD | True | False | False | 0.0033 | 50.45 | sentiment 0.003 < min 0.3 |
+| LINK-USD | True | False | True | 0.482 | 57.16 | entry_ok quality_tryout_v2 |
+| NEAR-USD | True | False | False | 0.0015 | 56.17 | sentiment 0.002 < min 0.3 |
+| XRP-USD | True | False | False | 0.0287 | 49.99 | sentiment 0.029 < min 0.3 |
+| ZEC-USD | True | False | False | 0.0787 | 68.33 | sentiment 0.079 < min 0.3; rsi 68.3 > max_buy 65.0 |
 
 ## Rules
 - Free/tee never clears REGIME-CASH.

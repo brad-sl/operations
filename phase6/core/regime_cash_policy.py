@@ -284,6 +284,51 @@ def _norm_pair_set(xs: Any) -> Set[str]:
     return out
 
 
+def _parse_policy_expiry(raw: Any) -> Optional[datetime]:
+    if raw is None:
+        return None
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo else raw.replace(tzinfo=timezone.utc)
+    s = str(raw).strip()
+    if not s:
+        return None
+    try:
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+    except Exception:
+        return None
+
+
+def _effective_tryout_max_rsi(src: Dict[str, Any], *, baseline: float = 55.0) -> float:
+    """
+    Brad GO 2026-09-17 door package: optional max_rsi_proof_window raises tryout RSI
+    cap until expires_at, then falls back to baseline/max_rsi_baseline.
+    """
+    base = float(src.get("max_rsi_baseline", src.get("max_rsi", baseline)) or baseline)
+    win = src.get("max_rsi_proof_window") if isinstance(src.get("max_rsi_proof_window"), dict) else {}
+    if not win or not bool(win.get("enabled", False)):
+        return float(src.get("max_rsi", base) or base)
+    exp = _parse_policy_expiry(win.get("expires_at"))
+    if exp is None:
+        return base  # fail-closed without expiry
+    now = datetime.now(timezone.utc)
+    if now <= exp:
+        return float(win.get("max_rsi", src.get("max_rsi", 65.0)) or 65.0)
+    return base
+
+
+def _effective_tryout_latch_ttl_min(src: Dict[str, Any], *, default: float = 45.0) -> float:
+    """Optional door-package latch TTL while proof window active."""
+    win = src.get("sensor_latch_window") if isinstance(src.get("sensor_latch_window"), dict) else {}
+    if win and bool(win.get("enabled", False)):
+        exp = _parse_policy_expiry(win.get("expires_at"))
+        if exp is not None and datetime.now(timezone.utc) <= exp:
+            return float(win.get("ttl_min", default) or default)
+    return float(src.get("tryout_sent_latch_ttl_min", default) or default)
+
+
 def recovery_quality_tryout_cfg(rec: Dict[str, Any]) -> Dict[str, Any]:
     """Normalize quality_tryout knobs (Brad GO 2026-09-01 thaw A; v2 2026-09-05)."""
     qt = rec.get("quality_tryout") if isinstance(rec.get("quality_tryout"), dict) else {}
@@ -293,13 +338,14 @@ def recovery_quality_tryout_cfg(rec: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "tryout_pairs": _norm_pair_set(qt.get("tryout_pairs") or rec.get("tryout_pairs") or []),
         "min_sentiment": float(src.get("min_sentiment", rec.get("quality_min_sentiment", 0.30)) or 0.30),
-        "max_rsi": float(src.get("max_rsi", rec.get("quality_max_rsi", 55.0)) or 55.0),
+        "max_rsi": _effective_tryout_max_rsi(src),
         "min_rsi": float(src.get("min_rsi", rec.get("quality_min_rsi", 0.0)) or 0.0),
         "max_new_seats_per_day": int(
             src.get("max_new_seats_per_day", rec.get("max_new_seats_per_day", 1)) or 1
         ),
         "abs_cap_usd": float(src.get("abs_cap_usd", rec.get("tryout_abs_cap_usd", 75.0)) or 75.0),
         "v2_dynamic": bool(qt.get("v2_dynamic") or v2.get("live_apply") or False),
+        "tryout_sent_latch_ttl_min": _effective_tryout_latch_ttl_min(src),
     }
 
 
@@ -618,9 +664,11 @@ def evaluate_buy_entry(
     min_rsi = 0.0
     # B1 2026-09-13: tryout sleeve uses quality_tryout min only (do NOT stack
     # max with regime min_sentiment_new_pair — that forced 0.35 over tryout 0.30).
+    # Door package 2026-09-17: tryout max_rsi is SSOT for on_tryout seats —
+    # do NOT min() with regime entry max_rsi (that kept 55 and killed RSI-65 proof).
     if qt_cfg is not None and on_tryout:
         min_s = float(qt_cfg["min_sentiment"])
-        max_rsi = min(max_rsi, float(qt_cfg["max_rsi"]))
+        max_rsi = float(qt_cfg["max_rsi"])
         min_rsi = float(qt_cfg.get("min_rsi") or 0.0)
 
     # A2: tryout sent latch — eng may have aged under floor after X refresh clear

@@ -157,7 +157,7 @@ def load_v2_cfg(rec: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         # legacy static list kept for shadow compare
         "legacy_tryout_pairs": _norm_set(qt.get("tryout_pairs") or ["ETH-USD", "LINK-USD"]),
         "min_sentiment": float(src.get("min_sentiment", qt.get("min_sentiment", 0.30)) or 0.30),
-        "max_rsi": float(src.get("max_rsi", qt.get("max_rsi", 55.0)) or 55.0),
+        "max_rsi": _v2_effective_max_rsi(src, qt),
         "max_new_seats_per_day": int(
             src.get("max_new_seats_per_day", qt.get("max_new_seats_per_day", 1)) or 1
         ),
@@ -165,6 +165,16 @@ def load_v2_cfg(rec: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "live_apply": bool(src.get("live_apply", False)),
         "v2_dynamic": bool(src.get("v2_dynamic", False)),
     }
+
+
+def _v2_effective_max_rsi(src: Dict[str, Any], qt: Optional[Dict[str, Any]] = None) -> float:
+    qt = qt if isinstance(qt, dict) else {}
+    try:
+        from phase6.core.regime_cash_policy import _effective_tryout_max_rsi
+
+        return float(_effective_tryout_max_rsi(src))
+    except Exception:
+        return float(src.get("max_rsi", qt.get("max_rsi", 55.0)) or 55.0)
 
 
 def _load_ledger_rows(path: Path = LEDGER_PATH) -> List[Dict[str, Any]]:

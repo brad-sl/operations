@@ -45,13 +45,11 @@
     },
     "buy_block_pairs": [
       "RAVE-USD",
-      "UNI-USD",
-      "LINK-USD"
+      "UNI-USD"
     ],
     "pair_buy_blocklist": [
       "RAVE-USD",
-      "UNI-USD",
-      "LINK-USD"
+      "UNI-USD"
     ]
   },
   "risk_management": {
@@ -106,8 +104,7 @@
     },
     "buy_block_pairs": [
       "RAVE-USD",
-      "UNI-USD",
-      "LINK-USD"
+      "UNI-USD"
     ],
     "first_fill_probation": {
       "enabled": true,

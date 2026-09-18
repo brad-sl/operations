@@ -7,7 +7,7 @@
       "SOL-USD",
       "XRP-USD",
       "DOGE-USD",
-      "NEAR-USD",
+      "HYPE-USD",
       "AVAX-USD",
       "LINK-USD",
       "UNI-USD",
@@ -173,7 +173,8 @@
       "NEAR-USD",
       "ZEC-USD",
       "STX-USD",
-      "WLD-USD"
+      "WLD-USD",
+      "HYPE-USD"
     ]
   },
   "withdrawal_reserve": {

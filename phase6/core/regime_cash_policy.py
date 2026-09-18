@@ -162,6 +162,36 @@ def _normalize_pair_symbol(pair: str) -> str:
     return p
 
 
+# Cash / stable legs never consume quality-tryout daily seat quota.
+# USDT↔USD/USDC rebalance and powder path buys were falsely burning 2/2.
+_NON_TRYOUT_SEAT_BASES = frozenset(
+    {
+        "USD",
+        "USDC",
+        "USDT",
+        "DAI",
+        "PYUSD",
+        "EURC",
+        "EUR",
+        "GBP",
+    }
+)
+
+
+def _is_non_tryout_seat_pair(pair: str) -> bool:
+    """True for cash/stable pairs that must not count as tryout seats."""
+    p = _normalize_pair_symbol(pair)
+    if not p:
+        return True
+    if p in _NON_TRYOUT_SEAT_BASES:
+        return True
+    # bare symbols already handled; product ids like USDT-USD / USDC-USDT
+    parts = [x for x in p.replace("/", "-").split("-") if x]
+    if not parts:
+        return True
+    return all(part in _NON_TRYOUT_SEAT_BASES for part in parts)
+
+
 def _add_block_pairs(out: Set[str], xs: Any) -> None:
     if not xs:
         return
@@ -387,6 +417,7 @@ def count_new_seat_buys_today(
 
     Skips:
       - exclude_pairs (ballast)
+      - cash/stable pairs (USDT/USDC/USD/… — never tryout seats)
       - rows tagged tryout_day_exempt / quality_tryout_exempt
       - full-day wipe when data/state/quality_tryout_day_clear.json matches today (Brad GO)
     """
@@ -424,6 +455,9 @@ def count_new_seat_buys_today(
                     continue
                 pair = _normalize_pair_symbol(str(row.get("pair") or ""))
                 if not pair or pair in exclude:
+                    continue
+                # Cash/stable legs (USDT-USD, USDT-USDC, …) never consume tryout seats.
+                if _is_non_tryout_seat_pair(pair):
                     continue
                 ts_raw = row.get("timestamp") or row.get("ts") or ""
                 try:

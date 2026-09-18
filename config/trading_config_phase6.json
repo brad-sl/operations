@@ -10,7 +10,7 @@
       "HYPE-USD",
       "AVAX-USD",
       "LINK-USD",
-      "UNI-USD",
+      "TIA-USD",
       "ADA-USD",
       "ARB-USD",
       "ZEC-USD"
@@ -174,7 +174,8 @@
       "ZEC-USD",
       "STX-USD",
       "WLD-USD",
-      "HYPE-USD"
+      "HYPE-USD",
+      "TIA-USD"
     ]
   },
   "withdrawal_reserve": {

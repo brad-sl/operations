@@ -1,8 +1,10 @@
-## STREAMLINED-ACTION-ARCH-20260918 — DESIGN (awaiting GO)
+## STREAMLINED-ACTION-ARCH-20260918 — PARTIAL SHIP (Tasks 1+6)
 
 **Type:** platform / action architecture (scale + dedupe)  
 **Date:** 2026-09-18  
-**Status:** **DESIGN** — plan landed; Tasks 1–10 not staffed until Brad GO  
+**Status:** **PARTIAL SHIP** — domain dispatcher + BookRebalanceAction dry_run refuse-new-seats (Tasks 1+6); Tasks 2–5,7–10 open  
+**Shipped paths:** `phase6/domain/`, `phase6/ingress/cli.py`, `scripts/phase6/run_book_rebalance_action.py`, `scripts/phase6/test_isolation_book_rebalance_action.py`  
+**Live path:** unchanged (runner/coordinator not cut over; no orders from action)  
 **Priority:** P0 architecture parent  
 **auto_pickup:** false  
 **Plan:** `docs/plans/2026-09-18-streamlined-action-architecture.md`  

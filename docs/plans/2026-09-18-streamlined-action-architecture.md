@@ -2,8 +2,10 @@
 
 > **For Hermes:** Architecture-first. Implement only after Brad GO on this plan. Prefer subagent-driven-development + agentic-architecture (ports first, isolation tests, thin orchestrators). Do **not** live-cutover knobs or kill 2× X from this doc alone.
 
-**Status:** DESIGN — awaiting Brad GO to staff implementation slices  
+**Status:** PARTIAL SHIP — Brad GO 2026-09-18 Tasks 1+6 vertical slice  
 **Date:** 2026-09-18  
+**Shipped:** `phase6/domain/` types + dispatcher + `BookRebalanceAction` dry_run (refuse new seats) + CLI  
+**Not shipped:** live order path, X spend on book action, cron cutover, RSI probe action, runner bridge  
 **Goal:** Replace clock-coupled, duplicate-laden Phase-6 paths with **clean action-based components** that scale to **~1000 concurrent trader tenants** hitting endpoints at different times of day — without copying eligibility / X / seat / SL logic into every module.
 
 **Architecture (3 lines):**  
@@ -399,10 +401,10 @@ trading/                      # keep — ExecutionPort adapter target
 
 > Bite-sized; each ends in isolation test + commit. No live knob cutover in Tasks 1–7.
 
-### Task 1: Domain types + dispatcher skeleton
+### Task 1: Domain types + dispatcher skeleton — **SHIPPED 2026-09-18**
 - Create: `phase6/domain/types.py`, `phase6/domain/dispatcher.py`, `phase6/domain/ports/__init__.py`
-- Test: `scripts/phase6/test_isolation_action_dispatcher.py` (noop action, idempotency replay)
-- Commit: `feat(domain): action request/receipt + dispatcher skeleton`
+- Test: covered in `scripts/phase6/test_isolation_book_rebalance_action.py` (noop + idempotency + tenant ns)
+- Commit: with Task 6 vertical slice
 
 ### Task 2: File StateStore + Idempotency adapters (tenant prefix)
 - Create: `phase6/adapters/state_files.py`, `idempotency_files.py`
@@ -426,11 +428,12 @@ trading/                      # keep — ExecutionPort adapter target
 - Cron bridge calls action (wrappers become 5-liners)
 - Commit: `feat: RsiEventProbeAction`
 
-### Task 6: BookRebalanceAction (dry_run first) + refuse new seats
-- Create: `phase6/domain/actions/book_rebalance.py`
-- Isolation test: plan with tryout leg → stripped + reason
-- Dry_run against live snapshot; no orders
-- Commit: `feat: BookRebalanceAction dry_run refuse new seats`
+### Task 6: BookRebalanceAction (dry_run first) + refuse new seats — **SHIPPED 2026-09-18**
+- Create: `phase6/domain/actions/book_rebalance.py`, `phase6/ingress/cli.py`, `scripts/phase6/run_book_rebalance_action.py`
+- Isolation test: `scripts/phase6/test_isolation_book_rebalance_action.py` (tryout leg stripped + reason)
+- Dry_run against live snapshot; no orders; X spend forced off in v1
+- CLI: `python3 -m phase6.ingress.cli action book_rebalance` / `run_book_rebalance_action.py`
+- Commit: `feat(domain): BookRebalanceAction dry_run refuse new seats`
 
 ### Task 7: Eligibility + SeatLedger facades (no behavior change)
 - Create: `phase6/domain/services/eligibility.py`, `seat_ledger.py`

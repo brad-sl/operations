@@ -168,15 +168,19 @@ def rebalance_x_candidates(*, held_pairs: set[str], plan_pairs: set[str], pool: 
 
 ---
 
-### Task 3: Rebalance refuses new tryout buys
+### Task 3: Rebalance refuses new tryout buys — **DOMAIN DRY_RUN SHIPPED 2026-09-18**
 
 **Objective:** At rebalance boundary, strip/block BUY legs that are new tryout seats.
 
-**Files (likely):**
-- Modify: `phase6/core/regime_cash_policy.py` (entry filter / allow_new_buys scoping)
-- Modify: `phase6/core/rebalancing/hybrid_rebalancer.py` and/or `phase6/core/rebalance_coordinator.py`
-- Modify: `phase6/core/phase6_runner.py` rebalance path
-- Test: isolation — rebalance plan with tryout new-buy → rejected; trim held → allowed per policy
+**Shipped (architecture, not live coordinator):**
+- `phase6/domain/types.py` — `classify_leg` / `filter_book_legs`
+- `phase6/domain/actions/book_rebalance.py` — default refuse `new_tryout_seat` + `opportunity_entry`
+- Test: `scripts/phase6/test_isolation_book_rebalance_action.py` green
+- CLI dry_run: `scripts/phase6/run_book_rebalance_action.py`
+
+**Still open (live path cutover):**
+- Modify: `phase6/core/regime_cash_policy.py` / hybrid_rebalancer / rebalance_coordinator / runner **or** point cron at action
+- Knob on live path after Brad GO
 
 **Default policy:** `rebalance_allow_new_tryout_buys = false` (new knob, default false on cutover).
 

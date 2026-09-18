@@ -4,6 +4,7 @@
 **Status:** VALIDATE SHIPPED (Brad GO 2026-09-18) — Task 1 helper + budget + measure CLI live.
 Full replace of 2× full-book X still needs explicit cutover GO (`x_query_split.rebalance_candidates_only=true`).
 RSI paid probe is ON under hard caps (track 1); place_orders still false.
+**Architecture parent (2026-09-18):** `docs/plans/2026-09-18-streamlined-action-architecture.md` — action-based scale design (BookRebalance / RsiEventProbe / TryoutSeatBuy). Product split below still holds; implement via architecture tasks after Brad GO.
 > **For Hermes:** After R0 RSI-event shadow **passes** closeout, staff this plan task-by-task. **No live knobs until Brad GO on cutover.** Use subagent-driven-development if implementing.
 
 **Status:** **PROPOSED — ARMED FOR POST-R0 SWITCH**  

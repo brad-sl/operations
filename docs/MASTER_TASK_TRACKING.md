@@ -1,3 +1,21 @@
+## STREAMLINED-ACTION-ARCH-20260918 — DESIGN (awaiting GO)
+
+**Type:** platform / action architecture (scale + dedupe)  
+**Date:** 2026-09-18  
+**Status:** **DESIGN** — plan landed; Tasks 1–10 not staffed until Brad GO  
+**Priority:** P0 architecture parent  
+**auto_pickup:** false  
+**Plan:** `docs/plans/2026-09-18-streamlined-action-architecture.md`  
+**Intent:** Action-based `BookRebalance` · `RsiEventProbe` · `TryoutSeatBuy` + shared ports; tenant-ready (~1000 traders); single wash/eligibility/X-budget; no live cutover without separate GO  
+**Children product plans:** X-split `docs/plans/2026-09-16-rebalance-book-vs-rsi-buy-x-split.md`; R0 `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`; OPS one-call actions map to same dispatcher later  
+
+### Must not
+- Live knob cutover / retire full-book 2× X from this epic alone  
+- Auto-compose probe → buy without explicit GO  
+- New policy logic in `phase6_runner` while domain actions exist  
+
+---
+
 ## OPS-ONE-CALL-P0-20260918 — OPEN (epic hub)
 
 **Type:** platform / operator one-call CLIs (token burn reduction)  

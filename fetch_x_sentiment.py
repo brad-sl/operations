@@ -200,6 +200,16 @@ def main():
         except:
             pairs = ["BTC-USD", "ETH-USD", "SOL-USD", "XRP-USD", "DOGE-USD", "ADA-USD", "AVAX-USD", "LINK-USD", "UNI-USD", "ARB-USD", "OP-USD", "MATIC-USD"]
 
+    # Scoped probe / rebalance-candidate path (Brad GO validate)
+    # PHASE6_X_PAIRS=comma pairs → only those; PHASE6_X_FORCE_STALE=1 → ignore freshness skip
+    import os as _os
+    _scoped = (_os.environ.get("PHASE6_X_PAIRS") or "").strip()
+    if _scoped:
+        pairs = [x.strip().upper().replace("_", "-") for x in _scoped.split(",") if x.strip()]
+        pairs = [p if "-" in p else f"{p}-USD" for p in pairs]
+        print(f"🎯 PHASE6_X_PAIRS scope: {pairs}")
+    _force = (_os.environ.get("PHASE6_X_FORCE_STALE") or "").strip() in ("1", "true", "TRUE", "yes")
+
     # The defined method: pull from central loader
     from phase6.core.sentiment_keywords import get_x_keyword, get_x_supplemental_queries
     kw_dict = {p: get_x_keyword(p) for p in pairs}
@@ -240,6 +250,9 @@ def main():
     else:
         stale_pairs = pairs[:]
 
+    if _force:
+        print("⚡ PHASE6_X_FORCE_STALE=1 — treating scoped pairs as stale")
+        stale_pairs = list(pairs)
     if not stale_pairs:
         print(f"✅ X sentiment cache fresh for all {len(pairs)} pairs (<{STALE_THRESHOLD_MINUTES} min old).")
         existing_cache = {}

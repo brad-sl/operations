@@ -81,3 +81,7 @@ reports/RSI_EVENT_X_TRYOUT_SHADOW_OBSERVE_24H.md
 # Luck ladder R1 knife filter
 data/state/knife_filter_shadow_*.json
 data/state/knife_filter_shadow_crumbs.jsonl
+data/state/rsi_event_x_probe_latest.json
+data/state/rsi_event_x_probe_events.jsonl
+data/state/x_query_budget.json
+data/state/rebalance_x_candidates_latest.json

@@ -64,3 +64,12 @@ Reduce clock luck between 09:00/21:00 X slots: when a **tryout-eligible** door i
 - Observe window **extended** Brad GO 2026-09-16 → through tomorrow (~48h total); prior 24h closeout `63b055a00372` removed
 - Bar to *discuss* X probe (not promote): ≥3 ticks, ≥2 trigger hits, ≥2 top-K hits
 - Graduate ladder: shadow evidence → single-pair X probe (GO) → live tryout only with evidence
+
+## Validate 2026-09-18 (Brad GO)
+
+- Paid X probe shipped: `scripts/phase6/run_rsi_event_x_probe.py --go`
+- Budget SSOT: `phase6/core/x_query_budget.py` (rsi ≤2 pair-queries/day, cooldown 6h)
+- Cron: `phase6-rsi-event-x-probe` (same slots as shadow, spends only on wash+budget)
+- `place_orders` remains **false**; live buy still full gate stack
+- Observe verdict was OBSERVE_PASS_discuss_X_probe → this is the discuss/validate step
+

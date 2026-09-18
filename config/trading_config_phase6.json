@@ -176,7 +176,27 @@
       "WLD-USD",
       "HYPE-USD",
       "TIA-USD"
-    ]
+    ],
+    "rsi_event_x_probe": {
+      "enabled": true,
+      "spend_x": true,
+      "top_k": 2,
+      "max_rsi_pair_queries_per_day": 2,
+      "max_pair_queries_per_day": 6,
+      "per_pair_cooldown_hours": 6.0,
+      "rsi_wash_max": 40.0,
+      "tryout_floor": 0.3,
+      "place_orders": false,
+      "note": "Brad GO 2026-09-18 validate: paid X on wash+budget only; never auto-buy"
+    },
+    "x_query_split": {
+      "enabled": true,
+      "mode": "validate",
+      "rebalance_candidates_only": false,
+      "exclude_ballast_from_x": true,
+      "max_rebal_pair_queries_per_day": 4,
+      "note": "Task1 helper live; full replace of 2x book X needs separate cutover GO"
+    }
   },
   "withdrawal_reserve": {
     "min_reserve_usd": 50.0,

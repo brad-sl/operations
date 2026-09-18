@@ -94,3 +94,10 @@ daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst
 ## Dashboard
 
 Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Linux cron. Surfaces read SSOTs; do not invent mode.
+
+## phase6-rsi-event-x-probe (Brad GO validate 2026-09-18)
+- Schedule: `25 7,11,15,19 * * *` America/Los_Angeles (5m after shadow tick)
+- Script: `~/.hermes/scripts/run_rsi_event_x_probe.sh` (PROBE_GO=1)
+- Behavior: paid X only if RSI wash + stale eng + budget; no orders; quiet if idle
+- Caps: rsi lane ≤2 pair-queries/day; total ≤6; per-pair cooldown 6h
+- Companion measure: `run_rebalance_x_candidates.py` (held∪plan X universe; full-book replace still OFF)

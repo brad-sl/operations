@@ -51,3 +51,12 @@
 - 2026-09-15: Brad GO save full ladder + Kanban + execute on schedule; R0 24h observe; R1 shipped shadow.
 - 2026-09-16: Brad GO extend R0 observe through tomorrow (~48h total) for pattern reliability; paid X / live gate still OFF.
 - 2026-09-16: Brad GO **save** post-R0 switch plan (rebalance/X split). Switch only if shadow passes closeout; cutover not yet authorized.
+
+## R0 validate 2026-09-18 (Brad GO)
+
+- Observe closed PASS → **paid X probe ON** under budget (rsi ≤2 pair-q/day, cooldown 6h)
+- CLI: `python3 scripts/phase6/run_rsi_event_x_probe.py [--go]`
+- Cron: `phase6-rsi-event-x-probe` @ :25 after shadow ticks
+- X-split Task1: `rebalance_x_candidates` + budget SSOT live; **full-book 2× still runs** until cutover GO (`x_query_split.rebalance_candidates_only`)
+- `place_orders` still **false** — probe feeds cache/latch only; buys still gate stack
+

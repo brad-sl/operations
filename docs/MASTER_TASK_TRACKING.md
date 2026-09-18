@@ -1,3 +1,45 @@
+## OPS-ONE-CALL-P0-20260918 — OPEN (epic hub)
+
+**Type:** platform / operator one-call CLIs (token burn reduction)  
+**Date:** 2026-09-18  
+**Status:** **OPEN** — Kanban staffed; implementation not started  
+**Priority:** P0 hub  
+**auto_pickup:** false  
+**Plan:** `docs/plans/2026-09-18-ops-one-call-p0.md`  
+**Handoff hub:** `handoffs/platform/Handoff_OPS_ONE_CALL_P0_20260918.md`  
+**Board:** `crypto-bot-project`  
+**Pattern:** same as `phase6-dual-agree-brad-go-swap` / `scripts/phase6/basket_swap.py`
+
+### Plain English
+Repeated chat digs (status prose, funnel blockers, force-rebalance wait/parse, runner restart thrash) become one-call CLIs + thin skills. Measure/read default; `--go` only where Brad already asked.
+
+### Children
+| ID | Tag | Pri | Title | Kanban |
+|----|-----|-----|-------|--------|
+| OPS-P0-1-STATUS-PLAIN-20260918 | STAGED | P0 | Status plain (read-only) | `t_050ea502` |
+| OPS-P0-2-FUNNEL-WHY-20260918 | STAGED | P0 | Funnel why (read-only) | `t_91d2b698` |
+| OPS-P0-3-FORCE-REBALANCE-20260918 | STAGED | P0 | Force rebalance (--go gated) | `t_6eb636a3` |
+| OPS-P0-4-RUNNER-CTL-20260918 | STAGED | P0 | Runner ctl (status default) | `t_bbe2956d` |
+
+### Must not
+- Live knobs / door-thaw / membership swaps from these cards
+- Auto `--go` force rebalance or runner restart from cron
+- Implement on hub card
+
+### Kanban task ids (2026-09-18)
+| Card | id |
+|------|-----|
+| HUB | `t_4d89f0c7` |
+| P0-1 | `t_050ea502` |
+| P0-2 | `t_91d2b698` |
+| P0-3 | `t_6eb636a3` |
+| P0-4 | `t_bbe2956d` |
+
+### Staff next
+Claim children independently on `crypto-engineer`. After all four DONE → umbrella skill `phase6-ops-one-call`.
+
+---
+
 ## LUCK-LADDER-20260915 — OPEN (epic hub)
 
 **Type:** platform / refine-while-idle / manufactured-luck reduction  

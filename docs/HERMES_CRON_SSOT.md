@@ -127,3 +127,14 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Cap: max ~80 Jev calls/day budget file; default max_judge 16/run
 - Isolation: `scripts/phase6/test_isolation_daily_dose_jev_ranker.py`
 - Delivery: local (skim compare.md; promote Jev order only after multi-day quality)
+
+## phase6-free-rss-jev-materiality (Brad GO shadow 2026-09-18)
+- Schedule: `50 */2 * * *` America/Los_Angeles (after free-sentiment @:40)
+- Script: `~/.hermes/scripts/run_free_rss_jev_materiality.sh` → `phase6/scripts/run_free_rss_jev_materiality_cron.sh`
+- Behavior: RSS pair-tag + TextBlob → Jev materiality weights → `sentiment_cache_free_jev.json`
+- Does **not** write live `sentiment_cache.json`; no floors / aging / X primary change
+- Artifacts: `sentiment_cache_free_jev.json`, `rss_sentiment_cache_jev.json`, `free_rss_jev_{compare,latest,crumbs,budget}.*`
+- Cap: ≤96 Jev calls/day; default max_judge 24/run
+- Isolation: `scripts/phase6/test_isolation_free_rss_jev_materiality.py`
+- Delivery: local · multi-day board before any mid-cycle wire talk
+- Job id: `5e2dd4ddfa96`

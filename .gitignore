@@ -97,3 +97,10 @@ data/state/daily_dose_jev_*.jsonl
 data/state/daily_dose_jev_*.txt
 data/state/daily_dose_jev_*.md
 logs/daily_dose_jev/
+# Free/RSS Jev materiality shadow
+data/state/sentiment_cache_free_jev.json
+data/state/rss_sentiment_cache_jev.json
+data/state/free_rss_jev_*.json
+data/state/free_rss_jev_*.jsonl
+data/state/free_rss_jev_*.md
+logs/free_rss_jev/

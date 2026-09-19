@@ -77,6 +77,13 @@ FUNDING_SENTIMENT_CACHE = STATE_DIR / "funding_sentiment_cache.json"
 RSS_SENTIMENT_CACHE = STATE_DIR / "rss_sentiment_cache.json"
 FREE_SENTIMENT_CACHE = STATE_DIR / "sentiment_cache_free.json"
 FREE_VS_X_CORRELATION = STATE_DIR / "free_vs_x_correlation_latest.json"
+# Free/RSS Jev materiality shadow (measure-only — not live floors / not X replace)
+FREE_JEV_SENTIMENT_CACHE = STATE_DIR / "sentiment_cache_free_jev.json"
+FREE_JEV_RSS_CACHE = STATE_DIR / "rss_sentiment_cache_jev.json"
+FREE_JEV_COMPARE = STATE_DIR / "free_rss_jev_compare.md"
+FREE_JEV_LATEST = STATE_DIR / "free_rss_jev_latest.json"
+FREE_JEV_CRUMBS = STATE_DIR / "free_rss_jev_crumbs.jsonl"
+FREE_JEV_BUDGET = STATE_DIR / "free_rss_jev_budget.json"
 # Adanos Reddit-crypto shadow (true Reddit; free tier key required — not live)
 ADANOS_SENTIMENT_CACHE = STATE_DIR / "adanos_sentiment_cache.json"
 ADANOS_MULTI_CORR = STATE_DIR / "adanos_rss_free_x_correlation_latest.json"

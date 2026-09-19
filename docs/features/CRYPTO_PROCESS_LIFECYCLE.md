@@ -8,7 +8,7 @@
 | **Owner** | Brad + platform |
 | **Updated** | 2026-09-19 |
 | **Supersedes for navigation** | Do **not** implement from `docs/FUNCTIONAL_SPEC.md` (LEGACY). Prefer this + `docs/SPECS_INDEX.md` + live config. |
-| **Companions** | `docs/faq/Internal_Trading_Platform_FAQ.md` (happy path glossary) · `docs/plans/2026-09-11-platform-completeness.md` · `docs/plans/2026-09-15-luck-ladder-platform-refine.md` · `docs/SPECS_CODE_GAP.md` |
+| **Companions** | [`CRYPTO_PROCESS_TRADER_VOICE.md`](./CRYPTO_PROCESS_TRADER_VOICE.md) (client copy) · [`TAKEOVER_NORMALIZE_PLAYBOOK.md`](./TAKEOVER_NORMALIZE_PLAYBOOK.md) (ops) · `docs/faq/Internal_Trading_Platform_FAQ.md` · `docs/plans/2026-09-11-platform-completeness.md` · `docs/plans/2026-09-15-luck-ladder-platform-refine.md` · `docs/SPECS_CODE_GAP.md` |
 
 ---
 
@@ -297,10 +297,12 @@ Fresh path looked **much more profitable** in historical init comparisons. That 
 ## 7. Staff-next (when Brad prioritizes)
 
 1. Keep proving **Fresh-like** money path on operator book (funnel → exit tax → R5 GO adds).  
-2. Write **Takeover normalize playbook** (classify → protect → trim schedule → when Grow allowed).  
-3. Productize **Close Down** one-call.  
-4. Refresh FAQ happy path numbers ($25×4, door dates, R5 approval).  
-5. Only then: Scaling-1000 onboarding UX that offers Fresh (default) vs Takeover (advanced).
+2. ~~Write **Takeover normalize playbook**~~ → **DONE draft:** [`TAKEOVER_NORMALIZE_PLAYBOOK.md`](./TAKEOVER_NORMALIZE_PLAYBOOK.md).  
+3. ~~Trader-facing one-pager~~ → **DONE draft:** [`CRYPTO_PROCESS_TRADER_VOICE.md`](./CRYPTO_PROCESS_TRADER_VOICE.md).  
+4. Productize **Close Down** one-call (shared Fresh/Takeover).  
+5. Implement playbook T0–T2 state artifact + naked-bag dashboard tile (see playbook §9).  
+6. Refresh FAQ happy path numbers ($25×4, door dates, R5 approval).  
+7. Only then: Scaling-1000 onboarding UX that offers Fresh (default) vs Takeover (advanced).
 
 ---
 
@@ -309,3 +311,4 @@ Fresh path looked **much more profitable** in historical init comparisons. That 
 | Date | Change |
 |------|--------|
 | 2026-09-19 | Initial draft from Brad lifecycle outline + Fresh/Takeover onboarding concept; coverage tags vs live Phase 6. |
+| 2026-09-19 | Child specs: trader voice one-pager + Takeover normalize playbook; companions linked. |

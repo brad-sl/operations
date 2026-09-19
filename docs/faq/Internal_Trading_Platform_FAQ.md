@@ -174,6 +174,8 @@ Same audit labels 90d buys: heat rules are strict (few pure heat-chases). **proc
 **Context:** Phase 6 recovery / quality_tryout / luck-ladder work (2026-09).  
 **Plans:** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`, `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`, `reports/LUCK_LADDER_STATUS_LATEST.md`  
 **Full lifecycle (Fresh vs Takeover, Manage stages, coverage tags):** `docs/features/CRYPTO_PROCESS_LIFECYCLE.md`  
+**Trader voice one-pager:** `docs/features/CRYPTO_PROCESS_TRADER_VOICE.md`  
+**Takeover normalize playbook:** `docs/features/TAKEOVER_NORMALIZE_PLAYBOOK.md`  
 **Mode default:** measure/shadow first; **no** live knobs, auto-buy, or promote without Brad GO.
 
 ### What is the “happy path” for a trading pair?

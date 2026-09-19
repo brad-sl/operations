@@ -17,6 +17,8 @@
 | — | [**PARK_SMART_IDLE_CASH.md**](./PARK_SMART_IDLE_CASH.md) | **Trader voice · Smart Park differentiator** |
 | — | [PARK_USDC_PAXG_OPERATOR_CHECKLIST.md](./PARK_USDC_PAXG_OPERATOR_CHECKLIST.md) | OPS companion |
 | FEAT-CRYPTO-PROCESS-LIFECYCLE-2026-09 | [CRYPTO_PROCESS_LIFECYCLE.md](./CRYPTO_PROCESS_LIFECYCLE.md) | DRAFT coverage map · Fresh vs Takeover · Manage stages |
+| FEAT-CRYPTO-PROCESS-TRADER-VOICE-2026-09 | [CRYPTO_PROCESS_TRADER_VOICE.md](./CRYPTO_PROCESS_TRADER_VOICE.md) | DRAFT client/trader plain-English one-pager |
+| FEAT-TAKEOVER-NORMALIZE-2026-09 | [TAKEOVER_NORMALIZE_PLAYBOOK.md](./TAKEOVER_NORMALIZE_PLAYBOOK.md) | DRAFT ops playbook · protect→classify→normalize |
 
 ## Conventions
 

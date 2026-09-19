@@ -207,6 +207,8 @@
 | [`docs/faq/Internal_Trading_Platform_FAQ.md`](faq/Internal_Trading_Platform_FAQ.md) | OPS | FAQ | Operator FAQ |
 | [`docs/faq/External_Client_FAQ.md`](faq/External_Client_FAQ.md) | GTM | FAQ | External wording |
 | [`docs/features/CRYPTO_PROCESS_LIFECYCLE.md`](features/CRYPTO_PROCESS_LIFECYCLE.md) | FEAT | DRAFT | End-to-end lifecycle coverage · Fresh vs Takeover · prefer over LEGACY FUNCTIONAL_SPEC |
+| [`docs/features/CRYPTO_PROCESS_TRADER_VOICE.md`](features/CRYPTO_PROCESS_TRADER_VOICE.md) | FEAT | DRAFT | Trader-facing process one-pager (no coverage grades) |
+| [`docs/features/TAKEOVER_NORMALIZE_PLAYBOOK.md`](features/TAKEOVER_NORMALIZE_PLAYBOOK.md) | FEAT | DRAFT | Takeover normalize phases T0–T5 + checklist |
 
 ---
 
@@ -219,6 +221,8 @@
 | — | [DAILY_DOSE_OPERATOR_COMMANDS.md](features/DAILY_DOSE_OPERATOR_COMMANDS.md) | OPS companion | Comms |
 | `FEAT-TRADER-PERSONALIZED-SETTINGS-2026-08` | [TRADER_PERSONALIZED_SETTINGS_SPEC.md](features/TRADER_PERSONALIZED_SETTINGS_SPEC.md) | PARTIAL_LIVE · MT planned | Capital / settings |
 | `FEAT-CRYPTO-PROCESS-LIFECYCLE-2026-09` | [CRYPTO_PROCESS_LIFECYCLE.md](features/CRYPTO_PROCESS_LIFECYCLE.md) | DRAFT coverage map | Core lifecycle · Fresh vs Takeover onboarding |
+| `FEAT-CRYPTO-PROCESS-TRADER-VOICE-2026-09` | [CRYPTO_PROCESS_TRADER_VOICE.md](features/CRYPTO_PROCESS_TRADER_VOICE.md) | DRAFT trader copy | GTM / client voice |
+| `FEAT-TAKEOVER-NORMALIZE-2026-09` | [TAKEOVER_NORMALIZE_PLAYBOOK.md](features/TAKEOVER_NORMALIZE_PLAYBOOK.md) | DRAFT ops playbook | Takeover protect→classify→normalize |
 
 **Rule:** New shippable product work gets a `FEAT-…` id, a file under `docs/features/`, a row here, and a MASTER block only if execution is tracked.
 

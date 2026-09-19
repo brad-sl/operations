@@ -116,3 +116,14 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Artifacts: `data/state/jev_lab_calibration_latest.json` + `reports/JEV_LAB_CALIBRATION_LATEST.md`
 - Guardrails: measure-only, honest N (`N_INSUFFICIENT` until n_ok≥20), no orders / no promote
 - Isolation: `scripts/phase6/test_isolation_jev_lab_calibration.py`
+
+## phase6-daily-dose-jev-ranker (Brad GO shadow 2026-09-18)
+- Schedule: `15 7 * * *` America/Los_Angeles (before `daily-dose-telegram` 08:00)
+- Script: `~/.hermes/scripts/run_daily_dose_jev_ranker.sh` → `phase6/scripts/run_daily_dose_jev_ranker_cron.sh`
+- Behavior: Jev judges RSS shortlist; compare vs baseline top-N; **shadow only**
+- Does **not** overwrite `daily_dose_latest` / publish_ready / live TG body
+- Not a trade signal; no allocator / tryout wiring
+- Artifacts: `data/state/daily_dose_jev_{latest,compare,preview,crumbs,budget}.*`
+- Cap: max ~80 Jev calls/day budget file; default max_judge 16/run
+- Isolation: `scripts/phase6/test_isolation_daily_dose_jev_ranker.py`
+- Delivery: local (skim compare.md; promote Jev order only after multi-day quality)

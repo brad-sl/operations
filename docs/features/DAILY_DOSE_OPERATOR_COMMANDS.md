@@ -44,3 +44,31 @@ bash phase6/scripts/run_daily_dose_pipeline.sh
 
 **Publish gate:** `editorial_review.status` must be `APPROVED`.  
 **Cron:** `daily-dose-telegram` — `0 8 * * *` America/Los_Angeles → Telegram home.
+
+---
+
+## Jev ranker shadow (measure-only)
+
+Does **not** replace TG publish. Skim compare board; expand platform-relevance only if quality wins multi-day.
+
+```bash
+cd /home/brad/projects/crypto-trading-bot
+
+# Against today's dose cards (no RSS refetch)
+.venv/bin/python3 scripts/phase6/run_daily_dose_jev_ranker.py \
+  --from-latest --top 5 --max-judge 8 --print-compare
+
+# Full RSS pool → Jev (more spend)
+.venv/bin/python3 scripts/phase6/run_daily_dose_jev_ranker.py --top 5 --max-judge 16
+
+# Offline mock
+.venv/bin/python3 scripts/phase6/run_daily_dose_jev_ranker.py --dry-run --from-latest
+```
+
+Artifacts:
+- `data/state/daily_dose_jev_latest.json`
+- `data/state/daily_dose_jev_compare.md`
+- `data/state/daily_dose_jev_preview.txt` (marked 🧪 shadow)
+- `data/state/daily_dose_jev_crumbs.jsonl`
+
+Cron: `phase6-daily-dose-jev-ranker` — `15 7 * * *` PT → local only.

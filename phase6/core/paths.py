@@ -88,6 +88,12 @@ DAILY_DOSE_TELEGRAM_PREVIEW = STATE_DIR / "daily_dose_telegram_preview.txt"
 DAILY_DOSE_EDITED = STATE_DIR / "daily_dose_edited.json"
 DAILY_DOSE_PUBLISH_READY = STATE_DIR / "daily_dose_publish_ready.txt"
 DAILY_DOSE_BRAD_TG_OK = STATE_DIR / "daily_dose_brad_telegram_ok.flag"
+# Daily Dose Jev ranker shadow (measure-only — not TG publish, not trade signal)
+DAILY_DOSE_JEV_LATEST = STATE_DIR / "daily_dose_jev_latest.json"
+DAILY_DOSE_JEV_CRUMBS = STATE_DIR / "daily_dose_jev_crumbs.jsonl"
+DAILY_DOSE_JEV_COMPARE = STATE_DIR / "daily_dose_jev_compare.md"
+DAILY_DOSE_JEV_PREVIEW = STATE_DIR / "daily_dose_jev_preview.txt"
+DAILY_DOSE_JEV_BUDGET = STATE_DIR / "daily_dose_jev_budget.json"
 # Preserve / park ballast
 PRESERVE_HOLD_STATE = STATE_DIR / "preserve_hold_state.json"
 PRESERVE_HOLD_STATUS = STATE_DIR / "preserve_hold_status.json"

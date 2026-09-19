@@ -90,3 +90,10 @@ data/state/rebalance_x_candidates_latest.json
 data/state/jev_lab_latest.json
 data/state/jev_lab_crumbs.jsonl
 data/state/jev_lab_budget.json
+
+# Daily Dose Jev shadow
+data/state/daily_dose_jev_*.json
+data/state/daily_dose_jev_*.jsonl
+data/state/daily_dose_jev_*.txt
+data/state/daily_dose_jev_*.md
+logs/daily_dose_jev/

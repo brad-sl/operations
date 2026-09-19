@@ -36,6 +36,7 @@ productivity
 red-teaming
 reliable-service-hosting
 research
+scale-first-action-architecture
 smart-home
 social-media
 soft-down-recovery-implementer

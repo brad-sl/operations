@@ -554,14 +554,17 @@ def apply_run_phase_to_actions(
             current_pair_usd=pos.get(pair, 0.0),
             cfg=c,
         )
-        # quality_tryout thaw A: week-1 tryout pairs already passed RSI≤55 + eng_sent floor.
+        # quality_tryout thaw A: week-1 tryout pairs already passed RSI + eng_sent floor.
         # Late-run hard block would freeze the only allowed path during soft_down recovery.
         # Brad GO C 2026-09-01: pass tryout allowlist through with full proposed size.
+        # 2026-09-19: use recovery_tryout_pairs_effective (v2 scoreboard), not legacy
+        # static tryout_pairs only — else ZEC/HYPE/SUI die on extension while LINK passes.
         if gr.dropped or gr.final_usd <= 0:
             try:
                 from phase6.core.regime_cash_policy import (
                     _recovery_rec,
                     recovery_quality_tryout_cfg,
+                    recovery_tryout_pairs_effective,
                 )
                 import json as _json
                 from pathlib import Path as _Path
@@ -576,11 +579,17 @@ def apply_run_phase_to_actions(
                 rec = _recovery_rec(pol) or {}
                 mode = str((rec or {}).get("new_alt_policy") or "")
                 if mode.startswith("quality_tryout"):
-                    qt = recovery_quality_tryout_cfg(rec if isinstance(rec, dict) else {})
                     try_set = {
                         str(x).upper().replace("_", "-")
-                        for x in (qt.get("tryout_pairs") or set())
+                        for x in (recovery_tryout_pairs_effective(rec if isinstance(rec, dict) else {}) or set())
                     }
+                    # Fallback legacy static list if effective empty
+                    if not try_set:
+                        qt = recovery_quality_tryout_cfg(rec if isinstance(rec, dict) else {})
+                        try_set = {
+                            str(x).upper().replace("_", "-")
+                            for x in (qt.get("tryout_pairs") or set())
+                        }
                     pu = str(pair).upper().replace("_", "-")
                     if pu in try_set:
                         gr = RunPhaseGateResult(
@@ -594,7 +603,7 @@ def apply_run_phase_to_actions(
                             blocked=False,
                             snapshot=gr.snapshot,
                             notes=list(gr.notes)
-                            + ["quality_tryout_late_run_pass", "brad_go_c_20260901"],
+                            + ["quality_tryout_late_run_pass", "v2_effective_tryout_set"],
                         )
                         logger.info(
                             "[RUN-PHASE] quality_tryout PASS BUY %s $%.2f (was phase=%s)",

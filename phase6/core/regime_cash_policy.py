@@ -1310,22 +1310,28 @@ def filter_trade_plan_regime_cash(
                     tryout_set = recovery_tryout_pairs_effective(rec_f)
                     ballast = _norm_pair_set(rec_f.get("allowlist_pairs"))
                     if pn in tryout_set and pn not in ballast:
-                        caps = [float(qt.get("abs_cap_usd") or 75.0)]
-                        if float(snap.rebalance_cap_usd or 0) > 0:
-                            caps.append(float(snap.rebalance_cap_usd))
-                        cap = min(caps)
+                        # Tryout shell = abs_cap (config; Brad GO $25×4). Do NOT min() with soft_down
+                        # de-risk sleeve ($35): that dust-kills first-fill under min_move.
+                        # quality_tryout shell is SSOT under soft_down.
+                        cap = float(qt.get("abs_cap_usd") or 25.0)
                         for key in ("usd", "usd_amount", "notional_usd", "size_usd"):
                             if key in a and a[key] is not None:
                                 try:
                                     prev = float(a[key])
+                                    # Always tag tryout; clamp only if above shell
+                                    a["quality_tryout_cap_usd"] = cap
+                                    a["quality_tryout"] = True
+                                    if str(rec_f.get("new_alt_policy") or "").startswith(
+                                        "quality_tryout_v2"
+                                    ) or bool(qt.get("v2_dynamic")):
+                                        a["quality_tryout_v2"] = True
                                     if prev > cap:
                                         a[key] = round(cap, 2)
-                                        a["quality_tryout_cap_usd"] = cap
-                                        a["quality_tryout"] = True
-                                        if str(rec_f.get("new_alt_policy") or "").startswith(
-                                            "quality_tryout_v2"
-                                        ) or bool(qt.get("v2_dynamic")):
-                                            a["quality_tryout_v2"] = True
+                                    elif prev + 1e-9 < cap and prev > 0:
+                                        # Lift undersized tryout tickets up to shell when
+                                        # allocator proposed de-risk sleeve notional.
+                                        a[key] = round(cap, 2)
+                                        a["quality_tryout_lifted_from"] = round(prev, 2)
                                 except (TypeError, ValueError):
                                     pass
             except Exception:

@@ -199,15 +199,28 @@ def size_first_fill(
         "abs_cap": abs_cap,
         "equity": round(_f(equity_usd), 2),
     }
-    # Recovery/quality tryout already caps BUYs (often $75) before this filter.
-    # Applying size_mult again dust-drops every seat: 0.4×$75=$30 < min_move $40.
+    # Recovery/quality tryout already caps BUYs (shell, e.g. $25 or $75) before this filter.
+    # Applying size_mult again dust-drops every seat (0.4×shell < default min_move).
     # If upstream already sized into the tryout band, keep proposed (equity-clipped).
-    if min_move - 1e-9 <= prop <= abs_cap + 1e-9:
-        final = min(prop, eq_cap if eq_cap > 0 else prop)
+    # Also honor explicit quality_tryout tags (even if soft_down sleeve briefly undersized).
+    upstream_tryout = bool(
+        (why and any("quality_tryout" in str(w) for w in why))
+        or detail.get("quality_tryout")
+        or detail.get("quality_tryout_v2")
+    )
+    if upstream_tryout or (min_move - 1e-9 <= prop <= abs_cap + 1e-9):
+        keep = prop
+        # Tagged tryout: never lift/drop vs generic min_move — shell is SSOT.
+        final = min(keep, eq_cap if eq_cap > 0 else keep)
         reasons.append("upstream_tryout_sized")
         detail["upstream_tryout_sized"] = True
-    if final + 1e-9 < min_move:
+        detail["upstream_tryout"] = upstream_tryout
+    # Tryout shell may be below generic first-fill min_move ($25 shell vs old $40).
+    if (not upstream_tryout) and final + 1e-9 < min_move:
         reasons.append(f"below_min_move ${min_move:.0f}")
+        return FirstFillDecision(p, "drop", prop, 0.0, reasons, detail)
+    if upstream_tryout and final + 1e-9 <= 0:
+        reasons.append("tryout_zero")
         return FirstFillDecision(p, "drop", prop, 0.0, reasons, detail)
     if final + 1e-6 < prop:
         reasons.append(f"haircut ${prop:.0f}→${final:.0f}")
@@ -328,6 +341,23 @@ def filter_trade_plan_first_fill(runner: Any, plan: Any) -> Any:
             continue
 
         proposed = _f(a.get("usd") if a.get("usd") is not None else a.get("usd_amount"))
+        # Quality tryout shell already sized — do not double-haircut.
+        qt_tagged = bool(a.get("quality_tryout") or a.get("quality_tryout_v2"))
+        if qt_tagged:
+            detail = dict(detail)
+            detail["quality_tryout"] = True
+            why = list(why) + ["quality_tryout_tagged"]
+            # Prefer tagged shell notional if present
+            try:
+                shell = _f(a.get("quality_tryout_cap_usd"))
+                if shell > 0 and proposed + 1e-9 < shell:
+                    proposed = shell
+                    a = dict(a)
+                    a["usd"] = shell
+                    if "usd_amount" in a:
+                        a["usd_amount"] = shell
+            except Exception:
+                pass
         # seat cap: only counts when opening a brand-new bag (pos ~ 0)
         if pos < _f(cfg.get("min_holding_usd"), 15.0):
             if seats_left - new_first_fills_this_plan <= 0:

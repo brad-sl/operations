@@ -239,10 +239,13 @@ def apply_buy_size_gates(
     momentum_pct: Optional[float] = None,
     reason: str = "",
     cfg: Optional[Dict[str, Any]] = None,
+    quality_tryout: bool = False,
+    quality_tryout_cap_usd: Optional[float] = None,
 ) -> BuyGateResult:
     """
     Pure P0 sizing. Returns final USD (0 if dropped).
     Order: classify → sentiment-only haircut → ticket cap → pair weight room → free-cash share.
+    quality_tryout seats: shell SSOT; exempt generic min_move dust-kill (e.g. $25 shell < $50).
     """
     c = cfg or DEFAULTS
     usd0 = max(0.0, _f(proposed_usd, 0.0))
@@ -253,6 +256,10 @@ def apply_buy_size_gates(
     usd = usd0
     haircut = ticket = pair_w = free_s = False
     min_move = _f(c.get("min_move_usd"), 50.0)
+    is_qt = bool(quality_tryout) or ("quality_tryout" in str(reason or "").lower())
+    shell = _f(quality_tryout_cap_usd, 0.0) if quality_tryout_cap_usd is not None else 0.0
+    if is_qt and shell <= 0:
+        shell = _f(rebalance_cap_usd, 0.0)
 
     if not c.get("enabled", True):
         return BuyGateResult(
@@ -272,10 +279,9 @@ def apply_buy_size_gates(
     frac = _f(c.get("sentiment_only_size_frac"), 0.35)
     frac = max(0.0, min(1.0, frac))
     if drivers.sentiment_only and frac < 1.0:
-        # Quality/recovery tryout already caps tickets (often $75) before this gate.
-        # 0.35×$75=$26.25 always dust-drops under min_move $50 — empty funnel.
-        # If upstream already sized into the tryout band, keep proposed size.
-        already_tryout = (
+        # Quality/recovery tryout already caps tickets (shell) before this gate.
+        # Haircut × shell always dust-drops under generic min_move — empty funnel.
+        already_tryout = is_qt or (
             rebalance_cap_usd is not None
             and min_move - 1e-9 <= usd0 <= _f(rebalance_cap_usd, -1.0) + 1e-9
         )
@@ -332,10 +338,15 @@ def apply_buy_size_gates(
                 free_s = True
                 notes.append(f"free_cash_share={share:.2f}→{lim:.2f}")
 
-    dropped = usd < min_move - 1e-9
-    if dropped:
-        notes.append(f"dropped_below_min_move={min_move}")
-        usd = 0.0
+    # 5) min_move — tryout shell may be $25 while default min_move is $50.
+    if is_qt and usd > 1e-9:
+        dropped = False
+        notes.append("tryout_min_move_exempt")
+    else:
+        dropped = usd < min_move - 1e-9
+        if dropped:
+            notes.append(f"dropped_below_min_move={min_move}")
+            usd = 0.0
 
     return BuyGateResult(
         pair=pair,
@@ -383,6 +394,23 @@ def apply_gates_to_actions(
         proposed = _f(a.get("usd") if a.get("usd") is not None else a.get("usd_amount"), 0.0)
         # Ignition seats: allow ticket up to equity*deploy_frac (not rebalance_cap $150)
         ticket_cap = rebalance_cap_usd
+        # Quality tryout shell must not be crushed by soft_down de-risk sleeve.
+        # Brad GO door package: tryout abs_cap is the ticket SSOT for tagged seats.
+        is_qt = bool(a.get("quality_tryout") or a.get("quality_tryout_v2"))
+        shell = 0.0
+        if is_qt:
+            try:
+                shell = _f(a.get("quality_tryout_cap_usd"), 0.0)
+            except Exception:
+                shell = 0.0
+            if shell <= 0:
+                shell = 25.0  # current shell default; config still overrides via cap tag
+            # Shell is SSOT — do not max() with soft_down sleeve (could be $35 > $25).
+            ticket_cap = shell
+            # Prefer shell notional if allocator undersized OR overshot shell
+            if proposed > 0 and abs(proposed - shell) > 1e-9:
+                if proposed + 1e-9 < shell or proposed - 1e-9 > shell:
+                    proposed = shell
         is_ign = bool(a.get("ignition_scout")) or "ignition_scout" in str(a.get("reason") or "").lower()
         if is_ign:
             try:
@@ -424,6 +452,8 @@ def apply_gates_to_actions(
             momentum_pct=mom_by_pair.get(str(pair)),
             reason=str(a.get("reason") or ""),
             cfg=c,
+            quality_tryout=is_qt,
+            quality_tryout_cap_usd=shell if shell > 0 else None,
         )
         results.append(gr)
         if gr.dropped or gr.final_usd <= 0:

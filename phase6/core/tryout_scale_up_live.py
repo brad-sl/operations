@@ -41,6 +41,8 @@ KILL_PATH = STATE_DIR / "tryout_scale_up_live_KILL"
 DAILY_PATH = STATE_DIR / "tryout_scale_up_live_daily.json"
 LATEST_PLAN_PATH = STATE_DIR / "tryout_scale_up_live_plan_latest.json"
 CRUMBS_PATH = STATE_DIR / "tryout_scale_up_live_crumbs.jsonl"
+APPROVAL_SEEN_PATH = STATE_DIR / "tryout_scale_up_live_approval_seen.json"
+APPROVAL_DEDUPE_HOURS = 12.0
 
 # Safety defaults — tighter than shadow band; never exceed shadow step
 LIVE_SAFETY: Dict[str, Any] = {
@@ -621,6 +623,166 @@ def apply_live_steps(
     return summary
 
 
+def _plan_rows(plan: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """Plan payload uses key `plans` (not `steps`)."""
+    if not isinstance(plan, dict):
+        return []
+    rows = plan.get("plans")
+    if not isinstance(rows, list):
+        rows = plan.get("steps")  # legacy alias
+    if not isinstance(rows, list):
+        return []
+    return [r for r in rows if isinstance(r, dict)]
+
+
+def approval_fingerprint(plan: Dict[str, Any]) -> str:
+    """Stable key for planned steps (pair + rounded step) so same plan doesn't re-page."""
+    parts: List[str] = []
+    for row in _plan_rows(plan):
+        if row.get("status") != "planned":
+            continue
+        pair = shadow._norm_pair(row.get("pair") or "")
+        if not pair:
+            continue
+        step = round(_f(row.get("step_usd")), 2)
+        parts.append(f"{pair}:{step:.2f}")
+    return "|".join(sorted(parts))
+
+
+def _load_approval_seen() -> Dict[str, Any]:
+    raw = _load_json(APPROVAL_SEEN_PATH, {"fingerprints": {}})
+    if not isinstance(raw, dict):
+        return {"fingerprints": {}}
+    fps = raw.get("fingerprints")
+    if not isinstance(fps, dict):
+        raw["fingerprints"] = {}
+    return raw
+
+
+def _should_send_approval(
+    fingerprint: str,
+    *,
+    now: Optional[datetime] = None,
+    dedupe_hours: float = APPROVAL_DEDUPE_HOURS,
+    mark: bool = True,
+) -> bool:
+    """True once per fingerprint within dedupe window."""
+    fp = str(fingerprint or "").strip()
+    if not fp:
+        return False
+    now_dt = now or _utc_now()
+    seen = _load_approval_seen()
+    fps = seen.get("fingerprints") if isinstance(seen.get("fingerprints"), dict) else {}
+    last_raw = str(fps.get(fp) or "")
+    last = None
+    if last_raw:
+        try:
+            last = datetime.fromisoformat(last_raw.replace("Z", "+00:00"))
+            if last.tzinfo is None:
+                last = last.replace(tzinfo=timezone.utc)
+        except Exception:
+            last = None
+    if last is not None and (now_dt - last).total_seconds() < float(dedupe_hours) * 3600.0:
+        return False
+    if mark:
+        fps[fp] = _utc_iso(now_dt)
+        # prune old
+        horizon = max(float(dedupe_hours), 24.0) * 3600.0 * 7.0
+        keep: Dict[str, str] = {}
+        for k, v in fps.items():
+            try:
+                t = datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+                if t.tzinfo is None:
+                    t = t.replace(tzinfo=timezone.utc)
+                if (now_dt - t).total_seconds() <= horizon:
+                    keep[str(k)] = str(v)
+            except Exception:
+                continue
+        seen["fingerprints"] = keep
+        seen["updated_at"] = _utc_iso(now_dt)
+        _write_json(APPROVAL_SEEN_PATH, seen)
+    return True
+
+
+def approval_telegram_summary(
+    plan: Dict[str, Any],
+    *,
+    force: bool = False,
+    mark_sent: bool = True,
+    dedupe_hours: float = APPROVAL_DEDUPE_HOURS,
+) -> str:
+    """Operator TG body only when path is armed and n_planned > 0.
+
+    Empty when: not armed, kill on, no planned steps, or same fingerprint within
+    dedupe window. Never places orders. Cron must only call plan path.
+    """
+    if not isinstance(plan, dict):
+        return ""
+    if kill_switch_on():
+        return ""
+    if not plan.get("live_armed"):
+        return ""
+    n_plan = int(plan.get("n_planned") or 0)
+    if n_plan <= 0:
+        return ""
+    steps = [r for r in _plan_rows(plan) if r.get("status") == "planned"]
+    if not steps:
+        return ""
+    fp = approval_fingerprint(plan)
+    if not force and not _should_send_approval(fp, dedupe_hours=dedupe_hours, mark=mark_sent):
+        return ""
+
+    cf = plan.get("cf_gate") if isinstance(plan.get("cf_gate"), dict) else {}
+    decision = load_decision()
+    waive = _waive_usage(decision)
+    lines = [
+        "SCALE-UP APPROVAL (money still OFF until you GO)",
+        f"armed · planned {n_plan} · fp={fp}",
+    ]
+    for row in steps:
+        pair = shadow._norm_pair(row.get("pair") or "")
+        step = _f(row.get("step_usd"))
+        held = _f(row.get("held_usd"))
+        r = row.get("unrealized_r")
+        r_s = f"{float(r)*100:.1f}%" if r is not None else "?"
+        phase = row.get("phase")
+        hold = row.get("hold_hours")
+        hold_s = f"{float(hold):.1f}h" if hold is not None else "?"
+        lines.append(
+            f"• {pair} +${step:.0f} (held ${held:.0f} · r {r_s} · phase {phase} · hold {hold_s})"
+        )
+    if cf.get("waived"):
+        rem = int(waive.get("remaining") or 0)
+        used = int(waive.get("used") or 0)
+        mx = int(waive.get("max") or 0)
+        lines.append(f"CF: waived ({used}/{mx} used · {rem} left) — ATTENTION_ONLY")
+    else:
+        lines.append(f"CF: {cf.get('reason') or 'ok'}")
+    safety = plan.get("safety") if isinstance(plan.get("safety"), dict) else {}
+    lines.append(
+        f"caps: {safety.get('max_steps_per_utc_day', 1)} step/day · "
+        f"${safety.get('max_step_usd', 25)} step · ${safety.get('max_usd_per_utc_day', 50)}/day"
+    )
+    lines.append("Reply GO + pair to apply, or run:")
+    lines.append(
+        "cd /home/brad/projects/crypto-trading-bot && "
+        "PYTHONPATH=. .venv/bin/python3 scripts/phase6/run_tryout_scale_up_live.py "
+        "--apply --go --no-dry-run"
+    )
+    lines.append("Kill: touch data/state/tryout_scale_up_live_KILL")
+    body = "\n".join(lines)
+    _append_crumb(
+        {
+            "kind": "approval_ping",
+            "ts": _utc_iso(),
+            "fingerprint": fp,
+            "n_planned": n_plan,
+            "forced": bool(force),
+        }
+    )
+    return body
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     import argparse
 
@@ -660,12 +822,42 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         action="store_true",
         help="Force OrderExecutor shadow_mode even on apply (isolation / safe rehearse)",
     )
+    p.add_argument(
+        "--telegram",
+        action="store_true",
+        help="Print approval card only when n_planned>0 (empty otherwise for quiet cron)",
+    )
+    p.add_argument(
+        "--quiet-ok",
+        action="store_true",
+        help="Same quiet contract as --telegram (empty stdout when nothing to approve)",
+    )
+    p.add_argument(
+        "--force-approval",
+        action="store_true",
+        help="Bypass 12h fingerprint dedupe for approval card (still plan-only)",
+    )
+    p.add_argument("--json", action="store_true", help="Dump plan JSON (and apply if requested)")
     args = p.parse_args(list(argv) if argv is not None else None)
 
-    do_plan = args.plan or not args.apply
+    do_plan = args.plan or not args.apply or args.telegram or args.quiet_ok
     board = shadow.run_cycle()
     plan = plan_live_steps(board=board)
-    print(json.dumps({"plan": plan}, indent=2, default=str))
+
+    quiet = bool(args.telegram or args.quiet_ok)
+    if quiet and not args.apply:
+        body = approval_telegram_summary(
+            plan,
+            force=bool(args.force_approval),
+            mark_sent=True,
+        )
+        if body:
+            print(body)
+        return 0
+
+    if args.json or not quiet:
+        print(json.dumps({"plan": plan}, indent=2, default=str))
+
     if args.apply or args.go:
         ex = None
         if args.shadow_executor or args.dry_run or not args.go:

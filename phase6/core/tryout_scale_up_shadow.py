@@ -1,9 +1,9 @@
 """Tryout mid-flight scale-up shadow — ride the wave (Brad GO 2026-09-05).
 
 Product hole this fills:
-  $75 tryout opens → works (green, still building) → step up size *while holding*
-  → ride with real size → jump (TP/trail/dual-peak) before the break.
-  NOT: tryout → tiny TP → flat → 24h lockout → \"graduated\" with no capital behind proof.
+  Tryout shell opens (live SSOT abs_cap, e.g. $25) → works (green, still building)
+  → one mid-flight step-up *while holding* → ride → jump (TP/trail/dual-peak) before break.
+  NOT: tryout → tiny TP → flat → 24h lockout → "graduated" with no capital behind proof.
 
 Standing rules:
   • Shadow only until Brad GO live_apply
@@ -13,6 +13,7 @@ Standing rules:
   • Volume is NOT the scale trigger (liquidity already filtered at intake)
   • Post-TP cooloff / H4 stay orthogonal (this is in-seat, pre-exit)
   • first_fill graduate_on_tp remains post-close for *next empty seat* — different job
+  • Size band follows live tryout shell (Brad GO 2026-09-19 $25×4); not frozen $75 forever
 
 Brad framing: catch the wave as it builds; jump before it breaks.
 """
@@ -41,14 +42,15 @@ REPORT_PATH = REPORTS_DIR / "TRYOUT_SCALE_UP_SHADOW_LATEST.md"
 LIVE_STATE = STATE_DIR / "phase6_live_state.json"
 LEDGER_PATH = PROJECT_ROOT / "trades" / "phase6_trades.jsonl"
 
-# Defaults — conservative ride-the-wave shadow
+# Defaults — $25 tryout shell ladder (Brad GO 2026-09-19). live_apply stays false.
+# Band covers $25 seats + residual legacy ~$75 tryouts during transition.
 DEFAULTS: Dict[str, Any] = {
     "enabled": True,
     "live_apply": False,  # NEVER true without Brad GO
-    "tryout_max_usd": 90.0,  # open seat still "tryout-sized" if held ≤ this
-    "tryout_min_usd": 40.0,
-    "step_usd": 75.0,  # one add: $75 → ~$150
-    "max_total_after_step_usd": 160.0,
+    "tryout_max_usd": 95.0,  # open seat still tryout-sized if held ≤ this
+    "tryout_min_usd": 18.0,  # $25 shell ± dust; was 40 (blind to $25)
+    "step_usd": 25.0,  # one add: $25 → ~$50 (first rung); not $75→$150 jump
+    "max_total_after_step_usd": 100.0,  # $25+$25 or legacy $75+$25
     "min_hold_hours": 2.0,  # not scalp FOMO
     "min_unrealized_r": 0.015,  # +1.5%
     "max_unrealized_r": 0.038,  # below ~trail arm (+4%); don't scale into bank zone
@@ -62,6 +64,7 @@ DEFAULTS: Dict[str, Any] = {
     "cf_prefer_scored": 12,
     # edge bar (ATTENTION_ONLY even if green): scale path mean excess vs tryout-only ≥ +0.5pp
     "cf_min_excess_pp": 0.005,
+    "shell_note": "Brad GO 2026-09-19: align shadow band to abs_cap $25 / max 4 seats",
 }
 
 
@@ -294,12 +297,30 @@ def _phase_and_structure(pair: str) -> Dict[str, Any]:
             out["error"] = "thin_candles"
             return out
         phase_cfg = load_run_phase_config(None)
-        snap = classify_run_phase(pair, candles, phase_cfg)
+        # classify_run_phase(candles, *, pair=, cfg=) — positional pair was a silent bug
+        snap = classify_run_phase(candles, pair=pair, cfg=phase_cfg)
         out["phase"] = int(getattr(snap, "phase", 0) or 0)
-        out["phase_name"] = str(getattr(snap, "phase_name", "") or getattr(snap, "name", "") or "")
+        out["phase_name"] = str(
+            getattr(snap, "phase_name", "") or getattr(snap, "name", "") or ""
+        )
         try:
             sc = classify_structure(candles, pair=pair)
-            out["structure_ok"] = bool(getattr(sc, "structure_ok_for_entry", False))
+            out["structure_ok"] = bool(
+                getattr(sc, "structure_ok_for_entry", False)
+                or getattr(sc, "ok", False)
+                or (sc.get("structure_ok_for_entry") if isinstance(sc, dict) else False)
+            )
+        except TypeError:
+            # older signature: classify_structure(candles) only
+            try:
+                sc = classify_structure(candles)
+                out["structure_ok"] = bool(
+                    getattr(sc, "structure_ok_for_entry", False)
+                    or (sc.get("structure_ok_for_entry") if isinstance(sc, dict) else False)
+                )
+            except Exception as e:
+                out["structure_ok"] = None
+                out["error"] = f"structure:{e}"
         except Exception as e:
             out["structure_ok"] = None
             out["error"] = f"structure:{e}"
@@ -337,7 +358,7 @@ def evaluate_scale_up(
     now = now or _utc_now()
     pair = _norm_pair(pos.get("pair") or "")
     held = _f(pos.get("value_usd"))
-    step = _f(c.get("step_usd"), 75.0)
+    step = _f(c.get("step_usd"), 25.0)
     reasons: List[str] = []
 
     if pair in set(c.get("sticky_skip") or ()):
@@ -355,9 +376,9 @@ def evaluate_scale_up(
     if ets:
         hold_h = max(0.0, (now - ets).total_seconds() / 3600.0)
 
-    # tryout-sized open seat?
-    tmin = _f(c.get("tryout_min_usd"), 40.0)
-    tmax = _f(c.get("tryout_max_usd"), 90.0)
+    # tryout-sized open seat? ($25 shell band; legacy ~$75 still inside max)
+    tmin = _f(c.get("tryout_min_usd"), 18.0)
+    tmax = _f(c.get("tryout_max_usd"), 95.0)
     is_tryout_size = tmin <= held <= tmax
     if not is_tryout_size and not lot.get("tryout_tagged_buy"):
         return ScaleDecision(
@@ -430,7 +451,7 @@ def evaluate_scale_up(
             reasons.append("structure_not_ok")
 
     total_after = held + step
-    if total_after > _f(c.get("max_total_after_step_usd"), 160.0) + 1e-6:
+    if total_after > _f(c.get("max_total_after_step_usd"), 100.0) + 1e-6:
         reasons.append(f"total_after={total_after:.0f}>max")
 
     detail = {
@@ -511,8 +532,8 @@ def _score_resolved_lots(cfg: Dict[str, Any], now: datetime) -> List[Dict[str, A
         scale_ts = _parse_ts(meta.get("scaled_at"))
         entry_px = _f(meta.get("entry_price"))
         mark_scale = _f(meta.get("mark_at_scale"))
-        step = _f(meta.get("step_usd"), 75.0)
-        held0 = _f(meta.get("held_usd_at_scale"), 75.0)
+        step = _f(meta.get("step_usd"), 25.0)
+        held0 = _f(meta.get("held_usd_at_scale"), 25.0)
         # find first SELL after scale
         sell = None
         for t in _ledger_rows_for_pair(pair, limit=30):

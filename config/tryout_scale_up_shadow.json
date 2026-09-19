@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "live_apply": false,
+  "tryout_min_usd": 18.0,
+  "tryout_max_usd": 95.0,
+  "step_usd": 25.0,
+  "max_total_after_step_usd": 100.0,
+  "min_hold_hours": 2.0,
+  "min_unrealized_r": 0.015,
+  "max_unrealized_r": 0.038,
+  "require_phase_in": [1, 2],
+  "require_structure_ok": true,
+  "cf_min_scored": 8,
+  "cf_prefer_scored": 12,
+  "cf_min_excess_pp": 0.005,
+  "shell_note": "Brad GO 2026-09-19: $25 shell ladder ($25→~$50). Shadow only. live_apply hard-off until CF bar + Brad GO.",
+  "updated": "2026-09-19",
+  "ladder_rungs_note": "Rung1 shadow step $25. Later rungs ($50→$75, $75→graduated) need separate Brad GO — not this file alone."
+}

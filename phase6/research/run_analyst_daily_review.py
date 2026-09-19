@@ -12,8 +12,9 @@ Writes:
   data/state/analyst_daily_review_latest.txt
 
 Telegram rules:
-  - stdout = TG body when --deliver or material
-  - empty stdout when quiet and not --force (no filler spam)
+  - stdout = short TG card when --deliver and signal changed / new proposals
+  - empty stdout when signal unchanged (full essay still on disk)
+  - --force prints full 8-section board
   - never writes live config / knobs / orders
 
 Novelty proposals: evidence-backed templates keyed by flags; skip if title
@@ -43,8 +44,65 @@ SCOREBOARD_JSON = STATE / "analyst_daily_scoreboard_latest.json"
 OUT_JSON = STATE / "analyst_daily_review_latest.json"
 OUT_TXT = STATE / "analyst_daily_review_latest.txt"
 PREV_HASH = STATE / "analyst_daily_review_content_hash.txt"
+PREV_SIGNAL = STATE / "analyst_daily_review_signal_hash.txt"
 BACKLOG = STATE / "analyst_proposed_backlog.json"
 HISTORY = STATE / "analyst_daily_review_history.jsonl"
+
+
+def _round_num(v, nd: int = 1):
+    try:
+        if v is None:
+            return None
+        return round(float(v), nd)
+    except (TypeError, ValueError):
+        return v
+
+
+def signal_fingerprint(board, proposals):
+    """Stable operator-signal hash. Tiny day-to-day float noise is rounded away.
+
+    Used so OFF_TRACK does not re-page the same essay every morning.
+    """
+    goal = board.get("goal") or {}
+    path = board.get("path") or {}
+    mp = board.get("month_path") or {}
+    pipe = board.get("pipeline") or {}
+    opt = board.get("opt") or {}
+    wounds = board.get("wounds") or {}
+    ss3 = wounds.get("same_session_3d") or {}
+    t7 = (board.get("trades") or {}).get("7d") or {}
+    exit_top = t7.get("exit_reasons_top") or []
+    top_exit = None
+    if exit_top and isinstance(exit_top[0], (list, tuple)) and len(exit_top[0]) >= 1:
+        top_exit = str(exit_top[0][0])
+    trials = []
+    for t in pipe.get("active_trials") or []:
+        if isinstance(t, dict):
+            trials.append(f"{t.get('trial_id')}:{t.get('status')}")
+        else:
+            trials.append(str(t))
+    payload = {
+        "goal": goal.get("label"),
+        "score": goal.get("score_0_100"),
+        "phase2": path.get("phase2_ready"),
+        "path_health": path.get("path_health"),
+        "recent_r": _round_num(path.get("recent_return_pct"), 1),
+        "window_r": _round_num(path.get("window_return_pct"), 1),
+        "mtd": _round_num(mp.get("current_mtd_return_pct"), 1),
+        "gap": _round_num(mp.get("current_mtd_gap_usd"), 0),
+        "tax": _round_num(mp.get("current_mtd_process_tax_usd"), 0),
+        "leaks": mp.get("current_leak_counts") or {},
+        "ss3": int(ss3.get("count_2h") or 0),
+        "opt_hint": opt.get("deployment_hint"),
+        "opt_winner": opt.get("opt_winner"),
+        "regime": pipe.get("live_regime"),
+        "trials": sorted(trials),
+        "top_exit7": top_exit,
+        "props": sorted(_norm_title(p.get("title") or "") for p in proposals),
+        "flags": sorted(str(x) for x in (board.get("material_flags") or [])),
+    }
+    raw = json.dumps(payload, sort_keys=True, default=str)
+    return hashlib.sha256(raw.encode()).hexdigest()[:16]
 
 
 def _now() -> datetime:
@@ -671,12 +729,20 @@ def _blockers(board: Dict[str, Any]) -> List[str]:
 def compose_review(board: Dict[str, Any]) -> Dict[str, Any]:
     proposals = _build_proposals(board)
     goal = board.get("goal") or {}
+    path = board.get("path") or {}
+    mp = board.get("month_path") or {}
+    sig = signal_fingerprint(board, proposals)
+    prev_sig = PREV_SIGNAL.read_text().strip() if PREV_SIGNAL.exists() else ""
+    signal_changed = (not prev_sig) or (prev_sig != sig)
+    # Full essay always on disk. TG only on signal move / new proposals / force.
+    # OFF_TRACK alone is NOT enough to re-page the same story daily.
+    tg_deliver = bool(proposals) or signal_changed
     review = {
-        "schema": "analyst_daily_review_v2",
+        "schema": "analyst_daily_review_v3",
         "as_of": _now().isoformat().replace("+00:00", "Z"),
         "scoreboard_as_of": board.get("as_of"),
         "goal": goal,
-        "month_path": board.get("month_path") or {},
+        "month_path": mp,
         "working": _working(board),
         "not_working": _not_working(board),
         "needs_change": _needs_change(board, proposals),
@@ -685,21 +751,115 @@ def compose_review(board: Dict[str, Any]) -> Dict[str, Any]:
         "blockers": _blockers(board),
         "proposals": proposals,
         "material_flags": board.get("material_flags"),
-        "material": bool(board.get("material")) or bool(proposals) or goal.get("label") != "ON_TRACK",
-        "voice": "management_report_v1",
+        # material = worth writing full board to disk / history (still true if off-track)
+        "material": bool(board.get("material"))
+        or bool(proposals)
+        or goal.get("label") != "ON_TRACK"
+        or signal_changed,
+        "tg_deliver": tg_deliver,
+        "signal_hash": sig,
+        "signal_changed": signal_changed,
+        "voice": "management_report_v2_short_delta",
+        "phase2_ready": path.get("phase2_ready"),
+        "path_health": path.get("path_health"),
+        "live_regime": (board.get("pipeline") or {}).get("live_regime"),
+        "opt_hint": (board.get("opt") or {}).get("deployment_hint"),
     }
     body = format_review_text(review)
     content_hash = hashlib.sha256(body.encode()).hexdigest()[:16]
     review["content_hash"] = content_hash
     prev = PREV_HASH.read_text().strip() if PREV_HASH.exists() else ""
     review["unchanged_vs_prior"] = bool(prev and prev == content_hash)
-    if review["unchanged_vs_prior"] and not proposals and goal.get("label") == "ON_TRACK":
+    if review["unchanged_vs_prior"] and not proposals and not signal_changed:
         review["material"] = False
+        review["tg_deliver"] = False
     return review
 
 
+def format_tg_card(review: Dict[str, Any]) -> str:
+    """Short Telegram card — deltas only, no 8-section essay."""
+    g = review.get("goal") or {}
+    mp = review.get("month_path") or {}
+    as_of = review.get("as_of") or ""
+    when = as_of
+    if "T" in as_of:
+        when = as_of.replace("+00:00", "Z").replace("T", " ")[:16]
+
+    label = g.get("label") or "UNKNOWN"
+    score = g.get("score_0_100")
+    mtd = mp.get("current_mtd_return_pct")
+    if mtd is None:
+        mtd = g.get("month_path_mtd_pct")
+    gap = mp.get("current_mtd_gap_usd")
+    if gap is None:
+        gap = g.get("month_path_gap_usd")
+    tax = mp.get("current_mtd_process_tax_usd")
+    if tax is None:
+        tax = g.get("month_path_process_tax_usd")
+    tgt = mp.get("target_monthly_pct") or g.get("target_monthly_pct") or 5.0
+
+    lines: List[str] = [
+        f"Analyst · {when}",
+        (
+            f"{label} ({score}/100) · phase2={'GO' if review.get('phase2_ready') else 'NO-GO'} · "
+            f"path={review.get('path_health') or 'n/a'} · regime={review.get('live_regime') or 'n/a'}"
+        ),
+    ]
+    meter_bits = []
+    if mtd is not None:
+        try:
+            meter_bits.append(f"MTD {_fmt_pct(float(mtd))}")
+        except (TypeError, ValueError):
+            pass
+    if gap is not None:
+        try:
+            meter_bits.append(f"gap {_fmt_usd(float(gap))} to ~{float(tgt):g}%")
+        except (TypeError, ValueError):
+            pass
+    if tax is not None:
+        try:
+            tax_f = float(tax)
+            if abs(tax_f) >= 1:
+                meter_bits.append(f"tax {_fmt_usd(tax_f)}")
+        except (TypeError, ValueError):
+            pass
+    if meter_bits:
+        lines.append(" · ".join(meter_bits))
+
+    needs = [str(x).strip() for x in (review.get("needs_change") or []) if str(x).strip()]
+    skip_prefixes = (
+        "main job remains moving us from",
+        "keep phase 3 earn and phase 4 scale closed",
+        "no forced change this cycle",
+    )
+    delta_needs = [
+        n for n in needs if not any(n.lower().startswith(p) for p in skip_prefixes)
+    ][:3]
+    if delta_needs:
+        lines.append("Δ")
+        for n in delta_needs:
+            lines.append(f"• {n}")
+
+    props = review.get("proposals") or []
+    if props:
+        lines.append("Call")
+        for i, p in enumerate(props[:3], 1):
+            title = p.get("title") or "Untitled"
+            pr = p.get("priority") or ""
+            pr_bit = f" ({pr})" if pr else ""
+            lines.append(f"{i}. {title}{pr_bit}")
+        lines.append('Reply "proceed with 1" / "wait" / "none".')
+    else:
+        lines.append("Call: none new")
+
+    if not review.get("signal_changed") and not props:
+        lines.append("(signal unchanged — full board on disk)")
+    lines.append("")
+    return "\n".join(lines)
+
+
 def format_review_text(review: Dict[str, Any]) -> str:
-    """Management-report voice: short prose paragraphs, not dumpster tuples."""
+    """Full management report for disk / --force. Not the default TG body."""
     g = review.get("goal") or {}
     as_of = review.get("as_of") or ""
     when = as_of
@@ -719,7 +879,6 @@ def format_review_text(review: Dict[str, Any]) -> str:
     ]
     if north:
         lines.append(north if north.endswith(".") else north + ".")
-    # fold notes into one readable sentence where possible
     if notes:
         clean = []
         for n in notes:
@@ -730,14 +889,16 @@ def format_review_text(review: Dict[str, Any]) -> str:
             elif "path health" in sl or sl.startswith("path health"):
                 s = "equity path is still declining"
             elif "recent path soft" in sl or "recent path" in sl:
-                # pull numbers if present
                 m = re.search(
                     r"recent[=:\s]*([+\-]?\d+(?:\.\d+)?).*window[=:\s]*([+\-]?\d+(?:\.\d+)?)",
                     s,
                     re.I,
                 )
                 if m:
-                    s = f"recent path about {float(m.group(1)):+.1f}%, window about {float(m.group(2)):+.1f}%"
+                    s = (
+                        f"recent path about {float(m.group(1)):+.1f}%, "
+                        f"window about {float(m.group(2)):+.1f}%"
+                    )
                 else:
                     s = "recent repair path is still soft"
             elif "deposit-adj" in sl or "go-live return" in sl:
@@ -758,13 +919,12 @@ def format_review_text(review: Dict[str, Any]) -> str:
                 elif m:
                     s = f"month-path MTD {float(m.group(1)):+.1f}% vs ~5% bar"
                 elif "hit_rate" in sl:
-                    s = s  # leave
+                    s = s
                 else:
                     s = "month-path meter updated"
             elif "test capacity free" in sl:
                 s = "offline test capacity is free"
             clean.append(s)
-        # de-dupe while preserving order
         seen = set()
         uniq = []
         for c in clean:
@@ -783,7 +943,6 @@ def format_review_text(review: Dict[str, Any]) -> str:
             lines.append(body_items[0])
         else:
             for it in body_items:
-                # light bullets still ok for scanability, but sentences not dumps
                 lines.append(f"• {it}")
         lines.append("")
 
@@ -801,7 +960,6 @@ def format_review_text(review: Dict[str, Any]) -> str:
     else:
         for i, p in enumerate(props, 1):
             why = str(p.get("why") or "").strip()
-            # humanize raw why fragments
             why = why.replace("phase2_ready=False", "Phase 2 not ready")
             why = re.sub(r"verdict=NO-GO[^\]]*", "stabilize bar unmet", why)
             why = re.sub(r"health=declining\s*", "path declining; ", why)
@@ -885,6 +1043,8 @@ def persist_review(review: Dict[str, Any], body: str) -> None:
     OUT_JSON.write_text(json.dumps(review, indent=2, default=str))
     OUT_TXT.write_text(body)
     PREV_HASH.write_text(review.get("content_hash") or "")
+    if review.get("signal_hash"):
+        PREV_SIGNAL.write_text(str(review.get("signal_hash")))
     try:
         with HISTORY.open("a") as f:
             f.write(
@@ -893,8 +1053,11 @@ def persist_review(review: Dict[str, Any], body: str) -> None:
                         "as_of": review.get("as_of"),
                         "goal": (review.get("goal") or {}).get("label"),
                         "material": review.get("material"),
+                        "tg_deliver": review.get("tg_deliver"),
+                        "signal_changed": review.get("signal_changed"),
                         "n_proposals": len(review.get("proposals") or []),
                         "content_hash": review.get("content_hash"),
+                        "signal_hash": review.get("signal_hash"),
                     },
                     default=str,
                 )
@@ -929,14 +1092,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     persist_review(review, body)
 
     should_print = bool(args.force or args.print)
+    print_full = bool(args.force or args.print)
     if args.deliver and not should_print:
-        should_print = bool(review.get("material"))
+        # Cron: short card only when signal moved or new proposals.
+        should_print = bool(review.get("tg_deliver"))
+        print_full = False
     if not args.deliver and not should_print:
-        # default CLI: print for human runs
+        # default CLI: print full board for human runs
         should_print = True
+        print_full = True
 
     if should_print:
-        print(body, end="")
+        out = body if print_full else format_tg_card(review)
+        print(out, end="")
     return 0
 
 

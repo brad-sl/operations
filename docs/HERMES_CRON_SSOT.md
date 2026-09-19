@@ -41,7 +41,7 @@ Rebalance 09:05/21:05 · RSI */15 · X 09:00/21:00 · Adanos Reddit shadow **08:
 ops-triage 06:00 TG **only when actionable** (empty stdout on OK) · **pre-ship quality nightly 04:15 TG fail-only** · ops-issue-loop 07/13/19 local · ops-engineer */30 · kanban backup */15 + daily 03:00 · git-daily 04:30 · llm-token rollup 05:05 · master-test pickup/scan TG only when work · analyst-test-strategy Mon 10:00
 
 ### C — Operator briefs (read-only surfaces)
-daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30
+daily-dose 08:00 · **analyst-daily-review 10:15 TG short-delta only (silent if signal unchanged)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30
 
 ### D — Shadow / research still active (own state only — **not** config writers)
 | Job | Why still on |

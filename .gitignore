@@ -85,3 +85,8 @@ data/state/rsi_event_x_probe_latest.json
 data/state/rsi_event_x_probe_events.jsonl
 data/state/x_query_budget.json
 data/state/rebalance_x_candidates_latest.json
+
+# Jev lab shadow
+data/state/jev_lab_latest.json
+data/state/jev_lab_crumbs.jsonl
+data/state/jev_lab_budget.json

@@ -101,3 +101,11 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Behavior: paid X only if RSI wash + stale eng + budget; no orders; quiet if idle
 - Caps: rsi lane ≤2 pair-queries/day; total ≤6; per-pair cooldown 6h
 - Companion measure: `run_rebalance_x_candidates.py` (held∪plan X universe; full-book replace still OFF)
+
+## phase6-jev-lab-shadow (Brad GO lab 2026-09-18)
+- Schedule: `30 7,11,15,19 * * *` America/Los_Angeles (job_id `172f3773f8b9`)
+- Script: `~/.hermes/scripts/run_jev_lab_shadow.sh` → `phase6/scripts/run_jev_lab_shadow_cron.sh`
+- Model: OpenRouter `~typesafe/jev-latest` via `POST /api/alpha/decisions`
+- Behavior: measure-only decision packets (BTC/ETH default); crumbs + budget; **no orders**
+- Cap: lab max 24 calls/day (`data/state/jev_lab_budget.json`); quiet logs under state/
+- Delivery: local (no TG spam); isolation `scripts/phase6/test_isolation_jev_lab.py`

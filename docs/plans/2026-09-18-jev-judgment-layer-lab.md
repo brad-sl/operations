@@ -2,10 +2,11 @@
 
 > **For Hermes:** Lab / measure-only. No live orders, no tryout knobs, no X budget changes from this doc. Implement only after Brad GO on the **lab slice** below.
 
-**Status:** DESIGN — awaiting GO to staff lab harness  
+**Status:** LAB HARNESS SHIPPED (measure-only) — 2026-09-18/19  
 **Date:** 2026-09-18  
 **Source:** Brad + Grok dialog on TypeSafe Jev (System One model)  
-**Refs:** https://typesafe.ai · Cloudflare Workers AI `typesafe/jev` · docs.typesafe.ai primitives (noul / choice / score)
+**Access:** OpenRouter `POST /api/alpha/decisions` · model `~typesafe/jev-latest` (resolved `typesafe/jev-1.13-20260917` on first smoke)  
+**Refs:** https://openrouter.ai/~typesafe/jev-latest · https://typesafe.ai · docs.typesafe.ai primitives (noul / choice / score)
 
 ---
 
@@ -124,39 +125,49 @@ data/state/jev_lab_crumbs.jsonl            # gitignored
 
 ---
 
-## 6. Access / ops prerequisites
+## 6. Access / ops (SHIPPED path)
 
-- [ ] TypeSafe / Cloudflare access (API token) — **Brad**  
-- [ ] Pin model id (`jev-1.13.0` or current stable)  
-- [ ] Secrets in env/vault — never in git  
-- [ ] Daily call + $ cap in lab config  
-- [ ] Offline fixture mode for CI (recorded responses)
+- [x] OpenRouter key in `~/.hermes/.env` (`OPENROUTER_API_KEY`) — never git  
+- [x] Model default `~typesafe/jev-latest` (smoke resolved `typesafe/jev-1.13-20260917`)  
+- [x] Daily call cap lab default **24**/day (`data/state/jev_lab_budget.json`)  
+- [x] offline `--dry-run` + isolation mock for CI  
+- Optional later: pin exact `typesafe/jev-1.13-…` via `JEV_MODEL` / `--model` once version freezes  
 
-Without API access: ship **harness + fixtures + schema tests** only; mark LAB_BLOCKED_ACCESS.
+**Endpoint:** `POST https://openrouter.ai/api/alpha/decisions`  
+Body: `{ "model", "state", "questions" }` → typed `answers` (noul/choice/score).
+
+### First live smoke (2026-09-19 UTC)
+
+- BTC-USD · model `typesafe/jev-1.13-20260917` · **852 ms** · ~1006 in tok · cost ~**$0.000042**  
+- action=**hold** (0.86) · regime=**range** · setup_quality≈1.11 (thin/mediocre)  
+- fakeout noul=**0.17** · should_trade=**0.27** · paper_buy_tag=**false** · `would_order` always false  
 
 ---
 
-## 7. Staffing tasks (after GO)
+## 7. Staffing tasks
 
-| Task | Deliverable |
-|------|-------------|
-| L0 | This plan + MASTER stub (done when committed) |
-| L1 | JudgmentPort + mock adapter + isolation schema test |
-| L2 | State packet builder from live snapshot (BTC/ETH) |
-| L3 | Shadow runner cron 4×/day or on RSI shadow tick — log only |
-| L4 | 7d rollup report: calibration + knife agreement + cost |
-| L5 | Stop for Brad: promote to shadow feature or park |
+| Task | Status | Deliverable |
+|------|--------|-------------|
+| L0 | SHIPPED | This plan + MASTER |
+| L1 | SHIPPED | `JudgmentPort` + OpenRouter adapter + isolation |
+| L2 | SHIPPED | `decision_packet` state + default fan-out questions |
+| L3 | SHIPPED | `run_jev_lab_shadow` + crumbs + budget + cron wrapper |
+| L4 | OPEN | 7d rollup: calibration + knife agreement + cost |
+| L5 | OPEN | Brad stop: shadow feature beside gates vs park |
 
-**Estimate:** L1–L3 half-day to one day if API works; L4 needs calendar time not coding time.
+**Run:**
+
+```bash
+python3 scripts/phase6/run_jev_lab_shadow.py --dry-run
+python3 scripts/phase6/run_jev_lab_shadow.py --pairs BTC-USD,ETH-USD
+python3 scripts/phase6/test_isolation_jev_lab.py
+```
 
 ---
 
 ## 8. Plain English for Brad
 
-**Yes, validation test is justified** — as a **judgment sensor lab**, same family as knife/RSI shadows, not a new trading bot.
+**Lab harness is live (measure-only).** OpenRouter Jev answers typed questions on compact BTC/ETH state; we log crumbs and never place orders.
 
-**Do first:** one pair, fan-out packet, log everything, confidence-gated *paper* tags only.  
-**Do not:** let Jev buy, promote, or own risk.  
-**Decide later:** whether fakeout / materiality noul beats our current brittle rules enough to sit *beside* (not on top of) the gate stack.
-
-**GO needed to code L1–L3.** Access token is the long pole.
+**Next:** let it collect ~7d crumbs (cron), then L4 calibration vs knife/RSI shadows.  
+**Still no:** Jev buy, promote, or risk ownership.

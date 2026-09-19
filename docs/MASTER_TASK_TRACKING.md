@@ -12318,6 +12318,22 @@ Analyst **free to offline-backtest any proposal** to validate before active CR. 
 
 ---
 
+
+### ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902 — FINAL REPORT READY (2026-09-19)
+**Status:** `REVIEW_PENDING` — awaiting Brad `decide` (not CLOSED).
+**Report:** `reports/POLYMARKET_INFLUENCE_RERUN_FINAL_20260919.md`
+**Machine:** `reports/POLYMARKET_INFLUENCE_RERUN_20260902.md`
+**Outcome:** `inconclusive_sparse_N` · primary_pass=false · n_primary=10 (crypto)
+**Rec enum:** `continue_observe_only` · live_promote=false
+**Sensor:** OK (52 post-fix stamps, unique40, stdev0.06) — 024 stuck-0.5 fixed.
+**Edge:** unproven (risk_on n=0; LINK-heavy; stables inflate all-sell join).
+**Inbox:** `docs/testing/inbox/REVIEW_ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902.md`
+**Decide (when ready):**
+```bash
+.venv/bin/python3 phase6/research/trial_cycle.py decide ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902 continue_observe_only \
+  --note 'Sensor OK; edge unproven; no live influence' --follow-on none
+```
+
 ## ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902
 
 **Type:** test  

@@ -121,11 +121,16 @@ def _load_sells() -> List[Dict[str, Any]]:
         )
         if not ts:
             continue
+        # Ledger SSOT often stamps plain `pnl` / `pnl_pct` (not only realized_*).
         pnl = t.get("realized_pnl_usd")
         if pnl is None:
             pnl = t.get("realized_pnl")
         if pnl is None:
             pnl = t.get("pnl_usd")
+        if pnl is None:
+            pnl = t.get("pnl")
+        if pnl is None:
+            pnl = t.get("net_pnl")
         try:
             pnl_f = float(pnl) if pnl is not None else None
         except Exception:
@@ -135,8 +140,10 @@ def _load_sells() -> List[Dict[str, Any]]:
                 "ts": ts,
                 "pair": t.get("pair") or t.get("product_id") or t.get("symbol"),
                 "pnl": pnl_f,
+                "pnl_pct": t.get("pnl_pct"),
                 "exit_reason": t.get("exit_reason") or t.get("reason"),
                 "side": side,
+                "qty": t.get("qty") or t.get("quantity") or t.get("size"),
             }
         )
     sells.sort(key=lambda x: x["ts"])

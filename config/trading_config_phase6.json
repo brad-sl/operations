@@ -8,7 +8,7 @@
       "XRP-USD",
       "DOGE-USD",
       "HYPE-USD",
-      "AVAX-USD",
+      "SUI-USD",
       "LINK-USD",
       "TIA-USD",
       "ADA-USD",
@@ -175,7 +175,8 @@
       "STX-USD",
       "WLD-USD",
       "HYPE-USD",
-      "TIA-USD"
+      "TIA-USD",
+      "SUI-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

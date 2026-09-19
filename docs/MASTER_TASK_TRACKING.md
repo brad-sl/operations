@@ -11,6 +11,17 @@
 
 ## STREAMLINED-ACTION-ARCH-20260918 — PARTIAL SHIP (Tasks 1+6)
 
+### TRIAL-CLOSEOUT-WATCH-20260919 — anti quiet-death
+**Status:** SHIPPED measure+notify.
+**Problem:** Trials can hit `final_at` and die quietly — no summary, no Kanban/MASTER decision, no Brad ask.
+**Fix:** `phase6/research/trial_closeout_watch.py` + cron `trial-closeout-watch` 09:20/18:20 PT.
+- Past-final still open → `docs/testing/inbox/OVERDUE_<id>.md` + TG card
+- REPORT_READY → forces `review-request` packet
+- REVIEW_PENDING overdue → re-ping
+- Never auto-decide / no live knobs
+**Live debt at ship:** ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902 RUNNING past final (no report).
+
+
 **Type:** platform / action architecture (scale + dedupe)  
 **Date:** 2026-09-18  
 **Status:** **PARTIAL SHIP** — domain dispatcher + BookRebalanceAction dry_run refuse-new-seats (Tasks 1+6); Tasks 2–5,7–10 open  

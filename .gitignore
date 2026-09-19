@@ -104,3 +104,10 @@ data/state/free_rss_jev_*.json
 data/state/free_rss_jev_*.jsonl
 data/state/free_rss_jev_*.md
 logs/free_rss_jev/
+
+# Trial closeout watch (runtime)
+data/state/trial_closeout_watch_*.json
+data/state/trial_closeout_watch_*.md
+data/state/trial_closeout_watch_*.txt
+data/state/trial_closeout_watch_fingerprint.txt
+data/state/trial_closeout_watch_history.jsonl

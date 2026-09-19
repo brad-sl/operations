@@ -298,29 +298,60 @@ def _persist(result: Dict[str, Any], board: Dict[str, Any]) -> None:
     MD_REPORT.write_text("\n".join(lines) + "\n")
 
 
-def telegram_summary(result: Dict[str, Any]) -> str:
-    """Short TG body; empty when dry idle with nothing selected."""
+def telegram_summary(result: Dict[str, Any], *, floor: float = 0.30) -> str:
+    """Operator TG only when it matters (Brad A+C 2026-09-19).
+
+    Ping when:
+      - paid X + at least one pair clears tryout floor (latch/would-tryout path), or
+      - hard fail (fetch attempted and failed).
+    Silent (empty) when:
+      - idle / no wash, dry would-probe, budget block, paid-but-under-floor.
+    Under-floor spend stays in crumbs/logs — not a daily operator alert.
+    """
     if not result:
         return ""
-    fetched = result.get("fetched") or []
-    if result.get("spend_x_executed"):
-        scores = result.get("x_scores") or {}
-        bits = []
-        for p in fetched:
-            row = scores.get(p) or {}
-            bits.append(f"{p} x={row.get('sentiment')}")
-        return (
-            "RSI-event X PROBE paid: "
-            + ("; ".join(bits) if bits else str(fetched))
-            + " · live_gate=OFF · no orders"
-        )
-    sel = result.get("selected_pre") or []
-    if not sel and result.get("dry_run"):
+
+    # Hard fail: spend path tried X and fetch broke
+    meta = result.get("fetch_meta") or {}
+    if (
+        not result.get("dry_run")
+        and result.get("spend_x_requested")
+        and meta
+        and meta.get("ok") is False
+    ):
+        pe = str(result.get("plain_english") or "X fetch failed")[:280]
+        return f"RSI-event X PROBE FAIL: {pe}"
+
+    if not result.get("spend_x_executed"):
+        # idle, dry, budget block — log only
         return ""
-    if result.get("dry_run"):
-        pairs = [s.get("pair") for s in sel if s.get("pair")]
-        return (
-            f"RSI-event X PROBE dry: would {pairs} "
-            f"budget={(result.get('budget') or {}).get('reason')} · no spend"
-        )
-    return str(result.get("plain_english") or "")[:400]
+
+    fetched = list(result.get("fetched") or [])
+    latches = result.get("latch_writes") or {}
+    scores = result.get("x_scores") or {}
+    fl = float(floor)
+    clears: list[str] = []
+    for p in fetched:
+        row_l = latches.get(p) if isinstance(latches, dict) else None
+        if isinstance(row_l, dict) and row_l.get("clears_floor"):
+            clears.append(f"{p} x={row_l.get('score')}")
+            continue
+        row_s = scores.get(p) if isinstance(scores, dict) else None
+        if isinstance(row_s, dict):
+            raw = row_s.get("sentiment")
+            if raw is None:
+                continue
+            try:
+                sf = float(raw)
+            except (TypeError, ValueError):
+                continue
+            if sf >= fl:
+                clears.append(f"{p} x={sf}")
+    if not clears:
+        # paid but all under floor — crumbs only
+        return ""
+    return (
+        "RSI-event X PROBE clear: "
+        + "; ".join(clears)
+        + " · latch path · live_gate=OFF · no orders"
+    )

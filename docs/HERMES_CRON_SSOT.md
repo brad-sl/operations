@@ -50,7 +50,7 @@ daily-dose 08:00 · **analyst-daily-review 10:15 TG (material only)** · analyst
 | `phase6-discovery-retro-board-daily` | Lookback: gainers × frozen contenders + T-7 forward book (research only) |
 | `phase6-basket-pick-metrics-refresh` | Open promote pick still `status=open` |
 | `phase6-platform-metrics-spine` `63cc2c821018` | Full pair lifecycle + runner ops board · **07:45 PT daily** · TG short board · measure-only · never auto-promote/eject |
-| `phase6-rsi-event-x-tryout-shadow` `36a4ade79e1c` | RSI-wash + stale eng → top-2 would-query/tryout shadow · **07:20/11:20/15:20/19:20 PT** · quiet TG · **no orders / no paid X** · ATTENTION_ONLY |
+| `phase6-rsi-event-x-tryout-shadow` `36a4ade79e1c` | RSI-wash + stale eng → top-2 would-query/tryout shadow · **07:20/11:20/15:20/19:20 PT** · **local only** (no TG) · **no orders / no paid X** |
 | `phase6-knife-filter-shadow` `5bd102bfd07e` | Luck ladder R1 knife vs wash arms CF · **07:30/19:30 PT** · **local only** (no TG — board is ATTENTION_ONLY / not daily-useful) · **no orders / no live block** |
 | `phase6-promote-graduation-chart` `af423d285b52` | P2 promote funnel SVG + claim bar · **12:40 PT daily** (after pick-metrics) · TG short · dash `/api/promote-graduation` |
 | `phase6-regime-arm-switch-metrics` `5036cfdbc289` | P3 flip success join · after switch cron · TG short · dash `/api/regime-arm-metrics` · claim OFF until N |
@@ -98,9 +98,11 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 ## phase6-rsi-event-x-probe (Brad GO validate 2026-09-18)
 - Schedule: `25 7,11,15,19 * * *` America/Los_Angeles (5m after shadow tick)
 - Script: `~/.hermes/scripts/run_rsi_event_x_probe.sh` (PROBE_GO=1)
-- Behavior: paid X only if RSI wash + stale eng + budget; no orders; quiet if idle
+- Behavior: paid X only if RSI wash + stale eng + budget; no orders
+- **TG (A+C 2026-09-19):** only when paid X **and** score ≥ floor (latch path), or hard fetch fail. Under-floor paid / idle / dry → empty stdout (crumbs only)
 - Caps: rsi lane ≤2 pair-queries/day; total ≤6; per-pair cooldown 6h
 - Companion measure: `run_rebalance_x_candidates.py` (held∪plan X universe; full-book replace still OFF)
+- Shadow companion `phase6-rsi-event-x-tryout-shadow` is **local only** (no TG twin)
 
 ## phase6-jev-lab-shadow (Brad GO lab 2026-09-18)
 - Schedule: `30 7,11,15,19 * * *` America/Los_Angeles (job_id `172f3773f8b9`)

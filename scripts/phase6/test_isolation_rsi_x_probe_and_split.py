@@ -109,5 +109,81 @@ class TestProbeImportDry(unittest.TestCase):
             self.assertEqual(r.get("live_gate"), "OFF")
 
 
+class TestProbeTelegramQuiet(unittest.TestCase):
+    """A+C: TG only on clear floor or hard fail — not under-floor paid."""
+
+    def test_under_floor_paid_silent(self):
+        from phase6.core.rsi_event_x_probe import telegram_summary
+
+        body = telegram_summary(
+            {
+                "dry_run": False,
+                "spend_x_requested": True,
+                "spend_x_executed": True,
+                "fetched": ["ZEC-USD"],
+                "x_scores": {"ZEC-USD": {"sentiment": 0.1585}},
+                "latch_writes": {
+                    "ZEC-USD": {"score": 0.1585, "clears_floor": False, "latch": None}
+                },
+                "fetch_meta": {"ok": True},
+            },
+            floor=0.30,
+        )
+        self.assertEqual(body, "")
+
+    def test_clear_floor_pings(self):
+        from phase6.core.rsi_event_x_probe import telegram_summary
+
+        body = telegram_summary(
+            {
+                "dry_run": False,
+                "spend_x_requested": True,
+                "spend_x_executed": True,
+                "fetched": ["ADA-USD"],
+                "x_scores": {"ADA-USD": {"sentiment": 0.55}},
+                "latch_writes": {
+                    "ADA-USD": {
+                        "score": 0.55,
+                        "clears_floor": True,
+                        "latch": "write_latches_from_scores",
+                    }
+                },
+                "fetch_meta": {"ok": True},
+            },
+            floor=0.30,
+        )
+        self.assertIn("PROBE clear", body)
+        self.assertIn("ADA-USD", body)
+
+    def test_fetch_fail_pings(self):
+        from phase6.core.rsi_event_x_probe import telegram_summary
+
+        body = telegram_summary(
+            {
+                "dry_run": False,
+                "spend_x_requested": True,
+                "spend_x_executed": False,
+                "fetched": [],
+                "fetch_meta": {"ok": False, "returncode": 1},
+                "plain_english": "X fetch failed for ['ZEC-USD']: boom",
+            },
+            floor=0.30,
+        )
+        self.assertIn("PROBE FAIL", body)
+
+    def test_dry_idle_silent(self):
+        from phase6.core.rsi_event_x_probe import telegram_summary
+
+        body = telegram_summary(
+            {
+                "dry_run": True,
+                "spend_x_executed": False,
+                "selected_pre": [{"pair": "ZEC-USD"}],
+            },
+            floor=0.30,
+        )
+        self.assertEqual(body, "")
+
+
 if __name__ == "__main__":
     unittest.main()

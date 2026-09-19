@@ -48,7 +48,7 @@ def main() -> int:
     if args.json:
         print(json.dumps(result, indent=2, default=str))
         return 0
-    body = telegram_summary(result)
+    body = telegram_summary(result, floor=float(args.floor))
     if args.telegram or args.quiet_ok:
         if body:
             print(body)

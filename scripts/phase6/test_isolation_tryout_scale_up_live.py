@@ -34,7 +34,7 @@ def test_not_armed_blocks_plan():
     decision = {
         "schema": "tryout_scale_up_brad_decision_v1",
         "live_apply": False,
-        "cf_bar": {"require": False, "min_scored": 8},
+        "cf_bar": {"require": False, "min_scored": 8, "max_waived_steps": 2, "waived_steps_used": 0},
     }
     with patch.object(live, "load_decision", return_value=decision), patch.object(
         live, "kill_switch_on", return_value=False
@@ -59,7 +59,7 @@ def test_armed_cf_waived_plans():
     decision = {
         "schema": "x",
         "live_apply": True,
-        "cf_bar": {"require": False},
+        "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0},
     }
     with patch.object(live, "load_decision", return_value=decision), patch.object(
         live, "kill_switch_on", return_value=False
@@ -78,6 +78,38 @@ def test_armed_cf_waived_plans():
     assert p["live_armed"] is True
     assert p["n_planned"] == 1
     assert p["plans"][0]["step_usd"] == 25.0
+    assert p["cf_gate"]["waived"] is True
+
+
+def test_cf_waive_budget_exhausted_blocks():
+    decision = {
+        "schema": "x",
+        "live_apply": True,
+        "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 2},
+    }
+    with patch.object(live, "load_decision", return_value=decision), patch.object(
+        live, "kill_switch_on", return_value=False
+    ), patch.object(live, "load_daily", return_value={
+        "utc_day": "2026-09-19", "n_steps": 0, "usd_spent": 0.0, "pairs": [], "events": []
+    }), patch.object(shadow, "_load_json", return_value={"lots": {}}), patch.object(
+        live, "_write_json"
+    ):
+        p = live.plan_live_steps(
+            decisions=[_would()],
+            board={"cf": {"n": 0, "edge_class": "INSUFFICIENT_N"}},
+            decision=decision,
+            now=datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc),
+        )
+    assert p["n_planned"] == 0
+    assert p["cf_gate"]["ok"] is False
+    assert "exhausted" in p["cf_gate"]["reason"]
+
+
+def test_cf_waive_require_false_needs_budget():
+    decision = {"live_apply": True, "cf_bar": {"require": False, "max_waived_steps": 0}}
+    g = live.cf_bar_cleared({"n": 0, "edge_class": "INSUFFICIENT_N"}, decision=decision)
+    assert g["ok"] is False
+    assert "max_waived_steps=0" in g["reason"]
 
 
 def test_cf_bar_blocks_when_required():
@@ -99,7 +131,7 @@ def test_kill_switch_disarms():
 
 
 def test_apply_dry_run_never_calls_buy():
-    decision = {"live_apply": True, "cf_bar": {"require": False}}
+    decision = {"live_apply": True, "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0}}
     plan = {
         "plans": [
             {
@@ -130,7 +162,7 @@ def test_apply_dry_run_never_calls_buy():
 
 
 def test_apply_live_calls_buy_once():
-    decision = {"live_apply": True, "cf_bar": {"require": False}}
+    decision = {"live_apply": True, "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0}}
     plan = {
         "plans": [
             {
@@ -189,7 +221,7 @@ def test_apply_live_calls_buy_once():
 
 
 def test_apply_refuses_when_not_armed_even_with_go():
-    decision = {"live_apply": False, "cf_bar": {"require": False}}
+    decision = {"live_apply": False, "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0}}
     plan = {
         "plans": [
             {
@@ -216,7 +248,10 @@ def test_apply_refuses_when_not_armed_even_with_go():
 
 
 def test_daily_cap_blocks_second():
-    decision = {"live_apply": True, "cf_bar": {"require": False}}
+    decision = {
+        "live_apply": True,
+        "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0},
+    }
     with patch.object(live, "load_decision", return_value=decision), patch.object(
         live, "kill_switch_on", return_value=False
     ), patch.object(live, "load_daily", return_value={
@@ -237,6 +272,8 @@ def test_daily_cap_blocks_second():
 if __name__ == "__main__":
     test_not_armed_blocks_plan()
     test_armed_cf_waived_plans()
+    test_cf_waive_budget_exhausted_blocks()
+    test_cf_waive_require_false_needs_budget()
     test_cf_bar_blocks_when_required()
     test_kill_switch_disarms()
     test_apply_dry_run_never_calls_buy()

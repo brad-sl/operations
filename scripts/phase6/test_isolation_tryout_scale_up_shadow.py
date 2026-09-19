@@ -85,7 +85,7 @@ def test_would_scale_legacy_75_shell_still_in_band():
 def test_blocked_in_bank_zone():
     cfg = load_cfg()
     now = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
-    pos = _pos(unreal=0.05, mark=10.5)  # +5% past max band
+    pos = _pos(unreal=0.06, mark=10.6)  # past max band (B max 0.05)
     with patch(
         "phase6.core.tryout_scale_up_shadow.infer_open_lot_entry",
         return_value={
@@ -107,7 +107,8 @@ def test_blocked_in_bank_zone():
 
 
 def test_blocked_late_phase():
-    cfg = load_cfg()
+    """Strict phase list still blocks; B default allows 3–5 — pin [1,2] here."""
+    cfg = load_cfg({"require_phase_in": [1, 2]})
     now = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
     pos = _pos()
     with patch(
@@ -128,6 +129,32 @@ def test_blocked_late_phase():
         d = evaluate_scale_up(pos, cfg, now=now)
     assert d.status == "blocked", d
     assert any("phase=" in r for r in d.reasons)
+
+
+def test_b_loosen_allows_phase3_mild_red():
+    """Brad GO B: measure gates allow extension + mild red for paper CF."""
+    cfg = load_cfg()
+    now = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
+    pos = _pos(unreal=-0.002, mark=9.98)
+    with patch(
+        "phase6.core.tryout_scale_up_shadow.infer_open_lot_entry",
+        return_value={
+            "entry_price": 10.0,
+            "entry_ts": (now - timedelta(hours=1.5)).isoformat(),
+            "entry_reason": "quality_tryout",
+            "tryout_tagged_buy": True,
+        },
+    ), patch(
+        "phase6.core.tryout_scale_up_shadow._phase_and_structure",
+        return_value={"phase": 3, "phase_name": "extension", "structure_ok": True, "error": None},
+    ), patch(
+        "phase6.core.tryout_scale_up_shadow._load_json",
+        return_value={"lots": {}},
+    ):
+        d = evaluate_scale_up(pos, cfg, now=now)
+    assert d.status == "would_scale", d
+    assert cfg["min_hold_hours"] <= 1.0
+    assert 3 in cfg["require_phase_in"]
 
 
 def test_sticky_skip():
@@ -191,6 +218,7 @@ if __name__ == "__main__":
     test_would_scale_legacy_75_shell_still_in_band()
     test_blocked_in_bank_zone()
     test_blocked_late_phase()
+    test_b_loosen_allows_phase3_mild_red()
     test_sticky_skip()
     test_not_tryout_large_bag()
     test_cf_insufficient_n()

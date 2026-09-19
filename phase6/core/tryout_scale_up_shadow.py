@@ -51,10 +51,11 @@ DEFAULTS: Dict[str, Any] = {
     "tryout_min_usd": 18.0,  # $25 shell ± dust; was 40 (blind to $25)
     "step_usd": 25.0,  # one add: $25 → ~$50 (first rung); not $75→$150 jump
     "max_total_after_step_usd": 100.0,  # $25+$25 or legacy $75+$25
-    "min_hold_hours": 2.0,  # not scalp FOMO
-    "min_unrealized_r": 0.015,  # +1.5%
-    "max_unrealized_r": 0.038,  # below ~trail arm (+4%); don't scale into bank zone
-    "require_phase_in": [1, 2],  # ignition, trend
+    # B 2026-09-19 measure loosen — paper CF legs (not edge claim / not auto live)
+    "min_hold_hours": 1.0,  # was 2.0; still blocks pure scalp
+    "min_unrealized_r": -0.005,  # was +1.5%; mild red OK for measure N
+    "max_unrealized_r": 0.05,  # was 3.8%; still avoid deep bank zone
+    "require_phase_in": [1, 2, 3, 4, 5],  # was [1,2]; include extension/distribution for paper
     "require_structure_ok": True,
     "fee_haircut_rt": 0.0016,  # ~round-trip bps proxy for CF
     "sl_r": -0.03,
@@ -64,7 +65,8 @@ DEFAULTS: Dict[str, Any] = {
     "cf_prefer_scored": 12,
     # edge bar (ATTENTION_ONLY even if green): scale path mean excess vs tryout-only ≥ +0.5pp
     "cf_min_excess_pp": 0.005,
-    "shell_note": "Brad GO 2026-09-19: align shadow band to abs_cap $25 / max 4 seats",
+    "measure_profile": "B_loosen_20260919",
+    "shell_note": "Brad GO 2026-09-19 B: measure gates loosened for paper CF N",
 }
 
 
@@ -408,21 +410,52 @@ def evaluate_scale_up(
         )
 
     # already stepped? check open lots registry
+    # paper_scaled alone must NOT block live C apply — only live_scaled does.
     open_reg = _load_json(OPEN_LOTS_PATH, {"lots": {}})
     lots = open_reg.get("lots") if isinstance(open_reg, dict) else {}
-    if isinstance(lots, dict) and pair in lots and lots[pair].get("scaled"):
-        return ScaleDecision(
-            pair,
-            "skip",
-            held,
-            r,
-            hold_h,
-            None,
-            None,
-            0.0,
-            ["already_scaled_this_lot"],
-            {"lot": lot, "reg": lots.get(pair)},
-        )
+    if isinstance(lots, dict) and pair in lots:
+        meta = lots[pair] if isinstance(lots[pair], dict) else {}
+        if meta.get("live_scaled") or meta.get("status") == "live_open":
+            return ScaleDecision(
+                pair,
+                "skip",
+                held,
+                r,
+                hold_h,
+                None,
+                None,
+                0.0,
+                ["already_live_scaled_this_lot"],
+                {"lot": lot, "reg": meta},
+            )
+        if meta.get("scaled") and meta.get("status") == "paper_open":
+            # already have paper CF leg — shadow would_scale once only
+            return ScaleDecision(
+                pair,
+                "skip",
+                held,
+                r,
+                hold_h,
+                meta.get("phase") if isinstance(meta.get("phase"), int) else None,
+                None,
+                0.0,
+                ["already_paper_scaled_cf_leg"],
+                {"lot": lot, "reg": meta, "paper_cf_leg": True},
+            )
+        if meta.get("scaled") and not meta.get("status"):
+            # legacy rows treated as paper
+            return ScaleDecision(
+                pair,
+                "skip",
+                held,
+                r,
+                hold_h,
+                None,
+                None,
+                0.0,
+                ["already_scaled_this_lot"],
+                {"lot": lot, "reg": meta},
+            )
 
     if hold_h is not None and hold_h < _f(c.get("min_hold_hours"), 2.0):
         reasons.append(f"hold_hours={hold_h:.2f}<{c.get('min_hold_hours')}")
@@ -490,7 +523,9 @@ def _mark_open_lot_scaled(pair: str, decision: ScaleDecision, now: datetime) -> 
         reg = {"schema": SCHEMA, "lots": {}}
     lots = reg.setdefault("lots", {})
     lots[_norm_pair(pair)] = {
-        "scaled": True,
+        "scaled": True,  # paper CF leg registered
+        "paper_scaled": True,
+        "live_scaled": False,
         "scaled_at": _utc_iso(now),
         "held_usd_at_scale": decision.held_usd,
         "step_usd": decision.step_usd,

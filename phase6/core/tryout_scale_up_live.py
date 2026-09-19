@@ -107,12 +107,53 @@ def is_live_armed(decision: Optional[Dict[str, Any]] = None) -> bool:
     return d.get("live_apply") is True
 
 
+def _waive_usage(decision: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """C-waive budget: max_waived_steps vs waived_steps_used on decision.cf_bar."""
+    d: Dict[str, Any] = decision if isinstance(decision, dict) else load_decision()
+    raw_bar = d.get("cf_bar")
+    bar: Dict[str, Any] = raw_bar if isinstance(raw_bar, dict) else {}
+    max_w = int(bar.get("max_waived_steps") or 0)
+    used = int(bar.get("waived_steps_used") or 0)
+    return {"max": max_w, "used": used, "remaining": max(0, max_w - used)}
+
+
+def record_waived_step(pair: str, step_usd: float) -> Dict[str, Any]:
+    """Bump cf_bar.waived_steps_used after a real (non-dry) waived apply."""
+    path = shadow.DECISION_PATH
+    raw = _load_json(path, {})
+    if not isinstance(raw, dict):
+        raw = {}
+    bar_raw = raw.get("cf_bar")
+    bar: Dict[str, Any] = dict(bar_raw) if isinstance(bar_raw, dict) else {}
+    used = int(bar.get("waived_steps_used") or 0) + 1
+    bar["waived_steps_used"] = used
+    hist_raw = bar.get("waive_events")
+    hist: List[Any] = list(hist_raw) if isinstance(hist_raw, list) else []
+    hist.append(
+        {
+            "at": _utc_iso(),
+            "pair": shadow._norm_pair(pair),
+            "step_usd": float(step_usd),
+            "used_after": used,
+        }
+    )
+    bar["waive_events"] = hist[-20:]
+    raw["cf_bar"] = bar
+    raw["as_of"] = _utc_iso()
+    _write_json(path, raw)
+    return bar
+
+
 def cf_bar_cleared(
     cf: Optional[Dict[str, Any]] = None,
     decision: Optional[Dict[str, Any]] = None,
     cfg: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Return {ok, reason, waived}."""
+    """Return {ok, reason, waived}.
+
+    C 2026-09-19: require=false allows a **budgeted** waive (max_waived_steps).
+    Exhausted budget → fail until CF n clears or Brad raises budget.
+    """
     d: Dict[str, Any] = decision if isinstance(decision, dict) else load_decision()
     c: Dict[str, Any] = cfg if isinstance(cfg, dict) else shadow.load_cfg()
     raw_bar = d.get("cf_bar")
@@ -122,10 +163,29 @@ def cf_bar_cleared(
         require = LIVE_SAFETY["require_cf_bar"]
     require = bool(require)
     if not require:
+        usage = _waive_usage(d)
+        if usage["max"] <= 0:
+            return {
+                "ok": False,
+                "waived": False,
+                "reason": "cf_bar.require=false but max_waived_steps=0",
+            }
+        if usage["remaining"] <= 0:
+            return {
+                "ok": False,
+                "waived": False,
+                "reason": (
+                    f"cf_waive_budget_exhausted used={usage['used']}/{usage['max']}"
+                ),
+            }
         return {
             "ok": True,
             "waived": True,
-            "reason": "cf_bar.require=false in decision (ATTENTION_ONLY path)",
+            "reason": (
+                f"cf_bar.waive remaining={usage['remaining']}/{usage['max']} "
+                f"(Brad C GO; not edge)"
+            ),
+            "waive_usage": usage,
         }
     cf_map: Dict[str, Any] = cf if isinstance(cf, dict) else {}
     n = int(cf_map.get("n") or cf_map.get("n_scored") or 0)
@@ -244,11 +304,30 @@ def plan_live_steps(
             continue
         pair = shadow._norm_pair(row.get("pair") or "")
         status = str(row.get("status") or "")
-        if status != "would_scale":
+        reasons_shadow = list(row.get("reasons") or [])
+        # B paper CF leg already registered → still eligible for C live plan
+        paper_leg = (
+            status == "skip"
+            and any("paper_scaled" in str(x) for x in reasons_shadow)
+        ) or (
+            status == "skip"
+            and "already_paper_scaled_cf_leg" in reasons_shadow
+        )
+        if status != "would_scale" and not paper_leg:
             continue
         reasons: List[str] = []
         held = _f(row.get("held_usd"))
-        step = min(_f(row.get("step_usd"), max_step), max_step)
+        # paper leg may have step_usd=0 on skip row — pull from registry/cfg
+        step = _f(row.get("step_usd"), 0.0)
+        if step < min_step - 1e-9:
+            open_reg0 = shadow._load_json(shadow.OPEN_LOTS_PATH, {"lots": {}})
+            lots0 = open_reg0.get("lots") if isinstance(open_reg0, dict) else {}
+            meta0 = (lots0 or {}).get(pair) if isinstance(lots0, dict) else {}
+            if isinstance(meta0, dict):
+                step = _f(meta0.get("step_usd"), max_step)
+            if step < min_step - 1e-9:
+                step = max_step
+        step = min(step, max_step)
         if step < min_step - 1e-9:
             reasons.append(f"step={step:.2f}<min_step={min_step}")
         if allow_set is not None and pair not in allow_set:
@@ -263,11 +342,14 @@ def plan_live_steps(
             reasons.append("daily_max_usd")
         if pair in (daily.get("pairs") or []):
             reasons.append("already_scaled_today")
-        # open lot already scaled (shadow or live)
+        # open lot already live-scaled (paper CF leg alone is OK for live C apply)
         open_reg = shadow._load_json(shadow.OPEN_LOTS_PATH, {"lots": {}})
         lots = open_reg.get("lots") if isinstance(open_reg, dict) else {}
-        if isinstance(lots, dict) and pair in lots and lots[pair].get("scaled"):
-            reasons.append("already_scaled_this_lot")
+        if isinstance(lots, dict) and pair in lots:
+            meta = lots[pair] if isinstance(lots[pair], dict) else {}
+            if meta.get("live_scaled") or meta.get("status") == "live_open":
+                reasons.append("already_live_scaled_this_lot")
+            # paper_open / paper_scaled: allow live plan (C seed) — do not block
         if not armed:
             reasons.append("live_apply_not_armed")
         if not cf_gate["ok"]:
@@ -316,7 +398,15 @@ def plan_live_steps(
             "pairs": daily.get("pairs"),
         },
         "safety": safety,
-        "n_would_scale": sum(1 for r in decisions if isinstance(r, dict) and r.get("status") == "would_scale"),
+        "n_would_scale": sum(
+            1
+            for r in decisions
+            if isinstance(r, dict)
+            and (
+                r.get("status") == "would_scale"
+                or "already_paper_scaled_cf_leg" in list(r.get("reasons") or [])
+            )
+        ),
         "n_planned": sum(1 for p in plans if p.status == "planned"),
         "n_blocked": sum(1 for p in plans if p.status == "blocked"),
         "plans": [p.to_dict() for p in plans],
@@ -472,10 +562,18 @@ def apply_live_steps(
                 lots = reg.get("lots") if isinstance(reg, dict) else {}
                 if isinstance(lots, dict) and pair in lots:
                     lots[pair]["status"] = "live_open"
+                    lots[pair]["live_scaled"] = True
+                    lots[pair]["scaled"] = True
                     lots[pair]["live_order_id"] = out["order_id"]
                     lots[pair]["live_applied_at"] = _utc_iso(now)
                     reg["lots"] = lots
                     shadow._write_json(shadow.OPEN_LOTS_PATH, reg)
+                # C: consume waive budget if this plan was under waive
+                if (payload.get("cf_gate") or {}).get("waived"):
+                    try:
+                        out["waive_bar"] = record_waived_step(pair, step)
+                    except Exception as e:
+                        out["waive_record_error"] = str(e)
                 daily["n_steps"] = int(daily.get("n_steps") or 0) + 1
                 daily["usd_spent"] = _f(daily.get("usd_spent")) + step
                 pairs = list(daily.get("pairs") or [])

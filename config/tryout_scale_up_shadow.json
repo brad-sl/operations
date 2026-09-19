@@ -5,15 +5,16 @@
   "tryout_max_usd": 95.0,
   "step_usd": 25.0,
   "max_total_after_step_usd": 100.0,
-  "min_hold_hours": 2.0,
-  "min_unrealized_r": 0.015,
-  "max_unrealized_r": 0.038,
-  "require_phase_in": [1, 2],
+  "min_hold_hours": 1.0,
+  "min_unrealized_r": -0.005,
+  "max_unrealized_r": 0.05,
+  "require_phase_in": [1, 2, 3, 4, 5],
   "require_structure_ok": true,
   "cf_min_scored": 8,
   "cf_prefer_scored": 12,
   "cf_min_excess_pp": 0.005,
-  "shell_note": "Brad GO 2026-09-19: $25 shell ladder ($25→~$50). Shadow only. live_apply hard-off until CF bar + Brad GO.",
+  "measure_profile": "B_loosen_20260919",
+  "shell_note": "Brad GO 2026-09-19 B: measure gates loosened so paper would_scale can register CF legs. Shadow live_apply hard-off. Live money uses decision arm + C waive + CLI.",
   "updated": "2026-09-19",
-  "ladder_rungs_note": "Rung1 shadow step $25. Later rungs ($50→$75, $75→graduated) need separate Brad GO — not this file alone."
+  "ladder_rungs_note": "Rung1 shadow step $25. Measure phases 1-5 + mild red OK for CF N only — not an edge claim."
 }

@@ -19,7 +19,8 @@ from phase6.domain.services.decision_packet import (
     default_lab_questions,
 )
 
-ROOT = Path(__file__).resolve().parents[3]
+# phase6/core/this.py → parents[2] = repo root (crypto-trading-bot)
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_OUT = ROOT / "data" / "state" / "jev_lab_latest.json"
 DEFAULT_CRUMBS = ROOT / "data" / "state" / "jev_lab_crumbs.jsonl"
 DEFAULT_BUDGET = ROOT / "data" / "state" / "jev_lab_budget.json"

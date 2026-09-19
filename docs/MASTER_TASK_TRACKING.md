@@ -2,10 +2,11 @@
 ## JEV-JUDGMENT-LAB-20260918 — LAB HARNESS SHIPPED (measure-only)
 - Plan: `docs/plans/2026-09-18-jev-judgment-layer-lab.md`
 - Access: OpenRouter `~typesafe/jev-latest` via POST /api/alpha/decisions
-- Code: phase6/domain/ports/judgment.py, adapters/judgment_jev.py, domain/services/decision_packet.py, core/jev_lab_shadow.py, scripts/phase6/run_jev_lab_shadow.py
-- Tests: scripts/phase6/test_isolation_jev_lab.py (6/6)
-- Live smoke: BTC hold/range, 852ms, ~$4e-5/call; paper tags only; no orders
-- Next: L4 7d calibration; cron 4x/day measure-only
+- Code: phase6/domain/ports/judgment.py, adapters/judgment_jev.py, domain/services/decision_packet.py, core/jev_lab_shadow.py, core/jev_lab_calibration.py, scripts/phase6/run_jev_lab_shadow.py, scripts/phase6/run_jev_lab_calibration.py
+- Tests: scripts/phase6/test_isolation_jev_lab.py + test_isolation_jev_lab_calibration.py
+- Live smoke: BTC/ETH hold/range; ~180–850ms; paper tags only; no orders
+- L4: SHIPPED measure-only calibration rollup (honest N; n_ok=7 as of first proof run)
+- Next: collect ~7d crumbs → re-read L4; L5 Brad stop (shadow feature vs park)
 - Guardrails: no live gates, no tryout, no promote from Jev
 
 ## STREAMLINED-ACTION-ARCH-20260918 — PARTIAL SHIP (Tasks 1+6)

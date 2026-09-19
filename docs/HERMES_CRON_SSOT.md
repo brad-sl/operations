@@ -109,3 +109,10 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Behavior: measure-only decision packets (BTC/ETH default); crumbs + budget; **no orders**
 - Cap: lab max 24 calls/day (`data/state/jev_lab_budget.json`); quiet logs under state/
 - Delivery: local (no TG spam); isolation `scripts/phase6/test_isolation_jev_lab.py`
+
+## phase6-jev-lab-calibration (L4 measure-only 2026-09-19)
+- Manual / after shadow ticks: `python3 scripts/phase6/run_jev_lab_calibration.py`
+- Optional quiet cron later at `35 7 * * *` PT once crumbs accumulate
+- Artifacts: `data/state/jev_lab_calibration_latest.json` + `reports/JEV_LAB_CALIBRATION_LATEST.md`
+- Guardrails: measure-only, honest N (`N_INSUFFICIENT` until n_ok≥20), no orders / no promote
+- Isolation: `scripts/phase6/test_isolation_jev_lab_calibration.py`

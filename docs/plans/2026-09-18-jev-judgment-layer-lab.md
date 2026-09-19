@@ -152,7 +152,7 @@ Body: `{ "model", "state", "questions" }` → typed `answers` (noul/choice/score
 | L1 | SHIPPED | `JudgmentPort` + OpenRouter adapter + isolation |
 | L2 | SHIPPED | `decision_packet` state + default fan-out questions |
 | L3 | SHIPPED | `run_jev_lab_shadow` + crumbs + budget + cron wrapper |
-| L4 | OPEN | 7d rollup: calibration + knife agreement + cost |
+| L4 | SHIPPED | 7d rollup: calibration + knife sideboard + cost/latency; honest N |
 | L5 | OPEN | Brad stop: shadow feature beside gates vs park |
 
 **Run:**
@@ -160,7 +160,9 @@ Body: `{ "model", "state", "questions" }` → typed `answers` (noul/choice/score
 ```bash
 python3 scripts/phase6/run_jev_lab_shadow.py --dry-run
 python3 scripts/phase6/run_jev_lab_shadow.py --pairs BTC-USD,ETH-USD
+python3 scripts/phase6/run_jev_lab_calibration.py
 python3 scripts/phase6/test_isolation_jev_lab.py
+python3 scripts/phase6/test_isolation_jev_lab_calibration.py
 ```
 
 ---
@@ -169,7 +171,8 @@ python3 scripts/phase6/test_isolation_jev_lab.py
 
 **Lab harness is live (measure-only).** OpenRouter Jev answers typed questions on compact BTC/ETH state; we log crumbs and never place orders.
 
-**Next:** let it collect ~7d crumbs (cron), then L4 calibration vs knife/RSI shadows.  
+**L4 harness is live (measure-only).** `run_jev_lab_calibration.py` joins crumbs → 1h/4h/24h fwd returns + confidence-route buckets. Current claim stays `N_INSUFFICIENT` until n_ok≥20 and bars age past ticks.  
+**Next:** let cron collect ~7d crumbs, then re-read L4 board (still no edge claim until N).  
 **Still no:** Jev buy, promote, or risk ownership.
 
 ---

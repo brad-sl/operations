@@ -10,11 +10,13 @@ but aged-out eng=0 between slots. Operator luck stack: window → $75 → TP.
 Doctrine (Brad 2026-09-15)
 --------------------------
 Shadow-only event path:
-  1. Universe = quality_tryout v1/v2 *eligible doors* (not XRP-only; not full basket)
+  1. Universe = **production tryout-eligible SSOT** (same doors live can seat)
+     — prefer tryout_readiness.eligible ∩ scoreboard.eligible; not full basket; not tier-A ballast
   2. Trigger = RSI in wash band + eng aged-out / below tryout floor
   3. Rank candidates; keep top K (default 2) as would-query / would-tryout
   4. Estimate would_pass from *cached* last X raw (no paid API by default)
   5. Simulate evaluate_buy_entry with hypothetical eng=floor if would_pass
+     + surface production_live_gate (actual eng) for apples-to-apples
   6. Never place orders, never mutate config, never wire live buy path
 
 Edge class: ATTENTION_ONLY_sensor_clock — not HIT abs / not promote.
@@ -472,15 +474,34 @@ def load_eng_pair_details(
     return out
 
 
-def load_tryout_universe(cfg: ShadowConfig) -> List[str]:
-    if cfg.pairs_override:
-        return [_norm_pair(p) for p in cfg.pairs_override]
-    # Prefer scoreboard eligible list
+def _norm_pair_list(raw: Any) -> List[str]:
+    if not isinstance(raw, list):
+        return []
+    out: List[str] = []
+    for p in raw:
+        n = _norm_pair(str(p or ""))
+        if n and n not in out:
+            out.append(n)
+    return out
+
+
+def production_tryout_eligible_sources() -> Dict[str, Any]:
+    """
+    Apples-to-apples SSOT for doors production can open under quality_tryout.
+
+    Prefer intersection of:
+      - tryout_readiness.eligible_tryout_pairs  (ops / gate board)
+      - recovery_tryout_scoreboard.eligible_tryout_pairs  (v2 qualify + thaw)
+    Fallbacks keep shadow alive if one artifact is missing.
+    Never expands to full basket or tier-A ballast.
+    """
+    tr = _read_json(READINESS)
     sb = _read_json(SCOREBOARD)
-    if isinstance(sb, dict):
-        elig = sb.get("eligible_tryout_pairs")
-        if isinstance(elig, list) and elig:
-            return sorted({_norm_pair(p) for p in elig})
+    tr_elig = _norm_pair_list(tr.get("eligible_tryout_pairs") if isinstance(tr, dict) else None)
+    sb_elig = _norm_pair_list(sb.get("eligible_tryout_pairs") if isinstance(sb, dict) else None)
+
+    policy_elig: List[str] = []
+    policy_err: Optional[str] = None
     try:
         from phase6.core.regime_cash_policy import (
             _recovery_rec,
@@ -489,10 +510,73 @@ def load_tryout_universe(cfg: ShadowConfig) -> List[str]:
         )
 
         pol = load_policy()
-        rec = _recovery_rec(pol)
-        return sorted(recovery_tryout_pairs_effective(rec))
-    except Exception:
-        return []
+        rec = _recovery_rec(pol) or {}
+        policy_elig = sorted(recovery_tryout_pairs_effective(rec)) if isinstance(rec, dict) else []
+    except Exception as e:
+        policy_err = f"{type(e).__name__}:{e}"
+
+    source = "empty"
+    universe: List[str] = []
+    if tr_elig and sb_elig:
+        inter = sorted(set(tr_elig) & set(sb_elig))
+        if inter:
+            universe = inter
+            source = "readiness_intersect_scoreboard"
+        else:
+            # both present but empty intersect → fail closed to empty with note
+            universe = []
+            source = "empty_intersect_fail_closed"
+    elif tr_elig:
+        universe = sorted(tr_elig)
+        source = "tryout_readiness_only"
+    elif sb_elig:
+        universe = sorted(sb_elig)
+        source = "scoreboard_only"
+    elif policy_elig:
+        universe = sorted(policy_elig)
+        source = "policy_effective_fallback"
+
+    only_tr = sorted(set(tr_elig) - set(sb_elig)) if tr_elig and sb_elig else []
+    only_sb = sorted(set(sb_elig) - set(tr_elig)) if tr_elig and sb_elig else []
+    parity_ok = bool(tr_elig) and bool(sb_elig) and not only_tr and not only_sb
+
+    return {
+        "universe": universe,
+        "source": source,
+        "parity_ok": parity_ok,
+        "tryout_readiness_eligible": tr_elig,
+        "scoreboard_eligible": sb_elig,
+        "policy_effective_eligible": policy_elig,
+        "only_in_readiness": only_tr,
+        "only_in_scoreboard": only_sb,
+        "policy_err": policy_err,
+        "note": (
+            "Production tryout doors only — same eligible set live quality_tryout "
+            "can seat (v2 + thaw). Not tier-A ballast, not full basket, not tier-C "
+            "outside thaw/force_eligible."
+        ),
+    }
+
+
+def load_tryout_universe(cfg: ShadowConfig) -> List[str]:
+    if cfg.pairs_override:
+        return [_norm_pair(p) for p in cfg.pairs_override]
+    meta = production_tryout_eligible_sources()
+    return list(meta.get("universe") or [])
+
+
+def load_tryout_universe_with_meta(cfg: ShadowConfig) -> Tuple[List[str], Dict[str, Any]]:
+    """Universe + parity meta for board honesty / R1 mirror."""
+    if cfg.pairs_override:
+        u = [_norm_pair(p) for p in cfg.pairs_override]
+        return u, {
+            "universe": u,
+            "source": "pairs_override",
+            "parity_ok": None,
+            "note": "operator override — not pure production mirror",
+        }
+    meta = production_tryout_eligible_sources()
+    return list(meta.get("universe") or []), meta
 
 
 def _simulate_buy_if_x_clears(
@@ -532,6 +616,41 @@ def _simulate_buy_if_x_clears(
 # ---------------------------------------------------------------------------
 
 
+def _production_live_gate(
+    pair: str,
+    *,
+    eng_sent: Optional[float],
+    rsi: Optional[float],
+) -> Dict[str, Any]:
+    """
+    Live evaluate_buy_entry with *actual* eng (not hypothetical floor).
+    Surfaces same-day / seats / latch / sent so shadow is comparable to prod.
+    """
+    try:
+        from phase6.core.regime_cash_policy import (
+            evaluate_buy_entry,
+            load_policy,
+            resolve_regime_cash,
+        )
+
+        pol = load_policy()
+        snap = resolve_regime_cash(policy=pol)
+        dec = evaluate_buy_entry(
+            pair,
+            snap,
+            sentiment=eng_sent,
+            rsi=rsi,
+            is_new_pair=True,
+            policy=pol,
+        )
+        return {
+            "allowed": bool(dec.allowed),
+            "reasons": list(dec.reasons or [])[:8],
+        }
+    except Exception as e:
+        return {"allowed": None, "reasons": [f"live_gate_err:{type(e).__name__}:{e}"]}
+
+
 def build_shadow_board(
     cfg: Optional[ShadowConfig] = None,
     *,
@@ -542,7 +661,7 @@ def build_shadow_board(
     assert cfg.mutate_config is False
     now = now or _utc_now()
 
-    universe = load_tryout_universe(cfg)
+    universe, univ_meta = load_tryout_universe_with_meta(cfg)
     rsi_map = load_rsi_map()
     x_map = load_x_pair_details(now=now)
     eng_map = load_eng_pair_details(now=now)
@@ -579,14 +698,22 @@ def build_shadow_board(
             eng_age_min=eng_row.get("age_min"),
             x_raw=x_raw,
             x_age_min=x_age,
-            tryout_eligible=True,  # universe already tryout doors
+            tryout_eligible=True,  # universe already production tryout doors
             buy_blocked=blocked,
             block_reasons=reasons,
             cfg=cfg,
         )
         c.eng_source = eng_row.get("source")
         c.x_posts = x_posts if x_posts is not None else x_row.get("posts")
+        # production live gate (actual eng) — apples-to-apples vs runner
+        live = _production_live_gate(pair, eng_sent=c.eng_sent, rsi=c.rsi)
+        c.notes.append(
+            f"prod_live={'ok' if live.get('allowed') else 'block'}:{','.join(live.get('reasons') or [])[:120]}"
+        )
         candidates.append(c)
+        # stash live gate on dict after to_dict via side channel
+        c.buy_sim_reasons  # keep attr touch for linters
+        setattr(c, "_prod_live_gate", live)
 
     selected = select_top_k(candidates, k=cfg.top_k)
 
@@ -617,13 +744,26 @@ def build_shadow_board(
         elif allowed is False:
             c.notes.append("other_gates_block_even_if_x_passes")
 
-    selected_dicts = [c.to_dict() for c in candidates if c.selected_top_k]
+    def _cand_dict(c: PairCandidate) -> Dict[str, Any]:
+        d = c.to_dict()
+        live = getattr(c, "_prod_live_gate", None)
+        if isinstance(live, dict):
+            d["production_live_gate"] = live
+        return d
+
+    selected_dicts = [_cand_dict(c) for c in candidates if c.selected_top_k]
     trigger_n = sum(
         1
         for c in candidates
         if c.trigger_rsi_wash and c.trigger_eng_stale and c.tryout_eligible and not c.buy_blocked
     )
     would_buy_n = sum(1 for c in candidates if c.would_buy_if_pass is True)
+    prod_ok_n = sum(
+        1
+        for c in candidates
+        if isinstance(getattr(c, "_prod_live_gate", None), dict)
+        and getattr(c, "_prod_live_gate").get("allowed") is True
+    )
 
     plain = _plain_english(
         universe=universe,
@@ -632,6 +772,13 @@ def build_shadow_board(
         would_buy_n=would_buy_n,
         cfg=cfg,
     )
+    if univ_meta.get("parity_ok") is False:
+        plain += (
+            f" | universe parity DRIFT readiness≠scoreboard "
+            f"only_tr={univ_meta.get('only_in_readiness')} "
+            f"only_sb={univ_meta.get('only_in_scoreboard')}"
+        )
+    plain += f" | prod_entry_ok_now={prod_ok_n}/{len(candidates)}"
 
     board = {
         "schema": SCHEMA,
@@ -649,18 +796,24 @@ def build_shadow_board(
             "eng_aged_out_max": cfg.eng_aged_out_max,
         },
         "universe": universe,
+        "universe_meta": univ_meta,
         "n_universe": len(universe),
         "n_trigger_pool": trigger_n,
         "n_selected_top_k": len(selected_dicts),
         "n_would_buy_if_x_pass": would_buy_n,
+        "n_production_entry_ok": prod_ok_n,
         "selected": selected_dicts,
-        "candidates": [c.to_dict() for c in sorted(candidates, key=lambda x: (-x.rank_score, x.pair))],
+        "candidates": [
+            _cand_dict(c)
+            for c in sorted(candidates, key=lambda x: (-x.rank_score, x.pair))
+        ],
         "plain_english": plain,
         "honesty": [
             "Shadow only — no orders, no config mutation, no paid X by default.",
             "would_pass_floor_est uses cached X only; stale cache → unknown.",
             "would_buy_if_pass assumes eng=tryout_floor after a successful X clear.",
-            "Universe = tryout-eligible doors (v1/v2 + thaw), not full basket / not XRP-only.",
+            "Universe = production tryout-eligible SSOT (readiness ∩ scoreboard when both present).",
+            "production_live_gate = evaluate_buy_entry with actual eng (same-day/seats/sent).",
             "Top-K cap avoids multi-pair X spend if many RSI-wash together.",
             "Does not claim edge; measures clock-gap opportunities only.",
         ],
@@ -724,20 +877,30 @@ def write_artifacts(board: Mapping[str, Any]) -> Dict[str, str]:
 
 
 def _render_md(board: Mapping[str, Any]) -> str:
+    um = board.get("universe_meta") or {}
     lines = [
         f"# RSI-event X tryout shadow",
         f"",
         f"- as_of: `{board.get('as_of')}`",
         f"- edge_class: `{board.get('edge_class')}`",
         f"- live_gate: **{board.get('live_gate')}** · spend_x={board.get('spend_x')}",
-        f"- universe: {board.get('n_universe')} tryout doors",
+        f"- universe: {board.get('n_universe')} tryout doors · source=`{um.get('source')}` · parity_ok={um.get('parity_ok')}",
         f"- trigger pool (RSI wash + stale eng): **{board.get('n_trigger_pool')}**",
         f"- selected top-K: **{board.get('n_selected_top_k')}**",
         f"- would-buy if X clears floor: **{board.get('n_would_buy_if_x_pass')}**",
+        f"- production entry_ok now (actual eng): **{board.get('n_production_entry_ok')}**",
         f"",
         f"## Plain English",
         f"",
         str(board.get("plain_english") or ""),
+        f"",
+        f"## Universe (production mirror)",
+        f"",
+        f"- doors: `{', '.join(board.get('universe') or []) or 'none'}`",
+        f"- readiness: `{', '.join(um.get('tryout_readiness_eligible') or []) or '—'}`",
+        f"- scoreboard: `{', '.join(um.get('scoreboard_eligible') or []) or '—'}`",
+        f"- only_readiness: `{um.get('only_in_readiness') or []}`",
+        f"- only_scoreboard: `{um.get('only_in_scoreboard') or []}`",
         f"",
         f"## Selected",
         f"",
@@ -746,14 +909,19 @@ def _render_md(board: Mapping[str, Any]) -> str:
     if not sel:
         lines.append("_none_")
     else:
-        lines.append("| pair | RSI | eng | x_raw | pass_est | buy_if_pass | reasons |")
-        lines.append("|---|---:|---:|---:|---|---|---|")
+        lines.append("| pair | RSI | eng | x_raw | pass_est | buy_if_pass | prod_live | reasons |")
+        lines.append("|---|---:|---:|---:|---|---|---|---|")
         for s in sel:
             reasons = ",".join((s.get("buy_sim_reasons") or [])[:3]) or "—"
+            pl = s.get("production_live_gate") or {}
+            pl_s = f"{pl.get('allowed')}"
+            pr = pl.get("reasons") or []
+            if pr:
+                pl_s += f" ({','.join(list(pr)[:2])})"
             lines.append(
                 f"| {s.get('pair')} | {s.get('rsi')} | {s.get('eng_sent')} | "
                 f"{s.get('x_raw')} | {s.get('would_pass_floor_est')} | "
-                f"{s.get('would_buy_if_pass')} | `{reasons}` |"
+                f"{s.get('would_buy_if_pass')} | {pl_s} | `{reasons}` |"
             )
     lines.extend(
         [

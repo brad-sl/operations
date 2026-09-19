@@ -136,9 +136,23 @@ def load_r0_would_buy_pairs(path: Path = R0_LATEST) -> List[Dict[str, Any]]:
 
 
 def load_tryout_eligible_pairs() -> List[str]:
+    """Mirror production tryout-eligible SSOT (same as R0)."""
+    try:
+        from phase6.core.rsi_event_x_tryout_shadow import production_tryout_eligible_sources
+
+        meta = production_tryout_eligible_sources()
+        u = meta.get("universe") or []
+        if isinstance(u, list) and u:
+            return [str(p) for p in u]
+    except Exception:
+        pass
+    # Fallback: readiness scoreboard_summary / eligible list
     raw = _read_json(TRYOUT_READY)
     if not isinstance(raw, dict):
         return []
+    top = raw.get("eligible_tryout_pairs")
+    if isinstance(top, list) and top:
+        return [str(p) for p in top]
     ss = raw.get("scoreboard_summary") or {}
     pairs = ss.get("thaw_active_eligible_pairs") or ss.get("eligible_pairs") or []
     if isinstance(pairs, list):

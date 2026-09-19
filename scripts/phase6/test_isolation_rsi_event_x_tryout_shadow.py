@@ -157,6 +157,70 @@ class TestFences(unittest.TestCase):
         self.assertFalse(cfg.spend_x)
 
 
+class TestProductionUniverseParity(unittest.TestCase):
+    def test_intersect_when_both_present(self):
+        from phase6.core import rsi_event_x_tryout_shadow as m
+
+        # readiness-only + scoreboard-only → intersect
+        tr = {
+            "eligible_tryout_pairs": ["ETH-USD", "LINK-USD", "ZEC-USD"],
+        }
+        sb = {
+            "eligible_tryout_pairs": ["LINK-USD", "ZEC-USD", "ADA-USD"],
+        }
+
+        def fake_read(path):
+            p = str(path)
+            if "tryout_readiness" in p:
+                return tr
+            if "scoreboard" in p:
+                return sb
+            return {}
+
+        old = m._read_json
+        m._read_json = fake_read  # type: ignore
+        try:
+            meta = m.production_tryout_eligible_sources()
+            self.assertEqual(meta["source"], "readiness_intersect_scoreboard")
+            self.assertEqual(meta["universe"], ["LINK-USD", "ZEC-USD"])
+            self.assertFalse(meta["parity_ok"])  # drift on both sides
+            self.assertEqual(meta["only_in_readiness"], ["ETH-USD"])
+            self.assertEqual(meta["only_in_scoreboard"], ["ADA-USD"])
+        finally:
+            m._read_json = old  # type: ignore
+
+    def test_identical_lists_parity_ok(self):
+        from phase6.core import rsi_event_x_tryout_shadow as m
+
+        doors = ["ETH-USD", "HYPE-USD", "LINK-USD"]
+        tr = {"eligible_tryout_pairs": list(doors)}
+        sb = {"eligible_tryout_pairs": list(doors)}
+
+        def fake_read(path):
+            p = str(path)
+            if "tryout_readiness" in p:
+                return tr
+            if "scoreboard" in p:
+                return sb
+            return {}
+
+        old = m._read_json
+        m._read_json = fake_read  # type: ignore
+        try:
+            meta = m.production_tryout_eligible_sources()
+            self.assertTrue(meta["parity_ok"])
+            self.assertEqual(meta["universe"], sorted(doors))
+            self.assertEqual(meta["source"], "readiness_intersect_scoreboard")
+        finally:
+            m._read_json = old  # type: ignore
+
+    def test_override_bypasses_ssot(self):
+        cfg = ShadowConfig(pairs_override=("SOL-USD", "DOGE-USD"))
+        from phase6.core.rsi_event_x_tryout_shadow import load_tryout_universe
+
+        self.assertEqual(load_tryout_universe(cfg), ["SOL-USD", "DOGE-USD"])
+
+
 if __name__ == "__main__":
     # no tempfile pollution required — pure unit
     ok = unittest.main(verbosity=2, exit=False)

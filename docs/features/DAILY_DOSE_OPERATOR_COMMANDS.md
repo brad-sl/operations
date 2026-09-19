@@ -72,3 +72,38 @@ Artifacts:
 - `data/state/daily_dose_jev_crumbs.jsonl`
 
 Cron: `phase6-daily-dose-jev-ranker` — `15 7 * * *` PT → local only.
+
+---
+
+## Locked-pool A/B (fair twin — Brad GO 2026-09-19)
+
+Runs **after** 08:00 publish so A and B share the same candidate freeze.
+
+- **A** = published TG top-N (`daily_dose_edited.json`)
+- **B** = Jev re-rank of `daily_dose_latest` draft ∪ A ids (same freeze)
+- Plain move notes + optional Brad gut mark (`b_better` / `a_better` / `mixed`)
+- Does **not** replace live dose · **not** a second TG brief · **not** a trade signal
+
+```bash
+cd /home/brad/projects/crypto-trading-bot
+
+# Live locked A/B (uses today's edited + draft)
+.venv/bin/python3 scripts/phase6/run_daily_dose_jev_ab.py --print-card
+
+# Short operator card only
+.venv/bin/python3 scripts/phase6/run_daily_dose_jev_ab.py --print-tg
+
+# Offline
+.venv/bin/python3 scripts/phase6/run_daily_dose_jev_ab.py --dry-run --print-card
+```
+
+Artifacts:
+- `data/state/daily_dose_jev_ab_latest.json`
+- `data/state/daily_dose_jev_ab_card.md`
+- `data/state/daily_dose_jev_ab_history.jsonl`
+
+Cron: `phase6-daily-dose-jev-ab` `ea05c1edf8b4` — `10 8 * * *` PT → **local**  
+Optional TG short card: `DOSE_AB_TG=1` on the wrapper (default off).
+
+Mark series (optional, chat): `dose ab b_better` | `a_better` | `mixed` — collect multi-day before any promote talk.
+

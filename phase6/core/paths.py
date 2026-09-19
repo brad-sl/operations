@@ -101,6 +101,10 @@ DAILY_DOSE_JEV_CRUMBS = STATE_DIR / "daily_dose_jev_crumbs.jsonl"
 DAILY_DOSE_JEV_COMPARE = STATE_DIR / "daily_dose_jev_compare.md"
 DAILY_DOSE_JEV_PREVIEW = STATE_DIR / "daily_dose_jev_preview.txt"
 DAILY_DOSE_JEV_BUDGET = STATE_DIR / "daily_dose_jev_budget.json"
+# Locked-pool A/B (same 08:00 freeze · shadow only · not a second dose)
+DAILY_DOSE_JEV_AB_LATEST = STATE_DIR / "daily_dose_jev_ab_latest.json"
+DAILY_DOSE_JEV_AB_CARD = STATE_DIR / "daily_dose_jev_ab_card.md"
+DAILY_DOSE_JEV_AB_HISTORY = STATE_DIR / "daily_dose_jev_ab_history.jsonl"
 # Preserve / park ballast
 PRESERVE_HOLD_STATE = STATE_DIR / "preserve_hold_state.json"
 PRESERVE_HOLD_STATUS = STATE_DIR / "preserve_hold_status.json"

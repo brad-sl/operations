@@ -111,3 +111,6 @@ data/state/trial_closeout_watch_*.md
 data/state/trial_closeout_watch_*.txt
 data/state/trial_closeout_watch_fingerprint.txt
 data/state/trial_closeout_watch_history.jsonl
+data/state/tryout_scale_up_live_*.json
+data/state/tryout_scale_up_live_crumbs.jsonl
+data/state/tryout_scale_up_live_KILL

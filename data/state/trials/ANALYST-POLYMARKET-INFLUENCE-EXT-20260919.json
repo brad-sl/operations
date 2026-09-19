@@ -1,0 +1,100 @@
+{
+  "trial_id": "ANALYST-POLYMARKET-INFLUENCE-EXT-20260919",
+  "title": "Polymarket influence extend \u2014 collect until crypto-N relevance (post sensor-OK window)",
+  "status": "RUNNING",
+  "source": "brad_go_extend",
+  "master_id": "ANALYST-POLYMARKET-INFLUENCE-EXT-20260919",
+  "family": "polymarket_influence",
+  "trial_kind": "offline_analysis",
+  "role": "crypto-analyst",
+  "parent_trial": "ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902",
+  "handoff": "handoffs/analyst/Handoff_ANALYST-POLYMARKET-INFLUENCE-EXT-20260919.md",
+  "protocol": "docs/testing/trials/ANALYST-POLYMARKET-INFLUENCE-EXT-20260919_PROTOCOL.md",
+  "cycle": "docs/testing/ANALYST_TEST_CYCLE.md",
+  "cycle_version": 2,
+  "auto_pickup": false,
+  "duration_days": 21,
+  "start_at": "2026-09-19T18:03:08.367111+00:00",
+  "mid_at": "2026-09-29T18:03:08.367111+00:00",
+  "final_at": "2026-10-10T18:03:08.367111+00:00",
+  "fix_cutoff_utc": "2026-09-02T22:00:00+00:00",
+  "kill_after_consecutive_health_fails": 5,
+  "intent": {
+    "why_extend": "Parent window sensor_ok but edge incomplete: crypto joined n=10 all LINK, risk_on n=0. Brad: extend until enough trades for relevance.",
+    "parent_decision": "extend_trial",
+    "parent_packet": "docs/testing/decisions/DEC_ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902_20260919.md",
+    "no_live_promote": true,
+    "real_data_only": true,
+    "ex_stable_edge_only": true
+  },
+  "design": {
+    "hypothesis": "With longer post-fix collect + ex-stable sells only, risk_on vs neutral bias buckets show measurable mean-PnL lift OR we honestly drop for sparse forever.",
+    "primary_window": "extend_collect_until_relevance",
+    "control": "neutral bias bucket (ex-stable)",
+    "arms": [
+      "risk_off",
+      "neutral",
+      "risk_on"
+    ],
+    "runner": "phase6/research/run_polymarket_influence_backtest.py --rerun",
+    "isolation": "phase6/research/test_isolation_sensor_preflight.py",
+    "health": "phase6/research/run_polymarket_influence_health.py",
+    "edge_universe": "crypto sells only (exclude USDT/USDC/stable pairs)"
+  },
+  "success_criteria": {
+    "primary_window": "extend_collect_until_relevance",
+    "sensor_preflight_ok": true,
+    "min_unique_bias_3dp": 5,
+    "min_bias_stdev": 0.02,
+    "forbid_all_bias_equal": 0.5,
+    "min_n_trades": 15,
+    "min_crypto_joined_sells": 15,
+    "min_risk_on_n": 5,
+    "min_neutral_n": 5,
+    "relevance_clears_if": "crypto_joined>=15 OR (risk_on_n>=5 AND neutral_n>=5)",
+    "min_join_rate_crypto": 0.1,
+    "lift_bar_attention": "risk_on mean_pnl - neutral >= 0 AND both n>=5",
+    "sparse_is": "inconclusive_not_promote",
+    "live_promote_allowed": false,
+    "hard_stop_final_at": "2026-10-10T18:03:08.367111+00:00",
+    "fix_cutoff_utc": "2026-09-02T22:00:00+00:00",
+    "frozen_at": "2026-09-19T18:03:08.367111+00:00",
+    "source": "protocol ANALYST-POLYMARKET-INFLUENCE-EXT-20260919 + Brad extend GO 2026-09-19"
+  },
+  "cron_ids": {
+    "health": "6183c52efe35"
+  },
+  "reports": [],
+  "health_log": [],
+  "decision": null,
+  "unblocks": [],
+  "created_at": "2026-09-19T18:03:08.367111+00:00",
+  "launched_at": "2026-09-19T18:03:08.367111+00:00",
+  "updated_at": "2026-09-19T18:03:08.367111+00:00",
+  "status_history": [
+    {
+      "from": null,
+      "to": "REGISTERED",
+      "at": "2026-09-19T18:03:08.367111+00:00",
+      "note": "Brad extend after parent incomplete N"
+    },
+    {
+      "from": "REGISTERED",
+      "to": "INSTRUMENTED",
+      "at": "2026-09-19T18:03:08.367111+00:00",
+      "note": "protocol+handoff+gates"
+    },
+    {
+      "from": "INSTRUMENTED",
+      "to": "RUNNING",
+      "at": "2026-09-19T18:03:08.367111+00:00",
+      "note": "collect until relevance or hard_stop"
+    }
+  ],
+  "notes": [
+    {
+      "at": "2026-09-19T18:03:08.367111+00:00",
+      "text": "Parent CLOSED extend_trial. Score post-fix only; edge tables ex-stable. Early finalize allowed if relevance bars clear before hard_stop."
+    }
+  ]
+}

@@ -177,6 +177,70 @@ def _bucket(bias: float) -> str:
     return "neutral"
 
 
+_STABLE_MARKERS = (
+    "USDT",
+    "USDC",
+    "DAI",
+    "USD1",
+    "PYUSD",
+    "EURC",
+    "USDE",
+    "FDUSD",
+)
+
+
+def _is_stable_pair(pair: Any) -> bool:
+    """True for park/rotation stables — exclude from edge scoreboard N."""
+    p = str(pair or "").upper().replace("/", "-")
+    if not p:
+        return False
+    base = p.split("-")[0] if "-" in p else p
+    return base in _STABLE_MARKERS
+
+
+def _bucket_stats_from(joined: List[Dict[str, Any]]) -> Dict[str, Any]:
+    buckets: Dict[str, List[float]] = defaultdict(list)
+    for j in joined:
+        if j.get("pnl") is not None:
+            buckets[j["bucket"]].append(float(j["pnl"]))
+    out: Dict[str, Any] = {}
+    for b, pnls in buckets.items():
+        wins = sum(1 for p in pnls if p > 0)
+        out[b] = {
+            "n": len(pnls),
+            "wr": (wins / len(pnls)) if pnls else None,
+            "mean_pnl": statistics.mean(pnls) if pnls else None,
+            "sum_pnl": sum(pnls),
+        }
+    return out
+
+
+def _lift_and_outcome(bucket_stats: Dict[str, Any], n_joined: int) -> tuple:
+    """Return (outcome, recommendation, lift_note) for a scoreboard."""
+    lift_note = "insufficient bucket coverage for lift claim"
+    recommendation = "continue_observe_only"
+    outcome = "inconclusive_sparse_N"
+    if (
+        bucket_stats.get("risk_on", {}).get("n", 0) >= 5
+        and bucket_stats.get("neutral", {}).get("n", 0) >= 5
+    ):
+        ro = bucket_stats["risk_on"]["mean_pnl"]
+        neu = bucket_stats["neutral"]["mean_pnl"]
+        if ro is not None and neu is not None:
+            delta = ro - neu
+            lift_note = f"risk_on mean_pnl − neutral = {delta:.4f}"
+            if delta > 0 and bucket_stats["risk_on"]["wr"] and bucket_stats["risk_on"]["wr"] >= 0.5:
+                outcome = "ATTENTION_ONLY"
+                recommendation = "continue_observe_only"
+            else:
+                outcome = "unstable_or_no_edge"
+                recommendation = "drop"
+    elif n_joined < 5:
+        outcome = "sensor_thin" if not n_joined else "inconclusive_sparse_N"
+        recommendation = "fix_sensor_or_data_pipeline" if not n_joined else "extend_trial"
+    return outcome, recommendation, lift_note
+
+
 def _extract_yes_from_events(events: List[Any]) -> List[float]:
     out: List[float] = []
     for ev in events or []:
@@ -413,44 +477,24 @@ def run(
         return result
 
     # --- Scoreboard path (only when sensor_ok) ---
-    buckets: Dict[str, List[float]] = defaultdict(list)
-    for j in joined:
-        if j.get("pnl") is not None:
-            buckets[j["bucket"]].append(float(j["pnl"]))
-
-    bucket_stats: Dict[str, Any] = {}
-    for b, pnls in buckets.items():
-        wins = sum(1 for p in pnls if p > 0)
-        bucket_stats[b] = {
-            "n": len(pnls),
-            "wr": (wins / len(pnls)) if pnls else None,
-            "mean_pnl": statistics.mean(pnls) if pnls else None,
-            "sum_pnl": sum(pnls),
-        }
-
-    # Simple lift: risk_on mean vs neutral mean (needs both buckets)
-    lift_note = "insufficient bucket coverage for lift claim"
-    recommendation = "continue_observe_only"
-    outcome = "inconclusive_sparse_N"
-    if bucket_stats.get("risk_on", {}).get("n", 0) >= 5 and bucket_stats.get("neutral", {}).get("n", 0) >= 5:
-        ro = bucket_stats["risk_on"]["mean_pnl"]
-        neu = bucket_stats["neutral"]["mean_pnl"]
-        if ro is not None and neu is not None:
-            delta = ro - neu
-            lift_note = f"risk_on mean_pnl − neutral = {delta:.4f}"
-            if delta > 0 and bucket_stats["risk_on"]["wr"] and bucket_stats["risk_on"]["wr"] >= 0.5:
-                outcome = "ATTENTION_ONLY"
-                recommendation = "continue_observe_only"
-            else:
-                outcome = "unstable_or_no_edge"
-                recommendation = "drop"
-    elif len(joined) < 5:
-        outcome = "sensor_thin" if not joined else "inconclusive_sparse_N"
-        recommendation = "fix_sensor_or_data_pipeline" if not joined else "extend_trial"
+    # Edge SSOT = crypto joined only (exclude USDT/USDC park rotations).
+    joined_crypto = [j for j in joined if not _is_stable_pair(j.get("pair"))]
+    joined_stable = [j for j in joined if _is_stable_pair(j.get("pair"))]
+    bucket_stats_all = _bucket_stats_from(joined)
+    bucket_stats = _bucket_stats_from(joined_crypto)  # primary edge board
+    outcome, recommendation, lift_note = _lift_and_outcome(
+        bucket_stats, len(joined_crypto)
+    )
+    # Relevance progress (extend trial gates) — advisory fields only
+    ro_n = int(bucket_stats.get("risk_on", {}).get("n") or 0)
+    neu_n = int(bucket_stats.get("neutral", {}).get("n") or 0)
+    relevance_cleared = len(joined_crypto) >= 15 or (ro_n >= 5 and neu_n >= 5)
 
     plain = (
-        f"Sensor OK. Joined {len(joined)}/{len(sells)} sells to bias≤24h. "
-        f"{lift_note}. Live promote still blocked without Brad GO + promotion gates."
+        f"Sensor OK. Joined crypto {len(joined_crypto)}/{len(sells)} "
+        f"(all_joined={len(joined)}, stables_excluded={len(joined_stable)}) to bias≤24h. "
+        f"{lift_note}. relevance_cleared={relevance_cleared}. "
+        f"Live promote still blocked without Brad GO + promotion gates."
     )
     result = {
         "schema": "polymarket_influence_backtest_v1",
@@ -466,7 +510,20 @@ def run(
         "bias_stats": bias_stats,
         "n_sells_loaded": len(sells),
         "n_joined": len(joined),
+        "n_joined_crypto": len(joined_crypto),
+        "n_joined_stable": len(joined_stable),
         "bucket_stats": bucket_stats,
+        "bucket_stats_all_including_stables": bucket_stats_all,
+        "relevance_progress": {
+            "crypto_joined": len(joined_crypto),
+            "min_crypto_joined": 15,
+            "risk_on_n": ro_n,
+            "neutral_n": neu_n,
+            "min_risk_on_n": 5,
+            "min_neutral_n": 5,
+            "cleared": relevance_cleared,
+            "rule": "crypto_joined>=15 OR (risk_on_n>=5 AND neutral_n>=5)",
+        },
         "sample_joined_tail": [
             {
                 "ts": j["ts"].isoformat(),
@@ -475,7 +532,7 @@ def run(
                 "bias": j.get("bias"),
                 "bucket": j.get("bucket"),
             }
-            for j in joined[-8:]
+            for j in joined_crypto[-8:]
         ],
         "live_promote_allowed": False,
         "preflight": preflight.to_dict(),
@@ -506,8 +563,17 @@ def run(
         f"- Min/max/mean: {bias_stats['bias_min']} / {bias_stats['bias_max']} / {bias_stats['bias_mean']}",
         f"- Stdev: {bias_stats['bias_stdev']}",
         "",
-        "## Buckets",
+        "## Relevance progress (extend gates)",
+        f"- crypto_joined: {len(joined_crypto)} / 15",
+        f"- risk_on_n: {ro_n} / 5 · neutral_n: {neu_n} / 5",
+        f"- cleared: **{relevance_cleared}**",
+        f"- stables_excluded: {len(joined_stable)}",
+        "",
+        "## Buckets (crypto only — edge SSOT)",
         f"```json\n{json.dumps(bucket_stats, indent=2)}\n```",
+        "",
+        "## Buckets (all joined including stables — noise reference)",
+        f"```json\n{json.dumps(bucket_stats_all, indent=2)}\n```",
         "",
         "## Preflight",
         f"```json\n{json.dumps(preflight.to_dict(), indent=2, default=str)}\n```",
@@ -555,6 +621,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Convenience: since=fix cutoff + rerun stem + proposal + why text",
     )
+    ap.add_argument(
+        "--extend",
+        action="store_true",
+        help="Convenience: EXT-20260919 stem + child proposal + ex-stable relevance note",
+    )
     args = ap.parse_args()
 
     since_s = args.since
@@ -569,6 +640,15 @@ if __name__ == "__main__":
             "Re-run of 024: prior study used degenerate sensor (bias stuck 0.5 from "
             "Gamma outcomePrices JSON-string parse + polarity). Historical log not rewritten. "
             "This window is post-fix stamps only; sensor_ok required before scoreboard. No live promote."
+        )
+    if args.extend:
+        since_s = since_s or DEFAULT_FIX_CUTOFF
+        proposal = proposal or "ANALYST-POLYMARKET-INFLUENCE-EXT-20260919"
+        stem = stem or "POLYMARKET_INFLUENCE_EXT_20260919"
+        why = why or (
+            "Extend after parent RERUN-20260902 CLOSED extend_trial: sensor OK but crypto N incomplete. "
+            "Edge SSOT = ex-stable joined sells. Relevance: crypto_joined>=15 OR (risk_on_n>=5 AND neutral_n>=5). "
+            "Hard stop ~21d. No live promote."
         )
 
     since_dt = _parse_ts(since_s) if since_s else None
@@ -589,7 +669,8 @@ if __name__ == "__main__":
     )
     print(json.dumps({k: out.get(k) for k in (
         "proposal_id", "since", "outcome_class", "recommendation",
-        "plain_english", "n_joined", "n_influence_in_window", "live_promote_allowed"
+        "plain_english", "n_joined", "n_joined_crypto", "n_influence_in_window",
+        "relevance_progress", "live_promote_allowed"
     )}, indent=2))
     print("wrote", out_json)
     print("wrote", out_md)

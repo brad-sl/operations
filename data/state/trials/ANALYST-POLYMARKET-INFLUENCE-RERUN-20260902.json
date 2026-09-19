@@ -1,0 +1,181 @@
+{
+  "trial_id": "ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902",
+  "title": "Polymarket influence re-run post sensor fix (bad 024 meter data)",
+  "status": "CLOSED",
+  "source": "brad_go_manual",
+  "master_id": "ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902",
+  "family": "polymarket_influence",
+  "trial_kind": "offline_analysis",
+  "role": "crypto-analyst",
+  "parent_trial": "ANALYST-20260627-024",
+  "handoff": "handoffs/analyst/Handoff_ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902.md",
+  "protocol": "docs/testing/trials/ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902_PROTOCOL.md",
+  "cycle": "docs/testing/ANALYST_TEST_CYCLE.md",
+  "cycle_version": 2,
+  "auto_pickup": false,
+  "duration_days": 14,
+  "start_at": "2026-09-02T22:00:00+00:00",
+  "mid_at": "2026-09-09T22:00:00+00:00",
+  "final_at": "2026-09-16T22:00:00+00:00",
+  "fix_cutoff_utc": "2026-09-02T22:00:00+00:00",
+  "kill_after_consecutive_health_fails": 5,
+  "intent": {
+    "why_rerun": "024 used degenerate sensor (bias stuck 0.5 from Gamma outcomePrices JSON-string parse + polarity). Historical log not rewritten. New trial scores post-fix stamps only.",
+    "predecessor_cr": "docs/testing/decisions/CR_ANALYST-20260627-024_PROCESSED_INCONCLUSIVE.md",
+    "no_live_promote": true,
+    "real_data_only": true,
+    "sensor_preflight_required": true
+  },
+  "design": {
+    "hypothesis": "Post-fix Polymarket risk_on_bias has real range and joined sells show measurable bucket lift (observe-only bar).",
+    "primary_window": "post_fix_collect",
+    "control": "neutral bias bucket",
+    "arms": [
+      "risk_off",
+      "neutral",
+      "risk_on"
+    ],
+    "runner": "phase6/research/run_polymarket_influence_backtest.py --rerun",
+    "isolation": "phase6/research/test_isolation_sensor_preflight.py",
+    "health": "phase6/research/run_polymarket_influence_health.py"
+  },
+  "success_criteria": {
+    "primary_window": "post_fix_collect",
+    "sensor_preflight_ok": true,
+    "min_unique_bias_3dp": 5,
+    "min_bias_stdev": 0.02,
+    "forbid_all_bias_equal": 0.5,
+    "min_joined_sells": 15,
+    "min_join_rate": 0.1,
+    "sparse_is": "inconclusive_not_promote",
+    "live_promote_allowed": false,
+    "fix_cutoff_utc": "2026-09-02T22:00:00+00:00",
+    "frozen_at": "2026-09-02T22:00:00+00:00",
+    "source": "protocol ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902",
+    "min_n_trades": 15,
+    "min_n_trades_note": "aliased from min_joined_sells for TEST_REGIMEN_E2E finalize gate"
+  },
+  "cron_ids": {
+    "health": "6183c52efe35"
+  },
+  "reports": [
+    {
+      "phase": "final",
+      "path": "reports/POLYMARKET_INFLUENCE_RERUN_FINAL_20260919.md",
+      "recommendation": "continue_observe_only",
+      "outcome_class": "inconclusive_sparse_N",
+      "at": "2026-09-19T17:57:22.896083+00:00",
+      "json": "data/state/analyst_polymarket_influence_rerun_20260902_latest.json"
+    },
+    {
+      "phase": "final",
+      "path": "reports/POLYMARKET_INFLUENCE_RERUN_FINAL_20260919.md",
+      "recommendation": "continue_observe_only",
+      "outcome_class": "inconclusive_sparse_N",
+      "at": "2026-09-19T17:57:35.522475+00:00",
+      "json": "data/state/analyst_polymarket_influence_rerun_20260902_latest.json"
+    }
+  ],
+  "health_log": [],
+  "decision": {
+    "value": "extend_trial",
+    "at": "2026-09-19T18:02:12.086035+00:00",
+    "by": "brad",
+    "note": "Brad 2026-09-19: lack of trades makes window incomplete for edge relevance. Sensor OK but crypto n=10 / risk_on n=0. Extend collect until crypto-N and bucket coverage clear relevance bar (or hard stop). No live promote.",
+    "follow_on": "extend",
+    "follow_on_detail": "child ANALYST-POLYMARKET-INFLUENCE-EXT-20260919; gates: crypto_joined>=15 OR (risk_on_n>=5 AND neutral_n>=5); hard_stop final_at +21d; ex-stable sells only for edge; live_promote=false",
+    "cr": "NO_CR"
+  },
+  "unblocks": [],
+  "created_at": "2026-09-02T22:00:00+00:00",
+  "launched_at": "2026-09-02T22:00:00+00:00",
+  "updated_at": "2026-09-19T18:02:12.086438+00:00",
+  "status_history": [
+    {
+      "from": null,
+      "to": "REGISTERED",
+      "at": "2026-09-02T22:00:00+00:00",
+      "note": "Brad GO re-run after 024 sensor_degenerate"
+    },
+    {
+      "from": "REGISTERED",
+      "to": "INSTRUMENTED",
+      "at": "2026-09-02T22:00:00+00:00",
+      "note": "protocol+handoff+runner --rerun+health+isolation"
+    },
+    {
+      "from": "INSTRUMENTED",
+      "to": "RUNNING",
+      "at": "2026-09-02T22:00:00+00:00",
+      "note": "collect post-fix influence stamps through final_at"
+    },
+    {
+      "from": "RUNNING",
+      "to": "REPORT_READY",
+      "at": "2026-09-19T17:57:35.530368+00:00",
+      "note": "finalize-report"
+    },
+    {
+      "from": "REPORT_READY",
+      "to": "REVIEW_PENDING",
+      "at": "2026-09-19T17:57:57.471323+00:00",
+      "note": "review request written"
+    },
+    {
+      "from": "REVIEW_PENDING",
+      "to": "CLOSED",
+      "at": "2026-09-19T18:02:12.086079+00:00",
+      "note": "decision=extend_trial"
+    }
+  ],
+  "notes": [
+    {
+      "at": "2026-09-02T22:00:00+00:00",
+      "text": "Why re-run: 024 bad test data (stuck bias 0.5). Score only --since 2026-09-02. No live promote."
+    },
+    {
+      "at": "2026-09-02T22:05:00+00:00",
+      "text": "Synced ~/.hermes polymarket_overlay; health cron 6183c52efe35; seed stamp bias=0.359"
+    },
+    {
+      "at": "2026-09-02T23:50:00+00:00",
+      "text": "Dropped 4 contaminated post-midnight bias=0.5 stamps (broken path). Cutoff\u219222:00Z seal. Backup influence_stack_log.jsonl.bak_pre_drop_bad_20260902"
+    },
+    {
+      "at": "2026-09-19T17:57:22.896125+00:00",
+      "text": "final closeout 2026-09-19; pnl loader fix applied; Brad review before decide"
+    },
+    {
+      "at": "2026-09-19T17:57:35.522516+00:00",
+      "text": "final closeout 2026-09-19; pnl loader fix applied; Brad review before decide"
+    },
+    {
+      "at": "2026-09-19T17:57:35.530378+00:00",
+      "text": "finalize-report"
+    },
+    {
+      "at": "2026-09-19T17:57:57.471345+00:00",
+      "text": "review request written"
+    }
+  ],
+  "stale_open": true,
+  "final_report": "reports/POLYMARKET_INFLUENCE_RERUN_FINAL_20260919.md",
+  "final_report_at": "2026-09-19T17:57:35.522445+00:00",
+  "final_recommendation": "continue_observe_only",
+  "outcome": {
+    "class": "inconclusive_sparse_N",
+    "primary_pass": false,
+    "n_primary": 10,
+    "delta_ret_pp": null,
+    "delta_dd_pp": null,
+    "plain_english": "Sensor OK post-fix (52 stamps, range real). Edge unproven: crypto joined n=10 all LINK, risk_on n=0; no live promote.",
+    "at": "2026-09-19T17:57:35.522467+00:00"
+  },
+  "follow_on": {
+    "mode": "extend",
+    "detail": "child ANALYST-POLYMARKET-INFLUENCE-EXT-20260919; gates: crypto_joined>=15 OR (risk_on_n>=5 AND neutral_n>=5); hard_stop final_at +21d; ex-stable sells only for edge; live_promote=false",
+    "at": "2026-09-19T18:02:12.086071+00:00"
+  },
+  "closed_at": "2026-09-19T18:02:12.086086+00:00",
+  "decision_packet": "docs/testing/decisions/DEC_ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902_20260919.md"
+}

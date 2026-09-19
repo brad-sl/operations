@@ -11,6 +11,17 @@
 
 ## STREAMLINED-ACTION-ARCH-20260918 — PARTIAL SHIP (Tasks 1+6)
 
+### ANALYST-POLYMARKET-INFLUENCE-EXT-20260919 — EXTEND collect (2026-09-19)
+**Status:** RUNNING (child of `ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902` CLOSED `extend_trial`).
+**Why:** Parent sensor OK but crypto N incomplete (n=10, risk_on=0). Brad: extend until relevance.
+**Relevance bar:** crypto_joined≥15 OR (risk_on_n≥5 AND neutral_n≥5); ex-stable only.
+**Hard stop:** `2026-10-10T18:03:08.367111+00:00` (~21d). Early finalize if bar clears sooner.
+**Protocol:** `docs/testing/trials/ANALYST-POLYMARKET-INFLUENCE-EXT-20260919_PROTOCOL.md`
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-POLYMARKET-INFLUENCE-EXT-20260919.md`
+**Parent packet:** `docs/testing/decisions/DEC_ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902_20260919.md`
+**live_promote:** false
+
+
 ### TRIAL-CLOSEOUT-WATCH-20260919 — anti quiet-death
 **Status:** SHIPPED measure+notify.
 **Problem:** Trials can hit `final_at` and die quietly — no summary, no Kanban/MASTER decision, no Brad ask.
@@ -12320,7 +12331,7 @@ Analyst **free to offline-backtest any proposal** to validate before active CR. 
 
 
 ### ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902 — FINAL REPORT READY (2026-09-19)
-**Status:** `REVIEW_PENDING` — awaiting Brad `decide` (not CLOSED).
+**Status:** `CLOSED` — Brad decide `extend_trial` 2026-09-19 → child `ANALYST-POLYMARKET-INFLUENCE-EXT-20260919`.
 **Report:** `reports/POLYMARKET_INFLUENCE_RERUN_FINAL_20260919.md`
 **Machine:** `reports/POLYMARKET_INFLUENCE_RERUN_20260902.md`
 **Outcome:** `inconclusive_sparse_N` · primary_pass=false · n_primary=10 (crypto)
@@ -12337,7 +12348,7 @@ Analyst **free to offline-backtest any proposal** to validate before active CR. 
 ## ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902
 
 **Type:** test  
-**Status:** RUNNING  
+**Status:** **DONE** — trial `ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902` decision=`extend_trial`  
 **auto_pickup:** false  
 **blocked_on:** none  
 **trial_kind:** offline_analysis  

@@ -171,3 +171,29 @@ python3 scripts/phase6/test_isolation_jev_lab.py
 
 **Next:** let it collect ~7d crumbs (cron), then L4 calibration vs knife/RSI shadows.  
 **Still no:** Jev buy, promote, or risk ownership.
+
+---
+
+## 9. Community tips audit (@0xMovez “20 tips”, 2026-09)
+
+Source: https://x.com/0xMovez/status/2101026930967335040
+
+| Tip theme | Our lab | Action |
+|-----------|---------|--------|
+| Not an LLM; state→typed decision | Already | Keep |
+| Choice / Score / Noul only | Already | Keep |
+| LLM generates, Jev decides, code controls, human uncertain | Architecture fit | Keep; human = escalate/skip route |
+| No personas/preambles; atomic Q + criteria | Strengthened | Descriptive criteria |
+| One judgment per question; combine in code | Already | Keep |
+| Never ask to explain | Already | Keep |
+| Clean small state | State compact | Prefer smaller packets over time |
+| Batch questions; free output | 5-Q fan-out | OK to add more dims later |
+| **Gate on confidence bands** (e.g. act ≥0.85 / escalate 0.55–0.85 / skip <0.55) | **Shipped paper route** | Starting points only; retune on crumbs |
+| Never invent options; closed choice list | Already | Keep |
+| Math/hard rules in code | Already | Keep |
+| Pin version after thresholds tuned | `~typesafe/jev-latest` lab | Pin `jev-1.13.x` at L5 |
+| Log model/probs/conf/route/outcome | Crumbs + route | L4 joins outcomes |
+| In the loop not beside it | Later | Only after calibration; still no sole kill |
+| Money workflows (support/lead/router) | N/A to trading | Skip |
+
+**Verdict:** Valuable as **operating discipline**, not new alpha. We adopted confidence-route logging; thresholds stay measure-only until L4.

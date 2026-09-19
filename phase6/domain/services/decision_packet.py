@@ -146,67 +146,103 @@ def build_pair_state(
 
 
 def default_lab_questions() -> Dict[str, Any]:
-    """Atomic fan-out for lab (decompose; code combines)."""
+    """Atomic fan-out for lab (decompose; code combines).
+
+    Design notes (0xMovez / TypeSafe tips applied):
+    - one atomic question per key; no compound \"and\" judgments
+    - descriptive criteria, not vague labels
+    - no persona / preamble / \"explain yourself\"
+    - choice options are a closed list built here (never invent)
+    """
     return {
         "action": {
             "type": "choice",
             "instructions": (
-                "Given indicators and inventory only, what is the most appropriate "
-                "spot action for this pair right now? Prefer hold when evidence is mixed. "
-                "This is not an order — a judgment label for logging."
+                "Pick the single most appropriate spot posture for this pair from the "
+                "state only. Prefer hold when evidence is mixed. This is a judgment label, "
+                "not an order."
             ),
             "criteria": {
-                "buy": "Setup favors opening or adding a small long",
-                "sell": "Setup favors reducing or exiting a long",
-                "hold": "No clear action; stay flat or keep current size",
-                "reduce": "Trim risk but not full exit",
-                "flatten": "Exit to flat urgently",
+                "buy": (
+                    "Indicators + inventory support opening or adding a small long "
+                    "(tryout-scale), not chasing extension"
+                ),
+                "sell": "Held long should be reduced or exited on structure/inventory grounds",
+                "hold": "No clear edge to change size; stay flat or keep current inventory",
+                "reduce": "Trim risk on a held long but full exit is not required",
+                "flatten": "Exit to flat urgently (stress, cascade, or broken thesis)",
             },
         },
         "regime": {
             "type": "choice",
-            "instructions": "Classify the short-horizon market regime for this pair from the state.",
+            "instructions": (
+                "Classify short-horizon regime for this pair from indicators in state only."
+            ),
             "criteria": {
-                "trend_up": "Clear upward trend / continuation higher",
-                "trend_down": "Clear downward trend / continuation lower",
-                "range": "Sideways / mean-reverting range",
-                "squeeze": "Compressed volatility, break imminent unclear",
-                "liquidation_cascade": "Forced selling / cascade-like stress",
+                "trend_up": "Price structure and momentum favor continuation higher",
+                "trend_down": "Price structure and momentum favor continuation lower",
+                "range": "Sideways / mean-reverting; no durable directional break",
+                "squeeze": "Compressed volatility; break direction unclear",
+                "liquidation_cascade": "Forced selling / cascade-like stress dominant",
             },
         },
         "setup_quality": {
             "type": "score",
-            "instructions": "Rate quality of the current trade setup for a small spot tryout.",
+            "instructions": (
+                "Rate quality of the current setup for a small spot tryout only "
+                "(not portfolio-scale risk)."
+            ),
             "criteria": [
-                "Toxic or trap-prone — avoid",
-                "Thin / mediocre — only with strong filters",
-                "Normal usable setup",
-                "Clean high-quality setup",
+                "Toxic or trap-prone — avoid any new risk",
+                "Thin / mediocre — only with strong external filters",
+                "Normal usable setup under tryout caps",
+                "Clean high-quality setup with clear structure",
             ],
         },
         "is_fakeout_or_stop_run": {
             "type": "noul",
             "instructions": (
                 "Is the current move more like a fakeout or stop-run than a durable break? "
-                "Use RSI and structure cues in state; if unclear, lean false."
+                "Use RSI and structure cues in state only."
             ),
             "criteria": {
-                "true": "Likely fakeout, stop-run, or knife without reclaim",
-                "false": "Not primarily a fakeout/stop-run, or insufficient evidence of one",
+                "true": (
+                    "Likely fakeout, stop-run, wash without reclaim, or knife "
+                    "(continued lower structure)"
+                ),
+                "false": (
+                    "Not primarily a fakeout/stop-run, or insufficient evidence of one"
+                ),
             },
         },
         "should_trade_name_now": {
             "type": "noul",
             "instructions": (
                 "Should we open or add risk in this name right now given inventory, "
-                "sentiment freshness, and RSI? Respect that tryouts are small and gated in code."
+                "sentiment freshness, and RSI in state? Tryouts are small and gated in code."
             ),
             "criteria": {
-                "true": "Yes — judgment supports trading this name now",
-                "false": "No — skip, wait, or do not add risk now",
+                "true": "Judgment supports trading this name now at tryout scale",
+                "false": "Skip, wait, or do not add risk now",
             },
         },
     }
+
+
+def _confidence_route(
+    conf: Optional[float],
+    *,
+    act_hi: float,
+    act_lo: float,
+) -> str:
+    """Three-band route on confidence (Movez tip 12/14). Thresholds are starting points."""
+    if conf is None:
+        return "missing_confidence"
+    if conf >= act_hi:
+        return "act"
+    if conf >= act_lo:
+        return "escalate"
+    return "human_or_skip"
 
 
 def confidence_gate_paper(
@@ -215,8 +251,14 @@ def confidence_gate_paper(
     should_trade_min: float = 0.65,
     fakeout_max: float = 0.55,
     action_conf_min: float = 0.55,
+    conf_act: float = 0.85,
+    conf_escalate: float = 0.55,
 ) -> Dict[str, Any]:
-    """Pure paper tag — never an order. Combines noul/choice with floors."""
+    """Pure paper tag — never an order.
+
+    Combines noul/choice with floors, then routes on *confidence* of the action
+    choice (not only the label). Lab never places orders regardless of route.
+    """
 
     def _noul(name: str) -> Optional[float]:
         a = result_answers.get(name) or {}
@@ -241,6 +283,8 @@ def confidence_gate_paper(
     except (TypeError, ValueError):
         act_c_f = None
 
+    route = _confidence_route(act_c_f, act_hi=conf_act, act_lo=conf_escalate)
+
     reasons: List[str] = []
     would = False
     if st is None:
@@ -253,24 +297,36 @@ def confidence_gate_paper(
         reasons.append(f"action_not_buy:{act}")
     if act_c_f is not None and act_c_f < action_conf_min:
         reasons.append(f"action_conf_below_{action_conf_min}")
+    if route == "human_or_skip":
+        reasons.append("confidence_route_human_or_skip")
+    elif route == "escalate":
+        reasons.append("confidence_route_escalate")
+    elif route == "missing_confidence":
+        reasons.append("confidence_route_missing")
 
+    # paper_would_buy_tag only on act-band + content filters (still never an order)
     if (
         st is not None
         and st >= should_trade_min
         and (fk is None or fk < fakeout_max)
         and act == "buy"
         and (act_c_f is None or act_c_f >= action_conf_min)
+        and route == "act"
     ):
         would = True
-        reasons = ["paper_would_buy_tag"]
+        reasons = ["paper_would_buy_tag", "confidence_route_act"]
 
     return {
         "would_order": False,  # hard — lab never orders
         "paper_would_buy_tag": would,
+        "confidence_route": route,
         "reasons": reasons,
         "thresholds": {
             "should_trade_min": should_trade_min,
             "fakeout_max": fakeout_max,
             "action_conf_min": action_conf_min,
+            "conf_act": conf_act,
+            "conf_escalate": conf_escalate,
+            "note": "Starting points from community tips; retune on our crumbs only",
         },
     }

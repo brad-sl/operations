@@ -55,6 +55,7 @@ class TestParseAndGate(unittest.TestCase):
         self.assertEqual(ans["action"].choice, "buy")
         g = confidence_gate_paper(ans)
         self.assertTrue(g["paper_would_buy_tag"])
+        self.assertEqual(g["confidence_route"], "act")
         self.assertFalse(g["would_order"])
 
     def test_gate_blocks_fakeout(self):
@@ -69,6 +70,22 @@ class TestParseAndGate(unittest.TestCase):
         )
         g = confidence_gate_paper(ans)
         self.assertFalse(g["paper_would_buy_tag"])
+
+    def test_gate_escalate_band_no_paper_buy(self):
+        """Movez tip: gate on confidence — mid band escalates, does not act."""
+        ans = parse_answers(
+            {
+                "answers": {
+                    "should_trade_name_now": {"type": "noul", "noul": 0.9},
+                    "action": {"type": "choice", "choice": "buy", "confidence": 0.7},
+                    "is_fakeout_or_stop_run": {"type": "noul", "noul": 0.2},
+                }
+            }
+        )
+        g = confidence_gate_paper(ans)
+        self.assertEqual(g["confidence_route"], "escalate")
+        self.assertFalse(g["paper_would_buy_tag"])
+        self.assertFalse(g["would_order"])
 
 
 class FakePort:

@@ -2,7 +2,7 @@
 
 **Canonical home for “where is the spec?”**  
 **Audience:** Brad, operators, Hermes/coding agents  
-**Updated:** 2026-08-16  
+**Updated:** 2026-09-19  
 **Repo root:** `projects/crypto-trading-bot` (paths below are from repo root)
 
 ---
@@ -206,6 +206,7 @@
 | [`docs/TRADING_BOT_DOCS.md`](TRADING_BOT_DOCS.md) | LEGACY | Older umbrella | Prefer this index |
 | [`docs/faq/Internal_Trading_Platform_FAQ.md`](faq/Internal_Trading_Platform_FAQ.md) | OPS | FAQ | Operator FAQ |
 | [`docs/faq/External_Client_FAQ.md`](faq/External_Client_FAQ.md) | GTM | FAQ | External wording |
+| [`docs/features/CRYPTO_PROCESS_LIFECYCLE.md`](features/CRYPTO_PROCESS_LIFECYCLE.md) | FEAT | DRAFT | End-to-end lifecycle coverage · Fresh vs Takeover · prefer over LEGACY FUNCTIONAL_SPEC |
 
 ---
 
@@ -217,6 +218,7 @@
 | `FEAT-DAILY-DOSE-PUB-CYCLE-2026-08` | [DAILY_DOSE_PUBLICATION_CYCLE.md](features/DAILY_DOSE_PUBLICATION_CYCLE.md) | IMPL_READY (disk; TG off) | Comms |
 | — | [DAILY_DOSE_OPERATOR_COMMANDS.md](features/DAILY_DOSE_OPERATOR_COMMANDS.md) | OPS companion | Comms |
 | `FEAT-TRADER-PERSONALIZED-SETTINGS-2026-08` | [TRADER_PERSONALIZED_SETTINGS_SPEC.md](features/TRADER_PERSONALIZED_SETTINGS_SPEC.md) | PARTIAL_LIVE · MT planned | Capital / settings |
+| `FEAT-CRYPTO-PROCESS-LIFECYCLE-2026-09` | [CRYPTO_PROCESS_LIFECYCLE.md](features/CRYPTO_PROCESS_LIFECYCLE.md) | DRAFT coverage map | Core lifecycle · Fresh vs Takeover onboarding |
 
 **Rule:** New shippable product work gets a `FEAT-…` id, a file under `docs/features/`, a row here, and a MASTER block only if execution is tracked.
 

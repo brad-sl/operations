@@ -16,6 +16,7 @@
 | FEAT-PARK-USDC-PAXG-PACKAGE-2026-08 | [PARK_USDC_PAXG_PACKAGE_SPEC.md](./PARK_USDC_PAXG_PACKAGE_SPEC.md) | SPEC+COORD W0 · LIVE PACKAGE OFF |
 | — | [**PARK_SMART_IDLE_CASH.md**](./PARK_SMART_IDLE_CASH.md) | **Trader voice · Smart Park differentiator** |
 | — | [PARK_USDC_PAXG_OPERATOR_CHECKLIST.md](./PARK_USDC_PAXG_OPERATOR_CHECKLIST.md) | OPS companion |
+| FEAT-CRYPTO-PROCESS-LIFECYCLE-2026-09 | [CRYPTO_PROCESS_LIFECYCLE.md](./CRYPTO_PROCESS_LIFECYCLE.md) | DRAFT coverage map · Fresh vs Takeover · Manage stages |
 
 ## Conventions
 
@@ -24,4 +25,4 @@
 3. Doctrine/PRD that is not a single shippable feature stays in `docs/research/` but is linked from the index.  
 4. Do not put SEO/SEM client work here (`docs/PROJECT_BOUNDARY.md`).
 
-*Last registry sync: 2026-08-07*
+*Last registry sync: 2026-09-19*

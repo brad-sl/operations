@@ -473,6 +473,15 @@ class StopLossManager:
             size, size_meta = resolve_sl_attach_size(self.exchange, pair, requested_size)
         if size <= 0:
             reason = size_meta.get("skip_reason") or size_meta.get("hint") or "zero_size"
+            # Dust-vs-bag refuse: do not strip an existing full stop just because
+            # free avail is a residual. Leave protection alone (CR-03 / settle lag).
+            if size_meta.get("refused_dust_attach") or reason == "avail_dust_vs_bag":
+                logger.error(
+                    "[SL-SIZE] %s refuse dust attach — leaving existing stops intact (meta=%s)",
+                    pair,
+                    size_meta,
+                )
+                return False
             logger.warning("[SL-SIZE] Skipping %s attach: %s (meta=%s)", pair, reason, size_meta)
             return False
 

@@ -221,6 +221,103 @@ def extract_stop_price_from_order(order: Dict[str, Any]) -> Optional[float]:
     return None
 
 
+def extract_stop_base_size_from_order(order: Dict[str, Any]) -> float:
+    """Best-effort base_size from exchange stop order shapes."""
+    if not isinstance(order, dict):
+        return 0.0
+    for key in ("base_size", "size", "filled_size", "quantity", "qty"):
+        raw = order.get(key)
+        if raw is None:
+            continue
+        try:
+            v = float(raw)
+            if v > 0:
+                return v
+        except (TypeError, ValueError):
+            pass
+    oc = order.get("order_configuration") or {}
+    if isinstance(oc, dict):
+        for _k, cfg in oc.items():
+            if not isinstance(cfg, dict):
+                continue
+            for key in ("base_size", "size", "quantity"):
+                raw = cfg.get(key)
+                if raw is None:
+                    continue
+                try:
+                    v = float(raw)
+                    if v > 0:
+                        return v
+                except (TypeError, ValueError):
+                    pass
+    return 0.0
+
+
+def open_stop_covers_position(
+    exchange: Any,
+    pair: str,
+    position_size: float,
+    *,
+    min_cover_frac: float = 0.90,
+    safety_ratio: float = 0.98,
+) -> Dict[str, Any]:
+    """
+    True when an open exchange stop already covers most of the bag.
+
+    Used by CR-03 reattach to avoid cancel→dust-reattach on a fresh post-buy stop
+    (LINK 2026-09-19: good 1.95 stop canceled, free avail dust 0.04 rearmed).
+    """
+    out: Dict[str, Any] = {
+        "covers": False,
+        "pair": pair,
+        "position_size": float(position_size or 0.0),
+        "covered_size": 0.0,
+        "open_count": 0,
+        "order_ids": [],
+    }
+    pos = float(position_size or 0.0)
+    if pos <= 0:
+        out["skip_reason"] = "no_position"
+        return out
+    try:
+        if hasattr(exchange, "get_open_stop_orders"):
+            orders = exchange.get_open_stop_orders(pair) or []
+        else:
+            orders = exchange.get_open_orders(pair) or []
+            orders = [
+                o
+                for o in orders
+                if order_configuration_is_stop(o.get("order_configuration"))
+            ]
+    except Exception as exc:
+        out["error"] = str(exc)
+        return out
+
+    covered = 0.0
+    oids: list = []
+    for order in orders or []:
+        if not isinstance(order, dict):
+            continue
+        sz = extract_stop_base_size_from_order(order)
+        if sz <= 0:
+            continue
+        covered += sz
+        oid = order.get("order_id") or order.get("id")
+        if oid:
+            oids.append(str(oid))
+    out["covered_size"] = covered
+    out["open_count"] = len(oids)
+    out["order_ids"] = oids
+    # Expect attach at ~safety_ratio of bag; require min_cover_frac of that floor.
+    need = pos * float(safety_ratio) * float(min_cover_frac)
+    out["need_size"] = need
+    if covered + 1e-12 >= need:
+        out["covers"] = True
+    else:
+        out["skip_reason"] = "under_covered"
+    return out
+
+
 def cancel_open_stops_for_pair(exchange: Any, pair: str) -> int:
     """Cancel open protective stops so base balance is released for re-attach.
 
@@ -325,6 +422,32 @@ def resolve_sl_attach_size(
 
     cap = max(0.0, avail * safety_ratio)
     if effective > cap:
+        # Refuse free-dust micro-stops when the bag is large but free is a
+        # settlement/hold residual. CR-03 cancel+reattach must not arm a
+        # 0.03 stop on a 1.99 bag (LINK 2026-09-19 same-session wound).
+        # min_cover_of_requested: effective must stay ≥ this fraction of the
+        # pre-cap request (after safety_ratio floor on the bag).
+        min_cover_of_requested = 0.50
+        floor = float(requested_size or 0.0) * float(safety_ratio) * min_cover_of_requested
+        # Prefer total holdings when request was stale/zero.
+        if floor <= 0 and total > 0:
+            floor = total * float(safety_ratio) * min_cover_of_requested
+        if floor > 0 and cap + 1e-12 < floor:
+            logger.error(
+                "[SL-SIZE] %s: REFUSE dust attach requested=%.8f avail=%.8f "
+                "cap=%.8f floor=%.8f (hold/settlement lag — keep existing stop)",
+                pair,
+                float(requested_size or 0.0),
+                avail,
+                cap,
+                floor,
+            )
+            meta["refused_dust_attach"] = True
+            meta["skip_reason"] = "avail_dust_vs_bag"
+            meta["capped"] = True
+            meta["cap"] = cap
+            meta["floor"] = floor
+            return 0.0, meta
         logger.warning(
             "[SL-SIZE] %s: capping attach size %.8f -> %.8f (avail=%.8f)",
             pair,

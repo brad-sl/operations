@@ -19,6 +19,7 @@ from phase6.core.sl_preflight import (
     order_configuration_is_stop,
     cancel_open_stops_for_pair,
     poll_available_after_cancel,
+    open_stop_covers_position,
 )
 
 logger = logging.getLogger(__name__)
@@ -215,8 +216,15 @@ class StopLossCoordinator:
                 "value_usd": float,
                 ...
             }
+
+        Serial per-pair cancel→settle→attach (multi-pair race). Skips cancel when an
+        open stop already covers ≥ ~88% of bag (post-buy CR-03 must not strip a good
+        stop then rearm free-dust).
         """
+        import time
+
         results = {}
+        pairs_done = 0
 
         for key, value in positions.items():
             # Normalize pair name
@@ -290,10 +298,46 @@ class StopLossCoordinator:
                 results[pair] = {"status": "skipped", "reason": "missing amount or price"}
                 continue
 
+            # Already covered by a full-size open stop (typical post-buy attach) →
+            # do NOT cancel + rearm from free dust (LINK 2026-09-19).
+            try:
+                cover = open_stop_covers_position(
+                    self.client,
+                    pair,
+                    float(amount),
+                    min_cover_frac=0.90,
+                    safety_ratio=0.98,
+                )
+            except Exception as ce:
+                cover = {"covers": False, "error": str(ce)}
+            if cover.get("covers"):
+                logger.info(
+                    "[CR-03] SKIP reattach %s — open stop already covers "
+                    "size=%.8f need=%.8f oids=%s",
+                    pair,
+                    float(cover.get("covered_size") or 0.0),
+                    float(cover.get("need_size") or 0.0),
+                    cover.get("order_ids"),
+                )
+                results[pair] = {
+                    "status": "skipped",
+                    "reason": "already_covered",
+                    "cover": cover,
+                    "entry_price": entry_for_calc,
+                    "size": amount,
+                }
+                continue
+
+            # Serial settle between pairs so pair B's hold does not starve pair C avail.
+            if pairs_done > 0:
+                time.sleep(1.5)
+
             # Release holds from existing stops before re-attach (root cause of PREVIEW_INSUFFICIENT_FUND).
             released = cancel_open_stops_for_pair(self.client, pair)
             if released:
-                poll_available_after_cancel(self.client, pair, timeout=4.0)
+                # Longer settle after cancel — free balance lag was the dust-attach path.
+                poll_available_after_cancel(self.client, pair, timeout=6.0)
+                time.sleep(0.75)
 
             if intended_entry > 0 and current_p > 0 and abs(intended_entry - current_p) / max(current_p, 1e-9) > 0.005:
                 logger.info(f"[SL-ANCHOR #1] {pair}: using original entry ${intended_entry:.4f} for SL (current ${current_p:.4f})")
@@ -322,9 +366,11 @@ class StopLossCoordinator:
                         results[pair]["verify"] = {"verified": v.get("verified"), "status": v.get("status")}
                     except Exception:
                         pass
+                pairs_done += 1
             except Exception as e:
                 logger.error(f"Failed to re-attach SL for {pair}: {e}")
                 results[pair] = {"status": "error", "error": str(e)}
+                pairs_done += 1
 
         return results
 

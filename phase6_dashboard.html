@@ -1068,10 +1068,11 @@
                     } else {
                         badge = ' <span class="text-slate-500 text-xs">cash</span>';
                     }
+                    // Cash: no Size (units ≡ $1) — Value only so it doesn't look like a calc input.
                     html += `<tr class="border-b border-slate-800 last:border-0 bg-slate-900/40">
                         <td class="py-2.5 font-medium ${nameClass}">${cur}${badge}</td>
-                        <td class="py-2.5 text-right tabular-nums">${parseFloat(pos.amount || 0).toFixed(2)}</td>
-                        <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || 0).toFixed(2)}</td>
+                        <td class="py-2.5 text-right tabular-nums text-slate-600" title="Cash has no separate size; value is the balance.">—</td>
+                        <td class="py-2.5 text-right tabular-nums">$${parseFloat(pos.value_usd || pos.amount || 0).toFixed(2)}</td>
                         <td class="py-2.5 text-right tabular-nums text-slate-500">—</td>
                     </tr>`;
                 });

@@ -1,9 +1,21 @@
-## ANALYST-REGIME-BEAR-PARK-20260920 — QUEUED (strategy)
+## ANALYST-REGIME-BEAR-PARK-20260920 — CLOSED (Brad Accept)
+
+**Status:** CLOSED · **CR:** ACCEPT · **Enum:** `propose_scoped_experiment`  
+**Trial:** `ANALYST-REGIME-BEAR-PARK-20260920-TRIAL`  
+**Follow-on:** `scoped_shadow` — full USDC park remains episode law under live bear; no tactical deploy promote; bear PT/ladder shadows measure-only.  
+**Evidence:** `reports/REGIME_BEAR_PARK_TEST_20260920.md` — HIT_CRITERIA 442d/59eps; park +4.25%/0DD vs tactical −60%. Live FP bear/`usdc_park`/`allow_new_buys=false`.  
+**Live writes:** **none**  
+**Packet:** `docs/testing/decisions/DEC_ANALYST-REGIME-BEAR-PARK-20260920-TRIAL_20260920.md`  
+**Decided:** 2026-09-20T07:11:41.988739+00:00
+
+---
+
+## ANALYST-REGIME-BEAR-PARK-20260920 — REPORT_READY / REVIEW_PENDING
 
 **Type:** test  
 **Date:** 2026-09-20  
 **Role:** Crypto-Analyst  
-**Status:** **RUNNING** — auto-pickup trial `ANALYST-REGIME-BEAR-PARK-20260920-TRIAL` at 2026-09-20T07:06:52  
+**Status:** **DONE** — trial `ANALYST-REGIME-BEAR-PARK-20260920-TRIAL` decision=`propose_scoped_experiment`  
 **auto_pickup:** true  
 **blocked_on:** none  
 **trial_kind:** offline_analysis  
@@ -41,6 +53,15 @@ Lower max DD / higher terminal vs tactical; USDC compare
   "cr_accept_only_if": "park beats tactical on maxDD and terminal on primary; N>=15"
 }
 ```
+
+### Offline result (2026-09-20 cron trial-exec)
+- **outcome:** `HIT_CRITERIA` · primary_pass=true · N_days=442 · episodes=59
+- **enum (proposed):** `propose_scoped_experiment` · follow_on `scoped_shadow` · **live_promote=false**
+- **Arms (bear labeled days):** full_park ret=+4.25% dd=0.0% vs tactical_0.25 ret=−59.95% dd=60.20% vs full_btc ret=−98.21% dd=98.26%
+- **Live fingerprint:** regime=bear · mode=usdc_park · allow_new_buys=false (observational; no config write)
+- **Report:** `reports/REGIME_BEAR_PARK_TEST_20260920.md` + `.json`
+- **Inbox:** `docs/testing/inbox/REVIEW_ANALYST-REGIME-BEAR-PARK-20260920-TRIAL.md`
+- **Not DONE** — Brad must `decide` (default accept shadow / no promote)
 
 ### Non-goals
 - No live trading config / regime policy writes without Brad + promotion gates

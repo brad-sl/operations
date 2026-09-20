@@ -1,3 +1,58 @@
+## ANALYST-REGIME-BEAR-PARK-20260920 — QUEUED (strategy)
+
+**Type:** test  
+**Date:** 2026-09-20  
+**Role:** Crypto-Analyst  
+**Status:** **RUNNING** — auto-pickup trial `ANALYST-REGIME-BEAR-PARK-20260920-TRIAL` at 2026-09-20T07:06:52  
+**auto_pickup:** true  
+**blocked_on:** none  
+**trial_kind:** offline_analysis  
+**family:** regime_bear_park  
+**duration_days:** 3  
+**Handoff:** `handoffs/analyst/Handoff_ANALYST-REGIME-BEAR-PARK-20260920.md`  
+**Strategy plan:** `PLAN-BEAR-PARK-001` · workstream `WS-REGIME-KNOBS`  
+**Regime focus:** bear  
+**Regimen:** `docs/testing/TEST_REGIMEN_E2E.md`  
+**Protocol:** `docs/testing/trials/PLAN-BEAR-PARK-001_PROTOCOL.md`  
+**Launch mode:** `live_regime`  
+**emit_only_when_regime:** `bear`
+
+### Goal
+Bear: full park vs small tactical deploy
+
+### Hypothesis
+Strict park minimizes loss vs any tactical bear deploy on real bears
+
+### Success metric
+Lower max DD / higher terminal vs tactical; USDC compare
+
+### Success criteria (frozen before run)
+```json
+{
+  "primary_window": "bear_historical_slices",
+  "min_n_trades": 15,
+  "must_beat_baseline_ret_pp": 0.0,
+  "must_beat_baseline_dd_pp": 0.0,
+  "require_both_ret_and_dd": true,
+  "usdc_hurdle": true,
+  "sparse_is": "inconclusive_not_promote",
+  "live_promote_allowed": false,
+  "shadow_ok_if": "primary_pass_and_n_ok",
+  "cr_accept_only_if": "park beats tactical on maxDD and terminal on primary; N>=15"
+}
+```
+
+### Non-goals
+- No live trading config / regime policy writes without Brad + promotion gates
+- Real data only
+- No promote on sparse N or bags-only edge
+- Close only via `trial_cycle.py decide` with follow_on + decision packet
+
+### Queue
+Emitted by `phase6/research/analyst_test_strategy.py` → pickup via `master_test_pickup.py`.
+
+---
+
 
 ## JEV-JUDGMENT-LAB-20260918 — LAB HARNESS SHIPPED (measure-only)
 - Plan: `docs/plans/2026-09-18-jev-judgment-layer-lab.md`

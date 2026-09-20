@@ -1,0 +1,121 @@
+{
+  "schema": "regime_bear_park_test_v1",
+  "plan_id": "PLAN-BEAR-PARK-001",
+  "family": "regime_bear_park",
+  "as_of": "2026-09-20T07:07:32.180718+00:00",
+  "live_writes": false,
+  "policy_fingerprint": {
+    "path": "config/regime_cash_policy.json",
+    "sha256": "f8c586e2697a8d08712be27d82feb32336e342b0a3cd4071857b2c57c10a5707",
+    "bytes": 15267
+  },
+  "live_fingerprint": {
+    "as_of": "2026-09-20T07:00:10.141976+00:00",
+    "regime": "bear",
+    "strategy_mode": "usdc_park",
+    "allow_new_buys": false,
+    "rebalance_cap_usd": 0.0,
+    "target_max_util_pct": 0.25,
+    "min_cash_reserve_pct": 0.7,
+    "confidence": 0.467,
+    "label": "Bear \u2014 park cash, strict entry",
+    "btc_return_pct": -14.699,
+    "regime_layer": "bear",
+    "entry": {
+      "min_sentiment": 0.4,
+      "min_sentiment_new_pair": 0.5,
+      "max_rsi": 45.0,
+      "require_lockout_clear": true
+    },
+    "live_is_bear": true
+  },
+  "live_confirm": {
+    "live_is_bear": true,
+    "allow_new_buys": false,
+    "strategy_mode": "usdc_park",
+    "note": "Live bear fingerprint recorded. Hist premise is primary; live confirm is observational (park knobs already enforce allow_new_buys=false). No live writes."
+  },
+  "arms": [
+    "USDC_full_park",
+    "tactical_small_deploy",
+    "live_bear_fingerprint"
+  ],
+  "detector_thresholds": {
+    "bull": 15.0,
+    "bear": -10.0,
+    "flat": 8.0,
+    "lookback": 30
+  },
+  "n_bear_days": 442,
+  "n_bear_episodes": 59,
+  "bear_paths": {
+    "full_park_usdc": {
+      "label": "full_park_usdc",
+      "n_days": 442,
+      "util": 0.0,
+      "total_return_pct": 4.2509,
+      "max_dd_pct": 0.0,
+      "end_equity_mult": 1.042509,
+      "insufficient": false
+    },
+    "tactical_util_0_25": {
+      "label": "tactical_util_0.25",
+      "n_days": 442,
+      "util": 0.25,
+      "total_return_pct": -59.9482,
+      "max_dd_pct": 60.1954,
+      "end_equity_mult": 0.400518,
+      "insufficient": false
+    },
+    "flat_like_0_65": {
+      "label": "flat_like_0_65",
+      "n_days": 442,
+      "util": 0.65,
+      "total_return_pct": -92.0176,
+      "max_dd_pct": 92.1433,
+      "end_equity_mult": 0.079824,
+      "insufficient": false
+    },
+    "full_btc": {
+      "label": "full_btc",
+      "n_days": 442,
+      "util": 1.0,
+      "total_return_pct": -98.2137,
+      "max_dd_pct": 98.2565,
+      "end_equity_mult": 0.017863,
+      "insufficient": false
+    }
+  },
+  "bear_premise": {
+    "class": "HIT_CRITERIA",
+    "primary_pass": true,
+    "enum": "propose_scoped_experiment",
+    "plain": "Bear premise HOLDS on 442d / 59 episodes: full park ret=4.2509% dd=0.0% vs tactical ret=-59.9482% dd=60.1954% vs BTC ret=-98.2137% dd=98.2565%."
+  },
+  "outcome": {
+    "class": "HIT_CRITERIA",
+    "primary_pass": true,
+    "enum": "propose_scoped_experiment",
+    "plain_english": "Bear premise HOLDS on 442d / 59 episodes: full park ret=4.2509% dd=0.0% vs tactical ret=-59.9482% dd=60.1954% vs BTC ret=-98.2137% dd=98.2565%.",
+    "n_labeled_days": 442,
+    "n_episodes": 59,
+    "live_promote_allowed": false,
+    "follow_on": "scoped_shadow"
+  },
+  "success_criteria": {
+    "primary_window": "bear_historical_slices",
+    "min_n_trades": 15,
+    "must_beat_baseline_ret_pp": 0.0,
+    "must_beat_baseline_dd_pp": 0.0,
+    "require_both_ret_and_dd": true,
+    "usdc_hurdle": true,
+    "live_promote_allowed": false
+  },
+  "recommendation": {
+    "enum": "propose_scoped_experiment",
+    "class": "HIT_CRITERIA",
+    "primary_pass": true,
+    "live_promote": false,
+    "plain": "Bear premise HOLDS on 442d / 59 episodes: full park ret=4.2509% dd=0.0% vs tactical ret=-59.9482% dd=60.1954% vs BTC ret=-98.2137% dd=98.2565%. Live regime=bear allow_new_buys=False mode=usdc_park."
+  }
+}

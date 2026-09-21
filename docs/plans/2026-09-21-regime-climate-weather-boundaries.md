@@ -32,11 +32,18 @@
 - Size-up off weather alone  
 - Promote B micro live without Brad GO + gate N
 
-## Next (after crumbs accumulate)
+## Next (staffed — doldrum pack)
 
-- Counterfactual: if micro B had been on when climate still bear/soft_down, 5d/10d path vs full park  
-- Optional hysteresis design (doc only) for bear→soft_down→flat  
-- BTC daily OHLCV backfill (sensor quality) so calendar weather matches bars  
+Full pack: `docs/plans/2026-09-21-climate-weather-remaining-four.md` · MASTER `REGIME-CLIMATE-WEATHER-REMAINING-20260921`
+
+| ID | Kanban | Note |
+|----|--------|------|
+| CW-1 OHLCV backfill | `t_b2c1e8e7` | P0 sensor |
+| CW-2 Hysteresis doc | `t_a8aafce3` | parallel |
+| CW-3 Threshold evidence | `t_defaaee0` | after CW-1; **no live write** |
+| CW-4 Live B path money OFF | `t_6af749f2` | after CW-2; arm ≠ orders |
+
+Still after crumbs: B vs park counterfactual join on climate/weather board.  
 
 ## Artifacts
 

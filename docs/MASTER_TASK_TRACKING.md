@@ -1,3 +1,22 @@
+## REGIME-CLIMATE-WEATHER-REMAINING-20260921 — OPEN (doldrum staffing)
+
+**Status:** OPEN · Brad GO staff remaining four after climate/weather spine (`07098d8c`)  
+**Metaphor:** 30d climate doldrum — fix sensors/rules before the breeze; weather ≠ rewrite climate.  
+**Pack plan:** `docs/plans/2026-09-21-climate-weather-remaining-four.md`  
+**Spine:** `docs/plans/2026-09-21-regime-climate-weather-boundaries.md`
+
+| ID | Title | Pri | Status | Kanban | Handoff |
+|----|-------|-----|--------|--------|---------|
+| CW-1 | BTC daily OHLCV backfill + freshness | P0 | ready/running | `t_b2c1e8e7` | `handoffs/crypto-engineer/Handoff_CW1_BTC_OHLCV_BACKFILL_20260921.md` |
+| CW-2 | Hysteresis design bear→soft_down→flat (doc) | P1 | ready | `t_a8aafce3` | `handoffs/crypto-analyst/Handoff_CW2_HYSTERESIS_DESIGN_20260921.md` |
+| CW-3 | Threshold surgery evidence (−10/±8/+15) — no live write | P1 | todo (parent CW-1) | `t_defaaee0` | `handoffs/crypto-analyst/Handoff_CW3_THRESHOLD_EVIDENCE_20260921.md` |
+| CW-4 | Live B micro path — armed, money OFF | P1 | todo (parent CW-2) | `t_6af749f2` | `handoffs/crypto-engineer/Handoff_CW4_LIVE_B_MICRO_PATH_20260921.md` |
+
+**Live knobs:** none from this epic until explicit Brad GO on CW-4 money arm / threshold shadow / hysteresis code.  
+**Board:** `crypto-bot-project`
+
+---
+
 ## ANALYST-REGIME-BEAR-PARK-20260920 — CLOSED (Brad Accept)
 
 **Status:** CLOSED · **CR:** ACCEPT · **Enum:** `propose_scoped_experiment`  
@@ -12824,3 +12843,23 @@ Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to co
 Source sweep: 2026-09-20T11:00:48.098291+00:00 | score=5.7836
 Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
 
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260921** (opened 2026-09-21T09:30:20.138230)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260921`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

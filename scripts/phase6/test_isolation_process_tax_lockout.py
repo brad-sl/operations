@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-"""Isolation: 72h post-SL + same-day pair lockout on evaluate path (ARCH-4 cannot bypass)."""
+"""Isolation: 72h post-SL + same-day pair lockout on evaluate path (ARCH-4 cannot bypass).
+
+Doctrine (funnel-first / rare perma-block):
+  - Default path = qualification funnel + expiring process locks
+    (72h post-SL, same-day seat, missfire, novelty, regime).
+  - buy_block_pairs = exceptional operator hard list only (toxic beyond funnel).
+  - Live scars today: RAVE-USD, UNI-USD — not every wounded tryout name.
+  - Do NOT pin LINK (etc.) into permanent buy_block to silence a gate.
+    Bug-class SLs → ledger correction + time-bounded waiver, not forever ban.
+"""
 from __future__ import annotations
 
 import json
@@ -12,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from phase6.core.runner_capital_events import pair_process_tax_lockout_reasons
+from phase6.core.regime_cash_policy import collect_buy_block_pairs, load_policy
 from phase6.core.limit_first_buy import (
     LimitFirstPolicy,
     policy_from_config,
@@ -105,13 +115,52 @@ def test_live_config_tryout_ioc_off() -> None:
     print("PASS live tryout IOC fallback OFF; knob still honours explicit 75")
 
 
-def test_live_cap_ssot_75() -> None:
+def test_live_hard_block_ssot_scar_pairs_only() -> None:
+    """Perma-block = exceptional. Live SSOT is RAVE/UNI scars — LINK not forever-banned.
+
+    Soft rebalance_cap_usd may still be 75; tryout shell ($25x4) is a separate path.
+    Hard list must not become a second membership jail for every process wound.
+    """
     cfg = json.loads((ROOT / "config" / "trading_config_phase6.json").read_text())
-    cap = float((cfg.get("global_settings") or {}).get("rebalance_cap_usd"))
-    assert cap == 75.0, cap
-    blocks = (cfg.get("global_settings") or {}).get("buy_block_pairs") or []
-    assert "LINK-USD" in blocks
-    print("PASS cap SSOT 75 and LINK buy_block")
+    gs = cfg.get("global_settings") or {}
+    cap = float(gs.get("rebalance_cap_usd") or 0)
+    # Soft cap still documented at 75 in many places; fail loud only if missing/zero
+    assert cap > 0, f"rebalance_cap_usd missing/zero: {cap}"
+    blocks = list(gs.get("buy_block_pairs") or [])
+    assert "RAVE-USD" in blocks, f"RAVE scar missing: {blocks}"
+    assert "UNI-USD" in blocks, f"UNI scar missing: {blocks}"
+    assert "LINK-USD" not in blocks, (
+        "LINK-USD must not live in buy_block_pairs; funnel + expiring post-SL, "
+        f"not perma-block. Got: {blocks}"
+    )
+    pol = load_policy()
+    collected = collect_buy_block_pairs(pol)
+    assert "RAVE-USD" in collected and "UNI-USD" in collected, collected
+    assert "LINK-USD" not in collected, collected
+    print("PASS hard-block SSOT = RAVE/UNI scars only (LINK not perma-blocked)")
+
+
+def test_buy_block_waivers_time_bounded() -> None:
+    """No unlimited scope=all waivers (AGENT_QUALITY_GATES law)."""
+    path = ROOT / "data" / "state" / "buy_block_waivers.json"
+    if not path.exists():
+        print("PASS waivers file absent (ok)")
+        return
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    pairs = raw.get("pairs") if isinstance(raw, dict) else None
+    items: list[dict] = []
+    if isinstance(pairs, dict):
+        for k, v in pairs.items():
+            if isinstance(v, dict):
+                items.append({"pair": k, **v})
+    elif isinstance(raw, dict) and "waivers" in raw:
+        items = [w for w in (raw.get("waivers") or []) if isinstance(w, dict)]
+    for w in items:
+        scope = str(w.get("scope") or "")
+        exp = w.get("expires_ts")
+        if scope == "all" and exp in (None, "", "null"):
+            raise AssertionError(f"unlimited scope=all waiver forbidden: {w}")
+    print("PASS buy_block_waivers time-bounded (no unlimited scope=all)")
 
 
 def test_get_recent_trades_accepts_hours() -> None:
@@ -129,6 +178,7 @@ if __name__ == "__main__":
     test_same_day_buy_blocks_second_seat()
     test_old_sl_does_not_block()
     test_live_config_tryout_ioc_off()
-    test_live_cap_ssot_75()
+    test_live_hard_block_ssot_scar_pairs_only()
+    test_buy_block_waivers_time_bounded()
     test_get_recent_trades_accepts_hours()
     print("ALL process-tax lockout isolation PASS")

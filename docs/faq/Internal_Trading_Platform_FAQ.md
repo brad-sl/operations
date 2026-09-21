@@ -272,6 +272,8 @@ eligible door
 | **Promote** | Shadow/paper → live membership or exit path — **Brad GO + evidence only** |
 | **dual_agree** | Paper arm agreement signal — **≠ promote** |
 | **live_membership_swaps** | Auto basket swap from arms — **stays false** unless Brad GO |
+| **Hard block / perma-block** | `buy_block_pairs` nuclear never-buy — **rare** scars (RAVE/UNI); not the normal filter |
+| **Funnel filter** | Tier / thaw / missfire / novelty / post-SL / regime — **default** way toxic names stay out |
 
 ### Ops pointers (happy path / luck ladder)
 

@@ -208,8 +208,11 @@ Learn runs **continuously** beside Care/Grow (not only at the end).
 | Name graduation | May keep sitting / exit tier-C jail | **PARTIAL** (ledger, thaw, force-eligible, novelty) |
 | Size graduation | Shell → larger ticket | **PARTIAL** / **ARMED** (R5 + first_fill) |
 | Promote shadow arm → live | Evidence + Brad GO | **GAP** (PC-08); auto-promote **OFF** |
-| Demote / block | Missfire, buy_block, hard list | **LIVE** |
+| Demote / block (funnel) | Missfire, post-SL 72h, same-day seat, novelty restricted | **LIVE** · default path |
+| Perma-block (`buy_block_pairs`) | Nuclear never-buy — toxic **beyond** funnel | **LIVE** · **rare** (scars: RAVE, UNI) |
 
+**Funnel-first:** filter toxicity in qualify / missfire / novelty / process locks.  
+**Do not** grow `buy_block_pairs` into a second membership jail.  
 **Do not auto-advance “old pairs.”** Re-qualify or packet + GO.
 
 ---

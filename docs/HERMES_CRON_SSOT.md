@@ -61,6 +61,8 @@ daily-dose 08:00 ·
 | `phase6-tryout-scale-up-live-approval` `229007957afb` | R5 live scale path **approval ping** · **09:40/15:40/21:40 PT** (after shadow :35) · TG **only if armed + n_planned>0** · 12h fingerprint dedupe · **plan only — never money** · wrapper `run_tryout_scale_up_live_approval.sh` |
 | `phase6-promote-graduation-chart` `af423d285b52` | P2 promote funnel SVG + claim bar · **12:40 PT daily** (after pick-metrics) · TG short · dash `/api/promote-graduation` |
 | `phase6-regime-arm-switch-metrics` `5036cfdbc289` | P3 flip success join · after switch cron · TG short · dash `/api/regime-arm-metrics` · claim OFF until N |
+| `phase6-regime-climate-weather` `2c2a52981860` | Climate vs weather multi-horizon + dwell · **07:50 PT daily** · local crumbs · measure-only · never flips REGIME-CASH · plan `docs/plans/2026-09-21-regime-climate-weather-boundaries.md` |
+| `phase6-bull-reentry-layered-paper` `f3f0f8c8d94e` | Layered B opportunity paper shadow (breakout+RSI sleeve) · **08:10/20:10 PT** · local · live_apply false · spec frozen 2026-07-30 |
 | `phase6-basket-seat-idle-refresh` | Soft idle flags; observe_only |
 | `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred from decision file (regime switch may flip) →2026-09-28 |
 | `phase6-regime-arm-switch` `353a8ca93150` | BTC 7d tape → paper-primary arm (`up/chop→rel_btc_stable`, `down→risk_adj_mom`) · **11:40/23:40 PT** · apply shadow · TG **only on flip** · live swaps forced OFF |

@@ -114,3 +114,7 @@ data/state/trial_closeout_watch_history.jsonl
 data/state/tryout_scale_up_live_*.json
 data/state/tryout_scale_up_live_crumbs.jsonl
 data/state/tryout_scale_up_live_KILL
+
+# climate/weather measure
+data/state/regime_climate_weather_latest.json
+data/state/regime_climate_weather_crumbs.jsonl

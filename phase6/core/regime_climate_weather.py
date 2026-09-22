@@ -33,7 +33,7 @@ from phase6.research.regime_detector import (
     LOOKBACK_DAYS,
     classify_regime_layer,
     detect_regime,
-    _load_btc_closes,
+    _load_btc_closes_with_meta,
     _merge_live_close,
 )
 from phase6.research.bull_reentry_layered import (
@@ -115,36 +115,106 @@ def _rolling_ret(
     return r
 
 
-def _load_long_closes() -> List[Tuple[date, float]]:
-    """Prefer long tape for dwell stats; fall back to detector loader."""
-    if LONG_BTC.exists():
+def _parse_ohlcv_close_rows(series: Sequence[Any]) -> List[Tuple[date, float]]:
+    out: List[Tuple[date, float]] = []
+    for bar in series:
+        if not isinstance(bar, dict):
+            continue
+        ts = str(bar.get("timestamp") or bar.get("time") or bar.get("date") or "")
+        close = bar.get("close") or bar.get("c")
+        if close is None or not ts:
+            continue
         try:
-            blob = json.loads(LONG_BTC.read_text(encoding="utf-8"))
-            series = blob if isinstance(blob, list) else (
-                blob.get("BTC-USD") or blob.get("BTC") or blob.get("closes") or []
-            )
-            out: List[Tuple[date, float]] = []
-            for bar in series:
-                if not isinstance(bar, dict):
-                    continue
-                ts = str(bar.get("timestamp") or bar.get("time") or bar.get("date") or "")
-                close = bar.get("close") or bar.get("c")
-                if close is None or not ts:
-                    continue
-                try:
-                    if "T" in ts:
-                        d = datetime.fromisoformat(ts.replace("Z", "+00:00")).date()
-                    else:
-                        d = date.fromisoformat(ts[:10])
-                    out.append((d, float(close)))
-                except (TypeError, ValueError):
-                    continue
-            out.sort(key=lambda x: x[0])
-            if len(out) >= 60:
-                return out
-        except (OSError, json.JSONDecodeError, TypeError, ValueError):
-            pass
-    return _load_btc_closes()
+            if "T" in ts:
+                d = datetime.fromisoformat(ts.replace("Z", "+00:00")).date()
+            else:
+                d = date.fromisoformat(ts[:10])
+            out.append((d, float(close)))
+        except (TypeError, ValueError):
+            continue
+    out.sort(key=lambda x: x[0])
+    return out
+
+
+def _load_marketdata_closes() -> Tuple[List[Tuple[date, float]], Dict[str, Any]]:
+    """P3 primary tape: marketdata.db BTC 1d (same port as regime_detector)."""
+    try:
+        from phase6.core.marketdata_store import get_btc_daily_closes
+
+        closes, md = get_btc_daily_closes()
+        meta = dict(md or {})
+        meta["source"] = "marketdata_db" if closes else meta.get("source") or "marketdata_db_empty"
+        if closes:
+            return closes, meta
+    except Exception as exc:  # noqa: BLE001
+        meta_err: Dict[str, Any] = {"source": "marketdata_error", "error": str(exc)}
+    else:
+        meta_err = {"source": "marketdata_empty"}
+
+    closes, det_meta = _load_btc_closes_with_meta()
+    meta = {**meta_err, **(det_meta or {}), "fallback": True}
+    meta.setdefault("source", det_meta.get("source") if isinstance(det_meta, dict) else "detector_fallback")
+    return closes, meta
+
+
+def _load_long_json_closes() -> List[Tuple[date, float]]:
+    """Research long tape only — never live climate SSOT by itself."""
+    if not LONG_BTC.exists():
+        return []
+    try:
+        blob = json.loads(LONG_BTC.read_text(encoding="utf-8"))
+        series = blob if isinstance(blob, list) else (
+            blob.get("BTC-USD") or blob.get("BTC") or blob.get("closes") or []
+        )
+        out = _parse_ohlcv_close_rows(series if isinstance(series, list) else [])
+        return out if len(out) >= 60 else []
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        return []
+
+
+def _merge_date_closes(
+    *series: Sequence[Tuple[date, float]],
+) -> List[Tuple[date, float]]:
+    """Later series win on same date (marketdata tip overrides stale long JSON)."""
+    by_d: Dict[date, float] = {}
+    for seq in series:
+        for d, px in seq:
+            if px and px > 0:
+                by_d[d] = float(px)
+    return sorted(by_d.items(), key=lambda x: x[0])
+
+
+def _load_long_closes() -> List[Tuple[date, float]]:
+    """Dwell tape: long research history + marketdata tip (P3).
+
+    Long JSON alone ends mid-tape and reintroduces false climate if used for
+    live multi-horizon. Marketdata alone is shorter; stitch for episode stats.
+    """
+    long_rows = _load_long_json_closes()
+    md_rows, _meta = _load_marketdata_closes()
+    if long_rows and md_rows:
+        return _merge_date_closes(long_rows, md_rows)
+    if md_rows:
+        return md_rows
+    if long_rows:
+        return long_rows
+    return []
+
+
+def _load_snapshot_closes(
+    *, live_merge: bool = True
+) -> Tuple[List[Tuple[date, float]], Dict[str, Any]]:
+    """Multi-horizon weather tape: marketdata first; optional same-day live mark."""
+    raw, load_meta = _load_marketdata_closes()
+    meta: Dict[str, Any] = {
+        "tape_source": load_meta.get("source"),
+        "load": load_meta,
+        "live_merge": {},
+    }
+    if live_merge and raw:
+        raw, merge_meta = _merge_live_close(raw)
+        meta["live_merge"] = merge_meta
+    return raw, meta
 
 
 def episode_stats(
@@ -186,7 +256,8 @@ def build_dwell_board(
     *,
     lookback_days: int = LOOKBACK_DAYS,
 ) -> Dict[str, Any]:
-    closes = closes or _load_long_closes()
+    caller_supplied = closes is not None
+    closes = list(closes) if caller_supplied else _load_long_closes()
     if len(closes) < lookback_days + 5:
         return {"ok": False, "error": "insufficient_closes", "n": len(closes)}
 
@@ -208,6 +279,8 @@ def build_dwell_board(
         "lookback_days": lookback_days,
         "tape_start": days[0].isoformat() if days else None,
         "tape_end": days[-1].isoformat() if days else None,
+        "tape_source": "caller" if caller_supplied else "long_json_stitched_marketdata",
+        "n_bars": len(closes),
         "coarse_episodes": episode_stats(labels_coarse),
         "layer_episodes": episode_stats(labels_layer),
         "heinein": {
@@ -222,12 +295,21 @@ def multi_horizon_snapshot(
     *,
     live_merge: bool = True,
 ) -> Dict[str, Any]:
-    raw = closes or _load_btc_closes()
-    meta: Dict[str, Any] = {}
-    if live_merge:
-        raw, meta = _merge_live_close(raw)
+    # P3: marketdata.db is primary weather tape (not long JSON / research freeze).
+    if closes is None:
+        raw, tape_meta = _load_snapshot_closes(live_merge=live_merge)
+        meta = dict(tape_meta.get("live_merge") or {})
+        load_meta = dict(tape_meta.get("load") or {})
+        tape_source = tape_meta.get("tape_source") or load_meta.get("source") or "marketdata_db"
+    else:
+        raw = list(closes)
+        meta = {}
+        load_meta = {"source": "caller"}
+        tape_source = "caller"
+        if live_merge and raw:
+            raw, meta = _merge_live_close(raw)
     if len(raw) < 5:
-        return {"ok": False, "error": "no_btc"}
+        return {"ok": False, "error": "no_btc", "tape_source": tape_source, "load": load_meta}
 
     days = [d for d, _ in raw]
     px = {d: c for d, c in raw}
@@ -242,6 +324,7 @@ def multi_horizon_snapshot(
         "prior_bar": days[i - 1].isoformat() if i >= 1 else None,
         "gap_days_before_last": gap_days,
         "sparse_tail": gap_days >= 3,
+        "tape_source": tape_source,
         "note": (
             "OHLCV lag + live append: calendar short horizons may collapse onto same prior close; "
             "prefer bars_* weather until daily backfill catches up."
@@ -331,10 +414,13 @@ def multi_horizon_snapshot(
         "as_of": _now().isoformat(),
         "btc_last": days[-1].isoformat(),
         "btc_px": px.get(days[-1]),
+        "tape_source": tape_source,
+        "load": load_meta,
         "live_merge": meta,
         "data_quality": data_quality,
         "climate": {
-            "source": "detect_regime / REGIME-CASH SSOT role",
+            "source": "detect_regime / marketdata_db",
+            "tape_source": tape_source,
             "regime": c_reg,
             "regime_layer": (climate or {}).get("regime_layer") if isinstance(climate, dict) else None,
             "btc_return_pct": (climate or {}).get("btc_return_pct") if isinstance(climate, dict) else None,
@@ -355,6 +441,8 @@ def multi_horizon_snapshot(
                     "window_start",
                     "window_end",
                     "as_of",
+                    "source",
+                    "data_source",
                 )
                 if isinstance(climate, dict) and k in climate
             },
@@ -421,6 +509,7 @@ def _plain(snap: Dict[str, Any], dwell: Dict[str, Any]) -> str:
     dq = snap.get("data_quality") or {}
     parts = [
         f"Climate (30d SSOT): {c.get('regime')} · BTC30d={c.get('btc_return_pct')}%.",
+        f"Tape: {snap.get('tape_source') or (dq.get('tape_source') or 'n/a')}.",
         f"Weather 7d/14d: {((h.get('7d') or {}).get('btc_return_pct'))}% / {((h.get('14d') or {}).get('btc_return_pct'))}% "
         f"(mode {((h.get('7d') or {}).get('primary_mode'))}).",
         f"Structure sleeve cap would be ${w.get('cap_usd')} (paper only)."

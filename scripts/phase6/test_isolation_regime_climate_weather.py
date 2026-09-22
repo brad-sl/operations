@@ -58,6 +58,7 @@ class TestRegimeClimateWeather(unittest.TestCase):
         }):
             snap = rcw.multi_horizon_snapshot(closes, live_merge=False)
         self.assertTrue(snap.get("ok"), snap)
+        self.assertEqual(snap.get("tape_source"), "caller")
         self.assertIn("7d", snap["weather_horizons"])
         self.assertIn("14d", snap["weather_horizons"])
         self.assertIn("30d", snap["weather_horizons"])
@@ -90,6 +91,39 @@ class TestRegimeClimateWeather(unittest.TestCase):
         # bar 7d should differ from collapsed calendar when enough history
         self.assertIsNotNone(h7["bars"]["btc_return_pct"])
 
+    def test_default_snapshot_uses_marketdata_port(self):
+        """P3: default path goes through marketdata loader, not long JSON tip alone."""
+        d0 = date(2026, 8, 1)
+        closes = [(d0 + timedelta(days=i), 80000.0 + i * 10) for i in range(60)]
+        load_meta = {"source": "marketdata_db", "fresh_ok": True, "bar_count": len(closes)}
+        with mock.patch.object(
+            rcw, "_load_marketdata_closes", return_value=(closes, load_meta)
+        ), mock.patch.object(
+            rcw,
+            "detect_regime",
+            return_value={
+                "regime": "transition",
+                "regime_layer": "climb",
+                "btc_return_pct": 11.0,
+                "confidence": 0.7,
+                "source": "marketdata_db",
+            },
+        ):
+            snap = rcw.multi_horizon_snapshot(live_merge=False)
+        self.assertTrue(snap.get("ok"), snap)
+        self.assertEqual(snap.get("tape_source"), "marketdata_db")
+        self.assertEqual(snap["climate"]["regime"], "transition")
+        self.assertFalse(snap["data_quality"].get("sparse_tail"))
+        self.assertEqual(snap["btc_last"], closes[-1][0].isoformat())
+
+    def test_merge_date_closes_marketdata_wins_tip(self):
+        long_rows = [(date(2026, 8, 15), 62997.81), (date(2026, 9, 1), 70000.0)]
+        md_rows = [(date(2026, 9, 1), 85000.0), (date(2026, 9, 22), 86443.0)]
+        merged = rcw._merge_date_closes(long_rows, md_rows)
+        by = dict(merged)
+        self.assertEqual(by[date(2026, 9, 1)], 85000.0)
+        self.assertEqual(by[date(2026, 9, 22)], 86443.0)
+        self.assertEqual(by[date(2026, 8, 15)], 62997.81)
 
     def test_build_board_writes_no_live_flag(self):
         with tempfile.TemporaryDirectory() as td:

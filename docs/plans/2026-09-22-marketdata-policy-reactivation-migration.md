@@ -330,6 +330,8 @@ git commit -m "fix(regime): restore transition deploy knob-map; preserve vs scor
 
 ## Wave P3 — D4 residual cutover (climate honesty)
 
+**Status:** **P3 SHIPPED 2026-09-22** (climate/weather → marketdata; L2 refresh; fossil audit)
+
 **Objective:** Kill remaining false-bear boards that will confuse GO decisions.
 
 ### Task P3.1 — `regime_climate_weather` → marketdata.db
@@ -366,6 +368,18 @@ rg -n "price_cache_|backtest_historical_ohlcv_btc|fetch_btc_daily|get_recent_pri
 | P3.3 | **Scotty** measure cron |
 
 **Kanban:** new card `MARKETDATA-D4-CLIMATE-WEATHER-PORT` or attach to CW residual.
+
+### P3 closeout (2026-09-22)
+
+| Check | Result |
+|-------|--------|
+| climate board | `transition` · climb · BTC30d **+10.966%** · tape `marketdata_db` |
+| stale false bear | cleared (was bear −14% / gap 19d / live $66.8k fossil) |
+| dwell | long JSON stitched + marketdata tip → tape_end **2026-09-22** |
+| isolation | `test_isolation_regime_climate_weather.py` **7/7 OK** |
+| L2 | refreshed; regime **transition** · deploy · allow_new_buys **true** (measure-only) |
+| fossils | live climate ported; research JSON left offline; park_ballast_shadow research tape OK |
+| money knobs | **none** |
 
 ---
 

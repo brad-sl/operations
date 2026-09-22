@@ -1,7 +1,9 @@
 
 
 
-## MARKETDATA-POLICY-REACTIVATION-20260922 (P1+P2 SHIPPED 2026-09-22 — P3+ open)
+## MARKETDATA-POLICY-REACTIVATION-20260922 (P1–P3 SHIPPED 2026-09-22 — P3+ open)
+
+- **P3 SHIPPED 2026-09-22:** `regime_climate_weather` → `marketdata.db` (false-bear board cleared; L2 refreshed; measure-only).
 
 - **Plan:** `docs/plans/2026-09-22-marketdata-policy-reactivation-migration.md`
 - **Choke:** detector transition/climb +11% on marketdata.db; policy JSON transition=deploy/$75; knob_map transition=usdc_hold/$0 wins merge to live park.

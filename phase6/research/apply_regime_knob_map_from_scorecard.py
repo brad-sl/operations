@@ -149,6 +149,12 @@ def main() -> int:
     idx = load_scenario_index()
     knob_map = json.loads(KNOB_MAP.read_text()) if KNOB_MAP.exists() else {"schema_version": "1", "regimes": {}}
     regimes_out = deepcopy(knob_map.get("regimes") or {})
+    # Top-level preserve list survives rewrites (flat + transition Brad thaws).
+    prior_preserved = {
+        str(x).strip().lower()
+        for x in (knob_map.get("operator_overrides_preserved") or [])
+        if str(x).strip()
+    }
     preserved: list[str] = []
 
     for rg in scorecard.get("regimes") or []:
@@ -156,10 +162,22 @@ def main() -> int:
         key = REGIME_KEY.get(regime, regime)
         if key not in ("bull", "bear", "flat", "transition"):
             continue
-        # Operator thaw / manual latch (e.g. flat option B) — do not clobber
+        # Operator thaw / manual latch (e.g. flat option B, transition P1) — do not clobber
         existing = regimes_out.get(key) or {}
         ov = existing.get("operator_override") or {}
-        if ov.get("protect", True) and ov.get("reason"):
+        protect = bool(ov.get("protect")) and bool(ov.get("reason"))
+        # Also honor top-level list even if a writer forgot operator_override block
+        if key in prior_preserved:
+            protect = True
+            if not ov.get("reason"):
+                ov = {
+                    **ov,
+                    "protect": True,
+                    "reason": ov.get("reason") or f"operator_overrides_preserved:{key}",
+                }
+                existing = deepcopy(existing)
+                existing["operator_override"] = ov
+        if protect:
             # Keep live overlay + mode; attach freshest scorecard under research_only
             refreshed = deepcopy(existing)
             refreshed["scorecard_research_only"] = {
@@ -175,6 +193,13 @@ def main() -> int:
                 f"{rg.get('optimal_strategy_id') or rg.get('winner_id')} "
                 f"(operator_override protected)"
             ).strip(" |")
+            if not (refreshed.get("operator_override") or {}).get("protect"):
+                refreshed["operator_override"] = {
+                    **(refreshed.get("operator_override") or {}),
+                    "protect": True,
+                    "reason": (refreshed.get("operator_override") or {}).get("reason")
+                    or f"operator_overrides_preserved:{key}",
+                }
             regimes_out[key] = refreshed
             preserved.append(key)
             continue
@@ -188,12 +213,19 @@ def main() -> int:
         else:
             regimes_out[key] = entry_from_winner(strategy_id, idx, regime, rg)
 
+    # Never drop prior preserve keys that still have protect blocks (soft_down etc.)
+    for k in sorted(prior_preserved):
+        if k not in preserved and k in regimes_out:
+            ov = (regimes_out.get(k) or {}).get("operator_override") or {}
+            if ov.get("protect") or k in ("flat", "transition", "soft_down"):
+                preserved.append(k)
+
     knob_map["regimes"] = regimes_out
     knob_map["updated_from_scorecard_at"] = datetime.now(timezone.utc).isoformat()
     knob_map["scorecard_generated_at"] = scorecard.get("generated_at")
-    knob_map["operator_overrides_preserved"] = preserved
+    knob_map["operator_overrides_preserved"] = sorted(set(preserved) | prior_preserved)
     KNOB_MAP.write_text(json.dumps(knob_map, indent=2))
-    print(f"regime_knob_map OK keys={list(regimes_out.keys())} preserved={preserved} wrote {KNOB_MAP}")
+    print(f"regime_knob_map OK keys={list(regimes_out.keys())} preserved={knob_map['operator_overrides_preserved']} wrote {KNOB_MAP}")
     return 0
 
 

@@ -172,6 +172,11 @@ def build_readiness_payload(
     plain_english: str = "",
     actions_taken: Optional[Sequence[str]] = None,
     as_of: Optional[datetime] = None,
+    strategy_mode: str = "",
+    allow_new_buys: Optional[bool] = None,
+    rebalance_cap_usd: Optional[float] = None,
+    regime_layer: str = "",
+    knob_map_scenario: str = "",
 ) -> Dict[str, Any]:
     now = as_of or _utc_now()
     if now.tzinfo is None:
@@ -181,11 +186,27 @@ def build_readiness_payload(
     any_allowed = any(d.allowed for d in doors)
     seats_left = max(0, int(max_new_seats_per_day) - int(seats_used_today))
     cash_ok = cash_usd is None or float(cash_usd) >= float(tryout_cap_usd) * 0.9
-    can_buy = bool(any_allowed and seats_left > 0 and cash_ok and not sensor.get("broken"))
+    park_blocked = bool(
+        (allow_new_buys is False)
+        or (str(strategy_mode or "").lower() in ("usdc_park", "park"))
+    )
+    can_buy = bool(
+        any_allowed
+        and seats_left > 0
+        and cash_ok
+        and not sensor.get("broken")
+        and not park_blocked
+    )
 
     if not plain_english:
         if sensor.get("broken"):
             plain_english = "Sensor looks broken — do not treat as drought; fix refresh path first."
+        elif park_blocked:
+            plain_english = (
+                f"Regime park blocks new buys (mode={strategy_mode or 'park'} "
+                f"regime={regime} layer={regime_layer or '—'}). "
+                "Unlock policy before reading eng doors as actionable."
+            )
         elif can_buy:
             ok = [d.pair for d in doors if d.allowed]
             plain_english = f"Tryout can seat before next rebalance: {', '.join(ok)} clear eng floor."
@@ -210,6 +231,12 @@ def build_readiness_payload(
         "tryout_cap_usd": float(tryout_cap_usd),
         "eligible_tryout_pairs": list(eligible_tryout_pairs),
         "regime": regime,
+        "regime_layer": regime_layer or "",
+        "strategy_mode": strategy_mode or "",
+        "allow_new_buys": allow_new_buys,
+        "rebalance_cap_usd": rebalance_cap_usd,
+        "knob_map_scenario": knob_map_scenario or "",
+        "park_blocked": park_blocked,
         "equity_health": equity_health,
         "sent_mode": sent_mode,
         "entry_floors": dict(floors),
@@ -235,7 +262,13 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         f"- Cash: `${payload.get('cash_usd')}` · tryout cap `${payload.get('tryout_cap_usd')}`",
         f"- Seats today: {payload.get('seats_used_today')}/{payload.get('max_new_seats_per_day')}",
         f"- Eligible: {', '.join(payload.get('eligible_tryout_pairs') or []) or '—'}",
-        f"- Regime: {payload.get('regime')} · equity_health: {payload.get('equity_health')}",
+        f"- Regime: {payload.get('regime')} · layer: {payload.get('regime_layer') or '—'} · "
+        f"mode: {payload.get('strategy_mode') or '—'} · "
+        f"allow_new_buys: {payload.get('allow_new_buys')} · "
+        f"cap: ${payload.get('rebalance_cap_usd')} · "
+        f"scenario: {payload.get('knob_map_scenario') or '—'} · "
+        f"park_blocked: {payload.get('park_blocked')} · "
+        f"equity_health: {payload.get('equity_health')}",
         f"- Runner PID: {payload.get('runner_pid')}",
         "",
         "## Floors (SSOT)",
@@ -639,6 +672,11 @@ def build_live_tryout_readiness(*, write: bool = True) -> Dict[str, Any]:
         runner_pid=_runner_pid(),
         actions_taken=["pc03_readiness_builder", "no knobs / no force_rebalance"],
         as_of=now,
+        strategy_mode=str(getattr(snap, "strategy_mode", "") or ""),
+        allow_new_buys=bool(getattr(snap, "allow_new_buys", True)),
+        rebalance_cap_usd=float(getattr(snap, "rebalance_cap_usd", 0.0) or 0.0),
+        regime_layer=str(getattr(snap, "regime_layer", "") or ""),
+        knob_map_scenario=str(getattr(snap, "knob_map_scenario", "") or ""),
     )
     if write:
         write_artifacts(payload)

@@ -1,7 +1,7 @@
 
 
 
-## MARKETDATA-POLICY-REACTIVATION-20260922 (PLAN — await Brad GO P1)
+## MARKETDATA-POLICY-REACTIVATION-20260922 (P1+P2 SHIPPED 2026-09-22 — P3+ open)
 
 - **Plan:** `docs/plans/2026-09-22-marketdata-policy-reactivation-migration.md`
 - **Choke:** detector transition/climb +11% on marketdata.db; policy JSON transition=deploy/$75; knob_map transition=usdc_hold/$0 wins merge to live park.

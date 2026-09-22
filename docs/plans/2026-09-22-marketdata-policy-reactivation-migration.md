@@ -2,10 +2,24 @@
 
 > **For Hermes:** Execute only after explicit Brad GO on each **policy** wave. Sensor/cutover waves may proceed under this plan without money-path writes.
 >
-> **Status:** PLAN ONLY — no knobs applied this turn  
+> **Status:** **P1+P2 SHIPPED 2026-09-22** (Brad GO) — P3+ still open  
 > **Date:** 2026-09-22  
 > **Owner (orchestration):** Scotty / Hermes default  
 > **Related:** `docs/plans/2026-09-22-marketdata-ohlcv-schema-design.md` · MASTER `MARKETDATA-OHLCV-*` · `REGIME-CLIMATE-WEATHER-REMAINING-20260921`
+
+### Shipped this turn (P1+P2)
+
+| Item | Result |
+|------|--------|
+| Knob map `transition` | `deploy` · cap **$75** · scenario `transition_gated_deploy_75` · `operator_override.protect` |
+| Preserve list | `flat` + **`transition`** |
+| Scorecard writer | honors top-level `operator_overrides_preserved` (isolation green) |
+| Live resolve | `transition/climb` · `allow_new_buys=true` · cap **$75** |
+| Tryout readiness | surfaces mode/cap/park; `can_buy` fails closed on park |
+| Doors | membership open; **eng-X still uncleared** → drought honest, not park |
+| Still OFF | membership swaps · auto-promote · force-rebalance |
+
+**Isolation:** `scripts/phase6/test_isolation_transition_knob_map_restore.py` · PC03 · `test_isolation_regime_cash_policy` PASS.
 
 ---
 

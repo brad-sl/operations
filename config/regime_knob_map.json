@@ -207,11 +207,11 @@
       }
     },
     "transition": {
-      "scenario_id": "usdc_hold",
-      "strategy_mode": "usdc_park",
-      "note": "scorecard recent optimal=usdc_hold ann=3.5% best_alt=defensive_rebalance_14d alt_ann=2.7514% (max annualized vs USDC carry)",
+      "scenario_id": "transition_gated_deploy_75",
+      "strategy_mode": "deploy",
+      "note": "Brad GO 2026-09-22 P1: restore 2026-08-24 transition thaw (gated deploy $75). Scorecard preferred usdc_hold offline — operator_override protected; do not silent-park climb.",
       "live_overlay": {
-        "global_settings.rebalance_cap_usd": 0.0,
+        "global_settings.rebalance_cap_usd": 75.0,
         "global_settings.risk_free_preference": "USDC",
         "global_settings.risk_free_apy_pct": 3.5
       },
@@ -220,12 +220,20 @@
         "rebal_freq": 7
       },
       "usdc_benchmark": {
-        "beats_usdc_benchmark": true,
-        "annualized_return_pct": 3.5,
+        "beats_usdc_benchmark": false,
+        "annualized_return_pct": 0.0,
         "usdc_apy_pct": 3.5,
-        "reason": "optimal_strategy"
+        "reason": "operator_transition_thaw_not_scorecard"
       },
-      "scorecard": {
+      "operator_override": {
+        "as_of": "2026-09-22",
+        "brad_go": "2026-09-22",
+        "reason": "transition_gated_deploy_restore_p1",
+        "previous_scenario_id": "usdc_hold",
+        "protect": true,
+        "note": "Matches regimes.transition in regime_cash_policy.json (Brad 2026-08-24). Recovery tryout shell still clamps sleeve."
+      },
+      "scorecard_research_only": {
         "winner_id": "usdc_hold",
         "optimal_strategy_id": "usdc_hold",
         "beats_baseline": true,
@@ -233,31 +241,21 @@
           "start": "2026-02-01",
           "end": "2026-07-30"
         },
+        "note": "Prior scorecard preferred usdc_hold; live law is operator deploy.",
         "usdc_optimal": {
           "optimal_strategy_id": "usdc_hold",
           "optimal_annualized_return_pct": 3.5,
           "optimal_is_usdc": true,
-          "optimal_metrics": {
-            "final_equity": 1017.01,
-            "total_return_pct": 1.7014,
-            "annualized_return_pct": 3.5,
-            "max_drawdown_pct": 0.0,
-            "sharpe_ratio": 34.403,
-            "total_trades": 0,
-            "rebalance_count": 0,
-            "avg_pairs_held": 0.0,
-            "engine": "usdc_carry",
-            "strategy": "usdc_hold",
-            "usdc_apy_pct": 3.5,
-            "window_days": 179,
-            "avg_exposure_pct": 0.0
-          },
-          "usdc_annualized_return_pct": 3.5,
           "best_alt_strategy_id": "defensive_rebalance_14d",
           "best_alt_annualized_return_pct": 2.7514,
-          "alt_beats_usdc_carry": false,
-          "comparison_metric": "annualized_return_pct"
+          "alt_beats_usdc_carry": false
         }
+      },
+      "scorecard": {
+        "winner_id": "transition_gated_deploy_75",
+        "optimal_strategy_id": "transition_gated_deploy_75",
+        "beats_baseline": false,
+        "note": "Operator product sleeve; not scorecard-promoted."
       }
     },
     "soft_down": {
@@ -290,6 +288,8 @@
   "updated_from_scorecard_at": "2026-09-20T11:00:47.718029+00:00",
   "scorecard_generated_at": "2026-09-20T11:00:46.403613+00:00",
   "operator_overrides_preserved": [
-    "flat"
-  ]
+    "flat",
+    "transition"
+  ],
+  "brad_go_p1_transition_restore_at": "2026-09-22T21:15:00+00:00"
 }

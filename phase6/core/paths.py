@@ -114,6 +114,8 @@ PARK_BALLAST_DECISION_HISTORY = STATE_DIR / "park_ballast_decision_history.jsonl
 
 # DB and other
 PHASE6_DB = DATA_DIR / "phase6.db"  # or logs/phase6/phase6_monitor.db per some
+# MarketData OHLCV SSOT (separate file — bars/freshness; not trade ledger)
+MARKETDATA_DB = DATA_DIR / "marketdata.db"
 
 # Config
 TRADING_CONFIG_PHASE6 = CONFIG_DIR / "trading_config_phase6.json" if (CONFIG_DIR / "trading_config_phase6.json").exists() else PROJECT_ROOT / "trading_config_phase6.json"

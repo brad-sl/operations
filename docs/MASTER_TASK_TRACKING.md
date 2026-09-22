@@ -1,3 +1,14 @@
+
+## MARKETDATA-OHLCV-D1-D2-20260922 (SHIPPED sensor)
+
+- **GO:** Brad 2026-09-22 — separate `data/marketdata.db`, BTC 1d first, D1+D2.
+- **Shipped:** `phase6/core/marketdata_store.py`, `marketdata_ingest.py`, CLI `scripts/phase6/run_marketdata_btc_1d.py`, isolation `test_isolation_marketdata_d1_d2.py`.
+- **Regime wire:** `regime_detector` reads marketdata port; refuses multi-day gap-fill; no undated `price_cache_*`.
+- **Evidence:** 400 BTC 1d bars; detect `transition/climb` ~+11.1% (was false bear -14%); `regime_cash_status` refreshed (transition park policy map — **no unpark GO**).
+- **Cron:** `phase6-marketdata-btc-1d` `c2753e10a9c9` 07:40 PT.
+- **Deferred:** 1h/15m backfill, multi-pair ingest, full fetcher de-dupe (D3+).
+- Plan: `docs/plans/2026-09-22-marketdata-ohlcv-schema-design.md`
+
 ## REGIME-CLIMATE-WEATHER-REMAINING-20260921 — OPEN (doldrum staffing)
 
 **Status:** OPEN · Brad GO staff remaining four after climate/weather spine (`07098d8c`)  

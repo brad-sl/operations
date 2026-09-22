@@ -120,16 +120,24 @@ def classify_regime_layer(
     }
 
 
-def _load_btc_closes() -> List[Tuple[date, float]]:
+def _load_btc_closes_from_legacy_json() -> List[Tuple[date, float]]:
+    """Legacy research freezes — NOT live SSOT. Used only as last-resort offline fill."""
     data_dir = PROJECT_ROOT / "backtests/data"
     if not data_dir.exists():
         return []
+    # Prefer longer tape if present; never sole live tip without freshness gate
     candidates = [
+        data_dir / "long" / "ohlcv_daily_btc.json",
         data_dir / "backtest_historical_ohlcv_btc_2025-04-20_to_2026-04-20.json",
         data_dir / "backtest_historical_ohlcv_BTC-USD_2025-04-20_to_2026-04-20.json",
         data_dir / "backtest_historical_ohlcv_BTC_2025-04-20_to_2026-04-20.json",
     ]
+    # fresher local mirror written by marketdata ingest
+    local_fresh = PROJECT_ROOT / "data" / "ohlcv" / "BTC-USD_1d_coinbase.json"
     path = next((p for p in candidates if p.exists()), None)
+    # If only local fresh exists, use it
+    if local_fresh.exists():
+        path = local_fresh
     if path is None:
         for p in sorted(data_dir.glob("backtest_historical_ohlcv_BTC*.json"), reverse=True):
             path = p
@@ -142,7 +150,13 @@ def _load_btc_closes() -> List[Tuple[date, float]]:
     if isinstance(blob, list):
         series = blob
     elif isinstance(blob, dict):
-        series = blob.get("BTC-USD") or blob.get("BTC/USD") or []
+        series = (
+            blob.get("BTC-USD")
+            or blob.get("BTC/USD")
+            or blob.get("candles")
+            or blob.get("data")
+            or []
+        )
     else:
         series = []
     out: List[Tuple[date, float]] = []
@@ -152,10 +166,12 @@ def _load_btc_closes() -> List[Tuple[date, float]]:
         if close is None:
             continue
         try:
-            if "T" in ts:
-                d = datetime.fromisoformat(ts.replace("Z", "+00:00")).date()
+            if isinstance(ts, (int, float)):
+                d = datetime.fromtimestamp(int(ts), tz=timezone.utc).date()
+            elif "T" in str(ts):
+                d = datetime.fromisoformat(str(ts).replace("Z", "+00:00")).date()
             else:
-                d = date.fromisoformat(ts[:10])
+                d = date.fromisoformat(str(ts)[:10])
             out.append((d, float(close)))
         except Exception:
             continue
@@ -163,12 +179,61 @@ def _load_btc_closes() -> List[Tuple[date, float]]:
     return out
 
 
-def _live_btc_price() -> Optional[float]:
-    """Real live/cache price only — never invent levels.
+def _load_btc_closes_with_meta() -> Tuple[List[Tuple[date, float]], Dict[str, Any]]:
+    """Primary: marketdata.db BTC 1d. Fallback: local/legacy JSON (flagged).
 
-    Prefer fresher runner live_state (RC-05) before price_cache which can lag.
+    Returns (closes, load_meta). load_meta includes freshness + source.
     """
-    # live state first (fresher trading view for regime window)
+    meta: Dict[str, Any] = {"source": None, "fresh_ok": False}
+    try:
+        from phase6.core.marketdata_store import get_btc_daily_closes
+
+        closes, md = get_btc_daily_closes()
+        meta.update(md)
+        if closes and md.get("fresh_ok"):
+            meta["source"] = "marketdata_db"
+            return closes, meta
+        if closes:
+            # DB has bars but freshness failed — still return closes; detect_regime fail-closes
+            meta["source"] = "marketdata_db_stale"
+            return closes, meta
+    except Exception as e:
+        meta["marketdata_error"] = str(e)
+
+    # Fallback JSON (may be fresh local file OR frozen research)
+    closes = _load_btc_closes_from_legacy_json()
+    meta["source"] = "legacy_json_fallback"
+    meta["fresh_ok"] = False
+    if closes:
+        last = closes[-1][0]
+        lag = (datetime.now(timezone.utc).date() - last).days
+        meta["legacy_last"] = last.isoformat()
+        meta["legacy_lag_days"] = lag
+        # Only treat as fresh_ok if tip is within STALE_DAYS (local file case)
+        meta["fresh_ok"] = lag <= STALE_DAYS and len(closes) >= 5
+    return closes, meta
+
+
+def _load_btc_closes() -> List[Tuple[date, float]]:
+    """Backward-compatible: closes list only (research/climate helpers)."""
+    closes, _meta = _load_btc_closes_with_meta()
+    return closes
+
+
+def _live_btc_price() -> Optional[float]:
+    """Dated spot only — never undated price_cache_*.json (fossil SSOT bug class).
+
+    Order: marketdata spot (max_age) → live_state BTC mark if held.
+    """
+    try:
+        from phase6.core.marketdata_store import get_spot
+
+        spot = get_spot("BTC-USD", max_age_sec=6 * 3600)
+        if spot and spot.get("price"):
+            return float(spot["price"])
+    except Exception:
+        pass
+
     live = STATE_DIR / "phase6_live_state.json"
     if live.exists():
         try:
@@ -180,24 +245,13 @@ def _live_btc_price() -> Optional[float]:
                     for k in ("current_price", "price", "mark_price", "last_price"):
                         if pos.get(k) is not None and float(pos[k]) > 0:
                             return float(pos[k])
-            # some runners store prices map
             prices = st.get("prices") or {}
             if prices.get("BTC-USD"):
                 return float(prices["BTC-USD"])
         except (json.JSONDecodeError, TypeError, ValueError, OSError, KeyError):
             pass
 
-    # price_cache fallback (may be stale or bootstrap)
-    for name in ("price_cache_BTC_USD.json", "price_cache_BTC-USD.json"):
-        p = STATE_DIR / name
-        if p.exists():
-            try:
-                blob = json.loads(p.read_text(encoding="utf-8"))
-                price = blob.get("price") if isinstance(blob, dict) else None
-                if price is not None and float(price) > 0:
-                    return float(price)
-            except (json.JSONDecodeError, TypeError, ValueError, OSError):
-                pass
+    # Explicitly DO NOT read price_cache_BTC_USD.json (undated bootstrap, caused false bear).
     return None
 
 
@@ -206,8 +260,17 @@ def _merge_live_close(
     *,
     today: Optional[date] = None,
 ) -> Tuple[List[Tuple[date, float]], Dict[str, Any]]:
-    """Append/update last bar with live BTC when OHLCV is stale."""
-    meta: Dict[str, Any] = {"live_appended": False, "ohlcv_last": None, "live_price": None}
+    """Tip hygiene only: same-day replace or +1 day append when lag is small.
+
+    Will NOT invent a multi-day bridge (no 19-day skip-fill). Large gaps stay gapped;
+    detect_regime fail-closes via freshness.
+    """
+    meta: Dict[str, Any] = {
+        "live_appended": False,
+        "ohlcv_last": None,
+        "live_price": None,
+        "refused_gap_fill": False,
+    }
     if not closes:
         return closes, meta
     meta["ohlcv_last"] = closes[-1][0].isoformat()
@@ -220,8 +283,13 @@ def _merge_live_close(
     last_d, last_px = closes[-1]
     lag_days = (end - last_d).days
     meta["lag_days"] = lag_days
-    if lag_days < STALE_DAYS and abs(live_px - last_px) / last_px < 0.001:
-        # Fresh enough and live ≈ last close
+    if lag_days < STALE_DAYS and abs(live_px - last_px) / max(last_px, 1e-12) < 0.001:
+        return closes, meta
+
+    # Refuse multi-day hole fill with a single spot print
+    if lag_days > STALE_DAYS:
+        meta["refused_gap_fill"] = True
+        meta["gap_days_not_filled"] = lag_days - 1
         return closes, meta
 
     out = list(closes)
@@ -229,12 +297,11 @@ def _merge_live_close(
         out[-1] = (end, live_px)
         meta["live_appended"] = True
         meta["live_mode"] = "replace_same_day"
-    elif last_d < end:
-        # Fill only the final live day (do not interpolate missing middles)
+    elif last_d < end and lag_days <= STALE_DAYS:
         out.append((end, live_px))
         meta["live_appended"] = True
         meta["live_mode"] = "append_today"
-        meta["gap_days_not_filled"] = lag_days - 1
+        meta["gap_days_not_filled"] = max(0, lag_days - 1)
     return out, meta
 
 
@@ -254,22 +321,43 @@ def detect_regime(
 
     Also emits regime_layer (soft_up/climb/pre_bull/…) for boundary observability.
     Coarse `regime` key stays the policy lookup key (bull|bear|flat|transition|unknown).
-    """
-    closes = _load_btc_closes()
-    live_meta: Dict[str, Any] = {}
-    if use_live_price:
-        closes, live_meta = _merge_live_close(closes)
 
-    if len(closes) < 5:
+    D2: prefers marketdata.db BTC 1d; fail-closed to unknown when series is gapped/stale
+    rather than inventing false bear/bull from fossil cache + frozen backtest tip.
+    """
+    closes, load_meta = _load_btc_closes_with_meta()
+    live_meta: Dict[str, Any] = {"load": load_meta}
+    if use_live_price and closes:
+        closes, merge_meta = _merge_live_close(closes)
+        live_meta.update(merge_meta)
+
+    # Fail-closed: stale/gapped market data must not drive confident money-path regime
+    fresh_ok = bool(load_meta.get("fresh_ok"))
+    if load_meta.get("source") == "marketdata_db_stale":
+        fresh_ok = False
+    if live_meta.get("refused_gap_fill"):
+        fresh_ok = False
+
+    if len(closes) < 5 or not fresh_ok:
+        reason = "insufficient BTC OHLCV"
+        if closes and not fresh_ok:
+            reason = (
+                f"BTC OHLCV not fresh for regime "
+                f"(source={load_meta.get('source')}, "
+                f"fresh={load_meta.get('freshness') or load_meta.get('legacy_lag_days')})"
+            )
         return {
             "regime": "unknown",
             "regime_layer": "unknown",
             "layer_label": "Unknown",
             "shadow_stance": "park",
             "confidence": 0.0,
-            "reason": "insufficient BTC OHLCV",
+            "reason": reason,
+            "btc_return_pct": None,
             "as_of": datetime.now(timezone.utc).isoformat(),
             "live_merge": live_meta,
+            "data_source": load_meta.get("source"),
+            "fresh_ok": False,
         }
 
     end_day = as_of or closes[-1][0]
@@ -318,4 +406,6 @@ def detect_regime(
         "layer_thresholds": layer_info.get("layer_thresholds"),
         "live_merge": live_meta,
         "as_of": datetime.now(timezone.utc).isoformat(),
+        "data_source": load_meta.get("source"),
+        "fresh_ok": True,
     }

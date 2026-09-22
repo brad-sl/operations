@@ -56,6 +56,7 @@ daily-dose 08:00 ·
 | `phase6-discovery-retro-board-daily` | Lookback: gainers × frozen contenders + T-7 forward book (research only) |
 | `phase6-basket-pick-metrics-refresh` | Open promote pick still `status=open` |
 | `phase6-platform-metrics-spine` `63cc2c821018` | Full pair lifecycle + runner ops board · **07:45 PT daily** · TG short board · measure-only · never auto-promote/eject |
+| `phase6-marketdata-btc-1d` `c2753e10a9c9` | **CW-1/D2 sensor** · BTC 1d → `data/marketdata.db` + freshness + refresh `regime_cash_status` · **07:40 PT daily** · TG short · **no knobs / no unpark** · plan `docs/plans/2026-09-22-marketdata-ohlcv-schema-design.md` |
 | `phase6-rsi-event-x-tryout-shadow` `36a4ade79e1c` | RSI-wash + stale eng → top-2 would-query/tryout shadow · **07:20/11:20/15:20/19:20 PT** · **local only** (no TG) · **no orders / no paid X** |
 | `phase6-knife-filter-shadow` `5bd102bfd07e` | Luck ladder R1 knife vs wash arms CF · **07:30/19:30 PT** · **local only** (no TG — board is ATTENTION_ONLY / not daily-useful) · **no orders / no live block** |
 | `phase6-tryout-scale-up-live-approval` `229007957afb` | R5 live scale path **approval ping** · **09:40/15:40/21:40 PT** (after shadow :35) · TG **only if armed + n_planned>0** · 12h fingerprint dedupe · **plan only — never money** · wrapper `run_tryout_scale_up_live_approval.sh` |

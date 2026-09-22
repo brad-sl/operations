@@ -1,11 +1,15 @@
 # Market Data / OHLCV schema design (design-first)
 
-> **Status:** D1+D2 SHIPPED 2026-09-22 — `data/marketdata.db` + BTC 1d ingest + regime_detector port. No unpark GO. Finer grans deferred.  
+> **Status:** D1–D4 SHIPPED thin 2026-09-22 — `data/marketdata.db` + thin multi-pair 1d + live climate cutover. No unpark GO. 1h/15m deferred.  
 > **Date:** 2026-09-22  
 > **Why:** Recurring stale OHLCV / false climate park. Platform has spot snapshots + JSON piles, not a bar SSOT.  
 > **Parent:** CW-1 sensor hygiene · climate/weather spine · decision-data integrity.
 >
-> **Shipped evidence:** live ingest 400 BTC 1d bars; `detect_regime` → `transition/climb` ~+11% from `marketdata_db` (was false `bear` −14% on fossil cache). `regime_cash_status.json` refreshed via `resolve_regime_cash` (still transition park policy — knobs unchanged). Cron `phase6-marketdata-btc-1d` 07:40 PT.
+> **Shipped evidence:**
+> - D2: 400 BTC 1d; `detect_regime` → `transition/climb` ~+11% from `marketdata_db` (was false `bear` −14%).
+> - D3 thin: 13 pairs held∪basket∪tryout∪BTC/ETH/PAXG — **13/13 ok** live ingest.
+> - D4 live cutover: `regime_arm_switch.fetch_btc_daily` + `run_phase_deploy.fetch_daily_candles_public` prefer store; research JSON freezes left alone.
+> - Cron `phase6-marketdata-btc-1d` 07:40 PT runs thin `all`.
 
 ## 0. Verdict up front
 

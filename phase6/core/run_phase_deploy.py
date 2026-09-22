@@ -149,8 +149,32 @@ def normalize_candles(raw: Sequence[Any]) -> List[Dict[str, float]]:
 
 
 def fetch_daily_candles_public(pair: str, limit: int = 40) -> List[Dict[str, float]]:
-    """Coinbase Exchange public candles (daily)."""
-    url = f"https://api.exchange.coinbase.com/products/{pair}/candles?granularity=86400"
+    """Daily candles — D4: marketdata.db first, Coinbase public fallback."""
+    pair_n = str(pair or "").upper().replace("/", "-")
+    try:
+        from phase6.core.marketdata_store import get_daily_candles
+
+        md = get_daily_candles(pair_n, limit=limit or 40)
+        if len(md) >= max(5, min(limit or 40, 12)):
+            # already in t/o/h/l/c/v shape
+            rows = [
+                {
+                    "t": float(c["t"]),
+                    "o": float(c["o"]),
+                    "h": float(c["h"]),
+                    "l": float(c["l"]),
+                    "c": float(c["c"]),
+                    "v": float(c.get("v") or 0.0),
+                }
+                for c in md
+            ]
+            if limit and len(rows) > limit:
+                rows = rows[-limit:]
+            return rows
+    except Exception:
+        pass
+
+    url = f"https://api.exchange.coinbase.com/products/{pair_n}/candles?granularity=86400"
     req = urllib.request.Request(url, headers=UA)
     with urllib.request.urlopen(req, timeout=25) as resp:
         data = json.loads(resp.read().decode())

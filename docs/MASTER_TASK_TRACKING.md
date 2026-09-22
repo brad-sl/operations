@@ -1,4 +1,15 @@
 
+
+## MARKETDATA-OHLCV-D3-D4-THIN-20260922 (SHIPPED sensor)
+
+- **GO:** Brad thin D3+D4 (held∪basket∪tryout∪BTC/ETH/PAXG @ 1d; live climate cutover; no unpark).
+- **D3:** `resolve_thin_universe` + `ingest_thin_1d` — live **13/13 ok** (HYPE 230 bars listing-age).
+- **D4:** `regime_arm_switch.fetch_btc_daily` + `run_phase_deploy.fetch_daily_candles_public` prefer `marketdata.db`; research backtest JSON untouched.
+- **CLI:** `run_marketdata_btc_1d.py thin|universe|all`; cron still `phase6-marketdata-btc-1d` 07:40 PT (now thin).
+- **Tests:** `test_isolation_marketdata_d3_d4.py` + D1/D2 + regime freshness PASS.
+- **Deferred:** 1h/15m, discovery firehose, full fetcher de-dupe.
+- Plan: `docs/plans/2026-09-22-marketdata-ohlcv-schema-design.md`
+
 ## MARKETDATA-OHLCV-D1-D2-20260922 (SHIPPED sensor)
 
 - **GO:** Brad 2026-09-22 — separate `data/marketdata.db`, BTC 1d first, D1+D2.

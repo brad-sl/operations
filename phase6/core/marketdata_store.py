@@ -270,8 +270,8 @@ def ensure_pair(
         return pid
 
 
-def seed_core_pairs(db_path: Optional[Path] = None) -> List[str]:
-    """Seed basket pairs; mark BTC for 1d ingest (D2)."""
+def seed_core_pairs(db_path: Optional[Path] = None, *, mark_1d: bool = False) -> List[str]:
+    """Seed basket pairs. D2: BTC 1d only. D3: mark_1d=True flags thin universe for 1d."""
     init_schema(db_path)
     try:
         from phase6.core.paths import load_trading_basket
@@ -298,11 +298,66 @@ def seed_core_pairs(db_path: Optional[Path] = None) -> List[str]:
         is_btc = sym.upper().replace("/", "-") in ("BTC-USD", "BTC")
         ensure_pair(
             sym,
-            ingest_1d=1 if is_btc else 0,
+            ingest_1d=1 if (is_btc or mark_1d) else 0,
             active_core=1,
             db_path=db_path,
         )
         out.append(sym)
+    # Always ensure ballast/core climate anchors exist
+    for extra in ("PAXG-USD", "ETH-USD"):
+        ensure_pair(extra, ingest_1d=1 if mark_1d else 0, active_core=1, db_path=db_path)
+        if extra not in out:
+            out.append(extra)
+    # thin_1d job row
+    with connect(db_path) as conn:
+        conn.execute(
+            """
+            INSERT OR IGNORE INTO md_ingest_job
+              (job_id, name, granularity_sec, enabled, interval_sec)
+            VALUES (2, 'thin_1d_daily', 86400, 1, 86400)
+            """
+        )
+    return out
+
+
+def list_ingest_1d_symbols(db_path: Optional[Path] = None) -> List[str]:
+    init_schema(db_path)
+    with connect(db_path) as conn:
+        rows = conn.execute(
+            "SELECT symbol FROM md_pair WHERE ingest_1d = 1 ORDER BY symbol"
+        ).fetchall()
+    return [str(r["symbol"]) for r in rows]
+
+
+def get_daily_candles(
+    symbol: str,
+    *,
+    limit: Optional[int] = None,
+    db_path: Optional[Path] = None,
+) -> List[Dict[str, Any]]:
+    """OHLCV dicts for live consumers (arm switch / run-phase). Prefer store over ad-hoc HTTP."""
+    bars = get_ohlcv(symbol, GRAN_1D, limit=limit, db_path=db_path)
+    out: List[Dict[str, Any]] = []
+    for b in bars:
+        d = _ts_to_date(int(b["ts_open"]))
+        out.append(
+            {
+                "time": f"{d.isoformat()}T00:00:00Z",
+                "ts_open": int(b["ts_open"]),
+                "open": float(b["open"]),
+                "high": float(b["high"]),
+                "low": float(b["low"]),
+                "close": float(b["close"]),
+                "volume": b.get("volume"),
+                # run_phase_deploy normalize shape
+                "t": float(b["ts_open"]),
+                "o": float(b["open"]),
+                "h": float(b["high"]),
+                "l": float(b["low"]),
+                "c": float(b["close"]),
+                "v": float(b["volume"] or 0.0),
+            }
+        )
     return out
 
 

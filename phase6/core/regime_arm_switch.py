@@ -159,9 +159,32 @@ def fetch_btc_daily(
     min_days: int = 40,
 ) -> List[Dict[str, Any]]:
     """
-    Daily BTC-USD OHLCV from Coinbase public candles.
-    Writes/refreshes cache. Falls back to cache on network fail.
+    Daily BTC-USD OHLCV — D4: marketdata.db first, then network+cache fallback.
+    Live climate must not depend on stale JSON alone.
     """
+    # Prefer marketdata SSOT (thin D3/D4)
+    try:
+        from phase6.core.marketdata_store import get_daily_candles
+
+        md = get_daily_candles("BTC-USD", limit=max(min_days + 20, 90))
+        if len(md) >= min_days:
+            # drop run_phase keys; keep arm-switch shape
+            out = []
+            for c in md:
+                out.append(
+                    {
+                        "time": c.get("time"),
+                        "open": c.get("open"),
+                        "high": c.get("high"),
+                        "low": c.get("low"),
+                        "close": c.get("close"),
+                        "volume": c.get("volume"),
+                    }
+                )
+            return out
+    except Exception:
+        pass
+
     end = end or _utc_now()
     start = start or (end - timedelta(days=max(min_days, 45)))
     candles: List[Dict[str, Any]] = []

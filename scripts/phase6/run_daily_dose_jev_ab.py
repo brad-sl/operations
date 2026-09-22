@@ -37,17 +37,20 @@ def main() -> int:
         return 2
     cmp_ = payload.get("compare") or {}
     rel = payload.get("relevance") or {}
-    print(
+    status = (
         f"DoseAB OK day={payload.get('dose_day')} freeze={payload.get('freeze_n')} "
         f"jaccard={cmp_.get('jaccard')} auto={rel.get('auto_mark')} "
         f"dry={cfg.dry_run} → {DAILY_DOSE_JEV_AB_LATEST}"
     )
+    # --print-tg: card-only stdout for Hermes deliver=telegram (status → stderr)
+    if args.print_tg:
+        print(status, file=sys.stderr)
+        print(payload.get("tg_card") or "")
+        return 0
+    print(status)
     if args.print_card and DAILY_DOSE_JEV_AB_CARD.is_file():
         print("--- card ---")
         print(DAILY_DOSE_JEV_AB_CARD.read_text(encoding="utf-8"))
-    if args.print_tg:
-        # Empty stdout = quiet cron; TG body only when --print-tg
-        print(payload.get("tg_card") or "")
     if args.json:
         print(
             json.dumps(

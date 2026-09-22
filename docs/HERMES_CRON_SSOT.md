@@ -134,10 +134,11 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Behavior: Jev judges RSS shortlist; compare vs baseline top-N; **shadow only**
 - Does **not** overwrite `daily_dose_latest` / publish_ready / live TG body
 - Not a trade signal; no allocator / tryout wiring
+- **Deliver:** `telegram` (Brad GO 2026-09-22) — stdout = `daily_dose_jev_preview.txt` only (shadow brief); logs → `logs/daily_dose_jev/`
 - Artifacts: `data/state/daily_dose_jev_{latest,compare,preview,crumbs,budget}.*`
 - Cap: max ~80 Jev calls/day budget file; default max_judge 16/run
 - Isolation: `scripts/phase6/test_isolation_daily_dose_jev_ranker.py`
-- Delivery: local (skim compare.md; promote Jev order only after multi-day quality)
+- Promote Jev order only after multi-day quality + Brad marks
 - Note: **not a fair A/B** (different freeze time). True twin is `phase6-daily-dose-jev-ab`.
 
 ## phase6-daily-dose-jev-ab (Brad GO locked A/B 2026-09-19)
@@ -146,11 +147,10 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Behavior: **locked pool** = `daily_dose_latest` draft ∪ published Arm A ids → Jev re-rank → dual top-5 card
 - A = live published TG top-N · B = Jev on **same** freeze · plain move notes + auto heuristic mark
 - Does **not** replace TG dose / publish_ready · **not** a second dose · **not** a trade signal
+- **Deliver:** `telegram` (Brad GO 2026-09-22) — stdout = short A/B card; empty if no freeze yet; continue multi-day marks for A/B value
 - Artifacts: `data/state/daily_dose_jev_ab_{latest,card,history}.*` · logs `logs/daily_dose_jev_ab/`
-- Optional TG short card: `DOSE_AB_TG=1` (default off — local only)
 - Isolation: `scripts/phase6/test_isolation_daily_dose_jev_ab.py`
 - Brad gut mark (optional): `dose ab b_better | a_better | mixed` — multi-day series before any promote talk
-- Delivery: local
 
 ## phase6-free-rss-jev-materiality (Brad GO shadow 2026-09-18)
 - Schedule: `50 */2 * * *` America/Los_Angeles (after free-sentiment @:40)

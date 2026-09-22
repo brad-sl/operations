@@ -458,6 +458,12 @@ def plan_live_steps(
                     "shadow_reasons": row.get("reasons"),
                     "signal_bar_profile": c.get("active_profile"),
                     "signal_bar_reasons": sig_reasons,
+                    "phase_dwell_ok": row.get("phase_dwell_ok"),
+                    "phase_struct": (
+                        (row.get("detail") or {}).get("phase_struct")
+                        if isinstance(row.get("detail"), dict)
+                        else None
+                    ),
                     "cf_gate": cf_gate,
                     "armed": armed,
                 },
@@ -796,6 +802,196 @@ def _should_send_approval(
     return True
 
 
+def _phase_label(phase: Any) -> str:
+    try:
+        p = int(phase)
+    except (TypeError, ValueError):
+        return "?"
+    return {
+        1: "ignition",
+        2: "early_trend",
+        3: "extension",
+        4: "exhaustion",
+        5: "distribution",
+    }.get(p, str(p))
+
+
+def _row_decision_factors(row: Dict[str, Any], plan: Dict[str, Any]) -> List[str]:
+    """Plain decision factors for one planned scale-up row."""
+    factors: List[str] = []
+    gates = plan.get("signal_bar_gates") if isinstance(plan.get("signal_bar_gates"), dict) else {}
+    detail = row.get("detail") if isinstance(row.get("detail"), dict) else {}
+    ps = detail.get("phase_struct") if isinstance(detail.get("phase_struct"), dict) else {}
+
+    phase = row.get("phase")
+    factors.append(f"phase {phase} ({_phase_label(phase)})")
+    allow = gates.get("require_phase_in") or [1, 2]
+    factors.append(f"phase allow {list(allow)}")
+
+    dwell_n = int(gates.get("phase_dwell_bars") or 0)
+    d_ok = row.get("phase_dwell_ok")
+    if d_ok is None and isinstance(detail, dict):
+        d_ok = detail.get("phase_dwell_ok")
+    if d_ok is None:
+        d_ok = ps.get("phase_dwell_ok")
+    if dwell_n > 0:
+        if d_ok is True:
+            factors.append(f"dwell {dwell_n}d OK")
+        elif d_ok is False:
+            factors.append(f"dwell {dwell_n}d FAIL")
+        else:
+            factors.append(f"dwell {dwell_n}d (tip-only / no hist)")
+    else:
+        factors.append("dwell off (measure)")
+
+    sk = row.get("structure_ok")
+    if sk is True:
+        factors.append("structure_ok")
+    elif sk is False:
+        factors.append("structure NOT ok")
+    else:
+        factors.append("structure unknown")
+
+    r = row.get("unrealized_r")
+    rmin = _f(gates.get("min_unrealized_r"), 0.008)
+    rmax = _f(gates.get("max_unrealized_r"), 0.035)
+    if r is None:
+        factors.append("r unknown")
+    else:
+        factors.append(
+            f"r {float(r)*100:.1f}% band [{rmin*100:.1f}%…{rmax*100:.1f}%]"
+        )
+
+    hold = row.get("hold_hours")
+    min_h = _f(gates.get("min_hold_hours"), 2.0)
+    if hold is None:
+        factors.append("hold unknown")
+    else:
+        factors.append(f"hold {float(hold):.1f}h ≥ {min_h:.0f}h")
+
+    profile = plan.get("signal_bar_profile") or detail.get("signal_bar_profile") or "?"
+    factors.append(f"bar={profile}")
+
+    held = _f(row.get("held_usd"))
+    step = _f(row.get("step_usd"))
+    factors.append(f"size held ${held:.0f} + ${step:.0f} → ${held+step:.0f}")
+    return factors
+
+
+def build_scale_up_recommendation(
+    plan: Dict[str, Any],
+    steps: Optional[Sequence[Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """Recommendation packet for approval TG (money still OFF until Brad GO).
+
+    Labels:
+      GO_KINDLING — live_signal cleared + CF not waived (still needs explicit GO)
+      HOLD_PATH_PROOF — planned but CF waived / ATTENTION_ONLY (optional spend only)
+      HOLD — missing structure/phase honesty or soft flags
+      NO_GO — should not page (caller usually filters these out)
+    """
+    rows = list(steps) if steps is not None else [
+        r for r in _plan_rows(plan) if isinstance(r, dict) and r.get("status") == "planned"
+    ]
+    cf = plan.get("cf_gate") if isinstance(plan.get("cf_gate"), dict) else {}
+    gates = plan.get("signal_bar_gates") if isinstance(plan.get("signal_bar_gates"), dict) else {}
+    profile = str(plan.get("signal_bar_profile") or "")
+
+    if not rows:
+        return {
+            "label": "NO_GO",
+            "headline": "NO-GO — nothing planned",
+            "why": "No planned scale-up steps under live signal bar.",
+            "factors": [],
+            "per_pair": {},
+        }
+
+    per_pair: Dict[str, List[str]] = {}
+    soft_flags: List[str] = []
+    hard_flags: List[str] = []
+
+    for row in rows:
+        pair = shadow._norm_pair(row.get("pair") or "") or "?"
+        facts = _row_decision_factors(row, plan)
+        per_pair[pair] = facts
+
+        phase = row.get("phase")
+        try:
+            phase_i = int(phase) if phase is not None else None
+        except (TypeError, ValueError):
+            phase_i = None
+        allow = {int(x) for x in (gates.get("require_phase_in") or [1, 2])}
+        if phase_i is None:
+            hard_flags.append(f"{pair}: phase unknown")
+        elif phase_i not in allow and profile == "live_signal":
+            hard_flags.append(f"{pair}: phase {phase_i} outside kindling allow")
+        if phase_i is not None and phase_i >= 4:
+            soft_flags.append(f"{pair}: late phase {phase_i} ({_phase_label(phase_i)})")
+
+        sk = row.get("structure_ok")
+        if sk is False:
+            hard_flags.append(f"{pair}: structure not ok")
+        elif sk is None and bool(gates.get("require_structure_ok", True)):
+            soft_flags.append(f"{pair}: structure unknown")
+
+        r = row.get("unrealized_r")
+        if r is not None:
+            rf = float(r)
+            if rf < 0:
+                soft_flags.append(f"{pair}: mild red r={rf*100:.1f}%")
+            if rf > _f(gates.get("max_unrealized_r"), 0.035):
+                soft_flags.append(f"{pair}: extended / bank-zone r")
+
+    if cf.get("waived"):
+        soft_flags.append("CF waived — ATTENTION_ONLY (no edge claim)")
+    elif not cf.get("ok", True):
+        hard_flags.append(f"CF bar blocked: {cf.get('reason')}")
+
+    if profile and profile != "live_signal":
+        soft_flags.append(f"plan profile={profile} (prefer live_signal for kindling)")
+
+    # Flatten factors for card (first pair primary; multi-pair listed)
+    factor_lines: List[str] = []
+    for pair, facts in per_pair.items():
+        factor_lines.append(f"{pair}: " + " · ".join(facts))
+    factor_lines.extend(f"flag: {x}" for x in soft_flags)
+    factor_lines.extend(f"block: {x}" for x in hard_flags)
+
+    if hard_flags:
+        label = "NO_GO"
+        headline = "NO-GO — do not spend"
+        why = "; ".join(hard_flags[:3])
+    elif cf.get("waived") or soft_flags:
+        label = "HOLD_PATH_PROOF"
+        headline = "HOLD — path-proof optional only"
+        why = (
+            "Live signal bar cleared for a plan, but CF is waived and/or soft flags "
+            "mean this is not certified 'run continuing' edge. Default = hold the "
+            "tryout; GO only if you explicitly want another kindling stick for path N."
+        )
+        if soft_flags:
+            why = why + " Soft: " + "; ".join(soft_flags[:4])
+    else:
+        label = "GO_KINDLING"
+        headline = "GO kindling (still needs your GO)"
+        why = (
+            "live_signal bar cleared (phase early, structure ok, green R band, hold) "
+            "and CF not waived. Money still OFF until you reply GO / run apply CLI."
+        )
+
+    return {
+        "label": label,
+        "headline": headline,
+        "why": why,
+        "factors": factor_lines,
+        "per_pair": per_pair,
+        "soft_flags": soft_flags,
+        "hard_flags": hard_flags,
+        "cf_waived": bool(cf.get("waived")),
+        "signal_bar_profile": profile or None,
+    }
+
+
 def approval_telegram_summary(
     plan: Dict[str, Any],
     *,
@@ -805,8 +1001,9 @@ def approval_telegram_summary(
 ) -> str:
     """Operator TG body only when path is armed and n_planned > 0.
 
-    Empty when: not armed, kill on, no planned steps, or same fingerprint within
-    dedupe window. Never places orders. Cron must only call plan path.
+    Includes RECOMMEND + decision factors. Empty when: not armed, kill on,
+    no planned steps, or same fingerprint within dedupe window.
+    Never places orders. Cron must only call plan path.
     """
     if not isinstance(plan, dict):
         return ""
@@ -827,10 +1024,18 @@ def approval_telegram_summary(
     cf = plan.get("cf_gate") if isinstance(plan.get("cf_gate"), dict) else {}
     decision = load_decision()
     waive = _waive_usage(decision)
+    rec = build_scale_up_recommendation(plan, steps)
+
     lines = [
         "SCALE-UP APPROVAL (money still OFF until you GO)",
         f"armed · planned {n_plan} · fp={fp}",
+        f"RECOMMEND: {rec.get('headline')}",
+        f"Why: {rec.get('why')}",
+        "Factors:",
     ]
+    for fact in list(rec.get("factors") or [])[:12]:
+        lines.append(f"  · {fact}")
+    lines.append("Plans:")
     for row in steps:
         pair = shadow._norm_pair(row.get("pair") or "")
         step = _f(row.get("step_usd"))
@@ -840,8 +1045,11 @@ def approval_telegram_summary(
         phase = row.get("phase")
         hold = row.get("hold_hours")
         hold_s = f"{float(hold):.1f}h" if hold is not None else "?"
+        sk = row.get("structure_ok")
+        sk_s = "struct✓" if sk is True else ("struct✗" if sk is False else "struct?")
         lines.append(
-            f"• {pair} +${step:.0f} (held ${held:.0f} · r {r_s} · phase {phase} · hold {hold_s})"
+            f"• {pair} +${step:.0f} (held ${held:.0f} · r {r_s} · "
+            f"phase {phase}/{_phase_label(phase)} · hold {hold_s} · {sk_s})"
         )
     if cf.get("waived"):
         rem = int(waive.get("remaining") or 0)
@@ -850,12 +1058,20 @@ def approval_telegram_summary(
         lines.append(f"CF: waived ({used}/{mx} used · {rem} left) — ATTENTION_ONLY")
     else:
         lines.append(f"CF: {cf.get('reason') or 'ok'}")
+    profile = plan.get("signal_bar_profile") or rec.get("signal_bar_profile")
+    if profile:
+        lines.append(f"signal_bar: {profile}")
     safety = plan.get("safety") if isinstance(plan.get("safety"), dict) else {}
     lines.append(
         f"caps: {safety.get('max_steps_per_utc_day', 1)} step/day · "
         f"${safety.get('max_step_usd', 25)} step · ${safety.get('max_usd_per_utc_day', 50)}/day"
     )
-    lines.append("Reply GO + pair to apply, or run:")
+    if rec.get("label") == "GO_KINDLING":
+        lines.append("If you agree → reply GO + pair, or run:")
+    elif rec.get("label") == "HOLD_PATH_PROOF":
+        lines.append("Default HOLD. Override only if you want path-proof spend → GO + pair:")
+    else:
+        lines.append("Do not apply. Diagnostic only:")
     lines.append(
         "cd /home/brad/projects/crypto-trading-bot && "
         "PYTHONPATH=. .venv/bin/python3 scripts/phase6/run_tryout_scale_up_live.py "
@@ -870,6 +1086,9 @@ def approval_telegram_summary(
             "fingerprint": fp,
             "n_planned": n_plan,
             "forced": bool(force),
+            "recommend": rec.get("label"),
+            "recommend_headline": rec.get("headline"),
+            "factors": list(rec.get("factors") or [])[:12],
         }
     )
     return body

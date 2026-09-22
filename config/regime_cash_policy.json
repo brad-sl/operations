@@ -288,15 +288,18 @@
             "AVAX-USD"
           ],
           "basket_tryout_thaw": {
-            "enabled": true,
+            "enabled": false,
             "brad_go": "2026-09-17",
-            "expires_at": "2026-09-26T21:00:00-07:00",
+            "expires_at": "2026-09-22T15:41:50-07:00",
             "allow_first_fill_basket": true,
             "bypass_tier_c_off_for_basket": true,
             "note": "Extended with door package through 2026-09-19 21:00 PT. Same $75/2 seats. Does NOT bypass hard_block UNI/RAVE, missfire, ugly ledger. LINK now unblocked via buy_block removal (not thaw).",
             "brad_go_extend": "2026-09-19",
             "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (basket_tryout_thaw). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote.",
-            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4"
+            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4",
+            "brad_go_expire": "2026-09-22",
+            "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
+            "expired_early": true
           },
           "min_net_pnl": 0.0,
           "min_rt_graduated": 3,
@@ -306,29 +309,35 @@
           "note": "Layer0 hard+missfire; Layer1 tier B; Layer2 ledger; Layer3 deploy floors. force_eligible_pairs = Brad GO seat bypass of ledger fail only (still $75 / sent / RSI). basket_tryout_thaw = temporary D path.",
           "max_rsi_baseline": 55.0,
           "max_rsi_proof_window": {
-            "enabled": true,
+            "enabled": false,
             "brad_go": "2026-09-17",
-            "expires_at": "2026-09-26T21:00:00-07:00",
+            "expires_at": "2026-09-22T15:41:50-07:00",
             "max_rsi": 65.0,
             "note": "Short RSI proof window \u2014 tryout max_buy 65 until expiry, then 55.",
             "brad_go_extend": "2026-09-19",
             "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (max_rsi_proof_window). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote.",
-            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4"
+            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4",
+            "brad_go_expire": "2026-09-22",
+            "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
+            "expired_early": true
           },
           "sensor_latch_window": {
-            "enabled": true,
+            "enabled": false,
             "brad_go": "2026-09-17",
-            "expires_at": "2026-09-26T21:00:00-07:00",
+            "expires_at": "2026-09-22T15:41:50-07:00",
             "ttl_min": 180.0,
             "note": "Longer tryout_sent_latch after X clear (3h) so mid-cycle aged eng still seats.",
             "brad_go_extend": "2026-09-19",
             "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (sensor_latch_window). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote.",
-            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4"
+            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4",
+            "brad_go_expire": "2026-09-22",
+            "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
+            "expired_early": true
           },
           "door_package_20260917": {
-            "enabled": true,
+            "enabled": false,
             "brad_go": "2026-09-17",
-            "expires_at": "2026-09-26T21:00:00-07:00",
+            "expires_at": "2026-09-22T15:41:50-07:00",
             "doors": [
               "link_unblock",
               "rsi_65_window",
@@ -343,34 +352,43 @@
             "note": "Brad GO 2026-09-17 door package (option 2 all 3): (1) LINK off static buy_block (permanent doghouse exit); (2) tryout max_rsi 55\u219265 proof window until 2026-09-19 21:00 PT; (3) sensor latch TTL 45\u2192180m same window. Keep $75 / max 2 seats / sent\u22650.30 / SL+trail / no auto-promote. Thaw extended to same expiry so basket A-names stay doors. Rollback RSI+latch: disable proof windows (max_rsi back 55, TTL 45). LINK stays unblocked unless Brad re-blocks.",
             "brad_go_extend": "2026-09-19",
             "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (door_package_20260917). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote.",
-            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4"
+            "shell_update": "Brad GO 2026-09-19: abs_cap $25 / max_new_seats 4",
+            "brad_go_expire": "2026-09-22",
+            "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
+            "expired_early": true
           }
         },
         "note": "v2 live: dynamic eligible set from ledger scoreboard + force_eligible + optional basket_tryout_thaw. Static tryout_pairs = legacy compare only.",
         "max_rsi_baseline": 55.0,
         "max_rsi_proof_window": {
-          "enabled": true,
+          "enabled": false,
           "brad_go": "2026-09-17",
-          "expires_at": "2026-09-26T21:00:00-07:00",
+          "expires_at": "2026-09-22T15:41:50-07:00",
           "max_rsi": 65.0,
           "note": "Short RSI proof window \u2014 tryout max_buy 65 until expiry, then 55.",
           "brad_go_extend": "2026-09-19",
-          "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (max_rsi_proof_window). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote."
+          "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (max_rsi_proof_window). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote.",
+          "brad_go_expire": "2026-09-22",
+          "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
+          "expired_early": true
         },
         "sensor_latch_window": {
-          "enabled": true,
+          "enabled": false,
           "brad_go": "2026-09-17",
-          "expires_at": "2026-09-26T21:00:00-07:00",
+          "expires_at": "2026-09-22T15:41:50-07:00",
           "ttl_min": 180.0,
           "note": "Longer tryout_sent_latch after X clear (3h) so mid-cycle aged eng still seats.",
           "brad_go_extend": "2026-09-19",
-          "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (sensor_latch_window). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote."
+          "extend_note": "Brad GO B+C 2026-09-19: extend door package through 2026-09-26T21:00:00-07:00 (sensor_latch_window). Same $75/max2/sent0.30/SL+trail/no auto-promote. Get fills for path proof / trial N \u2014 not promote.",
+          "brad_go_expire": "2026-09-22",
+          "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
+          "expired_early": true
         },
         "shell_note": "Brad GO 2026-09-19: tryout shell $25 x max 4 seats/day (was $75/2). Same sent>=0.30 / RSI door / SL+trail / no auto-promote. Path must exempt tryout from $50 allocator/RSI min_move dust-kill."
       },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "Rollback shell: quality_tryout abs_cap_usd 75 + max_new_seats_per_day 2; first_fill min_move/max seats; limit pilot_max_buys 3; restart. Door windows still expire 2026-09-26T21:00:00-07:00."
+      "rollback": "Rollback shell: quality_tryout abs_cap_usd 25 + max_new_seats_per_day 4; first_fill min_move/max seats; limit pilot. Door package EXPIRED 2026-09-22 (early) \u2014 thaw/RSI65/latch windows OFF."
     }
   },
   "buy_block_pairs": [

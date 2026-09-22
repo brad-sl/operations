@@ -1,3 +1,26 @@
+
+## Status 2026-09-22 — P4 door package EXPIRED early (Brad GO)
+
+**Decision:** Expire now (not wait until 2026-09-26 21:00 PT). Concept proved; do not permanent-codify.
+**Why:** fewer moving pieces during migration; path already proved (ZEC BUY 09-19 → TP-trail SELL 09-21 ~+$0.62; force-rebal path 09-22).
+
+**Disabled (enabled=false + expires_at=now):**
+- `quality_tryout.v2.basket_tryout_thaw`
+- `max_rsi_proof_window` (v2 + top) → effective tryout **max_rsi=55** again
+- `sensor_latch_window` (v2 + top) → latch TTL **45m** again
+- `door_package_20260917` marker
+
+**Kept:**
+- Tryout shell `$25 × ≤4` · sent ≥0.30 · SL+trail · no auto-promote
+- LINK off `buy_block` (RAVE/UNI only)
+- AVAX `force_eligible` (unchanged; not door package)
+- Live book (ZEC + PAXG) · climate deploy $75 · swaps OFF
+
+**Verify:** `basket_tryout_thaw.active=false` · `recovery_quality_tryout_cfg` max_rsi=55 latch=45 · scoreboard rewritten · readiness park_blocked=false
+**Backup:** `config/regime_cash_policy.json.bak_door_expire_*`
+**Rollback temporary doors:** only with new dated Brad GO (do not re-enable casually).
+
+
 # Marketdata + Policy Reactivation Migration Plan
 
 > **For Hermes:** Execute only after explicit Brad GO on each **policy** wave. Sensor/cutover waves may proceed under this plan without money-path writes.
@@ -89,7 +112,7 @@ Get the book **honest and active again**: finish market-data migration debt that
 | **P1** | Apply transition knob-map operator override + status refresh | **P0 ASAP** | **YES (cap unlock)** | crypto-engineer + Brad GO | **<1h** |
 | **P2** | Funnel sensor board honesty (tryout readiness + X latch path) | P0 | No knobs | crypto-engineer | **same day** |
 | **P3** | D4 residual: climate/weather + any live climate fossil readers | P0/P1 | No | crypto-engineer | **same day** |
-| **P4** | Door package extend-or-graduate decision | P0 (calendar) | Policy | Brad + Scotty | **by 2026-09-25** |
+| **P4** DONE expired early | Door package extend-or-graduate decision | P0 (calendar) | Policy | Brad + Scotty | **by 2026-09-25** |
 | **P5** | CW-2 hysteresis design (doc) | P1 | No | crypto-analyst | 1–2d |
 | **P6** | CW-3 threshold evidence (measure) | P1 | No | crypto-analyst | after P3 |
 | **P7** | CW-4 Live B micro path **money OFF** | P1 | Arm only | crypto-engineer | after P5 |
@@ -383,7 +406,7 @@ rg -n "price_cache_|backtest_historical_ohlcv_btc|fetch_btc_daily|get_recent_pri
 
 ---
 
-## Wave P4 — Door package calendar (hard date)
+## Wave P4 — Door package EXPIRED early 2026-09-22 (hard date)
 
 **Deadline:** **2026-09-26 21:00 PT**
 

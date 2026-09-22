@@ -10,6 +10,8 @@
 - **ASAP path:** P0 packet then Brad GO then P1 restore transition knob-map + preserve vs scorecard; P2 tryout board SSOT; P3 climate/weather port; P4 door expiry 2026-09-26.
 - **NO write yet:** no knobs applied this turn.
 
+- **P4 Door package (2026-09-22):** EXPIRED early per Brad GO. Thaw/RSI65/latch OFF. Shell kept $25×4/sent0.30. Concept proved (ZEC TP-trail RT). Not permanent. See `docs/plans/2026-09-22-marketdata-policy-reactivation-migration.md`.
+
 ## MARKETDATA-OHLCV-D3-D4-THIN-20260922 (SHIPPED sensor)
 
 - **GO:** Brad thin D3+D4 (held∪basket∪tryout∪BTC/ETH/PAXG @ 1d; live climate cutover; no unpark).

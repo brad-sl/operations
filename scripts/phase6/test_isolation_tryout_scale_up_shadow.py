@@ -213,6 +213,80 @@ def test_scale_decision_dict():
     assert d.to_dict()["pair"] == "X"
 
 
+def test_live_signal_profile_tighter_than_measure():
+    m = load_cfg(profile="measure")
+    L = load_cfg(profile="live_signal")
+    assert m["active_profile"] == "measure"
+    assert L["active_profile"] == "live_signal"
+    assert L["min_hold_hours"] >= 2.0
+    assert L["min_unrealized_r"] >= 0.008
+    assert set(L["require_phase_in"]).issubset({1, 2})
+    assert L["phase_dwell_bars"] >= 2
+    assert 5 in m["require_phase_in"]
+
+
+def test_live_signal_blocks_phase5_and_mild_red():
+    cfg = load_cfg(profile="live_signal")
+    now = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
+    pos = _pos(unreal=0.012, mark=10.12)
+    with patch(
+        "phase6.core.tryout_scale_up_shadow.infer_open_lot_entry",
+        return_value={
+            "entry_price": 10.0,
+            "entry_ts": (now - timedelta(hours=5)).isoformat(),
+            "entry_reason": "quality_tryout",
+            "tryout_tagged_buy": True,
+        },
+    ), patch(
+        "phase6.core.tryout_scale_up_shadow._phase_and_structure",
+        return_value={
+            "phase": 5,
+            "phase_name": "distribution",
+            "structure_ok": True,
+            "phase_dwell_ok": False,
+            "phase_history": [4, 5],
+            "error": None,
+        },
+    ), patch(
+        "phase6.core.tryout_scale_up_shadow._load_json",
+        return_value={"lots": {}},
+    ):
+        d = evaluate_scale_up(pos, cfg, now=now)
+    assert d.status == "blocked", d
+    assert any("phase=" in r or "dwell" in r for r in d.reasons)
+
+
+def test_live_signal_would_scale_ignition_green():
+    cfg = load_cfg(profile="live_signal")
+    now = datetime(2026, 9, 5, 20, 0, tzinfo=timezone.utc)
+    pos = _pos(unreal=0.02, mark=10.2)
+    with patch(
+        "phase6.core.tryout_scale_up_shadow.infer_open_lot_entry",
+        return_value={
+            "entry_price": 10.0,
+            "entry_ts": (now - timedelta(hours=5)).isoformat(),
+            "entry_reason": "quality_tryout",
+            "tryout_tagged_buy": True,
+        },
+    ), patch(
+        "phase6.core.tryout_scale_up_shadow._phase_and_structure",
+        return_value={
+            "phase": 1,
+            "phase_name": "ignition",
+            "structure_ok": True,
+            "phase_dwell_ok": True,
+            "phase_history": [1, 1],
+            "error": None,
+        },
+    ), patch(
+        "phase6.core.tryout_scale_up_shadow._load_json",
+        return_value={"lots": {}},
+    ):
+        d = evaluate_scale_up(pos, cfg, now=now)
+    assert d.status == "would_scale", d
+    assert d.detail.get("signal_bar") is True
+
+
 if __name__ == "__main__":
     test_would_scale_when_gates_clear()
     test_would_scale_legacy_75_shell_still_in_band()
@@ -225,4 +299,7 @@ if __name__ == "__main__":
     test_live_apply_pinned_false()
     test_defaults_match_25_shell()
     test_scale_decision_dict()
+    test_live_signal_profile_tighter_than_measure()
+    test_live_signal_blocks_phase5_and_mild_red()
+    test_live_signal_would_scale_ignition_green()
     print("ALL PASS isolation_tryout_scale_up_shadow")

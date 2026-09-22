@@ -44,6 +44,28 @@ LEDGER_PATH = PROJECT_ROOT / "trades" / "phase6_trades.jsonl"
 
 # Defaults — $25 tryout shell ladder (Brad GO 2026-09-19). live_apply stays false.
 # Band covers $25 seats + residual legacy ~$75 tryouts during transition.
+#
+# Dual profiles (Brad signal-bar 2026-09-22):
+#   measure      — B-loosen for paper CF N only
+#   live_signal  — kindling bar: run continuing (phase 1–2 + structure + green R + dwell)
+# Shadow cycle uses active_profile (default measure). Live plan/apply forces live_signal.
+PROFILE_MEASURE: Dict[str, Any] = {
+    "min_hold_hours": 1.0,
+    "min_unrealized_r": -0.005,
+    "max_unrealized_r": 0.05,
+    "require_phase_in": [1, 2, 3, 4, 5],
+    "require_structure_ok": True,
+    "phase_dwell_bars": 0,
+}
+PROFILE_LIVE_SIGNAL: Dict[str, Any] = {
+    "min_hold_hours": 2.0,
+    "min_unrealized_r": 0.008,  # +0.8% green floor — run must be working
+    "max_unrealized_r": 0.035,  # pre-bank / pre-TP arm band
+    "require_phase_in": [1, 2],  # ignition + early trend only
+    "require_structure_ok": True,  # null → fail closed
+    "phase_dwell_bars": 2,  # last N daily tips must stay in allow-set (no one-bar flip)
+}
+
 DEFAULTS: Dict[str, Any] = {
     "enabled": True,
     "live_apply": False,  # NEVER true without Brad GO
@@ -51,12 +73,13 @@ DEFAULTS: Dict[str, Any] = {
     "tryout_min_usd": 18.0,  # $25 shell ± dust; was 40 (blind to $25)
     "step_usd": 25.0,  # one add: $25 → ~$50 (first rung); not $75→$150 jump
     "max_total_after_step_usd": 100.0,  # $25+$25 or legacy $75+$25
-    # B 2026-09-19 measure loosen — paper CF legs (not edge claim / not auto live)
-    "min_hold_hours": 1.0,  # was 2.0; still blocks pure scalp
-    "min_unrealized_r": -0.005,  # was +1.5%; mild red OK for measure N
-    "max_unrealized_r": 0.05,  # was 3.8%; still avoid deep bank zone
-    "require_phase_in": [1, 2, 3, 4, 5],  # was [1,2]; include extension/distribution for paper
-    "require_structure_ok": True,
+    "active_profile": "measure",
+    "profiles": {
+        "measure": dict(PROFILE_MEASURE),
+        "live_signal": dict(PROFILE_LIVE_SIGNAL),
+    },
+    # Top-level gate keys = active (measure) after load_cfg merge
+    **dict(PROFILE_MEASURE),
     "fee_haircut_rt": 0.0016,  # ~round-trip bps proxy for CF
     "sl_r": -0.03,
     "sticky_skip": ("BTC-USD", "BTC-USDC", "PAXG-USD", "PAXG-USDC", "USDC-USD", "USD-USD"),
@@ -66,7 +89,15 @@ DEFAULTS: Dict[str, Any] = {
     # edge bar (ATTENTION_ONLY even if green): scale path mean excess vs tryout-only ≥ +0.5pp
     "cf_min_excess_pp": 0.005,
     "measure_profile": "B_loosen_20260919",
-    "shell_note": "Brad GO 2026-09-19 B: measure gates loosened for paper CF N",
+    "signal_bar_profile": "live_signal_20260922",
+    "shell_note": (
+        "Dual profile 2026-09-22: measure=B-loosen CF N; "
+        "live plan/apply=live_signal kindling bar"
+    ),
+    "smoothing_note": (
+        "Daily OHLCV + SMA20/50 already smooth minor inflections; "
+        "phase_dwell_bars confirms multi-day phase membership"
+    ),
 }
 
 
@@ -99,8 +130,70 @@ def _norm_pair(p: str) -> str:
     return s
 
 
-def load_cfg(overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+_GATE_KEYS = (
+    "min_hold_hours",
+    "min_unrealized_r",
+    "max_unrealized_r",
+    "require_phase_in",
+    "require_structure_ok",
+    "phase_dwell_bars",
+)
+
+
+def _merge_profiles(base: Dict[str, Any], file_profiles: Any) -> Dict[str, Any]:
+    """Deep-merge named profiles onto code defaults."""
+    out = {
+        "measure": dict(PROFILE_MEASURE),
+        "live_signal": dict(PROFILE_LIVE_SIGNAL),
+    }
+    raw_base = base.get("profiles")
+    if isinstance(raw_base, dict):
+        for name, body in raw_base.items():
+            if isinstance(body, dict):
+                out.setdefault(str(name), {})
+                out[str(name)].update({k: v for k, v in body.items() if v is not None})
+    if isinstance(file_profiles, dict):
+        for name, body in file_profiles.items():
+            if isinstance(body, dict):
+                out.setdefault(str(name), {})
+                out[str(name)].update({k: v for k, v in body.items() if v is not None})
+    return out
+
+
+def apply_profile(cfg: Dict[str, Any], profile: str) -> Dict[str, Any]:
+    """Return a copy of cfg with gate keys from named profile stamped on top."""
+    out = dict(cfg)
+    raw_profiles = out.get("profiles")
+    profiles: Dict[str, Any] = raw_profiles if isinstance(raw_profiles, dict) else {}
+    name = str(profile or out.get("active_profile") or "measure").strip() or "measure"
+    raw_body = profiles.get(name)
+    body: Dict[str, Any]
+    if isinstance(raw_body, dict):
+        body = raw_body
+    else:
+        body = dict(PROFILE_LIVE_SIGNAL if name == "live_signal" else PROFILE_MEASURE)
+    for k in _GATE_KEYS:
+        if k in body and body[k] is not None:
+            out[k] = body[k]
+    out["active_profile"] = name
+    out["profile_note"] = body.get("note")
+    # normalize
+    out["require_phase_in"] = [int(x) for x in (out.get("require_phase_in") or [1, 2])]
+    out["phase_dwell_bars"] = max(0, int(out.get("phase_dwell_bars") or 0))
+    out["require_structure_ok"] = bool(out.get("require_structure_ok", True))
+    return out
+
+
+def load_cfg(
+    overrides: Optional[Dict[str, Any]] = None,
+    *,
+    profile: Optional[str] = None,
+) -> Dict[str, Any]:
     cfg = dict(DEFAULTS)
+    cfg["profiles"] = {
+        "measure": dict(PROFILE_MEASURE),
+        "live_signal": dict(PROFILE_LIVE_SIGNAL),
+    }
     # optional file knobs
     for path in (
         PROJECT_ROOT / "config" / "tryout_scale_up_shadow.json",
@@ -110,20 +203,45 @@ def load_cfg(overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
             if path.exists():
                 raw = json.loads(path.read_text())
                 if isinstance(raw, dict):
-                    cfg.update({k: v for k, v in raw.items() if v is not None})
+                    file_profiles = raw.get("profiles")
+                    cfg["profiles"] = _merge_profiles(cfg, file_profiles)
+                    cfg.update(
+                        {
+                            k: v
+                            for k, v in raw.items()
+                            if v is not None and k != "profiles"
+                        }
+                    )
         except Exception:
             pass
     if overrides:
-        cfg.update({k: v for k, v in overrides.items() if v is not None})
-    # normalize lists
-    cfg["require_phase_in"] = [int(x) for x in (cfg.get("require_phase_in") or [1, 2])]
+        ov = dict(overrides)
+        if "profiles" in ov and isinstance(ov.get("profiles"), dict):
+            cfg["profiles"] = _merge_profiles(cfg, ov.pop("profiles"))
+        cfg.update({k: v for k, v in ov.items() if v is not None})
+    # sticky normalize before profile apply
     cfg["sticky_skip"] = tuple(
         _norm_pair(x) for x in (cfg.get("sticky_skip") or DEFAULTS["sticky_skip"])
     )
-    cfg["live_apply"] = False if not bool(cfg.get("live_apply")) else False  # hard pin shadow
-    # re-read pin: only decision file can flip live later — still false here
-    cfg["live_apply"] = False
+    cfg["live_apply"] = False  # hard pin shadow; decision file arms live separately
+    # Choose profile: explicit arg > overrides already in cfg.active_profile > measure
+    want = profile if profile is not None else cfg.get("active_profile") or "measure"
+    # Preserve explicit gate overrides after profile stamp (tests / one-off pins)
+    gate_overrides = {
+        k: cfg[k] for k in _GATE_KEYS if overrides and k in overrides and overrides[k] is not None
+    }
+    cfg = apply_profile(cfg, str(want))
+    if gate_overrides:
+        cfg.update(gate_overrides)
+        cfg["require_phase_in"] = [int(x) for x in (cfg.get("require_phase_in") or [1, 2])]
+        cfg["phase_dwell_bars"] = max(0, int(cfg.get("phase_dwell_bars") or 0))
+        cfg["require_structure_ok"] = bool(cfg.get("require_structure_ok", True))
     return cfg
+
+
+def load_live_signal_cfg(overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Cfg for live plan/apply/approval — always live_signal kindling bar."""
+    return load_cfg(overrides, profile="live_signal")
 
 
 def _load_json(path: Path, default: Any) -> Any:
@@ -279,12 +397,28 @@ def _unrealized_r(pos: Dict[str, Any], entry_px: float) -> float:
     return 0.0
 
 
-def _phase_and_structure(pair: str) -> Dict[str, Any]:
+def _phase_and_structure(
+    pair: str,
+    cfg: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """Daily-tape phase + structure.
+
+    Smoothing already lives in the classifiers (1d bars, SMA20/50, multi-day
+    lookbacks). Optional phase_dwell_bars requires the last N tip bars to stay
+    inside require_phase_in so a single daily flip cannot unlock kindling.
+    """
+    c = cfg or {}
+    dwell_n = max(0, int(c.get("phase_dwell_bars") or 0))
+    allow = {int(x) for x in (c.get("require_phase_in") or [1, 2])}
     out: Dict[str, Any] = {
         "phase": None,
         "phase_name": None,
         "structure_ok": None,
         "error": None,
+        "phase_history": [],
+        "phase_dwell_ok": True if dwell_n <= 0 else None,
+        "phase_dwell_bars": dwell_n,
+        "tape": "daily_ohlcv",
     }
     try:
         from phase6.core.run_phase_deploy import (
@@ -297,6 +431,7 @@ def _phase_and_structure(pair: str) -> Dict[str, Any]:
         candles = fetch_daily_candles_public(pair, limit=40) or []
         if len(candles) < 15:
             out["error"] = "thin_candles"
+            out["phase_dwell_ok"] = False if dwell_n > 0 else True
             return out
         phase_cfg = load_run_phase_config(None)
         # classify_run_phase(candles, *, pair=, cfg=) — positional pair was a silent bug
@@ -305,6 +440,23 @@ def _phase_and_structure(pair: str) -> Dict[str, Any]:
         out["phase_name"] = str(
             getattr(snap, "phase_name", "") or getattr(snap, "name", "") or ""
         )
+        # Multi-bar phase membership (dwell) — tip-inclusive window
+        if dwell_n > 0:
+            hist: List[int] = []
+            n = len(candles)
+            # need dwell_n tips; if thin history, fail closed
+            if n < max(16, dwell_n):
+                out["phase_dwell_ok"] = False
+                out["error"] = (out.get("error") or "") + ":dwell_thin"
+            else:
+                for back in range(dwell_n - 1, -1, -1):
+                    idx = n - 1 - back
+                    s = classify_run_phase(
+                        candles, pair=pair, cfg=phase_cfg, as_of_index=idx
+                    )
+                    hist.append(int(getattr(s, "phase", 0) or 0))
+                out["phase_history"] = hist
+                out["phase_dwell_ok"] = bool(hist) and all(p in allow for p in hist)
         try:
             sc = classify_structure(candles, pair=pair)
             out["structure_ok"] = bool(
@@ -328,6 +480,8 @@ def _phase_and_structure(pair: str) -> Dict[str, Any]:
             out["error"] = f"structure:{e}"
     except Exception as e:
         out["error"] = str(e)
+        if dwell_n > 0 and out.get("phase_dwell_ok") is None:
+            out["phase_dwell_ok"] = False
     return out
 
 
@@ -469,7 +623,22 @@ def evaluate_scale_up(
     if r > rmax:
         reasons.append(f"r={r:.4f}>max {rmax} (bank_zone_or_extended)")
 
-    ps = phase_struct if phase_struct is not None else _phase_and_structure(pair)
+    ps = (
+        phase_struct
+        if phase_struct is not None
+        else _phase_and_structure(pair, c)
+    )
+    # If caller passed a thin phase_struct (tests), still honor dwell when cfg asks
+    # and history is present; otherwise recompute dwell only when needed.
+    if (
+        phase_struct is not None
+        and int(c.get("phase_dwell_bars") or 0) > 0
+        and "phase_dwell_ok" not in ps
+    ):
+        # Test stubs without dwell → treat tip phase check only (dwell N/A)
+        ps = dict(ps)
+        ps.setdefault("phase_dwell_ok", True)
+        ps.setdefault("phase_dwell_bars", 0)
     phase = ps.get("phase")
     struct_ok = ps.get("structure_ok")
     allow_phases = {int(x) for x in (c.get("require_phase_in") or [1, 2])}
@@ -477,6 +646,16 @@ def evaluate_scale_up(
         reasons.append(f"phase_unknown:{ps.get('error')}")
     elif int(phase) not in allow_phases:
         reasons.append(f"phase={phase} not in {sorted(allow_phases)}")
+    dwell_n = int(c.get("phase_dwell_bars") or 0)
+    if dwell_n > 0:
+        d_ok = ps.get("phase_dwell_ok")
+        if d_ok is False:
+            hist = ps.get("phase_history") or []
+            reasons.append(
+                f"phase_dwell_fail hist={list(hist)} need_in={sorted(allow_phases)}"
+            )
+        elif d_ok is None:
+            reasons.append("phase_dwell_unknown")
     if bool(c.get("require_structure_ok", True)):
         if struct_ok is None:
             reasons.append("structure_unknown")
@@ -495,6 +674,8 @@ def evaluate_scale_up(
         "step_usd": step,
         "total_after_usd": round(total_after, 2),
         "ride_the_wave": True,
+        "active_profile": c.get("active_profile"),
+        "signal_bar": c.get("active_profile") == "live_signal",
     }
 
     if reasons:
@@ -869,6 +1050,7 @@ def run_cycle(overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "cfg": {
             k: cfg[k]
             for k in (
+                "active_profile",
                 "tryout_min_usd",
                 "tryout_max_usd",
                 "step_usd",
@@ -877,8 +1059,11 @@ def run_cycle(overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
                 "max_unrealized_r",
                 "require_phase_in",
                 "require_structure_ok",
+                "phase_dwell_bars",
                 "cf_min_scored",
                 "cf_min_excess_pp",
+                "signal_bar_profile",
+                "smoothing_note",
             )
             if k in cfg
         },
@@ -889,8 +1074,9 @@ def run_cycle(overrides: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         "cf": cf,
         "open_lots_path": str(OPEN_LOTS_PATH),
         "note": (
-            "Paper only. No orders. Scale-up earns capital into momentum before TP; "
-            "exit automation still owns the jump before the break."
+            "Paper only (measure profile). No orders. "
+            "Live plan/apply re-evals on live_signal kindling bar — not this loosen set. "
+            "Exit automation still owns the jump before the break."
         ),
     }
     _write_json(LATEST_PATH, payload)

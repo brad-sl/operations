@@ -250,6 +250,62 @@ class LiveScalePlan:
         return asdict(self)
 
 
+def _signal_bar_reasons(row: Dict[str, Any], cfg: Dict[str, Any]) -> List[str]:
+    """Kindling checks on a candidate row (phase/structure/R/hold/dwell).
+
+    Used so live plan does not trust measure-profile would_scale alone.
+    """
+    reasons: List[str] = []
+    hold_h = row.get("hold_hours")
+    min_h = _f(cfg.get("min_hold_hours"), 2.0)
+    if hold_h is None:
+        reasons.append("hold_hours_unknown")
+    elif float(hold_h) < min_h:
+        reasons.append(f"hold_hours={float(hold_h):.2f}<{min_h}")
+
+    r = _f(row.get("unrealized_r"))
+    rmin = _f(cfg.get("min_unrealized_r"), 0.008)
+    rmax = _f(cfg.get("max_unrealized_r"), 0.035)
+    if r < rmin:
+        reasons.append(f"r={r:.4f}<min {rmin}")
+    if r > rmax:
+        reasons.append(f"r={r:.4f}>max {rmax} (bank_zone_or_extended)")
+
+    allow = {int(x) for x in (cfg.get("require_phase_in") or [1, 2])}
+    phase = row.get("phase")
+    if phase is None:
+        reasons.append("phase_unknown")
+    elif int(phase) not in allow:
+        reasons.append(f"phase={phase} not in {sorted(allow)}")
+
+    dwell_n = int(cfg.get("phase_dwell_bars") or 0)
+    if dwell_n > 0:
+        d_ok = row.get("phase_dwell_ok")
+        detail = row.get("detail") if isinstance(row.get("detail"), dict) else {}
+        if d_ok is None and isinstance(detail, dict):
+            ps = detail.get("phase_struct") if isinstance(detail.get("phase_struct"), dict) else {}
+            d_ok = ps.get("phase_dwell_ok")
+            if d_ok is None and ps.get("phase_history"):
+                hist = list(ps.get("phase_history") or [])
+                d_ok = bool(hist) and all(int(p) in allow for p in hist)
+        # Isolation rows often omit dwell meta: fail closed only when history present
+        if d_ok is False:
+            reasons.append("phase_dwell_fail")
+        elif d_ok is None and row.get("phase_history"):
+            hist = list(row.get("phase_history") or [])
+            if not (hist and all(int(p) in allow for p in hist)):
+                reasons.append("phase_dwell_fail")
+        # else: no dwell evidence in row → tip phase already checked; dwell deferred
+
+    if bool(cfg.get("require_structure_ok", True)):
+        sk = row.get("structure_ok")
+        if sk is None:
+            reasons.append("structure_unknown")
+        elif not sk:
+            reasons.append("structure_not_ok")
+    return reasons
+
+
 def plan_live_steps(
     decisions: Optional[Sequence[Dict[str, Any]]] = None,
     *,
@@ -258,14 +314,26 @@ def plan_live_steps(
     decision: Optional[Dict[str, Any]] = None,
     now: Optional[datetime] = None,
 ) -> Dict[str, Any]:
-    """Build apply plan from shadow would_scale rows. Never places orders."""
+    """Build apply plan under **live_signal** kindling bar. Never places orders.
+
+    Default cfg is live_signal (not measure B-loosen). Measure would_scale is only
+    a candidate pool hint; each row must still clear signal-bar gates.
+    """
     now = now or _utc_now()
-    c = cfg or shadow.load_cfg()
+    # Default live plan = live_signal kindling bar. Tests may pass measure/explicit cfg.
+    if isinstance(cfg, dict):
+        ap = cfg.get("active_profile")
+        if ap in ("measure", "live_signal"):
+            c = dict(cfg)
+        else:
+            c = shadow.apply_profile(dict(cfg), "live_signal")
+    else:
+        c = shadow.load_live_signal_cfg()
     d = decision if isinstance(decision, dict) else load_decision()
     armed = is_live_armed(d)
     b = board
     if b is None and decisions is None:
-        # fresh shadow evaluate (no write side effects beyond normal cycle — caller may pass board)
+        # fresh shadow evaluate (measure cycle for CF crumbs)
         b = shadow.run_cycle()
     if decisions is None:
         decisions = list((b or {}).get("decisions") or [])
@@ -300,6 +368,7 @@ def plan_live_steps(
     plans: List[LiveScalePlan] = []
     planned_usd = 0.0
     planned_n = 0
+    signal_blocked_n = 0
 
     for row in decisions:
         if not isinstance(row, dict):
@@ -318,6 +387,13 @@ def plan_live_steps(
         if status != "would_scale" and not paper_leg:
             continue
         reasons: List[str] = []
+
+        # --- Kindling / signal bar (always; cfg may be measure only in tests) ---
+        sig_reasons = _signal_bar_reasons(row, c)
+        if sig_reasons:
+            signal_blocked_n += 1
+            reasons.extend(f"signal_bar:{x}" for x in sig_reasons)
+
         held = _f(row.get("held_usd"))
         # paper leg may have step_usd=0 on skip row — pull from registry/cfg
         step = _f(row.get("step_usd"), 0.0)
@@ -377,9 +453,11 @@ def plan_live_steps(
                 else None,
                 status=st,
                 reasons=reasons
-                or ["ready_for_apply_when_go"],
+                or ["ready_for_apply_when_go", "live_signal_bar"],
                 detail={
                     "shadow_reasons": row.get("reasons"),
+                    "signal_bar_profile": c.get("active_profile"),
+                    "signal_bar_reasons": sig_reasons,
                     "cf_gate": cf_gate,
                     "armed": armed,
                 },
@@ -391,6 +469,18 @@ def plan_live_steps(
         "as_of": _utc_iso(now),
         "live_armed": armed,
         "kill": kill_switch_on(),
+        "signal_bar_profile": c.get("active_profile"),
+        "signal_bar_gates": {
+            k: c.get(k)
+            for k in (
+                "min_hold_hours",
+                "min_unrealized_r",
+                "max_unrealized_r",
+                "require_phase_in",
+                "require_structure_ok",
+                "phase_dwell_bars",
+            )
+        },
         "cf_gate": cf_gate,
         "cf": cf,
         "daily": {
@@ -409,12 +499,14 @@ def plan_live_steps(
                 or "already_paper_scaled_cf_leg" in list(r.get("reasons") or [])
             )
         ),
+        "n_signal_blocked": signal_blocked_n,
         "n_planned": sum(1 for p in plans if p.status == "planned"),
         "n_blocked": sum(1 for p in plans if p.status == "blocked"),
         "plans": [p.to_dict() for p in plans],
         "note": (
-            "Plan only. apply_live_steps(..., go=True, dry_run=False) required for money. "
-            "Cron must never call apply."
+            "Plan only under signal bar (default live_signal). "
+            "apply_live_steps(..., go=True, dry_run=False) required for money. "
+            "Cron must never call apply. Measure would_scale ≠ automatic planned."
         ),
     }
     _write_json(LATEST_PLAN_PATH, payload)

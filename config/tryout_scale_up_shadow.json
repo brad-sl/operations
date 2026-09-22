@@ -5,16 +5,40 @@
   "tryout_max_usd": 95.0,
   "step_usd": 25.0,
   "max_total_after_step_usd": 100.0,
+  "active_profile": "measure",
+  "profiles": {
+    "measure": {
+      "min_hold_hours": 1.0,
+      "min_unrealized_r": -0.005,
+      "max_unrealized_r": 0.05,
+      "require_phase_in": [1, 2, 3, 4, 5],
+      "require_structure_ok": true,
+      "phase_dwell_bars": 0,
+      "note": "B 2026-09-19 loosen — paper CF N only; not edge / not auto live"
+    },
+    "live_signal": {
+      "min_hold_hours": 2.0,
+      "min_unrealized_r": 0.008,
+      "max_unrealized_r": 0.035,
+      "require_phase_in": [1, 2],
+      "require_structure_ok": true,
+      "phase_dwell_bars": 2,
+      "note": "Signal bar 2026-09-22: kindling only if run continuing (ignition/trend + structure + green R band + 2d phase dwell)"
+    }
+  },
   "min_hold_hours": 1.0,
   "min_unrealized_r": -0.005,
   "max_unrealized_r": 0.05,
   "require_phase_in": [1, 2, 3, 4, 5],
   "require_structure_ok": true,
+  "phase_dwell_bars": 0,
   "cf_min_scored": 8,
   "cf_prefer_scored": 12,
   "cf_min_excess_pp": 0.005,
   "measure_profile": "B_loosen_20260919",
-  "shell_note": "Brad GO 2026-09-19 B: measure gates loosened so paper would_scale can register CF legs. Shadow live_apply hard-off. Live money uses decision arm + C waive + CLI.",
-  "updated": "2026-09-19",
-  "ladder_rungs_note": "Rung1 shadow step $25. Measure phases 1-5 + mild red OK for CF N only — not an edge claim."
+  "signal_bar_profile": "live_signal_20260922",
+  "shell_note": "Dual profile 2026-09-22: measure stays B-loosen for CF N; live plan/apply re-eval on live_signal bar (phase 1-2, structure fail-closed, R +0.8..+3.5%, hold>=2h, phase_dwell 2 daily bars). Shadow live_apply hard-off. Money still CLI --apply --go.",
+  "updated": "2026-09-22",
+  "ladder_rungs_note": "Rung1 step $25. Measure phases 1-5 for CF N. Live/approval uses live_signal only — not schedule, not phase-5 kindling.",
+  "smoothing_note": "No extra zoom-out needed: run phase + structure already use daily OHLCV + SMA20/50 + multi-day lookbacks. phase_dwell_bars adds confirmation so one tip bar cannot flip kindling alone."
 }

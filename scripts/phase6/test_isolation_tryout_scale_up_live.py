@@ -16,7 +16,7 @@ from phase6.core import tryout_scale_up_live as live  # noqa: E402
 from phase6.core import tryout_scale_up_shadow as shadow  # noqa: E402
 
 
-def _would(pair="ZEC-USD", held=25.0, step=25.0, r=0.02):
+def _would(pair="ZEC-USD", held=25.0, step=25.0, r=0.02, phase=1, structure_ok=True):
     return {
         "pair": pair,
         "status": "would_scale",
@@ -24,8 +24,9 @@ def _would(pair="ZEC-USD", held=25.0, step=25.0, r=0.02):
         "step_usd": step,
         "unrealized_r": r,
         "hold_hours": 5.0,
-        "phase": 1,
-        "structure_ok": True,
+        "phase": phase,
+        "structure_ok": structure_ok,
+        "phase_dwell_ok": True,
         "reasons": ["earned_mid_flight_step"],
     }
 
@@ -263,10 +264,37 @@ def test_daily_cap_blocks_second():
             decisions=[_would("LINK-USD")],
             board={"cf": {"n": 12, "edge_class": "ATTENTION_ONLY_scale_helps"}},
             decision=decision,
+            cfg=shadow.load_cfg(profile="measure"),
             now=datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc),
         )
     assert p["n_planned"] == 0
     assert any("daily_max_steps" in r for r in p["plans"][0]["reasons"])
+
+
+def test_live_signal_blocks_measure_phase5_would_scale():
+    """Measure may mark would_scale on phase 5; live plan must still refuse kindling."""
+    decision = {
+        "live_apply": True,
+        "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0},
+    }
+    with patch.object(live, "load_decision", return_value=decision), patch.object(
+        live, "kill_switch_on", return_value=False
+    ), patch.object(live, "load_daily", return_value={
+        "utc_day": "2026-09-19", "n_steps": 0, "usd_spent": 0.0, "pairs": [], "events": []
+    }), patch.object(shadow, "_load_json", return_value={"lots": {}}), patch.object(
+        live, "_write_json"
+    ):
+        p = live.plan_live_steps(
+            decisions=[_would(phase=5, r=0.012)],
+            board={"cf": {"n": 0, "edge_class": "INSUFFICIENT_N"}},
+            decision=decision,
+            # default cfg = live_signal
+            now=datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc),
+        )
+    assert p["signal_bar_profile"] == "live_signal"
+    assert p["n_planned"] == 0
+    assert p["n_signal_blocked"] >= 1
+    assert any("signal_bar:" in r for r in p["plans"][0]["reasons"])
 
 
 if __name__ == "__main__":
@@ -280,4 +308,5 @@ if __name__ == "__main__":
     test_apply_live_calls_buy_once()
     test_apply_refuses_when_not_armed_even_with_go()
     test_daily_cap_blocks_second()
+    test_live_signal_blocks_measure_phase5_would_scale()
     print("ALL PASS isolation_tryout_scale_up_live")

@@ -79,6 +79,7 @@ daily-dose 08:00 ·
 | `stoch-30d-reeval` | 2026-09-03 09:00 PT | remove after fire |
 | `phase6-rsi-event-x-shadow-observe-close` `17289c281af6` | **2026-09-17 19:35 PT** | R0 extended observe closeout; remove after fire; paid X still OFF |
 | `basket-swap-30d-revisit` | 2026-09-28 09:00 PT | preferred arm vs dual_agree re-score |
+| `phase6-break-even-one-pager-eow` `9b8645c8dd9d` | **2026-09-27 18:00 PT** | Week wait closeout: RT gross · process tax · est X · net vs **$150/mo** bar · TG short card · full `reports/BREAK_EVEN_ONE_PAGER_LATEST.md` · **measure-only / no knobs** · remove after fire · wrapper `run_break_even_one_pager.sh` |
 
 ### F — Paused / ARCHIVED (reactivate with `hermes cron resume <id>` when needed)
 | Job | Id | Why paused |
@@ -128,6 +129,17 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Artifacts: `data/state/jev_lab_calibration_latest.json` + `reports/JEV_LAB_CALIBRATION_LATEST.md`
 - Guardrails: measure-only, honest N (`N_INSUFFICIENT` until n_ok≥20), no orders / no promote
 - Isolation: `scripts/phase6/test_isolation_jev_lab_calibration.py`
+
+## phase6-jev-select-few-cf (Brad GO select-few paper book 2026-09-23)
+- Schedule: `15 8,14,20 * * *` America/Los_Angeles
+- Script: `~/.hermes/scripts/run_jev_select_few_cf.sh` → `phase6/scripts/run_jev_select_few_cf_cron.sh`
+- Behavior: OHLCV+aged eng sent → Jev judgment on **prod tryout-eligible ∩ held**, max 3 doors → **paper $25** seats only when `paper_would_buy_tag`; mark 1h/4h/24h fwd; close CF at ~24h
+- Cap: separate budget `data/state/jev_select_few_cf_budget.json` max 12 calls/day
+- Artifacts: `jev_select_few_cf_{latest,book,crumbs,budget}.*` + `reports/JEV_SELECT_FEW_CF_LATEST.md`
+- Delivery: **local** (quiet); set `JEV_CF_TG=1` only if Brad wants a card
+- Guardrails: measure-only · `would_order` always false · no knobs · no promote · `N_INSUFFICIENT` until n_closed≥20
+- Isolation: `scripts/phase6/test_isolation_jev_select_few_cf.py`
+- Plan: `docs/plans/2026-09-23-jev-select-few-cf.md`
 
 ## phase6-daily-dose-jev-ranker (Brad GO shadow 2026-09-18)
 - Schedule: `15 7 * * *` America/Los_Angeles (before `daily-dose-telegram` 08:00)

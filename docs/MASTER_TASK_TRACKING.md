@@ -135,7 +135,12 @@ Emitted by `phase6/research/analyst_test_strategy.py` → pickup via `master_tes
 - Tests: scripts/phase6/test_isolation_jev_lab.py + test_isolation_jev_lab_calibration.py
 - Live smoke: BTC/ETH hold/range; ~180–850ms; paper tags only; no orders
 - L4: SHIPPED measure-only calibration rollup (honest N; n_ok=7 as of first proof run)
-- Next: collect ~7d crumbs → re-read L4; L5 Brad stop (shadow feature vs park)
+- **L5 thin (2026-09-23 Brad GO):** select-few CF paper book — plan `docs/plans/2026-09-23-jev-select-few-cf.md`
+  - Code: `phase6/core/jev_select_few_cf.py` + `scripts/phase6/run_jev_select_few_cf.py` + isolation
+  - Universe: prod tryout-eligible ∩ held, max 3; paper $25; max 4 open CF; 12 calls/day budget
+  - Cron: `phase6-jev-select-few-cf` `15 8,14,20 * * *` PT **deliver=local**
+  - Claim: `N_INSUFFICIENT_no_edge_claim` until n_closed≥20; still no live edge / no orders
+- Next: accumulate CF closed seats + L4 crumbs; no money-path wire
 - Guardrails: no live gates, no tryout, no promote from Jev
 
 ## STREAMLINED-ACTION-ARCH-20260918 — PARTIAL SHIP (Tasks 1+6)

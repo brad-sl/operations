@@ -65,7 +65,7 @@ daily-dose 08:00 ·
 | `phase6-regime-climate-weather` `2c2a52981860` | Climate vs weather multi-horizon + dwell · **07:50 PT daily** · local crumbs · measure-only · never flips REGIME-CASH · plan `docs/plans/2026-09-21-regime-climate-weather-boundaries.md` |
 | `phase6-bull-reentry-layered-paper` `f3f0f8c8d94e` | Layered B opportunity paper shadow (breakout+RSI sleeve) · **08:10/20:10 PT** · local · live_apply false · spec frozen 2026-07-30 |
 | `phase6-basket-seat-idle-refresh` | Soft idle flags; observe_only |
-| `phase6-basket-swap-cf-shadow` | TG only on dual_agree / preferred-arm new write / hard CF; preferred from decision file (regime switch may flip) →2026-09-28 |
+| `phase6-basket-swap-cf-shadow` | TG **only** on dual_agree this-run/new ledger **or** preferred-arm new membership-OK write (concrete remove→add). CF-only `modify_selector` / promote research **silent** (Brad 2026-09-22). preferred from decision file (regime switch may flip) →2026-09-28 |
 | `phase6-regime-arm-switch` `353a8ca93150` | BTC 7d tape → paper-primary arm (`up/chop→rel_btc_stable`, `down→risk_adj_mom`) · **11:40/23:40 PT** · apply shadow · TG **only on flip** · live swaps forced OFF |
 | `phase6-tcs-shadow-would-block` `dd16da710656` | Trade-comparison CF + would-block replay · **12:25 PT daily** · local · own state only · live cooldown OFF |
 | `phase6-vol-risk-scalar-shadow` | Keep collecting (not enough data for promote) |

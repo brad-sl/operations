@@ -1541,12 +1541,19 @@ def plain_english_summary(bundle: Dict[str, Any]) -> str:
 
 def serious_consider_message(bundle: Dict[str, Any]) -> Optional[str]:
     """
-    Telegram-worthy body only when stronger-than-baseline factors fire.
+    Telegram body only when a concrete swap decision is on the table.
 
-    Brad 2026-08-30: discovery baseline Δ pings confuse; drop those.
-    Only surface when dual_agree hits and/or preferred arm nominates a
-    membership-gate-ok swap. Never implies live promote (live swaps stay OFF
-    until explicit Brad go on a specific pair).
+    Brad 2026-08-30: drop baseline scout heat.
+    Brad 2026-09-22: drop CF-only statuses (modify_selector / stop_baseline /
+    promote_candidate research). Those are measure noise while live swaps stay
+    OFF — they are not a pair remove→add decision.
+
+    Ping only when:
+      1) dual_agree co-leaders agree this run (or newly ledger a swap), or
+      2) preferred arm wrote a *new* membership-gate-OK paper swap this run.
+
+    Never implies live promote (live_membership_swaps stays OFF until explicit
+    Brad go on a specific pair).
     """
     brad: Dict[str, Any] = {}
     if BRAD_DECISION_JSON.exists():
@@ -1576,22 +1583,16 @@ def serious_consider_message(bundle: Dict[str, Any]) -> Optional[str]:
         if ok:
             pref_ok.append(w)
 
+    # CF gate status alone is research (modify_selector etc.) — disk only.
     decide = ((bundle.get("cf") or {}).get("decide") or {})
     status = str(decide.get("status") or "")
-    # Hard CF "change the selector" statuses — rare; still worth a ping
-    decide_hard = status in {
-        "modify_selector",
-        "promote_candidate",
-        "stop_baseline",
-        "arm_failed_gate",
-    }
 
-    if not dual_hit and not pref_ok and not decide_hard:
+    if not dual_hit and not pref_ok:
         return None
 
     factors: List[str] = []
     lines = [
-        "👀 Seriously consider (paper review — not auto-promote)",
+        "🔀 Swap decision needed (paper — not auto-promote)",
         "Live membership swaps: "
         + ("ON (still needs explicit pair go)" if live_on else "OFF"),
         "",
@@ -1621,12 +1622,6 @@ def serious_consider_message(bundle: Dict[str, Any]) -> Optional[str]:
             if reason:
                 lines.append(f"  why: {reason[:180]}")
 
-    if decide_hard:
-        factors.append(f"CF gate status={status}")
-        pe = (decide.get("plain_english") or "").strip()
-        if pe:
-            lines.append(f"• CF: {pe[:220]}")
-
     # Empty-seat / low-regret note when present on preferred write
     for s in pref_ok[:1]:
         held = s.get("remove_held_usd")
@@ -1634,17 +1629,27 @@ def serious_consider_message(bundle: Dict[str, Any]) -> Optional[str]:
             factors.append("empty/near-empty remove seat (low exit friction)")
             break
 
+    # Optional CF context only when a real swap is already on the card
+    if status:
+        pe = (decide.get("plain_english") or "").strip()
+        if pe:
+            lines.append(f"• CF context ({status}): {pe[:180]}")
+
     lines.append("")
-    lines.append("Why this ping (not baseline scout heat):")
+    lines.append("Why this ping (swap decision only — not CF research heat):")
     for f in factors:
         lines.append(f"  – {f}")
     lines.append("")
     lines.append(
-        "Scout baseline hybrid proposals stay off Telegram. "
-        "Details: reports/BASKET_SELECT_ARMS_SHADOW_LATEST.md + "
+        "CF-only statuses (modify_selector etc.) and baseline scout stay off "
+        "Telegram. Details: reports/BASKET_SELECT_ARMS_SHADOW_LATEST.md + "
         "data/state/basket_dual_agree_latest.json"
     )
     lines.append("Anti-bleed: config untouched, no orders.")
+    lines.append(
+        "Reply GO + remove→add pair only if you want a live membership change "
+        "(live_membership_swaps still OFF by default)."
+    )
     return "\n".join(lines)
 
 

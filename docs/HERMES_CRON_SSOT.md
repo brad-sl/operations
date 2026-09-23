@@ -131,7 +131,7 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Isolation: `scripts/phase6/test_isolation_jev_lab_calibration.py`
 
 ## phase6-jev-select-few-cf (Brad GO select-few paper book 2026-09-23)
-- Schedule: `15 8,14,20 * * *` America/Los_Angeles
+- Schedule: `15 8,14,20 * * *` America/Los_Angeles (job_id `e8c0876dab79`)
 - Script: `~/.hermes/scripts/run_jev_select_few_cf.sh` → `phase6/scripts/run_jev_select_few_cf_cron.sh`
 - Behavior: OHLCV+aged eng sent → Jev judgment on **prod tryout-eligible ∩ held**, max 3 doors → **paper $25** seats only when `paper_would_buy_tag`; mark 1h/4h/24h fwd; close CF at ~24h
 - Cap: separate budget `data/state/jev_select_few_cf_budget.json` max 12 calls/day
@@ -140,6 +140,14 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Guardrails: measure-only · `would_order` always false · no knobs · no promote · `N_INSUFFICIENT` until n_closed≥20
 - Isolation: `scripts/phase6/test_isolation_jev_select_few_cf.py`
 - Plan: `docs/plans/2026-09-23-jev-select-few-cf.md`
+
+## phase6-jev-select-few-cf-weekly (Brad GO weekly TG 2026-09-23)
+- Schedule: `30 18 * * 0` America/Los_Angeles (Sundays **18:30 PT**, after BE one-pager 18:00) — job_id `62e93f0b798e`
+- Script: `~/.hermes/scripts/run_jev_select_few_cf_weekly.sh` → `phase6/scripts/run_jev_select_few_cf_weekly_cron.sh`
+- Behavior: rollup paper book last 7d (closed/opened/W-L/CF $ by pair + lifetime N) — **no Jev API calls**
+- Delivery: **telegram** short card; full `reports/JEV_SELECT_FEW_CF_WEEKLY_LATEST.md`
+- Guardrails: measure-only · no orders · no knobs · honest N claim class
+- CLI: `run_jev_select_few_cf.py --weekly`
 
 ## phase6-daily-dose-jev-ranker (Brad GO shadow 2026-09-18)
 - Schedule: `15 7 * * *` America/Los_Angeles (before `daily-dose-telegram` 08:00)

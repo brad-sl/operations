@@ -14,9 +14,12 @@ if str(ROOT) not in sys.path:
 from phase6.core.jev_select_few_cf import (  # noqa: E402
     REPORT_PATH,
     STATE_PATH,
+    WEEKLY_REPORT_PATH,
     SelectFewConfig,
+    build_weekly_rollup,
     run_select_few_cf,
     telegram_card,
+    weekly_telegram_card,
 )
 
 
@@ -33,7 +36,26 @@ def main() -> int:
     ap.add_argument("--no-write", action="store_true")
     ap.add_argument("--tg", action="store_true", help="Print short card only")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument(
+        "--weekly",
+        action="store_true",
+        help="Sunday rollup from paper book (no Jev calls)",
+    )
+    ap.add_argument("--lookback-days", type=int, default=7)
     args = ap.parse_args()
+
+    if args.weekly:
+        payload = build_weekly_rollup(
+            lookback_days=int(args.lookback_days),
+            write=not bool(args.no_write),
+        )
+        if args.json:
+            print(json.dumps(payload, indent=2, default=str))
+        else:
+            print(payload.get("plain") or weekly_telegram_card(payload))
+            if not args.no_write:
+                print(f"[meta] weekly_report={WEEKLY_REPORT_PATH}")
+        return 0
 
     override = [x.strip() for x in str(args.pairs).split(",") if x.strip()]
     cfg = SelectFewConfig(

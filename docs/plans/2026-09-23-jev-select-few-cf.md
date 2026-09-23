@@ -55,7 +55,9 @@ Reuses: `JudgmentPort` / `run_lab` / `confidence_gate_paper` / `forward_return` 
 | Job | When | Deliver |
 |-----|------|---------|
 | `phase6-jev-select-few-cf` | `15 8,14,20 * * *` PT | **local** (quiet); crumbs on disk |
-| Optional weekly rollup | with BE one-pager or manual | TG short only if asked |
+| `phase6-jev-select-few-cf-weekly` | `30 18 * * 0` PT (Sun, after BE 18:00) | **telegram** short week card |
+
+CLI: `run_jev_select_few_cf.py --weekly`
 
 ---
 

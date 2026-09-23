@@ -101,6 +101,79 @@ class TestJevSelectFewCf(unittest.TestCase):
             self.assertIn("measure-only", card)
             self.assertIn("No orders", card)
 
+    def test_weekly_rollup_empty_book(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td)
+            book_p = tdir / "book.json"
+            book_p.write_text(json.dumps(m._empty_book()), encoding="utf-8")
+            wstate = tdir / "weekly.json"
+            wrep = tdir / "weekly.md"
+            crumbs = tdir / "crumbs.jsonl"
+            with mock.patch.object(m, "BOOK_PATH", book_p), mock.patch.object(
+                m, "WEEKLY_STATE_PATH", wstate
+            ), mock.patch.object(m, "WEEKLY_REPORT_PATH", wrep), mock.patch.object(
+                m, "CRUMBS_PATH", crumbs
+            ), mock.patch.object(m, "BUDGET_PATH", tdir / "budget.json"):
+                payload = m.build_weekly_rollup(
+                    lookback_days=7,
+                    now=datetime(2026, 9, 28, 18, 0, tzinfo=timezone.utc),
+                    write=True,
+                    book_path=book_p,
+                )
+            self.assertTrue(payload["measure_only"])
+            self.assertEqual(payload["week"]["n_closed"], 0)
+            self.assertIn("N_INSUFFICIENT", payload["claim_class"])
+            card = m.weekly_telegram_card(payload)
+            self.assertIn("weekly", card.lower())
+            self.assertIn("Paper only", card)
+            self.assertTrue(wstate.exists())
+            self.assertIn("weekly rollup", wrep.read_text().lower())
+
+    def test_weekly_rollup_counts_closed_in_window(self) -> None:
+        book = m._empty_book()
+        book["closed"] = [
+            {
+                "pair": "ETH-USD",
+                "entry_ts": "2026-09-24T12:00:00+00:00",
+                "exit_ts": "2026-09-25T12:00:00+00:00",
+                "realized_pnl_usd": 1.25,
+                "status": "closed_cf",
+            },
+            {
+                "pair": "LINK-USD",
+                "entry_ts": "2026-09-10T12:00:00+00:00",
+                "exit_ts": "2026-09-11T12:00:00+00:00",
+                "realized_pnl_usd": -0.5,
+                "status": "closed_cf",
+            },
+        ]
+        book["banks"] = {
+            "realized_pnl_usd": 0.75,
+            "n_closed": 2,
+            "n_opened": 2,
+            "n_paper_buy_tags": 2,
+        }
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td)
+            book_p = tdir / "book.json"
+            book_p.write_text(json.dumps(book), encoding="utf-8")
+            with mock.patch.object(m, "CRUMBS_PATH", tdir / "c.jsonl"), mock.patch.object(
+                m, "BUDGET_PATH", tdir / "b.json"
+            ), mock.patch.object(m, "WEEKLY_STATE_PATH", tdir / "w.json"), mock.patch.object(
+                m, "WEEKLY_REPORT_PATH", tdir / "w.md"
+            ):
+                payload = m.build_weekly_rollup(
+                    lookback_days=7,
+                    now=datetime(2026, 9, 28, 18, 0, tzinfo=timezone.utc),
+                    write=False,
+                    book_path=book_p,
+                )
+        self.assertEqual(payload["week"]["n_closed"], 1)
+        self.assertEqual(payload["week"]["realized_pnl_usd"], 1.25)
+        self.assertEqual(payload["week"]["wins"], 1)
+        self.assertEqual(payload["week"]["by_pair"].get("ETH-USD"), 1.25)
+        self.assertEqual(payload["lifetime"]["n_closed"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

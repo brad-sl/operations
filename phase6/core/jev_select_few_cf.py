@@ -9,9 +9,16 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
+
+try:
+    from zoneinfo import ZoneInfo
+
+    PT = ZoneInfo("America/Los_Angeles")
+except Exception:  # pragma: no cover
+    PT = timezone.utc
 
 from phase6.core.jev_lab_calibration import (
     HORIZONS_H,
@@ -35,6 +42,8 @@ BOOK_PATH = STATE_DIR / "jev_select_few_cf_book.json"
 CRUMBS_PATH = STATE_DIR / "jev_select_few_cf_crumbs.jsonl"
 BUDGET_PATH = STATE_DIR / "jev_select_few_cf_budget.json"
 REPORT_PATH = PROJECT_ROOT / "reports" / "JEV_SELECT_FEW_CF_LATEST.md"
+WEEKLY_STATE_PATH = STATE_DIR / "jev_select_few_cf_weekly_latest.json"
+WEEKLY_REPORT_PATH = PROJECT_ROOT / "reports" / "JEV_SELECT_FEW_CF_WEEKLY_LATEST.md"
 
 
 def _utc_now() -> datetime:
@@ -480,3 +489,203 @@ def telegram_card(payload: Dict[str, Any]) -> str:
         lines.append(f"Opened this tick: {opened}")
     lines.append("No orders · no knobs · full: reports/JEV_SELECT_FEW_CF_LATEST.md")
     return "\n".join(lines)
+
+
+def _pt_now(now: Optional[datetime] = None) -> datetime:
+    now = now or _utc_now()
+    if now.tzinfo is None:
+        now = now.replace(tzinfo=timezone.utc)
+    return now.astimezone(PT)
+
+
+def _seat_ts(seat: Dict[str, Any], key: str = "exit_ts") -> Optional[float]:
+    return _parse_ts(seat.get(key) or seat.get("entry_ts"))
+
+
+def build_weekly_rollup(
+    *,
+    lookback_days: int = 7,
+    now: Optional[datetime] = None,
+    write: bool = True,
+    book_path: Path = BOOK_PATH,
+) -> Dict[str, Any]:
+    """Sunday (or on-demand) measure-only CF week card. No Jev calls, no orders."""
+    now = now or _utc_now()
+    now_pt = _pt_now(now)
+    window_start = now - timedelta(days=max(1, int(lookback_days)))
+    window_ts = window_start.timestamp()
+    book = load_book(book_path)
+    banks = book.get("banks") or {}
+
+    closed_all = [s for s in (book.get("closed") or []) if isinstance(s, dict)]
+    closed_week = []
+    for s in closed_all:
+        ts = _seat_ts(s, "exit_ts")
+        if ts is not None and ts >= window_ts:
+            closed_week.append(s)
+
+    opened_week = 0
+    for s in list(book.get("open") or []) + closed_all:
+        if not isinstance(s, dict):
+            continue
+        ts = _seat_ts(s, "entry_ts")
+        if ts is not None and ts >= window_ts:
+            opened_week += 1
+
+    week_pnl = 0.0
+    wins = 0
+    losses = 0
+    by_pair: Dict[str, float] = {}
+    for s in closed_week:
+        pnl = _f(s.get("realized_pnl_usd"))
+        week_pnl += pnl
+        pair = str(s.get("pair") or "?")
+        by_pair[pair] = round(by_pair.get(pair, 0.0) + pnl, 4)
+        if pnl > 0:
+            wins += 1
+        elif pnl < 0:
+            losses += 1
+
+    n_closed_w = len(closed_week)
+    n_closed_all = int(banks.get("n_closed") or 0)
+    claim = "N_INSUFFICIENT_no_edge_claim"
+    if n_closed_all >= MIN_N_CLAIM:
+        claim = "SAMPLE_OK_still_no_live_edge_claim"
+
+    # Unrealized approx on open (longest mark)
+    unreal = 0.0
+    open_pairs: List[str] = []
+    for s in book.get("open") or []:
+        if not isinstance(s, dict):
+            continue
+        open_pairs.append(str(s.get("pair") or ""))
+        m = s.get("marks") or {}
+        for h in reversed(HORIZONS_H):
+            k = f"pnl_{h}h_usd"
+            if m.get(k) is not None:
+                unreal += _f(m[k])
+                break
+
+    # Crumb activity this window
+    n_ticks = 0
+    if CRUMBS_PATH.is_file():
+        try:
+            for line in CRUMBS_PATH.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                ts = _parse_ts(row.get("ts"))
+                if ts is not None and ts >= window_ts:
+                    n_ticks += 1
+        except OSError:
+            pass
+
+    budget = {}
+    if BUDGET_PATH.is_file():
+        try:
+            budget = json.loads(BUDGET_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            budget = {}
+
+    payload: Dict[str, Any] = {
+        "schema": "jev_select_few_cf_weekly_v1",
+        "as_of": now.isoformat(),
+        "as_of_pt": now_pt.isoformat(),
+        "lookback_days": int(lookback_days),
+        "window_start": window_start.isoformat(),
+        "measure_only": True,
+        "would_order_always_false": True,
+        "no_knobs": True,
+        "claim_class": claim,
+        "min_n_claim": MIN_N_CLAIM,
+        "week": {
+            "n_closed": n_closed_w,
+            "n_opened": opened_week,
+            "realized_pnl_usd": round(week_pnl, 4),
+            "wins": wins,
+            "losses": losses,
+            "by_pair": by_pair,
+            "n_ticks": n_ticks,
+        },
+        "lifetime": {
+            "n_closed": n_closed_all,
+            "n_opened": int(banks.get("n_opened") or 0),
+            "realized_pnl_usd": banks.get("realized_pnl_usd"),
+            "n_paper_buy_tags": banks.get("n_paper_buy_tags"),
+        },
+        "open": {
+            "n": len(open_pairs),
+            "pairs": open_pairs,
+            "unrealized_pnl_usd_approx": round(unreal, 4),
+        },
+        "budget_today": budget,
+        "notional_per_seat": DEFAULT_NOTIONAL,
+    }
+    payload["plain"] = weekly_telegram_card(payload)
+
+    if write:
+        WEEKLY_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        WEEKLY_STATE_PATH.write_text(
+            json.dumps(payload, indent=2, default=str) + "\n", encoding="utf-8"
+        )
+        WEEKLY_REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        WEEKLY_REPORT_PATH.write_text(weekly_markdown(payload), encoding="utf-8")
+    return payload
+
+
+def weekly_telegram_card(payload: Dict[str, Any]) -> str:
+    w = payload.get("week") or {}
+    life = payload.get("lifetime") or {}
+    op = payload.get("open") or {}
+    by_pair = w.get("by_pair") or {}
+    pair_bits = ", ".join(f"{k} ${v}" for k, v in sorted(by_pair.items())) or "—"
+    lines = [
+        "🧪 Jev CF — weekly (measure-only)",
+        f"Window: last {payload.get('lookback_days')}d · claim {payload.get('claim_class')}",
+        f"Week closed: {w.get('n_closed')} · opened {w.get('n_opened')} · "
+        f"W/L {w.get('wins')}/{w.get('losses')}",
+        f"Week CF $: {w.get('realized_pnl_usd')} · by pair: {pair_bits}",
+        f"Open now: {op.get('n')} {op.get('pairs')} · unreal≈${op.get('unrealized_pnl_usd_approx')}",
+        f"Lifetime: closed={life.get('n_closed')} · CF ${life.get('realized_pnl_usd')} · "
+        f"need ≥{payload.get('min_n_claim')} closed before sample bar",
+        "Paper only · no orders · no knobs · reports/JEV_SELECT_FEW_CF_WEEKLY_LATEST.md",
+    ]
+    return "\n".join(lines)
+
+
+def weekly_markdown(payload: Dict[str, Any]) -> str:
+    w = payload.get("week") or {}
+    life = payload.get("lifetime") or {}
+    op = payload.get("open") or {}
+    return "\n".join(
+        [
+            "# Jev select-few CF — weekly rollup",
+            "",
+            f"**As of (PT):** `{payload.get('as_of_pt')}`",
+            f"**Window:** last {payload.get('lookback_days')}d from `{payload.get('window_start')}`",
+            f"**Claim:** `{payload.get('claim_class')}`",
+            "",
+            "> Measure-only paper book. `would_order` always false.",
+            "",
+            "## This window",
+            "",
+            f"- Closed: **{w.get('n_closed')}** · opened: **{w.get('n_opened')}** · W/L **{w.get('wins')}/{w.get('losses')}**",
+            f"- Realized CF $: **{w.get('realized_pnl_usd')}**",
+            f"- By pair: `{w.get('by_pair')}`",
+            f"- Ticks (crumbs): {w.get('n_ticks')}",
+            "",
+            "## Open / lifetime",
+            "",
+            f"- Open: {op.get('n')} `{op.get('pairs')}` · unreal≈${op.get('unrealized_pnl_usd_approx')}",
+            f"- Lifetime closed={life.get('n_closed')} · CF ${life.get('realized_pnl_usd')} · tags={life.get('n_paper_buy_tags')}",
+            "",
+            "```json",
+            json.dumps(payload, indent=2, default=str)[:4000],
+            "```",
+            "",
+        ]
+    )

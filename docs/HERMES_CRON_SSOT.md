@@ -69,7 +69,7 @@ daily-dose 08:00 ·
 | `phase6-regime-arm-switch` `353a8ca93150` | BTC 7d tape → paper-primary arm (`up/chop→rel_btc_stable`, `down→risk_adj_mom`) · **11:40/23:40 PT** · apply shadow · TG **only on flip** · live swaps forced OFF |
 | `phase6-tcs-shadow-would-block` `dd16da710656` | Trade-comparison CF + would-block replay · **12:25 PT daily** · local · own state only · live cooldown OFF |
 | `phase6-vol-risk-scalar-shadow` | Keep collecting (not enough data for promote) |
-| `bear-ladder-promote-watch` | **Not** done — 1 bear day / 0 episodes (need real bear) |
+| `bear-ladder-promote-watch` `523161fb9545` | Shadow promote gates only · **09:00/21:00 PT** · **local only** (Brad 2026-09-22: no TG; live is soft_up deploy, not bear ladder) · measure crumbs on disk |
 | free-sentiment **2h** `655188d1df61` | Shadow RSS+funding+F&G denser mid-cycle samples vs X (Brad 2026-09-04 lag thesis); live still X 2× |
 | Adanos Reddit **2×** `539424468b36` | True-Reddit free shadow @ **08:35/20:35** pre-X · multi-corr vs RSS/free/X · ~2 calls/run · **not** live wire |
 

@@ -29,19 +29,47 @@ from phase6.core.protected_market_exit import protected_market_exit
 logger = logging.getLogger(__name__)
 
 STATE_PATH = PROJECT_ROOT / "data/state/sl_dust_sweep_latest.json"
-DEFAULT_MAX_USD = 50.0
+# After-SL residual can be a few $ on large bags (0.98 safety_ratio leftover).
+DEFAULT_MAX_USD = 25.0
+# Orphan cycle path: true dust only. Tryout seats are $25–$75 — never auto-sweep those.
+# Incident 2026-09-23: LINK $25 full bag sold as dust_sweep_orphan under shared $50 cap.
+DEFAULT_ORPHAN_MAX_USD = 5.0
 DEFAULT_MIN_USD = 0.50
 DEFAULT_MAX_FRAC_OF_FILL = 0.06  # 2% buffer + slack
 STABLE = frozenset({"USD", "USDC", "USDT", "DAI", "EUR", "GBP"})
+
+
+def _coerce_holding_qty(raw: Any) -> float:
+    """Normalize float or {available, hold, amount} holdings dict → total qty."""
+    if isinstance(raw, dict):
+        if raw.get("amount") is not None:
+            try:
+                return float(raw["amount"] or 0.0)
+            except (TypeError, ValueError):
+                pass
+        try:
+            return float(raw.get("available", 0) or 0) + float(raw.get("hold", 0) or 0)
+        except (TypeError, ValueError):
+            return 0.0
+    try:
+        return float(raw or 0.0)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 def load_dust_sweep_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     rm = (config or {}).get("risk_management") or {}
     gs = (config or {}).get("global_settings") or {}
     enabled = rm.get("dust_sweep_after_sl", gs.get("dust_sweep_after_sl", True))
+    max_usd = float(rm.get("dust_sweep_max_usd", DEFAULT_MAX_USD))
+    # Orphan path defaults tighter than residual-after-SL path.
+    orphan_max = rm.get("dust_sweep_orphan_max_usd", DEFAULT_ORPHAN_MAX_USD)
+    if orphan_max is None:
+        orphan_max = DEFAULT_ORPHAN_MAX_USD
     return {
         "enabled": bool(enabled),
-        "max_usd": float(rm.get("dust_sweep_max_usd", DEFAULT_MAX_USD)),
+        "max_usd": max_usd,
+        "orphan_max_usd": float(orphan_max),
         "min_usd": float(rm.get("dust_sweep_min_usd", DEFAULT_MIN_USD)),
         "max_frac_of_fill": float(
             rm.get("dust_sweep_max_frac_of_fill", DEFAULT_MAX_FRAC_OF_FILL)
@@ -94,10 +122,11 @@ def read_residual_balance(exchange: Any, pair: str) -> Dict[str, float]:
         if hasattr(exchange, "get_holdings_verified"):
             hv = exchange.get_holdings_verified() or {}
             pos = hv.get("positions") or {}
-            total = float(pos.get(asset, 0.0) or 0.0)
+            # Live client returns {available, hold, amount} dicts — not bare floats.
+            total = _coerce_holding_qty(pos.get(asset, 0.0))
         elif hasattr(exchange, "get_holdings"):
             h = exchange.get_holdings() or {}
-            total = float(h.get(asset, 0.0) or 0.0)
+            total = _coerce_holding_qty(h.get(asset, 0.0))
     except Exception as exc:
         logger.debug("holdings %s: %s", asset, exc)
     try:
@@ -437,7 +466,8 @@ def sweep_orphan_dust(
     Skips pairs that still have an open protective stop (unless disabled).
     """
     cfg = load_dust_sweep_config(config)
-    cap = float(max_usd if max_usd is not None else cfg["max_usd"])
+    # Orphan path uses the tighter orphan_max_usd (not residual-after-SL max).
+    cap = float(max_usd if max_usd is not None else cfg["orphan_max_usd"])
     floor = float(min_usd if min_usd is not None else 0.0)
     candidates = list_orphan_dust_from_live_state(max_usd=cap, min_usd=floor)
     results: List[Dict[str, Any]] = []
@@ -469,6 +499,38 @@ def sweep_orphan_dust(
         bal = read_residual_balance(exchange, pair)
         usd = bal["usd"] if bal["usd"] > 0 else float(c["value_usd"])
         qty = bal["qty"] if bal["qty"] > 0 else float(c["amount"])
+        # Hard refuse full tryout/seat bags even if config was loosened.
+        # Prefer total wallet (avail+hold) so stop-held bags aren't "orphan dust".
+        total_usd = float(bal.get("usd_total") or 0.0)
+        if total_usd <= 0:
+            total_usd = usd
+        if total_usd > cap or usd > cap:
+            results.append(
+                {
+                    "pair": pair,
+                    "success": False,
+                    "skipped": True,
+                    "skip_reason": "above_max_usd_full_bag",
+                    "value_usd": max(total_usd, usd),
+                    "cap_usd": cap,
+                }
+            )
+            continue
+        # Held under open stop (avail dust, total bag) is NEVER orphan dust.
+        if float(bal.get("qty_total") or 0.0) > float(bal.get("qty_avail") or 0.0) + 1e-12:
+            if float(bal.get("qty_total") or 0.0) * float(bal.get("price") or 0.0) > cap:
+                results.append(
+                    {
+                        "pair": pair,
+                        "success": False,
+                        "skipped": True,
+                        "skip_reason": "held_under_stop_not_dust",
+                        "value_usd": float(bal.get("usd_total") or total_usd),
+                        "qty_total": bal.get("qty_total"),
+                        "qty_avail": bal.get("qty_avail"),
+                    }
+                )
+                continue
         ok, gate = residual_is_sweepable(
             residual_qty=qty,
             residual_usd=usd,

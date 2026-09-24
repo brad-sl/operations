@@ -399,12 +399,30 @@ def resolve_sl_attach_size(
     asset = pair.split("-")[0] if "-" in pair else pair
     avail = 0.0
     total = 0.0
+
+    def _qty(raw: Any) -> float:
+        if isinstance(raw, dict):
+            if raw.get("amount") is not None:
+                try:
+                    return float(raw["amount"] or 0.0)
+                except (TypeError, ValueError):
+                    pass
+            try:
+                return float(raw.get("available", 0) or 0) + float(raw.get("hold", 0) or 0)
+            except (TypeError, ValueError):
+                return 0.0
+        try:
+            return float(raw or 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
     try:
         if hasattr(exchange, "get_crypto_available"):
             avail = float(exchange.get_crypto_available(asset) or 0.0)
         if hasattr(exchange, "get_holdings_verified"):
             hv = exchange.get_holdings_verified() or {}
-            total = float((hv.get("positions") or {}).get(asset, 0.0) or 0.0)
+            # Live client returns {available, hold, amount} — not bare floats.
+            total = _qty((hv.get("positions") or {}).get(asset, 0.0))
     except Exception as exc:
         meta["balance_error"] = str(exc)
 

@@ -301,6 +301,9 @@ _TRADE_REASON_SHORT: Dict[str, str] = {
     "dust_sweep_after_sl": "Dust",
     "dust_sweep_orphan": "Dust",
     "dust_sweep": "Dust",
+    "process_bug_orphan_dust_full_bag": "Bug exit",
+    "process_bug_same_session_sl_void": "Bug SL",
+    "process_bug_cr03_dust_race": "Bug dust",
     "preserve_arm_micro": "Preserve",
     "preserve_arm": "Preserve",
     "preserve_disarm": "Disarm",
@@ -341,15 +344,36 @@ def classify_trade_row(t: Any) -> str:
     Partition ledger rows for Trades panel.
     Returns: 'trade' | 'cash' | 'noise'
     - cash: stable powder/park (USDT/USDC/USD legs)
-    - noise: dust sweeps (hide from main tape)
-    - trade: crypto sleeve buys/sells/SL/TP
+    - noise: micro dust sweeps (hide from main tape)
+    - trade: crypto sleeve buys/sells/SL/TP + material dust exits
     """
     if not isinstance(t, dict):
         return "noise"
     pair = str(t.get("pair") or "").upper().strip()
     reason = str(t.get("reason") or t.get("exit_reason") or t.get("reason_label") or "").lower()
     label = str(t.get("reason_label") or t.get("reason_short") or "").lower()
-    if "dust" in reason or label == "dust" or reason.startswith("dust"):
+    # Material dust exits belong on the crypto tape (full-bag mis-tag / residual > pennies).
+    # Hide only sub-threshold noise so Coinbase history and dash don't diverge.
+    MATERIAL_DUST_USD = 5.0
+    is_dust = "dust" in reason or label == "dust" or reason.startswith("dust")
+    is_process_bug = reason.startswith("process_bug")
+    if is_process_bug:
+        return "trade"
+    if is_dust:
+        try:
+            qty = abs(float(t.get("qty") or t.get("size") or 0.0))
+            px = float(
+                t.get("exit_price")
+                or t.get("average_filled_price")
+                or t.get("entry_price")
+                or 0.0
+            )
+            notional = qty * px if px > 0 else abs(float(t.get("pnl") or 0.0))
+            # Non-zero strategy PnL always shows (even tiny) when notional unknown
+            if notional >= MATERIAL_DUST_USD or abs(float(t.get("pnl") or 0.0)) >= 0.05:
+                return "trade"
+        except (TypeError, ValueError):
+            return "trade"
         return "noise"
     if not pair:
         return "noise"

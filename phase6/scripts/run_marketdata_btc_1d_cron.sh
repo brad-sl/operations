@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # Quiet thin marketdata 1d ingest + regime board (D3/D4). Sensor only — no knobs.
+# Full dump → logs/marketdata only. Stdout = one short line (or empty on --quiet).
+# Cron deliver should be **local**; never dump thin JSON to Telegram.
 set -euo pipefail
 ROOT="${PROJECT_ROOT:-/home/brad/projects/crypto-trading-bot}"
 cd "$ROOT"
@@ -11,19 +13,29 @@ LOG="$LOG_DIR/${STAMP}.log"
 PY="${ROOT}/.venv/bin/python3"
 if [[ ! -x "$PY" ]]; then PY=python3; fi
 
+QUIET=0
+for a in "$@"; do
+  case "$a" in
+    --quiet|-q) QUIET=1 ;;
+  esac
+done
+
+# Full work → log only (never stdout — cron no_agent delivers stdout)
 {
   echo "=== marketdata thin 1d $STAMP ==="
   "$PY" scripts/phase6/run_marketdata_btc_1d.py all --mirror-json
-  # Refresh REGIME-CASH status SSOT from honest detector (policy map only — no knob GO)
   "$PY" - <<'PY'
 from phase6.core.regime_cash_policy import load_policy, persist_status, resolve_regime_cash
 snap = resolve_regime_cash(policy=load_policy())
 path = persist_status(snap)
 print(f"regime_cash_status refreshed → {snap.regime} btc30d={snap.btc_return_pct} path={path}")
 PY
-} 2>&1 | tee "$LOG"
+} >"$LOG" 2>&1
 
-# Short stdout for Telegram when deliver=telegram
+# Short board only (optional; quiet cron uses empty stdout = no TG noise)
+if [[ "$QUIET" -eq 1 ]]; then
+  exit 0
+fi
 "$PY" - <<'PY'
 import sys
 sys.path.insert(0, ".")

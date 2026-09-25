@@ -80,6 +80,7 @@ daily-dose 08:00 ·
 | `phase6-rsi-event-x-shadow-observe-close` `17289c281af6` | **2026-09-17 19:35 PT** | R0 extended observe closeout; remove after fire; paid X still OFF |
 | `basket-swap-30d-revisit` | 2026-09-28 09:00 PT | preferred arm vs dual_agree re-score |
 | `phase6-break-even-one-pager-eow` `9b8645c8dd9d` | **2026-09-27 18:00 PT** | Week wait closeout: RT gross · process tax · est X · net vs **$150/mo** bar · TG short card · full `reports/BREAK_EVEN_ONE_PAGER_LATEST.md` · **measure-only / no knobs** · remove after fire · wrapper `run_break_even_one_pager.sh` |
+| `phase6-shell-slot-score` `77fc2e716b1a` | **21:20 PT × 3** (2026-09-24..26) | Wave 1 proof of current tryout shell · disk always · TG **only** on fill, bug exit, RSI-only block, or final slot · **no knobs** · remove after 3rd fire · wrapper `run_shell_slot_score.sh` |
 
 ### F — Paused / ARCHIVED (reactivate with `hermes cron resume <id>` when needed)
 | Job | Id | Why paused |

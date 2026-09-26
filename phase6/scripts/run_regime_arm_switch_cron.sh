@@ -20,7 +20,8 @@ TS="$(date -u +%Y%m%dT%H%M%SZ)"
 LOG="$LOG_DIR/regime_arm_switch_${TS}.log"
 LATEST_LOG="$LOG_DIR/regime_arm_switch_latest.log"
 
-MODE="${REGIME_ARM_SWITCH_MODE:-shadow}"
+# Brad GO 2026-09-25: production preferred-arm attention SSOT (still never live seats).
+MODE="${REGIME_ARM_SWITCH_MODE:-production}"
 APPLY="${REGIME_ARM_SWITCH_APPLY:-1}"
 
 set +e

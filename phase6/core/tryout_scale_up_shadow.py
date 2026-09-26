@@ -373,7 +373,20 @@ def infer_open_lot_entry(pair: str, pos: Dict[str, Any]) -> Dict[str, Any]:
                 "e2e_rebalance",
             )
         )
-    # fallback hold hours unknown
+    # Open-lot registry from TryoutSeatBuy (R5 bridge) wins/or-s with ledger tag
+    reg = _load_json(OPEN_LOTS_PATH, {"lots": {}})
+    lots = reg.get("lots") if isinstance(reg, dict) else {}
+    meta = lots.get(_norm_pair(pair)) if isinstance(lots, dict) else None
+    if isinstance(meta, dict):
+        if meta.get("tryout_tagged_buy") or meta.get("tryout_shell"):
+            tryout_tag = True
+        if not entry_ts:
+            entry_ts = _parse_ts(meta.get("entry_ts") or meta.get("registered_at"))
+        mp = _f(meta.get("entry_price"))
+        if mp > 0 and entry_px <= 0:
+            entry_px = mp
+        if not reason:
+            reason = str(meta.get("source") or "tryout_seat_registry")
     return {
         "entry_price": entry_px,
         "entry_ts": entry_ts.isoformat() if entry_ts else None,
@@ -720,6 +733,71 @@ def _mark_open_lot_scaled(pair: str, decision: ScaleDecision, now: datetime) -> 
     }
     reg["updated_at"] = _utc_iso(now)
     _write_json(OPEN_LOTS_PATH, reg)
+
+
+def register_tryout_open_lot(
+    pair: str,
+    *,
+    shell_usd: float,
+    entry_price: Optional[float] = None,
+    order_id: Optional[str] = None,
+    source: str = "tryout_seat_buy",
+    now: Optional[datetime] = None,
+) -> Dict[str, Any]:
+    """Register a freshly filled tryout shell so R5 scale-up can see the lot.
+
+    Does **not** mark scaled — that happens only after a mid-flight step.
+    Safe to call repeatedly for the same open pair (refreshes entry meta).
+    """
+    now = now or _utc_now()
+    pn = _norm_pair(pair)
+    if not pn:
+        return {"ok": False, "error": "bad_pair"}
+    reg = _load_json(OPEN_LOTS_PATH, {"schema": SCHEMA, "lots": {}})
+    if not isinstance(reg, dict):
+        reg = {"schema": SCHEMA, "lots": {}}
+    lots = reg.setdefault("lots", {})
+    prev = lots.get(pn) if isinstance(lots.get(pn), dict) else {}
+    # If already live-scaled this lot, leave scaled flags alone
+    already_scaled = bool(prev.get("live_scaled") or prev.get("scaled"))
+    meta = {
+        "scaled": bool(prev.get("scaled")) if already_scaled else False,
+        "paper_scaled": bool(prev.get("paper_scaled")) if already_scaled else False,
+        "live_scaled": bool(prev.get("live_scaled")),
+        "tryout_shell": True,
+        "tryout_tagged_buy": True,
+        "shell_usd": float(shell_usd or 0),
+        "entry_ts": prev.get("entry_ts") or _utc_iso(now),
+        "entry_price": float(entry_price)
+        if entry_price is not None
+        else prev.get("entry_price"),
+        "seat_order_id": order_id or prev.get("seat_order_id"),
+        "source": source,
+        "status": prev.get("status")
+        if already_scaled
+        else "tryout_open",
+        "registered_at": _utc_iso(now),
+    }
+    if already_scaled:
+        # preserve scale marks
+        for k in (
+            "scaled_at",
+            "held_usd_at_scale",
+            "step_usd",
+            "unrealized_r",
+            "phase",
+            "mark_at_scale",
+            "live_order_id",
+            "live_applied_at",
+            "score",
+        ):
+            if k in prev:
+                meta[k] = prev[k]
+    lots[pn] = meta
+    reg["lots"] = lots
+    reg["updated_at"] = _utc_iso(now)
+    _write_json(OPEN_LOTS_PATH, reg)
+    return {"ok": True, "pair": pn, "lot": meta, "path": str(OPEN_LOTS_PATH)}
 
 
 def _clear_open_lot(pair: str) -> None:

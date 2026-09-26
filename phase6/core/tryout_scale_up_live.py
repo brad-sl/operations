@@ -691,12 +691,38 @@ def apply_live_steps(
                 )
                 daily["events"] = ev[-20:]
                 _save_daily(daily)
+                # Brad ladder: count CLI GOs toward autonomous arm
+                if go and ok:
+                    try:
+                        from phase6.core.tryout_scale_up_ladder import record_manual_go
+
+                        ladder = record_manual_go(
+                            pair=pair,
+                            step_usd=float(step or 0),
+                            order_id=str(out.get("order_id") or ""),
+                            note="live_mid_flight_step",
+                            source="cli_go" if go else "auto",
+                        )
+                        out["ladder_gos"] = len(ladder.get("manual_gos") or [])
+                        out["ladder_ready_to_arm"] = len(
+                            ladder.get("manual_gos") or []
+                        ) >= int(ladder.get("required_manual_gos") or 2)
+                    except Exception as e:
+                        out["ladder_record_error"] = str(e)
             _append_crumb({"kind": "live_apply", "ts": _utc_iso(now), **out})
         except Exception as e:
             out["error"] = str(e)
             logger.exception("live scale apply failed %s", pair)
             _append_crumb({"kind": "live_apply_error", "ts": _utc_iso(now), **out})
         results.append(out)
+
+    ladder_plain = ""
+    try:
+        from phase6.core.tryout_scale_up_ladder import status_plain
+
+        ladder_plain = status_plain()
+    except Exception:
+        ladder_plain = ""
 
     summary = {
         "schema": SCHEMA,
@@ -712,9 +738,10 @@ def apply_live_steps(
         "results": results,
         "daily": load_daily(now),
         "plan_path": str(LATEST_PLAN_PATH),
+        "ladder": ladder_plain,
         "note": (
             "Money only if go and not dry_run and decision.live_apply and no KILL. "
-            "Default dry_run."
+            "Default dry_run. First N CLI GOs feed approval→autonomous ladder."
         ),
     }
     _write_json(STATE_DIR / "tryout_scale_up_live_apply_latest.json", summary)
@@ -1026,9 +1053,38 @@ def approval_telegram_summary(
     waive = _waive_usage(decision)
     rec = build_scale_up_recommendation(plan, steps)
 
+    ladder_line = ""
+    try:
+        from phase6.core.tryout_scale_up_ladder import (
+            autonomous_apply_allowed,
+            load_ladder,
+            manual_go_count,
+            ready_to_arm,
+            status_plain,
+        )
+
+        lad = load_ladder()
+        need = int(lad.get("required_manual_gos") or 2)
+        n_go = manual_go_count(lad)
+        if autonomous_apply_allowed(lad):
+            ladder_line = f"LADDER: autonomous ON · {status_plain()}"
+        elif ready_to_arm(lad):
+            ladder_line = (
+                f"LADDER: {n_go}/{need} GOs done — arm: "
+                "python3 scripts/phase6/run_tryout_scale_up_ladder.py --arm-auto"
+            )
+        else:
+            ladder_line = (
+                f"LADDER: approval {n_go}/{need} · money OFF until CLI GO · "
+                f"{status_plain()}"
+            )
+    except Exception:
+        ladder_line = "LADDER: (unavailable)"
+
     lines = [
         "SCALE-UP APPROVAL (money still OFF until you GO)",
         f"armed · planned {n_plan} · fp={fp}",
+        ladder_line,
         f"RECOMMEND: {rec.get('headline')}",
         f"Why: {rec.get('why')}",
         "Factors:",

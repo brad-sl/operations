@@ -490,14 +490,33 @@ def apply_to_decision(
     if changed:
         brad["previous_preferred_arm"] = before
     brad["preferred_arm"] = after
-    brad["preferred_arm_role"] = "paper_primary_for_operator_attention"
-    brad["preferred_arm_note"] = (
-        f"regime_arm_switch mode={mode}: {snap.reason}. "
-        f"BTC 7d={snap.btc_ret_7d_pct}% sticky={snap.sticky_tape}. "
-        "Does not auto-swap live basket."
-    )
-    brad["decided_at"] = _iso(now)
-    brad["decided_by"] = decided_by or f"regime_arm_switch:{mode}"
+    # Preserve Brad GO production stamp when present (mode=production).
+    go_raw = brad.get("brad_go_arm_production")
+    go: Dict[str, Any] = dict(go_raw) if isinstance(go_raw, dict) else {}
+    production_ssot = mode == "production" or bool(go)
+    if production_ssot:
+        brad["preferred_arm_role"] = "production_preferred_arm_attention_ssot"
+        brad["preferred_arm_note"] = (
+            f"regime_arm_switch mode={mode}: {snap.reason}. "
+            f"BTC 7d={snap.btc_ret_7d_pct}% sticky={snap.sticky_tape}. "
+            "Production preferred-arm attention SSOT (Brad GO 2026-09-25). "
+            "Does not auto-swap live basket."
+        )
+        # Keep human GO as provenance; append switcher only when arm actually flipped.
+        if changed:
+            brad["decided_by"] = decided_by or f"regime_arm_switch:{mode}+brad_go_production"
+            brad["decided_at"] = _iso(now)
+        else:
+            brad["decided_by"] = brad.get("decided_by") or "brad_go_2026-09-25_rel_btc_stable_production"
+    else:
+        brad["preferred_arm_role"] = "paper_primary_for_operator_attention"
+        brad["preferred_arm_note"] = (
+            f"regime_arm_switch mode={mode}: {snap.reason}. "
+            f"BTC 7d={snap.btc_ret_7d_pct}% sticky={snap.sticky_tape}. "
+            "Does not auto-swap live basket."
+        )
+        brad["decided_at"] = _iso(now)
+        brad["decided_by"] = decided_by or f"regime_arm_switch:{mode}"
     if brad.get("prior_decided_at") is None and brad.get("decided_at"):
         pass
     elif changed and before:
@@ -508,25 +527,46 @@ def apply_to_decision(
     brad["live_membership_swaps"] = False
     brad["live_apply"] = False
 
-    # secondary status notes
+    # secondary status notes — preserve production_preferred on winner arm when GO stamp exists
     other = ARM_DOWN if after == ARM_UP_CHOP else ARM_UP_CHOP
-    brad[after] = {
-        "status": "paper_primary_regime",
-        "note": f"Active paper-primary via regime switch ({snap.sticky_tape}).",
-    }
+    go_arm = str(go.get("arm") or ARM_UP_CHOP)
+    if production_ssot and after == go_arm:
+        raw_prev = brad.get(after)
+        prev_arm_block: Dict[str, Any] = dict(raw_prev) if isinstance(raw_prev, dict) else {}
+        prev_arm_block["status"] = "production_preferred"
+        prev_arm_block["note"] = (
+            f"Production preferred arm (Brad GO). Active via regime switch ({snap.sticky_tape}). "
+            "Not auto live seats."
+        )
+        brad[after] = prev_arm_block
+    else:
+        brad[after] = {
+            "status": "paper_primary_regime" if not production_ssot else "production_preferred_regime_map",
+            "note": f"Active preferred via regime switch ({snap.sticky_tape}); live seats OFF.",
+        }
     brad[other] = {
-        "status": "continue_shadow_secondary",
+        "status": "continue_shadow_secondary_regime_down" if other == ARM_DOWN else "continue_shadow_secondary",
         "note": f"Secondary collect while preferred={after} (regime={snap.sticky_tape}).",
     }
-    plain = (
-        f"Regime arm switch ({mode}): preferred_arm={after} "
-        f"(BTC 7d={snap.btc_ret_7d_pct}%, tape={snap.sticky_tape}). "
-        "Live membership swaps OFF."
-    )
+    if production_ssot:
+        plain = (
+            f"Brad GO production preferred-arm path ({mode}): preferred_arm={after} "
+            f"(BTC 7d={snap.btc_ret_7d_pct}%, tape={snap.sticky_tape}). "
+            "Live membership swaps OFF. Collecting arms stay on for regime correlation."
+        )
+    else:
+        plain = (
+            f"Regime arm switch ({mode}): preferred_arm={after} "
+            f"(BTC 7d={snap.btc_ret_7d_pct}%, tape={snap.sticky_tape}). "
+            "Live membership swaps OFF."
+        )
     if refuse_live_note:
         plain = f"{plain} {refuse_live_note}"
     brad["plain_english"] = plain
+    raw_ras = brad.get("regime_arm_switch")
+    prev_ras: Dict[str, Any] = dict(raw_ras) if isinstance(raw_ras, dict) else {}
     brad["regime_arm_switch"] = {
+        **{k: v for k, v in prev_ras.items() if str(k).startswith("brad_go")},
         "mode": mode,
         "sticky_tape": snap.sticky_tape,
         "raw_tape": snap.raw_tape,

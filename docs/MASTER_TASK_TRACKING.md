@@ -32,22 +32,65 @@
 - **Deferred:** 1h/15m backfill, multi-pair ingest, full fetcher de-dupe (D3+).
 - Plan: `docs/plans/2026-09-22-marketdata-ohlcv-schema-design.md`
 
+## KANBAN-SWEEP-20260926 (Scotty — post seat/scale ship)
+
+**Board:** `crypto-bot-project`  
+**Trigger:** Brad review after TryoutSeatBuy + scale-up ladder ship; ready=3 failed, scheduled=25, todo=7.
+
+### Closed this turn
+| Card | Title | Why close |
+|------|-------|-----------|
+| `t_caa744ee` | LUCK-R1 Knife filter | SHIPPED 2026-09-15; isolation 10/10; MASTER already SHIPPED; stale todo |
+| `t_1f6450d7` | LUCK-R0 Sensor clock observe | Observe window ended; shadow+probe live; 2026-09-25 seat path shipped |
+
+### Parked / annotated
+| Card | Action |
+|------|--------|
+| `t_529fe799` | LUCK hub → **scheduled** (tracking-only; was unassigned ready ~10d) |
+| `t_ed05d5fb` | R5 comment: path+ladder shipped; keep scheduled until tryout fills/CF N |
+| `t_b2c1e8e7` / `t_a8aafce3` | Ready fail = **xAI OAuth missing on worker profiles** (not scope). Still open. |
+
+### Not closed (honest)
+- **OPS-P0-1..4** (`t_050ea502`…`t_bbe2956d`) — scripts still missing on disk  
+- **CW-2/3/4** — hysteresis doc / threshold packet / Live B still open  
+- **CW-1** — may overlap MARKETDATA D1–D4 ship; verify handoff before complete  
+- **Scheduled 25** — mostly PARKED/GATED/BLOCKED hubs; leave parked  
+- **Today’s seat+scale ship** had **no dedicated Kanban cards** (session-direct)
+
+### Post-ship artifacts (session, not board)
+- TryoutSeatBuy + RSI composer + approval ladder  
+- Scale-up open-lot register + Brad ladder 2 GOs → arm-auto  
+- Plans: `2026-09-25-tryout-seat-buy-action.md`, `2026-09-26-scale-up-investment-ladder.md`
+
+### Counts after sweep (final)
+ready=0 · todo=5 · scheduled≈27 · done=166 · blocked=0
+
+### Also closed/parked mid-sweep
+| Card | Action |
+|------|--------|
+| `t_b2c1e8e7` CW-1 | **DONE** — satisfied by MARKETDATA D1–D4 (`marketdata.db`, `run_marketdata_btc_1d`) |
+| `t_a8aafce3` CW-2 | **scheduled** — OAuth park; hysteresis doc still missing |
+| `t_defaaee0` CW-3 | **scheduled** — auto-promoted after CW-1; park until OAuth + CW-2 |
+
+---
+
 ## REGIME-CLIMATE-WEATHER-REMAINING-20260921 — OPEN (doldrum staffing)
 
-**Status:** OPEN · Brad GO staff remaining four after climate/weather spine (`07098d8c`)  
+**Status:** OPEN · 1/4 done (CW-1) · CW-2/3 parked OAuth · CW-4 still todo  
 **Metaphor:** 30d climate doldrum — fix sensors/rules before the breeze; weather ≠ rewrite climate.  
 **Pack plan:** `docs/plans/2026-09-21-climate-weather-remaining-four.md`  
 **Spine:** `docs/plans/2026-09-21-regime-climate-weather-boundaries.md`
 
 | ID | Title | Pri | Status | Kanban | Handoff |
 |----|-------|-----|--------|--------|---------|
-| CW-1 | BTC daily OHLCV backfill + freshness | P0 | ready/running | `t_b2c1e8e7` | `handoffs/crypto-engineer/Handoff_CW1_BTC_OHLCV_BACKFILL_20260921.md` |
-| CW-2 | Hysteresis design bear→soft_down→flat (doc) | P1 | ready | `t_a8aafce3` | `handoffs/crypto-analyst/Handoff_CW2_HYSTERESIS_DESIGN_20260921.md` |
-| CW-3 | Threshold surgery evidence (−10/±8/+15) — no live write | P1 | todo (parent CW-1) | `t_defaaee0` | `handoffs/crypto-analyst/Handoff_CW3_THRESHOLD_EVIDENCE_20260921.md` |
+| CW-1 | BTC daily OHLCV backfill + freshness | P0 | **DONE** (via marketdata D1–D4) | `t_b2c1e8e7` | superseded by marketdata path |
+| CW-2 | Hysteresis design bear→soft_down→flat (doc) | P1 | scheduled (OAuth park) | `t_a8aafce3` | `handoffs/crypto-analyst/Handoff_CW2_HYSTERESIS_DESIGN_20260921.md` |
+| CW-3 | Threshold surgery evidence (−10/±8/+15) — no live write | P1 | scheduled (OAuth park) | `t_defaaee0` | `handoffs/crypto-analyst/Handoff_CW3_THRESHOLD_EVIDENCE_20260921.md` |
 | CW-4 | Live B micro path — armed, money OFF | P1 | todo (parent CW-2) | `t_6af749f2` | `handoffs/crypto-engineer/Handoff_CW4_LIVE_B_MICRO_PATH_20260921.md` |
 
 **Live knobs:** none from this epic until explicit Brad GO on CW-4 money arm / threshold shadow / hysteresis code.  
-**Board:** `crypto-bot-project`
+**Board:** `crypto-bot-project`  
+**Note 2026-09-26:** Worker profiles need `hermes -p crypto-analyst model` / engineer OAuth before CW-2/3 can run. Or reassign to `default`.
 
 ---
 
@@ -12978,6 +13021,26 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260925`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260926** (opened 2026-09-26T04:30:49.606130)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260926`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

@@ -400,6 +400,55 @@ def main(
         f"Refresher complete. Calls: {calls_made}. Updated: {len(rsi_entries)}/{len(basket)}. "
         f"Stoch: {stoch_n}. Errors: {len(errors)}. Cache size: {len(final_rsi)}"
     )
+
+    def _post_rsi_tryout_composer() -> None:
+        """Immediately after 15m RSI write: scan regime tryout doors (money off).
+
+        Skipped on subset/contender warm and dry-run. Failures are soft — never
+        fail the RSI refresher itself.
+        """
+        if dry_run or subset:
+            return
+        # Opt-out: POST_RSI_COMPOSER=0
+        import os
+
+        if str(os.environ.get("POST_RSI_COMPOSER", "1")).strip() in ("0", "false", "False", "no"):
+            print("post-RSI composer skipped (POST_RSI_COMPOSER=0)")
+            return
+        try:
+            from phase6.core.rsi_event_tryout_seat_composer import ComposerConfig, run_composer
+
+            go_x = str(os.environ.get("COMPOSER_GO_X", "1")).strip() not in (
+                "0",
+                "false",
+                "False",
+                "no",
+            )
+            out = run_composer(
+                ComposerConfig(
+                    post_rsi=True,
+                    spend_x=go_x,
+                    dry_run_x=not go_x,
+                    go_buy=False,
+                    dry_run_buy=True,
+                    actor="post_rsi_refresh",
+                )
+            )
+            plain = (out or {}).get("plain_english") or "composer ok"
+            print(
+                f"post-RSI composer: universe={out.get('n_universe')} "
+                f"in_door={out.get('n_in_rsi_door')} money={((out or {}).get('config') or {}).get('money')} "
+                f"approval={bool((out or {}).get('approval_pending'))} "
+                f"| {plain}"
+            )
+            if (out or {}).get("approval_pending"):
+                print(
+                    "post-RSI APPROVAL PENDING — TG via phase6-rsi-event-tryout-seat-composer "
+                    "(:02/:17/:32/:47) or: bash phase6/scripts/run_rsi_event_tryout_seat_composer_cron.sh"
+                )
+        except Exception as e:
+            print(f"[WARN] post-RSI tryout seat composer failed: {e}")
+
     if subset:
         # Contender warm: success if we got any real RSI; empty is soft-fail 0 for pipeline
         if len(rsi_entries) == 0 and basket:
@@ -409,9 +458,11 @@ def main(
         return 0
     if len(rsi_entries) == len(basket) and stoch_n == len(basket):
         print("SUCCESS: Full basket RSI + StochRSI coverage.")
+        _post_rsi_tryout_composer()
         return 0
     if len(rsi_entries) >= 6 and stoch_n >= 6:
         print("PARTIAL: core coverage OK; some pairs missing.")
+        _post_rsi_tryout_composer()
         return 0
     print("WARN: coverage below minimum")
     return 1

@@ -46,10 +46,12 @@ def _norm_pair(p: str) -> str:
 class BudgetConfig:
     """Hard caps — Brad GO can tighten; do not loosen in code without GO."""
 
-    max_pair_queries_per_day: int = 6  # total RSI+rebal pair-queries
-    max_rsi_pair_queries_per_day: int = 2
+    # System loop (Brad 2026-09-26): RSI wash must be able to re-pull gate-grade X
+    # mid-day, not exhaust after one morning dual-pair probe. Caps still hard.
+    max_pair_queries_per_day: int = 12  # total RSI+rebal pair-queries
+    max_rsi_pair_queries_per_day: int = 8
     max_rebal_pair_queries_per_day: int = 4
-    per_pair_cooldown_hours: float = 6.0
+    per_pair_cooldown_hours: float = 3.0
     path: Path = field(default_factory=lambda: DEFAULT_PATH)
 
 

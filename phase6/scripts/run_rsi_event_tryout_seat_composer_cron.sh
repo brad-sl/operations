@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# Post-15m-RSI tryout seat: scan regime doors + quiet TG approval when dual-clear.
-# Money OFF until Brad GO (approval ladder) or policy auto_armed.
-# Quiet: empty stdout when nothing to approve (Hermes deliver=telegram stays silent).
+# Post-15m-RSI tryout seat system loop: RSI wash → paid X (budget) → latch → $shell.
+# Money ON only when policy mode=autonomous + auto_armed (system arm). Else dry + quiet TG.
+# Quiet: empty stdout when no approval card / nothing material.
 set -euo pipefail
 ROOT="${PHASE6_ROOT:-/home/brad/projects/crypto-trading-bot}"
 cd "$ROOT"

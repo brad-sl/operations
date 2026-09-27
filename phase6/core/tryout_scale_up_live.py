@@ -657,6 +657,20 @@ def apply_live_steps(
                     },
                 )
                 shadow._mark_open_lot_scaled(pair, dec, now)
+                try:
+                    from phase6.core.pair_funnel_dwell import on_tryout_scaled
+
+                    on_tryout_scaled(
+                        pair,
+                        scaled_at=_utc_iso(now),
+                        meta={
+                            "source": "tryout_scale_up_live",
+                            "step_usd": step,
+                            "order_id": out.get("order_id"),
+                        },
+                    )
+                except Exception:
+                    pass
                 # stamp live status on registry
                 reg = shadow._load_json(shadow.OPEN_LOTS_PATH, {"lots": {}})
                 lots = reg.get("lots") if isinstance(reg, dict) else {}

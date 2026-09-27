@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
-"""RSI-event tryout seat — approval → autonomous policy (Brad 2026-09-25).
+"""RSI-event tryout seat — system loop policy (Brad 2026-09-26).
 
-Ladder
-------
-1. **approval** (default): dual-clear → dry seat plan + quiet TG approval card.
-   Money stays OFF until Brad runs `--go-buy --live` (counts as one manual GO).
-2. After `required_manual_gos` (default 2) successful live seats are recorded,
-   Brad can **arm autonomous** (`auto_armed=true`).
-3. **autonomous**: post-RSI path may place the $shell seat when dual-clear
-   (still killed by kill file / policy.kill / POST_RSI_COMPOSER=0).
+Product stance
+--------------
+RSI wash → gate-grade sent refresh → $shell tryout seat is a **closed system**,
+not a betting desk that petitions Brad for each entry.
+
+Modes
+-----
+1. **system / autonomous+armed** (preferred): post-RSI composer places the
+   seat when dual-clear. Arm via `--system`.
+2. **approval** (legacy): dual-clear → dry plan + quiet TG; money only on
+   explicit `--go-buy --live` until N GOs then `--arm-auto`.
 
 Hard fences
 -----------
-- Default mode=approval, auto_armed=false — no surprise money.
-- Recording a GO only on real filled receipt (or explicit record-go).
-- Flip to autonomous is explicit arm, not silent after N.
-- Kill file or policy.kill freezes money and TG noise.
+- evaluate_buy_entry + quality_tryout shell; free/tee cannot unlock.
+- Kill file or policy.kill freezes money.
+- Default file still starts approval until Brad arms system once.
 
 Artifacts
 ---------
@@ -98,14 +100,22 @@ def load_policy() -> Dict[str, Any]:
     out.update({k: v for k, v in raw.items() if v is not None})
     if not isinstance(out.get("manual_gos"), list):
         out["manual_gos"] = []
+    # 0 is valid for system_loop (no petition). Do not `or DEFAULT` — that
+    # treated 0 as missing and re-imposed the 2-GO ladder after every load/fill.
     try:
-        out["required_manual_gos"] = int(out.get("required_manual_gos") or DEFAULT_REQUIRED_MANUAL_GOS)
+        if "required_manual_gos" in out and out.get("required_manual_gos") is not None:
+            out["required_manual_gos"] = int(out["required_manual_gos"])
+        else:
+            out["required_manual_gos"] = DEFAULT_REQUIRED_MANUAL_GOS
+        if out["required_manual_gos"] < 0:
+            out["required_manual_gos"] = 0
     except (TypeError, ValueError):
         out["required_manual_gos"] = DEFAULT_REQUIRED_MANUAL_GOS
     mode = str(out.get("mode") or "approval").strip().lower()
     out["mode"] = mode if mode in ("approval", "autonomous") else "approval"
     out["auto_armed"] = bool(out.get("auto_armed"))
     out["kill"] = bool(out.get("kill"))
+    out["system_loop"] = bool(out.get("system_loop"))
     return out
 
 
@@ -126,21 +136,26 @@ def manual_go_count(pol: Optional[Dict[str, Any]] = None) -> int:
 
 def ready_to_arm_autonomous(pol: Optional[Dict[str, Any]] = None) -> bool:
     p = pol or load_policy()
-    need = int(p.get("required_manual_gos") or DEFAULT_REQUIRED_MANUAL_GOS)
+    raw_need = p.get("required_manual_gos")
+    need = int(raw_need) if raw_need is not None else DEFAULT_REQUIRED_MANUAL_GOS
+    if need < 0:
+        need = 0
     return manual_go_count(p) >= need and not bool(p.get("auto_armed"))
 
 
 def autonomous_money_allowed(pol: Optional[Dict[str, Any]] = None) -> bool:
-    """True when post-RSI path may place a live seat without Brad on the wire."""
+    """True when post-RSI path may place a live seat without Brad on the wire.
+
+    Once mode=autonomous + auto_armed, do **not** re-gate on manual_go count.
+    Requiring GOs again after arm turned the ladder into a perpetual petition.
+    Kill file / policy.kill still freeze money.
+    """
     if kill_switch_on():
         return False
     p = pol or load_policy()
     if str(p.get("mode") or "") != "autonomous":
         return False
     if not bool(p.get("auto_armed")):
-        return False
-    need = int(p.get("required_manual_gos") or DEFAULT_REQUIRED_MANUAL_GOS)
-    if manual_go_count(p) < need:
         return False
     return True
 
@@ -181,19 +196,33 @@ def record_manual_go(
     return p
 
 
-def arm_autonomous(*, force: bool = False) -> Dict[str, Any]:
-    """Flip mode=autonomous + auto_armed. Refuses until N GOs unless force."""
+def arm_autonomous(*, force: bool = False, system: bool = False) -> Dict[str, Any]:
+    """Flip mode=autonomous + auto_armed. Refuses until N GOs unless force/system.
+
+    system=True (Brad product stance): RSI→sent→$shell is a closed loop, not a
+    betting desk. Skips the manual-GO petition ladder.
+    """
     p = load_policy()
     need = int(p.get("required_manual_gos") or DEFAULT_REQUIRED_MANUAL_GOS)
     n = manual_go_count(p)
-    if n < need and not force:
+    if n < need and not force and not system:
         p["arm_refused"] = f"need {need} manual GOs, have {n}"
         return p
     p["mode"] = "autonomous"
     p["auto_armed"] = True
     p["kill"] = False
     p["arm_refused"] = None
-    p["note"] = f"Autonomous armed at {_utc_iso()} after {n} manual GOs"
+    if system:
+        p["required_manual_gos"] = 0
+        p["system_loop"] = True
+        p["note"] = (
+            f"SYSTEM loop armed at {_utc_iso()}: RSI wash → gate-grade sent "
+            f"→ $shell tryout seat. No Brad petition. Kill: "
+            f"touch data/state/rsi_event_tryout_seat_KILL or --disarm --kill"
+        )
+    else:
+        p["system_loop"] = bool(p.get("system_loop"))
+        p["note"] = f"Autonomous armed at {_utc_iso()} after {n} manual GOs (force={force})"
     p["updated_at"] = _utc_iso()
     _write_json(POLICY_PATH, p)
     return p

@@ -114,7 +114,7 @@
     "flat": {
       "scenario_id": "flat_cautious_deploy_b",
       "strategy_mode": "deploy",
-      "note": "Operator thaw 2026-07-18 option B: cautious gated deploy under flat. NOT usdc_park. Cap $75. Scorecard may later re-park if USDC beats \u2014 only via promotion gates + Brad. | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected)",
+      "note": "Operator thaw 2026-07-18 option B: cautious gated deploy under flat. NOT usdc_park. Cap $75. Scorecard may later re-park if USDC beats \u2014 only via promotion gates + Brad. | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected)",
       "live_overlay": {
         "global_settings.rebalance_cap_usd": 75.0,
         "global_settings.risk_free_preference": "USDC",
@@ -203,13 +203,13 @@
           "alt_beats_usdc_carry": false,
           "comparison_metric": "annualized_return_pct"
         },
-        "scorecard_generated_at": "2026-09-20T11:00:46.403613+00:00"
+        "scorecard_generated_at": "2026-09-27T11:02:01.506040+00:00"
       }
     },
     "transition": {
       "scenario_id": "transition_gated_deploy_75",
       "strategy_mode": "deploy",
-      "note": "Brad GO 2026-09-22 P1: restore 2026-08-24 transition thaw (gated deploy $75). Scorecard preferred usdc_hold offline — operator_override protected; do not silent-park climb.",
+      "note": "Brad GO 2026-09-22 P1: restore 2026-08-24 transition thaw (gated deploy $75). Scorecard preferred usdc_hold offline \u2014 operator_override protected; do not silent-park climb. | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected) | scorecard would prefer usdc_hold (operator_override protected)",
       "live_overlay": {
         "global_settings.rebalance_cap_usd": 75.0,
         "global_settings.risk_free_preference": "USDC",
@@ -241,15 +241,32 @@
           "start": "2026-02-01",
           "end": "2026-07-30"
         },
-        "note": "Prior scorecard preferred usdc_hold; live law is operator deploy.",
         "usdc_optimal": {
           "optimal_strategy_id": "usdc_hold",
           "optimal_annualized_return_pct": 3.5,
           "optimal_is_usdc": true,
+          "optimal_metrics": {
+            "final_equity": 1017.01,
+            "total_return_pct": 1.7014,
+            "annualized_return_pct": 3.5,
+            "max_drawdown_pct": 0.0,
+            "sharpe_ratio": 34.403,
+            "total_trades": 0,
+            "rebalance_count": 0,
+            "avg_pairs_held": 0.0,
+            "engine": "usdc_carry",
+            "strategy": "usdc_hold",
+            "usdc_apy_pct": 3.5,
+            "window_days": 179,
+            "avg_exposure_pct": 0.0
+          },
+          "usdc_annualized_return_pct": 3.5,
           "best_alt_strategy_id": "defensive_rebalance_14d",
           "best_alt_annualized_return_pct": 2.7514,
-          "alt_beats_usdc_carry": false
-        }
+          "alt_beats_usdc_carry": false,
+          "comparison_metric": "annualized_return_pct"
+        },
+        "scorecard_generated_at": "2026-09-27T11:02:01.506040+00:00"
       },
       "scorecard": {
         "winner_id": "transition_gated_deploy_75",
@@ -285,8 +302,8 @@
       }
     }
   },
-  "updated_from_scorecard_at": "2026-09-20T11:00:47.718029+00:00",
-  "scorecard_generated_at": "2026-09-20T11:00:46.403613+00:00",
+  "updated_from_scorecard_at": "2026-09-27T11:02:03.114851+00:00",
+  "scorecard_generated_at": "2026-09-27T11:02:01.506040+00:00",
   "operator_overrides_preserved": [
     "flat",
     "transition"

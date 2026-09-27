@@ -131,10 +131,10 @@ class ComposerConfig:
     tenant_id: str = "default"
     actor: str = "composer"
     pair_override: str = ""  # force one pair (still must clear gates)
-    max_rsi_day: int = 4  # allow full small tryout set under daily budget
-    max_day: int = 8
-    cooldown_h: float = 6.0
-    # Post-RSI cron: never money
+    max_rsi_day: int = 8  # system: enough lane for wash re-clears mid-day
+    max_day: int = 12
+    cooldown_h: float = 3.0
+    # Post-RSI cron: money ON only when policy autonomous_money_allowed
     post_rsi: bool = False
 
 
@@ -419,12 +419,71 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         rsi_max=float(cfg.rsi_max),
     )
 
+    # System hold: dual-clear from gate-grade X/cache must keep latch alive so
+    # evaluate_buy_entry + readiness don't fall back to aged eng zeros mid-cycle.
+    if cand is not None and float(cand.get("eng") or 0) >= float(cfg.floor):
+        try:
+            from phase6.core.tryout_sent_latch import write_latches_from_scores
+
+            pn = _norm_pair(str(cand.get("pair") or ""))
+            src = str(cand.get("eng_source") or "composer_dual_clear")
+            if "tee" not in src.lower() and "free" not in src.lower():
+                write_latches_from_scores(
+                    {pn: float(cand["eng"])},
+                    tryout_pairs=[pn],
+                    floor=float(cfg.floor),
+                    source=f"composer_hold:{src}"[:48],
+                )
+        except Exception as e:
+            logger.warning("composer latch hold failed: %s", e)
+
+    # Process discipline (Jev-map): atomic judgments + code policy + calibration
+    # triple. live_apply=false → shadow only; does not change money unless GO.
+    discipline_block: Optional[Dict[str, Any]] = None
+    try:
+        from phase6.core.tryout_decision_discipline import apply_to_composer_candidate
+        from phase6.core.rsi_event_tryout_seat_policy import kill_switch_on as _kill_on
+
+        shell_for_disc = float(cfg.max_shell_usd or regime.get("abs_cap_usd") or 25.0)
+        # Prefer regime abs_cap as economic shell when set
+        try:
+            if regime.get("abs_cap_usd"):
+                shell_for_disc = min(shell_for_disc, float(regime["abs_cap_usd"]))
+        except (TypeError, ValueError):
+            pass
+        discipline_block = apply_to_composer_candidate(
+            cand,
+            regime=regime,
+            kill=bool(_kill_on()),
+            shell_usd=shell_for_disc,
+            floor=float(cfg.floor),
+            rsi_max=float(cfg.rsi_max),
+            persist=True,
+        )
+    except Exception as de:
+        logger.warning("tryout_decision_discipline failed: %s", de)
+        discipline_block = {"ran": False, "error": str(de), "skip_seat": False}
+
     seat_receipt = None
     seat_skipped_reason = None
     if cand is None:
         seat_skipped_reason = "no_dual_clear_candidate"
+    elif isinstance(discipline_block, dict) and discipline_block.get("skip_seat"):
+        seat_skipped_reason = "discipline_abstain:" + str(
+            discipline_block.get("rung") or discipline_block.get("action") or "block"
+        )
     else:
         money = bool(cfg.go_buy) and (not cfg.dry_run_buy)
+        shell_cap = cfg.max_shell_usd
+        if (
+            isinstance(discipline_block, dict)
+            and discipline_block.get("reduce_shell")
+            and discipline_block.get("shell_usd") is not None
+        ):
+            try:
+                shell_cap = min(float(shell_cap), float(discipline_block["shell_usd"]))
+            except (TypeError, ValueError):
+                pass
         key = (
             f"rsi-event-seat-{cand['pair']}-"
             f"{datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')}-"
@@ -439,7 +498,7 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
                 "sentiment": cand["eng"],
                 "rsi": cand.get("rsi"),
                 "eng_source": cand.get("eng_source") or "composer",
-                "max_shell_usd": cfg.max_shell_usd,
+                "max_shell_usd": shell_cap,
                 "dry_run": not money,
                 "go": bool(cfg.go_buy),
             },
@@ -480,6 +539,13 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         )
     else:
         plain_bits.append("no dual-clear candidate")
+    if isinstance(discipline_block, dict) and discipline_block.get("ran"):
+        plain_bits.append(
+            f"discipline action={discipline_block.get('action')} "
+            f"setup={discipline_block.get('setup_quality')} "
+            f"live={discipline_block.get('live_apply')} "
+            f"would_block={discipline_block.get('would_block_if_live')}"
+        )
     if seat_receipt:
         plain_bits.append(
             f"seat status={seat_receipt.get('status')} ok={seat_receipt.get('ok')} "
@@ -578,13 +644,30 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         "candidate": {k: cand.get(k) for k in ("pair", "eng", "eng_source", "rsi", "clears_floor")}
         if cand
         else None,
+        "discipline": {
+            "ran": (discipline_block or {}).get("ran"),
+            "live_apply": (discipline_block or {}).get("live_apply"),
+            "action": (discipline_block or {}).get("action"),
+            "rung": (discipline_block or {}).get("rung"),
+            "setup_quality": (discipline_block or {}).get("setup_quality"),
+            "setup_confidence": (discipline_block or {}).get("setup_confidence"),
+            "would_block_if_live": (discipline_block or {}).get("would_block_if_live"),
+            "would_reduce_if_live": (discipline_block or {}).get("would_reduce_if_live"),
+            "skip_seat": (discipline_block or {}).get("skip_seat"),
+            "reasons": (discipline_block or {}).get("reasons"),
+            "plain": (discipline_block or {}).get("plain_english"),
+            "error": (discipline_block or {}).get("error"),
+        }
+        if isinstance(discipline_block, dict)
+        else None,
         "seat_skipped_reason": seat_skipped_reason,
         "seat_receipt": seat_receipt,
         "plain_english": " | ".join(plain_bits),
         "note": (
             "Composer only. Scans all regime tryout-eligible doors. "
-            "Approval ladder: first N Brad GOs via TG; then --arm-auto for 24×7. "
-            "Not book_rebalance."
+            "System loop when policy autonomous+armed: RSI→gate-grade sent→$shell. "
+            "Discipline shadow logs atomic judgments (live_apply OFF until GO). "
+            "Not book_rebalance. Kill file freezes money."
         ),
     }
     # Quiet approval card (empty when no dual-clear / deduped / already autonomous)
@@ -621,6 +704,19 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
                 "plain": payload.get("plain_english"),
             },
         )
+        # Measure-only funnel dwell (does not affect money path)
+        try:
+            from phase6.core.pair_funnel_dwell import run_tick as _funnel_dwell_tick
+
+            dwell = _funnel_dwell_tick(write=True)
+            payload["funnel_dwell"] = {
+                "n_open": dwell.get("n_open"),
+                "n_profiles": dwell.get("n_profiles"),
+                "plain": dwell.get("plain_english"),
+            }
+        except Exception as de:
+            logger.warning("pair_funnel_dwell tick failed: %s", de)
+            payload["funnel_dwell_error"] = str(de)
     except Exception as e:
         logger.warning("composer persist failed: %s", e)
         payload["persist_error"] = str(e)

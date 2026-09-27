@@ -47,9 +47,9 @@ ACTION_SKIP = "skip"
 class WaveNeed:
     """How much USD the next deploy wave(s) may need."""
 
-    seat_usd: float = 75.0
-    max_seats_per_day: int = 2
-    max_concurrent_seats: int = 2
+    seat_usd: float = 25.0
+    max_seats_per_day: int = 6
+    max_concurrent_seats: int = 6
     rebalance_cap_usd: float = 75.0
     wave_usd: float = 150.0
     source: str = "default"
@@ -119,20 +119,24 @@ def compute_wave_need(config_dict: Optional[Dict[str, Any]] = None) -> WaveNeed:
     """Derive next-wave USD need from tryout + rebalance cap."""
     gs = (config_dict or {}).get("global_settings") or {}
     rebal_cap = float(gs.get("rebalance_cap_usd") or 0.0)
-    seat = max(rebal_cap, 0.0) if rebal_cap > 0 else 75.0
-    max_day = 2
-    max_conc = 2
+    seat = max(rebal_cap, 0.0) if rebal_cap > 0 else 25.0
+    max_day = 6
+    max_conc = 6
     source = "rebalance_cap"
 
     rec = _recovery_block(config_dict)
     qt = rec.get("quality_tryout") if isinstance(rec.get("quality_tryout"), dict) else {}
     if qt:
         try:
-            abs_cap = float(qt.get("abs_cap_usd") or seat or 75.0)
+            abs_cap = float(qt.get("abs_cap_usd") or seat or 25.0)
             seat = abs_cap
             max_day = int(qt.get("max_new_seats_per_day") or max_day)
-            # concurrent ≈ day pace under tryout (same sleeve inventory bound)
-            max_conc = max(1, max_day)
+            # concurrent: explicit max_open_tryout_seats, else day pace
+            mo = qt.get("max_open_tryout_seats")
+            if mo is not None:
+                max_conc = max(1, int(mo))
+            else:
+                max_conc = max(1, max_day)
             source = "quality_tryout"
         except (TypeError, ValueError):
             pass

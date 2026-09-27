@@ -113,11 +113,11 @@
       "equity_frac_cap": 0.08,
       "abs_cap_usd": 150.0,
       "min_move_usd": 25.0,
-      "max_open_first_fill_seats": 4,
+      "max_open_first_fill_seats": 6,
       "min_holding_usd": 15.0,
       "graduate_min_rt": 2,
       "graduate_on_tp": true,
-      "note": "No-history / ungraduated ADDs: tryout size + max 4 concurrent first-fill seats. min_move 25 matches $25 tryout shell (Brad GO 2026-09-19). Not a hard block."
+      "note": "No-history / ungraduated ADDs: tryout size + max 6 concurrent first-fill seats (Brad GO 2026-09-26 funnel headroom). min_move 25 matches $25 tryout shell. Not a hard block."
     }
   },
   "preserve_mode": {

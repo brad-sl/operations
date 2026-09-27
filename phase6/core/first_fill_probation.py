@@ -32,8 +32,8 @@ DEFAULTS: Dict[str, Any] = {
     "size_mult": 0.40,  # fraction of proposed BUY
     "equity_frac_cap": 0.08,  # max tryout ≤ 8% equity
     "abs_cap_usd": 150.0,  # hard ceiling on first fill
-    "min_move_usd": 40.0,  # below this → drop (dust)
-    "max_open_first_fill_seats": 2,
+    "min_move_usd": 25.0,  # below this → drop (dust); match $25 shell
+    "max_open_first_fill_seats": 6,  # funnel headroom (was 2; config SSOT may override)
     "min_holding_usd": 15.0,  # already held above this → not first fill
     # graduation (off this filter once earned)
     "graduate_min_rt": 2,  # ≥2 closed RTs and not miss-fire blocked
@@ -304,7 +304,13 @@ def filter_trade_plan_first_fill(runner: Any, plan: Any) -> Any:
     positions, equity = _positions_and_equity(runner)
     smap = _pair_stats_map()
     open_ff = count_open_first_fill_seats(positions, stats_map=smap, cfg=cfg)
-    max_seats = int(cfg.get("max_open_first_fill_seats") or 2)
+    max_raw = cfg.get("max_open_first_fill_seats")
+    if max_raw is None:
+        max_raw = DEFAULTS["max_open_first_fill_seats"]
+    try:
+        max_seats = int(max_raw)
+    except (TypeError, ValueError):
+        max_seats = int(DEFAULTS["max_open_first_fill_seats"])
     seats_left = max(0, max_seats - len(open_ff))
 
     decisions: List[FirstFillDecision] = []

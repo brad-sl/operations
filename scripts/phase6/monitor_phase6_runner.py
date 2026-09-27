@@ -136,6 +136,79 @@ def is_runner_running() -> bool:
     pids = get_runner_pids()
     return len(pids) > 0
 
+
+def runner_log_age_minutes(log_path: str | None = None) -> float | None:
+    """Minutes since last write to phase6_runner.log (None if missing)."""
+    candidates = [
+        log_path,
+        "logs/phase6_runner.log",
+        "/home/brad/projects/crypto-trading-bot/logs/phase6_runner.log",
+    ]
+    for p in candidates:
+        if not p:
+            continue
+        try:
+            if os.path.isfile(p):
+                age = (time.time() - os.path.getmtime(p)) / 60.0
+                return float(age)
+        except OSError:
+            continue
+    return None
+
+
+def is_runner_log_fresh(max_age_min: float = 90.0) -> bool:
+    """PID-alive is not enough — hung runners freeze the log while still pgrep-able.
+
+    Cycle interval is ~30m; 90m (~3 missed cycles) = hung threshold.
+    """
+    age = runner_log_age_minutes()
+    if age is None:
+        return False
+    return age <= max_age_min
+
+
+def restart_runner(project_root: str | None = None) -> bool:
+    """Canonical singleton restart via start_phase6_runner.sh. Returns True if PIDs live after."""
+    project_root = project_root or os.getcwd()
+    start_sh = os.path.join(project_root, "scripts/phase6/start_phase6_runner.sh")
+    if not os.path.isfile(start_sh):
+        project_root = "/home/brad/projects/crypto-trading-bot"
+        start_sh = os.path.join(project_root, "scripts/phase6/start_phase6_runner.sh")
+    if not os.path.isfile(start_sh):
+        print("[MONITOR] restart_runner: start script missing")
+        return False
+    try:
+        # Soft-stop hung PIDs first so start script doesn't refuse as duplicate
+        for pid in get_runner_pids():
+            try:
+                os.kill(int(pid), signal.SIGTERM)
+                print(f"[MONITOR] SIGTERM hung/old runner pid={pid}")
+            except OSError as e:
+                print(f"[MONITOR] SIGTERM pid={pid} failed: {e}")
+        time.sleep(3)
+        for pid in get_runner_pids():
+            try:
+                os.kill(int(pid), signal.SIGKILL)
+                print(f"[MONITOR] SIGKILL stubborn runner pid={pid}")
+            except OSError:
+                pass
+        time.sleep(1)
+        proc = subprocess.run(
+            ["bash", start_sh],
+            cwd=project_root,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        out = (proc.stdout or "") + (proc.stderr or "")
+        print("[MONITOR] Restart attempt:", out.strip()[:500])
+        time.sleep(3)
+        return bool(get_runner_pids())
+    except Exception as e:
+        print(f"[MONITOR] restart_runner failed: {e}")
+        return False
+
+
 def check_last_rebalance() -> bool:
     """Returns True if healthy (suppress alert).
     Supports daily_rebalance_times list for 2x daily (9am & 9pm).
@@ -228,33 +301,30 @@ def main():
         pid_issues = check_pid_files()
         if pid_issues:
             print("[MONITOR] PID issues:", "; ".join(pid_issues))
-        # Auto-restart canonical launcher (singleton-safe)
-        start_sh = os.path.join(os.getcwd(), "scripts/phase6/start_phase6_runner.sh")
-        project_root = os.getcwd()
-        if not os.path.isfile(start_sh):
-            project_root = "/home/brad/projects/crypto-trading-bot"
-            start_sh = os.path.join(project_root, "scripts/phase6/start_phase6_runner.sh")
-        if os.path.isfile(start_sh):
-            try:
-                proc = subprocess.run(
-                    ["bash", start_sh],
-                    cwd=project_root,
-                    capture_output=True,
-                    text=True,
-                    timeout=120,
-                )
-                out = (proc.stdout or "") + (proc.stderr or "")
-                print("[MONITOR] Auto-restart attempt:", out.strip()[:500])
-                time.sleep(3)
-                if get_runner_pids():
-                    send_telegram("✅ Phase 6 Runner auto-restarted by monitor.")
-                    print("[MONITOR] Auto-restart succeeded")
-                    return
-            except Exception as e:
-                print(f"[MONITOR] Auto-restart failed: {e}")
+        if restart_runner():
+            send_telegram("✅ Phase 6 Runner auto-restarted by monitor.")
+            print("[MONITOR] Auto-restart succeeded")
+            return
         send_telegram(msg)
         return
-    elif count > 1:
+
+    # PID alive but log frozen = hung runner (2026-09-25 class: 2d zombie, monitor green)
+    log_age = runner_log_age_minutes()
+    if log_age is not None and log_age > 90.0:
+        msg = (
+            f"🚨 CRITICAL: Phase 6 Runner HUNG — pid(s)={pids} but "
+            f"logs/phase6_runner.log stale {log_age:.0f}m (threshold 90m). Auto-restarting."
+        )
+        print(msg)
+        send_telegram(msg)
+        if restart_runner():
+            send_telegram("✅ Phase 6 hung runner auto-restarted by monitor.")
+            print("[MONITOR] Hung-runner auto-restart succeeded")
+            return
+        send_telegram("🚨 Hung runner restart FAILED — needs manual GO restart.")
+        return
+
+    if count > 1:
         keep, killed = remediate_duplicate_runners(pids)
         remaining = get_runner_pids()
         if killed and len(remaining) <= 1:

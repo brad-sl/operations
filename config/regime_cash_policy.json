@@ -268,8 +268,9 @@
         "min_sentiment": 0.3,
         "max_rsi": 55.0,
         "min_rsi": 0.0,
-        "max_new_seats_per_day": 4,
+        "max_new_seats_per_day": 6,
         "abs_cap_usd": 25.0,
+        "max_open_tryout_seats": 6,
         "v2_dynamic": true,
         "v2": {
           "live_apply": true,
@@ -384,11 +385,11 @@
           "expire_note": "Brad GO 2026-09-22: door package EXPIRED early (2026-09-22 15:41 PT). Concept proved (ZEC BUY\u2192TP-trail RT + path e2e). Not permanent policy. Fewer moving pieces for migration. Tryout shell kept ($25\u00d7\u22644 / sent\u22650.30 / SL+trail / no auto-promote). LINK stays off buy_block. Re-open only as dated Brad GO.",
           "expired_early": true
         },
-        "shell_note": "Brad GO 2026-09-19: tryout shell $25 x max 4 seats/day (was $75/2). Same sent>=0.30 / RSI door / SL+trail / no auto-promote. Path must exempt tryout from $50 allocator/RSI min_move dust-kill."
+        "shell_note": "Brad GO 2026-09-26: tryout shell $25 x max 6 seats/day + 6 concurrent open (was 4). Funnel attrition: most seats SL or fail ladder; need intake headroom so 1/N can rung. Same sent>=0.30 / RSI door / SL+trail / no auto-promote."
       },
       "bull_rebalance_cap_usd_max": 75.0,
       "do_not_clear_sl_72h": true,
-      "rollback": "Rollback shell: quality_tryout abs_cap_usd 25 + max_new_seats_per_day 4; first_fill min_move/max seats; limit pilot. Door package EXPIRED 2026-09-22 (early) \u2014 thaw/RSI65/latch windows OFF."
+      "rollback": "Rollback shell: quality_tryout abs_cap_usd 25 + max_new_seats_per_day 6 + max_open_tryout_seats 6; first_fill concurrent 6; limit pilot. Door package EXPIRED 2026-09-22 (early) \u2014 thaw/RSI65/latch windows OFF."
     }
   },
   "buy_block_pairs": [

@@ -11,6 +11,7 @@ See docs/OPS_ISSUE_LOOP.md and docs/OPS_TRIAGE_TASK_WORKFLOW.md.
 Usage:
   python3 scripts/phase6/ops_issue_loop.py status
   python3 scripts/phase6/ops_issue_loop.py run          # full tick (default)
+  python3 scripts/phase6/ops_issue_loop.py auto-repair  # no_agent known-class heal
   python3 scripts/phase6/ops_issue_loop.py sync
   python3 scripts/phase6/ops_issue_loop.py route
   python3 scripts/phase6/ops_issue_loop.py ensure-kanban
@@ -493,6 +494,127 @@ def cmd_ingest_cron_errors(args: argparse.Namespace) -> int:
     return 0
 
 
+def _close_registry_for_repair(candidates: list[dict[str, str]]) -> list[dict[str, Any]]:
+    """Close open registry + kanban/GH for crons healed by no_agent auto-repair.
+
+    Sticky jobs.json last_status=error does not block close: repair verified the
+    wrapper path; next scheduled fire clears Hermes status.
+    """
+    if not candidates:
+        return []
+    rows = _load_registry()
+    actions: list[dict[str, Any]] = []
+    by_name = {c.get("cron_name"): c for c in candidates if c.get("cron_name")}
+    by_id = {c.get("cron_job_id"): c for c in candidates if c.get("cron_job_id")}
+
+    for r in rows:
+        if r.get("status") not in ("open", "in_progress"):
+            continue
+        finding = str(r.get("finding") or "")
+        m = CRON_ERR_RE.match(finding.strip())
+        cron_name = r.get("cron_name") or (m.group(1).strip() if m else None)
+        jid = str(r.get("cron_job_id") or "")
+        cand = None
+        if cron_name and cron_name in by_name:
+            cand = by_name[cron_name]
+        elif jid and jid in by_id:
+            cand = by_id[jid]
+        if not cand:
+            continue
+        note = cand.get("note") or "no_agent auto-repair"
+        r["status"] = "done"
+        r["closed"] = _day()
+        r["resolution_note"] = r.get("resolution_note") or note
+        r.setdefault("loop", {})["reconciled_at"] = _now()
+        r.setdefault("loop", {})["auto_closed_reason"] = "no_agent_auto_repair"
+        ktid = r.get("kanban_task_id")
+        issue = r.get("github_issue")
+        if ktid:
+            _run(
+                [
+                    "hermes",
+                    "kanban",
+                    "--board",
+                    BOARD,
+                    "complete",
+                    str(ktid),
+                    "--result",
+                    note[:500],
+                ]
+            )
+        if issue:
+            _run(
+                [
+                    "gh",
+                    "issue",
+                    "close",
+                    str(issue),
+                    "-R",
+                    REPO,
+                    "--comment",
+                    f"Auto-closed by no_agent repair: {note[:400]}",
+                ]
+            )
+        actions.append({"id": r.get("id"), "closed": True, "note": note, "cron": cron_name})
+    if actions:
+        _save_registry(rows)
+    return actions
+
+
+def cmd_auto_repair(args: argparse.Namespace) -> int:
+    """Deterministic heal for known env classes — before Kanban dispatch.
+
+    Classes (phase6.core.ops_no_agent_auto_repair):
+      bare_python / ModuleNotFoundError → pin Hermes wrappers to project .venv
+      hung_runner → log age >90m + PID alive → restart
+
+    On success: close matching registry/Kanban/GH so blocked workers are not
+    the pager. Never touches trading knobs or live membership.
+    """
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+    from phase6.core.ops_no_agent_auto_repair import (  # type: ignore
+        registry_close_candidates,
+        run_auto_repair,
+    )
+
+    dry = bool(getattr(args, "dry_run", False) or getattr(args, "repair_dry_run", False))
+    skip = bool(getattr(args, "no_auto_repair", False))
+    if skip:
+        print(json.dumps({"auto_repair": "skipped", "reason": "--no-auto-repair"}))
+        return 0
+    payload = run_auto_repair(
+        dry_run=dry,
+        include_hung=not bool(getattr(args, "no_hung_repair", False)),
+        verify=not bool(getattr(args, "no_repair_verify", False)),
+    )
+    closed: list[dict[str, Any]] = []
+    if not dry:
+        cands = registry_close_candidates(list(payload.get("actions") or []))
+        # Only close when rewrite landed or verify_ok (not pure skipped)
+        closeable = [
+            c
+            for c in cands
+            if any(
+                a.get("job_name") == c.get("cron_name")
+                and a.get("status") in ("repaired", "already_ok")
+                and (a.get("verify_ok") or a.get("status") == "repaired")
+                for a in (payload.get("actions") or [])
+            )
+        ]
+        closed = _close_registry_for_repair(closeable)
+    out = {
+        "auto_repair": True,
+        "dry_run": dry,
+        "summary": payload.get("summary"),
+        "actions": payload.get("actions"),
+        "registry_closed": closed,
+    }
+    print(json.dumps(out, indent=2))
+    # Non-zero only if hard failures and nothing repaired — still don't abort loop
+    return 0
+
+
 def cmd_reconcile(args: argparse.Namespace) -> int:
     """If Kanban done or GH closed → registry done + close the other side.
 
@@ -658,11 +780,17 @@ def cmd_status(args: argparse.Namespace) -> int:
 
 
 def cmd_run(args: argparse.Namespace) -> int:
-    """Full tick: ingest cron errors → sync → route → ensure-kanban → reconcile → dispatch."""
+    """Full tick: ingest → **auto-repair** → sync → route → ensure-kanban → reconcile → dispatch.
+
+    Auto-repair (no_agent) runs *before* Kanban ensure/dispatch so known env
+    classes (bare python, hung runner) heal without a worker that may crash on
+    Hermes tools python. Registry rows closed by repair skip agent work.
+    """
     started = _now()
     results: dict[str, Any] = {"started_at": started}
     for name, fn in [
         ("ingest_cron_errors", cmd_ingest_cron_errors),
+        ("auto_repair", cmd_auto_repair),
         ("sync", cmd_sync),
         ("route", cmd_route),
         ("ensure_kanban", cmd_ensure_kanban),
@@ -697,6 +825,16 @@ def main() -> int:
     )
     ip.add_argument("--no-github", action="store_true")
     ip.set_defaults(func=cmd_ingest_cron_errors)
+
+    ar = sub.add_parser(
+        "auto-repair",
+        help="No-agent heal: bare-python wrappers + hung runner (before dispatch)",
+    )
+    ar.add_argument("--dry-run", action="store_true")
+    ar.add_argument("--no-hung-repair", action="store_true")
+    ar.add_argument("--no-repair-verify", action="store_true")
+    ar.add_argument("--no-auto-repair", action="store_true", help="No-op (loop flag passthrough)")
+    ar.set_defaults(func=cmd_auto_repair)
 
     rp = sub.add_parser("route", help="Auto-assign profile + priority")
     rp.add_argument("--gh-assign", action="store_true", help="Also assign GH issue to @me")
@@ -745,6 +883,22 @@ def main() -> int:
     runp.add_argument("--goal-max-turns", type=int, default=12)
     runp.add_argument("--no-goal", action="store_true", help="Deprecated no-op")
     runp.add_argument("--no-github", action="store_true", help="Skip GH on cron ingest promote")
+    runp.add_argument(
+        "--no-auto-repair",
+        action="store_true",
+        help="Skip no_agent auto-repair step (ticket-only mode)",
+    )
+    runp.add_argument("--no-hung-repair", action="store_true", help="Auto-repair: skip hung runner")
+    runp.add_argument(
+        "--no-repair-verify",
+        action="store_true",
+        help="Auto-repair: skip wrapper smoke after rewrite",
+    )
+    runp.add_argument(
+        "--repair-dry-run",
+        action="store_true",
+        help="Auto-repair: plan only (still runs other loop steps)",
+    )
     runp.set_defaults(func=cmd_run)
 
     args = p.parse_args()
@@ -766,6 +920,14 @@ def main() -> int:
         args.dispatch = False
     if not hasattr(args, "no_github"):
         args.no_github = False
+    if not hasattr(args, "no_auto_repair"):
+        args.no_auto_repair = False
+    if not hasattr(args, "no_hung_repair"):
+        args.no_hung_repair = False
+    if not hasattr(args, "no_repair_verify"):
+        args.no_repair_verify = False
+    if not hasattr(args, "repair_dry_run"):
+        args.repair_dry_run = False
     return int(args.func(args))
 
 

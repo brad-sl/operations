@@ -1,0 +1,75 @@
+{
+  "schema": "pair_funnel_stages_v1",
+  "note": "SSOT stage names for pair dwell profiles. Measure-only until Brad GO on prediction. Code reads this file — do not hardcode stage lists in executables.",
+  "stages": [
+    {
+      "id": "door_eligible",
+      "label": "Door eligible (tryout universe)",
+      "order": 10,
+      "terminal": false
+    },
+    {
+      "id": "rsi_wash",
+      "label": "RSI wash (in door, sent not clear)",
+      "order": 20,
+      "terminal": false
+    },
+    {
+      "id": "dual_clear",
+      "label": "Dual-clear (RSI + gate-grade sent)",
+      "order": 30,
+      "terminal": false
+    },
+    {
+      "id": "tryout_open",
+      "label": "Tryout shell open",
+      "order": 40,
+      "terminal": false
+    },
+    {
+      "id": "ladder",
+      "label": "Ladder / kindling (scaled once)",
+      "order": 50,
+      "terminal": false
+    },
+    {
+      "id": "exit_sl",
+      "label": "Exit — stop / process tax",
+      "order": 90,
+      "terminal": true,
+      "outcome_class": "loss_or_tax"
+    },
+    {
+      "id": "exit_tp",
+      "label": "Exit — take profit / trail",
+      "order": 91,
+      "terminal": true,
+      "outcome_class": "win"
+    },
+    {
+      "id": "exit_other",
+      "label": "Exit — other / unknown",
+      "order": 92,
+      "terminal": true,
+      "outcome_class": "other"
+    }
+  ],
+  "profile": {
+    "min_closed_rts_for_pattern": 5,
+    "predict_enabled": false,
+    "note": "Prediction OFF until enough closed RTs per pair. Dwell crumbs always on."
+  },
+  "tick": {
+    "include_composer_candidates": true,
+    "include_open_lots": true,
+    "include_ledger_exits": true,
+    "ledger_lookback_rows": 4000
+  },
+  "monthly": {
+    "enabled": true,
+    "note": "Quiet measure-only TG table: Pair × stage visit counts. No prediction. Cron 1st of month.",
+    "include_open_age_col": true,
+    "min_pairs_to_emit": 0,
+    "empty_stdout_if_no_pairs": false
+  }
+}

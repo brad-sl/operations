@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 cd "$ROOT"
 export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+export OPENBLAS_CORETYPE="${OPENBLAS_CORETYPE:-GENERIC}"
 # load hermes env for OPENROUTER_API_KEY without printing
 if [[ -f /home/brad/.hermes/.env ]]; then
   set -a
@@ -11,4 +12,6 @@ if [[ -f /home/brad/.hermes/.env ]]; then
   source /home/brad/.hermes/.env
   set +a
 fi
-exec python3 scripts/phase6/run_jev_lab_shadow.py --pairs BTC-USD,ETH-USD
+PY="$ROOT/.venv/bin/python3"
+[[ -x "$PY" ]] || PY=python3
+exec "$PY" scripts/phase6/run_jev_lab_shadow.py --pairs BTC-USD,ETH-USD

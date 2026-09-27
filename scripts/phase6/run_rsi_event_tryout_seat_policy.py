@@ -32,6 +32,11 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Tryout seat approval/autonomous policy")
     ap.add_argument("--arm-auto", action="store_true", help="Arm autonomous after N GOs")
     ap.add_argument("--force-arm", action="store_true", help="Arm even if GOs < required")
+    ap.add_argument(
+        "--system",
+        action="store_true",
+        help="Arm closed-loop system (RSI→sent→buy; no petition ladder)",
+    )
     ap.add_argument("--disarm", action="store_true", help="Back to approval mode")
     ap.add_argument("--kill", action="store_true", help="With --disarm: set kill flag")
     ap.add_argument("--record-go", action="store_true", help="Manually count a GO")
@@ -58,8 +63,8 @@ def main() -> int:
             note="cli_record_go",
             source="cli_record",
         )
-    elif args.arm_auto:
-        p = arm_autonomous(force=bool(args.force_arm))
+    elif args.arm_auto or args.system:
+        p = arm_autonomous(force=bool(args.force_arm), system=bool(args.system))
         if p.get("arm_refused"):
             print(p["arm_refused"], file=sys.stderr)
             if args.json:

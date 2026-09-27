@@ -24,7 +24,10 @@ from phase6.core.paths import PROJECT_ROOT
 
 SCHEMA = "tryout_sent_latch_v1"
 STATE_PATH = PROJECT_ROOT / "data" / "state" / "tryout_sent_latch.json"
-DEFAULT_TTL_MIN = 45.0
+# Hold gate-grade X clear across mid-cycle eng decay + several 15m RSI ticks.
+# 45m was too short: dual-clear died before the next X refresh and forced human
+# re-petition. 180m bridges typical 2× daily X cadence without free/tee unlock.
+DEFAULT_TTL_MIN = 180.0
 
 
 def _utc_now() -> datetime:

@@ -243,6 +243,62 @@ def plan_tryout_seat(
             eng_source=eng_source,
         )
 
+    # Day + concurrent inventory caps (funnel headroom lives here too)
+    try:
+        from phase6.core.regime_cash_policy import count_new_seat_buys_today
+
+        # Preserve / cash / majors that are not quality-tryout inventory
+        ballast = {
+            "BTC-USD",
+            "BTC-USDC",
+            "PAXG-USD",
+            "PAXG-USDC",
+            "USDC-USD",
+            "USD-USD",
+            "USDT-USD",
+            "USDT-USDC",
+        }
+        seats_today = int(count_new_seat_buys_today(exclude_pairs=ballast))
+        max_day = int((qt or {}).get("max_new_seats_per_day") or 6)
+        if seats_today >= max_day:
+            return SeatPlan(
+                pair=p,
+                shell_usd=shell,
+                status="blocked",
+                reasons=[f"max_new_seats_per_day {seats_today}>={max_day}"],
+                sentiment=sentiment,
+                rsi=rsi,
+                eng_source=eng_source,
+                detail={"seats_today": seats_today, "max_day": max_day},
+            )
+        max_open = int((qt or {}).get("max_open_tryout_seats") or max_day or 6)
+        # non-ballast held ≈ open tryout inventory
+        open_n = len(
+            {
+                h
+                for h in held
+                if h
+                and h not in ballast
+                and "USD" in str(h).upper()
+                and not str(h).upper().startswith(("USD", "USDC", "USDT"))
+            }
+        )
+        if open_n >= max_open:
+            return SeatPlan(
+                pair=p,
+                shell_usd=shell,
+                status="blocked",
+                reasons=[f"max_open_tryout_seats {open_n}>={max_open}"],
+                sentiment=sentiment,
+                rsi=rsi,
+                eng_source=eng_source,
+                detail={"open_tryouts": open_n, "max_open": max_open},
+            )
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).warning("seat inventory check failed: %s", e)
+
     dec = evaluate_buy_entry(
         p,
         snap_l,
@@ -439,6 +495,28 @@ class TryoutSeatBuyAction:
                             )
                             plan.detail["scale_up_lot"] = reg
                             effects.append(f"scale_up_lot_registered:{plan.pair}")
+                            # Funnel dwell crumb (measure-only)
+                            try:
+                                from phase6.core.pair_funnel_dwell import (
+                                    on_tryout_seat_filled,
+                                )
+
+                                dwell = on_tryout_seat_filled(
+                                    plan.pair,
+                                    meta={
+                                        "shell_usd": float(plan.shell_usd or 0),
+                                        "order_id": order_id,
+                                        "entry_price": entry_px,
+                                        "source": "tryout_seat_buy",
+                                    },
+                                )
+                                plan.detail["funnel_dwell"] = dwell
+                                effects.append(f"funnel_dwell:tryout_open:{plan.pair}")
+                            except Exception as de:
+                                effects.append(
+                                    f"funnel_dwell_failed:{type(de).__name__}"
+                                )
+                                logger.warning("pair_funnel_dwell seat hook failed: %s", de)
                         except Exception as e:
                             effects.append(f"scale_up_lot_register_failed:{type(e).__name__}")
                             logger.warning("register_tryout_open_lot failed: %s", e)

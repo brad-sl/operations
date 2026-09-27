@@ -1,0 +1,80 @@
+{
+  "schema": "tryout_decision_discipline_v1",
+  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. live_apply OFF until Brad GO + calibration N.",
+  "live_apply": false,
+  "shadow_log": true,
+  "source": "rohonchain_jev_process_map_2026-09-26",
+  "judgments": {
+    "note": "Atomic questions composed in code. Each is independent; policy weights them. Not one 'should we buy?' blob.",
+    "ids": [
+      "regime_door",
+      "rsi_wash_depth",
+      "sent_clear",
+      "eng_source_grade",
+      "latch_fresh",
+      "seat_headroom",
+      "behavior_prior",
+      "setup_quality"
+    ]
+  },
+  "thresholds": {
+    "note": "Live only when live_apply=true. Shadow always records would_*.",
+    "min_setup_score": 1.5,
+    "min_setup_confidence": 0.55,
+    "min_sent_clear_noul": 0.30,
+    "max_toxic_source_noul": 0.50,
+    "min_latch_fresh_noul": 0.40,
+    "behavior_skip_labels": ["fast_tryout_exit", "sl_heavy"],
+    "behavior_min_closed_rts": 5,
+    "behavior_skip_confidence": 0.60,
+    "reduced_shell_setup_score": 1.0,
+    "reduced_shell_fraction": 0.5
+  },
+  "fallback_ladder": {
+    "note": "Order matters. First match wins. Hard risk never delegates.",
+    "rungs": [
+      {"id": "kill_switch", "action": "STAND_DOWN", "size": 0.0},
+      {"id": "regime_block", "action": "STAND_DOWN", "size": 0.0},
+      {"id": "hard_entry_veto", "action": "STAND_DOWN", "size": 0.0},
+      {"id": "toxic_source", "action": "STAND_DOWN", "size": 0.0},
+      {"id": "stale_latch", "action": "OBSERVE", "size": 0.0},
+      {"id": "behavior_skip", "action": "SKIP_PAIR", "size": 0.0},
+      {"id": "low_confidence", "action": "OBSERVE", "size": 0.0},
+      {"id": "reduced_shell", "action": "BUY_REDUCED", "size": 0.5},
+      {"id": "full_shell", "action": "BUY_FULL", "size": 1.0}
+    ]
+  },
+  "calibration": {
+    "enabled": true,
+    "path": "data/state/tryout_decision_triples.jsonl",
+    "latest_path": "data/state/tryout_decision_discipline_latest.json",
+    "min_triples_for_reliability": 30,
+    "note": "Log snapshot+judgments+decision; attach outcome on exit. Reliability before live_apply."
+  },
+  "state_fields": {
+    "note": "Deterministic snapshot only — never spend judgment on arithmetic we already compute.",
+    "required": [
+      "pair",
+      "rsi",
+      "rsi_max",
+      "eng",
+      "floor",
+      "eng_source",
+      "strategy_mode",
+      "allow_new_buys",
+      "regime"
+    ],
+    "optional": [
+      "latch_age_min",
+      "latch_ttl_min",
+      "seats_used_today",
+      "seats_max_day",
+      "open_tryout_seats",
+      "max_open_tryout",
+      "pattern_hint",
+      "closed_rts",
+      "shell_usd",
+      "kill"
+    ]
+  }
+}

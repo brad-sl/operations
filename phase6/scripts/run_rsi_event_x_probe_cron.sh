@@ -5,7 +5,9 @@ set -euo pipefail
 ROOT="${PHASE6_ROOT:-/home/brad/projects/crypto-trading-bot}"
 cd "$ROOT"
 export OPENBLAS_CORETYPE="${OPENBLAS_CORETYPE:-GENERIC}"
-PY="${PYTHON:-python3}"
+export PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}"
+PY="$ROOT/.venv/bin/python3"
+[[ -x "$PY" ]] || PY="${PYTHON:-python3}"
 ARGS=(scripts/phase6/run_rsi_event_x_probe.py --telegram --quiet-ok)
 if [[ "${PROBE_GO:-0}" == "1" ]] || [[ "${1:-}" == "--go" ]]; then
   ARGS+=(--go)

@@ -365,15 +365,38 @@ def recovery_quality_tryout_cfg(rec: Dict[str, Any]) -> Dict[str, Any]:
     v2 = qt.get("v2") if isinstance(qt.get("v2"), dict) else {}
     # v2 nested knobs override flat deploy floors when present
     src = {**qt, **v2}
+
+    def _int_knob(key: str, *fallbacks: Any, default: int = 1) -> int:
+        cands = [src.get(key)]
+        cands.extend(fallbacks)
+        for cand in cands:
+            if cand is None:
+                continue
+            try:
+                return max(0, int(cand))
+            except (TypeError, ValueError):
+                continue
+        return int(default)
+
+    max_day = _int_knob(
+        "max_new_seats_per_day",
+        rec.get("max_new_seats_per_day"),
+        default=6,
+    )
+    # concurrent open tryouts (inventory). Default tracks day cap.
+    max_open = _int_knob(
+        "max_open_tryout_seats",
+        qt.get("max_open_tryout_seats") if isinstance(qt, dict) else None,
+        default=max_day if max_day > 0 else 6,
+    )
     return {
         "tryout_pairs": _norm_pair_set(qt.get("tryout_pairs") or rec.get("tryout_pairs") or []),
         "min_sentiment": float(src.get("min_sentiment", rec.get("quality_min_sentiment", 0.30)) or 0.30),
         "max_rsi": _effective_tryout_max_rsi(src),
         "min_rsi": float(src.get("min_rsi", rec.get("quality_min_rsi", 0.0)) or 0.0),
-        "max_new_seats_per_day": int(
-            src.get("max_new_seats_per_day", rec.get("max_new_seats_per_day", 1)) or 1
-        ),
-        "abs_cap_usd": float(src.get("abs_cap_usd", rec.get("tryout_abs_cap_usd", 75.0)) or 75.0),
+        "max_new_seats_per_day": max_day,
+        "max_open_tryout_seats": max_open,
+        "abs_cap_usd": float(src.get("abs_cap_usd", rec.get("tryout_abs_cap_usd", 25.0)) or 25.0),
         "v2_dynamic": bool(qt.get("v2_dynamic") or v2.get("live_apply") or False),
         "tryout_sent_latch_ttl_min": _effective_tryout_latch_ttl_min(src),
     }

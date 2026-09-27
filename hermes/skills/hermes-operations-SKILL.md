@@ -56,6 +56,11 @@ version: 1.1.0
 - **Fix:** end voice conversation — click the mic/conversation end control, type bare `stop` + Enter (typed stop phrase; no space needed), or say the configured stop phrase. Prefer **read-aloud / auto-TTS** when Brad wants spoken replies **and** normal typing; leave the conversation loop off.
 - **Diagnose STT vs TTS split:** host logs often show xAI STT transcripts + Piper `TTS audio saved` while the user hears nothing or interrupts mid-reply — treat input and playback as separate legs. Check `gui.log` for `speak-stream synthesis failed` (e.g. `extra_headers`) and interrupted turns / barge-in before declaring host synth dead.
 
+**Dual voices / two speakers on one reply:**
+- **Causes (order):** (1) voice **conversation** + **Read replies aloud** (`voice.auto_tts`) both armed; (2) primary `tts.provider` stream failing while another engine still plays — xAI speak-stream failures in `gui.log`/`web_server`: `unexpected keyword argument 'extra_headers'` and `server rejected WebSocket connection: HTTP 400`; config can still show `tts.provider: xai` while audible voice is a working path (often Edge); (3) agent `text_to_speech` stacked on auto-TTS/conversation speak.
+- **Working baseline after dual-voice incident:** `tts.provider=edge` (e.g. `en-US-AriaNeural`); `tts.xai.auto_speech_tags=false`; voice conversation OK with **one** primary provider. `hermes config set tts.provider …` often applies **live** on Desktop — do not require full app restart just to test voice identity; end/restart open voice session if speak path stuck.
+- **HUD:** `read_window_below` = app/title/bounds only — **not** screen pixels. Dashboard content → live API (Phase 6 `:8502` `/api/pair-signals`) or user screenshot.
+
 **Expressive tags without the lag tax:** If re-enabling `auto_speech_tags`, pin a cheap fast model under `auxiliary.tts_audio_tags` so the rewrite is not flagship-speed.
 
 Detail: `references/voice-tts-latency-and-local-engines.md`.

@@ -13051,3 +13051,43 @@ Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to co
 Source sweep: 2026-09-27T11:02:03.514105+00:00 | score=5.0534
 Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
 
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260927** (opened 2026-09-27T12:00:50.033400)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260927`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260928** (opened 2026-09-28T02:00:49.346794)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20260928`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

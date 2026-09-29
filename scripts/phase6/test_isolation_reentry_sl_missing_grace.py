@@ -97,6 +97,81 @@ def test_log_wall_pt() -> None:
     assert dt.hour == 16 and dt.minute == 0
 
 
+def test_sticky_sl_fingerprint_ignores_held_usd() -> None:
+    from scripts.phase6.monitor_reentry_sl_tp import sticky_sl_alert_fingerprint
+
+    a1 = "SL_MISSING_EXCHANGE LINK-USD held_usd=42.94"
+    a2 = "SL_MISSING_EXCHANGE LINK-USD held_usd=44.10"
+    assert sticky_sl_alert_fingerprint(a1) == sticky_sl_alert_fingerprint(a2)
+    assert sticky_sl_alert_fingerprint(a1) == "sl_missing_exchange:LINK-USD"
+    assert sticky_sl_alert_fingerprint("CASH_HOLD_ARMED $100") is None
+
+
+def test_sticky_sl_dedupe_silences_repeat() -> None:
+    from scripts.phase6.monitor_reentry_sl_tp import filter_sticky_alerts_for_page
+
+    seen: dict = {}
+    notes: list = []
+    alerts = ["SL_MISSING_EXCHANGE LINK-USD held_usd=42.94"]
+    page1 = filter_sticky_alerts_for_page(alerts, notes, seen, hours=6.0)
+    assert page1 == alerts
+    notes2: list = []
+    page2 = filter_sticky_alerts_for_page(
+        ["SL_MISSING_EXCHANGE LINK-USD held_usd=99.00"], notes2, seen, hours=6.0
+    )
+    assert page2 == []
+    assert any("deduped" in n for n in notes2)
+
+
+def test_naked_repair_dry_run_and_kill() -> None:
+    from scripts.phase6 import monitor_reentry_sl_tp as mon
+
+    # dry_run never hits exchange
+    r = mon.attempt_naked_sl_repair(
+        "LINK-USD", qty=3.11, entry_px=14.1, value_usd=44.0, dry_run=True
+    )
+    assert r["ok"] is True and r["status"] == "would_repair"
+
+    # ballast skipped
+    r2 = mon.attempt_naked_sl_repair(
+        "PAXG-USD", qty=0.01, entry_px=4000.0, value_usd=80.0, dry_run=False
+    )
+    assert r2["ok"] is True and r2["status"] == "skipped_ballast"
+
+    alerts: list = []
+    notes: list = []
+    held = {"LINK-USD": {"qty": 3.11, "value_usd": 44.0, "entry_px": 14.1}}
+    out = mon.escalate_naked_active_bags(
+        ["LINK-USD"], held, {}, alerts=alerts, notes=notes, dry_run=True
+    )
+    assert out and out[0]["status"] == "would_repair"
+    assert any("SL_AUTO_REPAIRED" in n for n in notes)
+    assert alerts == []  # success path does not page
+
+
+def test_repair_fail_pages() -> None:
+    from scripts.phase6 import monitor_reentry_sl_tp as mon
+
+    alerts: list = []
+    notes: list = []
+    # Force fail by monkeypatch
+    orig = mon.attempt_naked_sl_repair
+
+    def boom(*a, **k):
+        return {"pair": "LINK-USD", "ok": False, "status": "attach_failed", "error": "boom"}
+
+    mon.attempt_naked_sl_repair = boom  # type: ignore
+    try:
+        held = {"LINK-USD": {"qty": 3.11, "value_usd": 44.0, "entry_px": 14.1}}
+        mon.escalate_naked_active_bags(
+            ["LINK-USD"], held, {}, alerts=alerts, notes=notes, dry_run=False
+        )
+        assert any(a.startswith("SL_NAKED_REPAIR_FAILED") for a in alerts)
+        assert notes == []
+    finally:
+        mon.attempt_naked_sl_repair = orig  # type: ignore
+
+
 def main() -> int:
     test_classify()
     print("PASS classify")
@@ -106,6 +181,14 @@ def main() -> int:
     print("PASS suspend_in_flight")
     test_log_wall_pt()
     print("PASS log_wall")
+    test_sticky_sl_fingerprint_ignores_held_usd()
+    print("PASS sticky_fp")
+    test_sticky_sl_dedupe_silences_repeat()
+    print("PASS sticky_dedupe")
+    test_naked_repair_dry_run_and_kill()
+    print("PASS naked_repair_dry")
+    test_repair_fail_pages()
+    print("PASS repair_fail_pages")
     print("ALL PASS")
     return 0
 

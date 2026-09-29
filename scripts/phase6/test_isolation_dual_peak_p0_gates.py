@@ -133,6 +133,61 @@ def main() -> int:
     else:
         print("legacy_lock OK")
 
+    # 6) P1 meat gate: flat ~0R heat-death must NOT dual_peak (LINK lesson)
+    flat_lot = {
+        "pair": "LINK-USD",
+        "open": True,
+        "entry_price": 14.097,
+        "entry_sentiment": 0.54,
+        "entry_sent_peak": 0.54,
+        "peak_price": 14.48,  # ~+2.7% MFE — under 4% meat bar
+        "usd": 88.0,
+    }
+    flat = evaluate_dual_peak_exits(
+        lots=[flat_lot],
+        current_sentiment={"LINK-USD": 0.03},
+        current_prices={"LINK-USD": 14.10},  # ~0R green
+        positions_usd={"LINK-USD": 88.0},
+        candles_by_pair={"LINK-USD": candles},
+        cfg_p2=cfg,
+    )
+    if any(e.kind == "dual_peak" for e in flat):
+        fails.append(
+            f"flat 0R heat-death must not dual_peak under 4% meat, got "
+            f"{[(e.kind, e.peak_return, e.reasons) for e in flat]}"
+        )
+    else:
+        print("meat_gate_flat_block OK")
+
+    # 7) Meat gate: ≥4% peak + ≥4% mark green + fade → dual_peak still fires
+    # Must be off-peak enough that TP arm does not own the exit (arm + tiny dip → skip).
+    meat_lot = dict(base_lot)
+    meat_lot["peak_price"] = 110.0  # +10%
+    meat = evaluate_dual_peak_exits(
+        lots=[meat_lot],
+        current_sentiment={"BTC-USD": 0.05},
+        current_prices={"BTC-USD": 105.0},  # +5% mark, ~4.5% off peak 110
+        positions_usd={"BTC-USD": 500.0},
+        candles_by_pair={"BTC-USD": candles},
+        cfg_p2=cfg,
+    )
+    if not any(e.kind == "dual_peak" for e in meat):
+        fails.append(
+            f"≥4% meat + fade should dual_peak, got {[(e.kind, e.reasons) for e in meat]}"
+        )
+    else:
+        print("meat_gate_allow OK", [e.reasons for e in meat if e.kind == "dual_peak"][0])
+
+    # 8) Defaults bind meat bars (path integrity)
+    if float(DEFAULTS_P2.get("min_peak_return") or 0) < 0.039:
+        fails.append(f"DEFAULTS min_peak_return expected 0.04, got {DEFAULTS_P2.get('min_peak_return')}")
+    if float(DEFAULTS_P2.get("dual_peak_min_green_pct") or -1) < 0.039:
+        fails.append(
+            f"DEFAULTS dual_peak_min_green_pct expected 0.04, got {DEFAULTS_P2.get('dual_peak_min_green_pct')}"
+        )
+    else:
+        print("defaults_meat_bars OK")
+
     if fails:
         print("FAIL")
         for f in fails:

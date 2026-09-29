@@ -341,7 +341,7 @@
       "mode": "live",
       "mfe_stall_bars": 2,
       "failed_high_off_peak": 0.03,
-      "min_peak_return": 0.02,
+      "min_peak_return": 0.04,
       "sent_fade_delta": 0.3,
       "sent_fade_floor": 0.2,
       "climax_vol_ratio": 1.8,
@@ -361,11 +361,11 @@
         "PAXG-USDC"
       ],
       "dual_peak_require_mark_ge_entry": true,
-      "dual_peak_min_green_pct": 0.0,
+      "dual_peak_min_green_pct": 0.04,
       "extension_partial_require_mark_ge_entry": true,
       "dual_peak_max_trims_per_lot": 1,
       "dual_peak_rearm_on_new_peak": true,
-      "note": " P0-20260826: no red half-trim; max 1 dual_peak/lot until new peak."
+      "note": "P0-20260826 no red half-trim + max 1 dual/lot. P1-20260928 meat gate: min_peak=min_green=tp_arm 4% — no 0R heat-death half-trim (LINK flat dual-peak lesson)."
     }
   },
   "entry_execution": {

@@ -11,6 +11,12 @@ Checks (per new BUY since cursor / lookback):
   4. No LIVE-TP trail fire within minutes of BUY while mark_r < arm (stale-peak pattern)
   5. Cash hold: page only on NEW/increased arm (sticky same-$ is silent note)
   6. Live dual-peak/extension failures: page once per fingerprint (6h dedupe)
+  7. Sticky SL_MISSING / SL_NO_PRICE / BUY_NO_SL: page once per pair fingerprint
+     (default 6h). Same naked bag must not TG every */10 tick.
+  8. **P0 naked-bag escalation (Brad 2026-09-28):** true `alert_missing` on an
+     actively held non-dust crypto bag → **auto-reattach SL ASAP** inside this
+     monitor. TG only if repair **fails** (`SL_NAKED_REPAIR_FAILED`). Success is
+     a quiet note. Kill: `data/state/reentry_sl_auto_repair_KILL`.
 
 Usage:
   PYTHONPATH=. .venv/bin/python scripts/phase6/monitor_reentry_sl_tp.py
@@ -44,6 +50,15 @@ SL_GRACE_MINUTES = 15
 CASH_HOLD_ALERT_EPS_USD = 1.0
 # Live dual-peak / extension failures: page once per fingerprint, then quiet.
 LIVE_EXIT_FAIL_DEDUPE_HOURS = 6.0
+# Sticky exchange-SL alerts: same pair still naked → one TG, then quiet until
+# fingerprint TTL. held_usd must NOT be in the key (it jitters every tick).
+STICKY_SL_ALERT_DEDUPE_HOURS = 6.0
+# Auto-repair naked active bags (financial risk P0). Failures page; success quiet.
+NAKED_SL_AUTO_REPAIR = True
+NAKED_SL_MIN_USD = 25.0  # same floor as check_pairs
+NAKED_SL_REPAIR_KILL = STATE / "reentry_sl_auto_repair_KILL"
+# Repair-fail pages are sticky too, but shorter so a stuck naked bag re-escalates.
+NAKED_REPAIR_FAIL_DEDUPE_HOURS = 2.0
 # CR-03 suspend/reattach leaves bags briefly naked (~10–30s). Monitor is */10 and
 # collides with 09:00/21:00 PT rebalance → daily SL_MISSING_EXCHANGE false pages.
 # Suppress page when suspend is in-flight or inventory is stop-locked on venue.
@@ -210,6 +225,225 @@ def _should_page_fingerprint(key: str, seen: Dict[str, Any], hours: float) -> bo
             keep[k] = str(v)
     seen["fingerprints"] = keep
     return True
+
+
+def sticky_sl_alert_fingerprint(alert: str) -> Optional[str]:
+    """Stable TG fingerprint for sticky SL alerts (pair only — not held_usd).
+
+    Returns None when the alert is not sticky (always eligible to page).
+    """
+    a = str(alert or "").strip()
+    if not a:
+        return None
+    # "SL_MISSING_EXCHANGE LINK-USD held_usd=42.94"
+    # "BUY_NO_SL LINK-USD age_min=20.1 ts=... order=..."
+    prefixes = (
+        "SL_MISSING_EXCHANGE ",
+        "SL_NO_PRICE ",
+        "SL_ABOVE_OR_AT_ENTRY ",
+        "SL_TOO_TIGHT_OR_WRONG ",
+        "BUY_NO_SL ",
+        "SL_NAKED_REPAIR_FAILED ",
+        "SL_NAKED_REPAIR_DISABLED ",
+    )
+    for pref in prefixes:
+        if a.startswith(pref):
+            rest = a[len(pref) :].strip()
+            pair = rest.split()[0] if rest else ""
+            if pair:
+                kind = pref.strip().lower().replace(" ", "_")
+                return f"{kind}:{pair}"
+            return f"{pref.strip().lower().replace(' ', '_')}:unknown"
+    return None
+
+
+def filter_sticky_alerts_for_page(
+    alerts: List[str],
+    notes: List[str],
+    seen: Dict[str, Any],
+    *,
+    hours: float = STICKY_SL_ALERT_DEDUPE_HOURS,
+) -> List[str]:
+    """Keep non-sticky alerts; sticky ones page once per fingerprint TTL."""
+    pageable: List[str] = []
+    for a in alerts:
+        fp = sticky_sl_alert_fingerprint(a)
+        if fp is None:
+            pageable.append(a)
+            continue
+        # Repair failures re-escalate sooner than plain missing.
+        ttl = hours
+        if str(a).startswith("SL_NAKED_REPAIR_FAILED"):
+            ttl = NAKED_REPAIR_FAIL_DEDUPE_HOURS
+        if _should_page_fingerprint(fp, seen, ttl):
+            pageable.append(a)
+        else:
+            notes.append(f"{a} (deduped {ttl:g}h)")
+    return pageable
+
+
+def naked_sl_auto_repair_enabled() -> bool:
+    if not NAKED_SL_AUTO_REPAIR:
+        return False
+    if NAKED_SL_REPAIR_KILL.exists():
+        return False
+    return True
+
+
+def attempt_naked_sl_repair(
+    pair: str,
+    *,
+    qty: float,
+    entry_px: float,
+    value_usd: float,
+    dry_run: bool = False,
+) -> Dict[str, Any]:
+    """Attach exchange SL for a truly naked active bag. Returns status dict.
+
+    Does **not** run during CR-03 window (caller must gate). Preserve/PAXG
+    pairs must not be passed here. Kill file disables live attach.
+    """
+    out: Dict[str, Any] = {
+        "pair": pair,
+        "ok": False,
+        "status": "pending",
+        "value_usd": float(value_usd or 0.0),
+        "qty": float(qty or 0.0),
+        "entry_px": float(entry_px or 0.0),
+        "dry_run": bool(dry_run),
+    }
+    if not pair or pair.startswith("PAXG"):
+        out["status"] = "skipped_ballast"
+        out["ok"] = True
+        return out
+    if float(value_usd or 0.0) < NAKED_SL_MIN_USD and float(qty or 0.0) <= 0:
+        out["status"] = "skipped_dust"
+        out["ok"] = True
+        return out
+    if dry_run or not naked_sl_auto_repair_enabled():
+        out["status"] = "would_repair" if dry_run else "kill_or_disabled"
+        out["ok"] = False if not dry_run and not naked_sl_auto_repair_enabled() else True
+        if dry_run:
+            out["ok"] = True
+        return out
+
+    try:
+        from phase6.core.config_loader import ConfigLoader
+        from phase6.core.exchange_client import CoinbaseExchangeClient
+        from phase6.core.stop_loss_manager import StopLossManager
+
+        cfg_obj = ConfigLoader(str(ROOT / "config" / "trading_config_phase6.json"))
+        cfg = getattr(cfg_obj, "_config", None) or getattr(cfg_obj, "config", None) or {}
+        if not isinstance(cfg, dict):
+            cfg = {}
+        exchange = CoinbaseExchangeClient(mode="live")
+        slm = StopLossManager(exchange, cfg, mode="live")
+
+        mark = 0.0
+        try:
+            mark = float(exchange.get_price(pair) or 0.0)
+        except Exception:
+            mark = 0.0
+        # Prefer live mark as attach anchor when entry is missing/stale-low
+        # (dual-peak leftover bags often carry a stale live_state entry).
+        anchor = float(entry_px or 0.0)
+        if mark > 0 and (anchor <= 0 or (anchor > 0 and anchor < mark * 0.88)):
+            anchor = mark
+        if anchor <= 0 and mark > 0:
+            anchor = mark
+        size = float(qty or 0.0)
+        if size <= 0 and mark > 0 and value_usd > 0:
+            size = float(value_usd) / mark
+        if anchor <= 0 or size <= 0:
+            out["status"] = "bad_size_or_price"
+            out["error"] = f"anchor={anchor} size={size} mark={mark}"
+            return out
+
+        ok = bool(
+            slm.attach_stop_loss(
+                pair,
+                float(anchor),
+                float(size),
+                anchor_entry=float(anchor),
+                fresh_buy=False,
+            )
+        )
+        out["attach_called"] = True
+        out["anchor"] = float(anchor)
+        out["mark"] = float(mark)
+        out["size"] = float(size)
+
+        # Verify exchange actually has a stop (attach True can still lag).
+        verified = False
+        try:
+            stops_map = _exchange_stops([pair]) or {}
+            verified = bool(stops_map.get(pair))
+        except Exception as ve:
+            out["verify_error"] = str(ve)[:160]
+
+        if ok and verified:
+            out["ok"] = True
+            out["status"] = "repaired"
+        elif ok and not verified:
+            out["ok"] = False
+            out["status"] = "attach_true_verify_empty"
+        else:
+            out["ok"] = False
+            out["status"] = "attach_failed"
+        return out
+    except Exception as exc:
+        out["ok"] = False
+        out["status"] = "error"
+        out["error"] = str(exc)[:240]
+        return out
+
+
+def escalate_naked_active_bags(
+    naked_pairs: List[str],
+    held: Dict[str, Dict[str, float]],
+    marks: Any,
+    *,
+    alerts: List[str],
+    notes: List[str],
+    dry_run: bool = False,
+) -> List[Dict[str, Any]]:
+    """P0: auto-repair naked actively held bags; page only on repair failure."""
+    results: List[Dict[str, Any]] = []
+    if not naked_pairs:
+        return results
+    marks_map: Dict[str, Any] = marks if isinstance(marks, dict) else {}
+    if not naked_sl_auto_repair_enabled() and not dry_run:
+        for pair in naked_pairs:
+            alerts.append(
+                f"SL_NAKED_REPAIR_DISABLED {pair} "
+                f"held_usd={float((held.get(pair) or {}).get('value_usd') or 0):.2f} "
+                f"(touch {NAKED_SL_REPAIR_KILL.name} or NAKED_SL_AUTO_REPAIR)"
+            )
+            results.append({"pair": pair, "ok": False, "status": "disabled"})
+        return results
+
+    for pair in naked_pairs:
+        h = held.get(pair) or {}
+        m_raw = marks_map.get(pair)
+        m = m_raw if isinstance(m_raw, dict) else {}
+        entry = float(m.get("entry_px") or h.get("entry_px") or 0.0)
+        qty = float(h.get("qty") or 0.0)
+        usd = float(h.get("value_usd") or 0.0)
+        res = attempt_naked_sl_repair(
+            pair, qty=qty, entry_px=entry, value_usd=usd, dry_run=dry_run
+        )
+        results.append(res)
+        if res.get("ok") and res.get("status") in ("repaired", "would_repair", "skipped_ballast", "skipped_dust"):
+            notes.append(
+                f"SL_AUTO_REPAIRED {pair} status={res.get('status')} "
+                f"held_usd={usd:.2f} anchor={res.get('anchor') or entry}"
+            )
+        else:
+            err = res.get("error") or res.get("status") or "unknown"
+            alerts.append(
+                f"SL_NAKED_REPAIR_FAILED {pair} held_usd={usd:.2f} status={err}"
+            )
+    return results
 
 
 def _exchange_stops(pairs: List[str]) -> Dict[str, List[dict]]:
@@ -515,6 +749,8 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
         )
     lock_fracs = _holdings_lock_fracs(check_pairs) if check_pairs else {}
 
+    naked_for_repair: List[str] = []
+    repair_results: List[Dict[str, Any]] = []
     for pair in check_pairs:
         orders = stops.get(pair) or []
         entry = float((marks.get(pair) or {}).get("entry_px") or held[pair].get("entry_px") or 0.0)
@@ -535,8 +771,11 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
                     f"held_usd={held[pair].get('value_usd'):.2f} (list lag; not naked)"
                 )
             else:
-                alerts.append(
-                    f"SL_MISSING_EXCHANGE {pair} held_usd={held[pair].get('value_usd'):.2f}"
+                # True naked active bag — escalate to auto-repair (not page-first).
+                naked_for_repair.append(pair)
+                notes.append(
+                    f"SL_NAKED_DETECTED {pair} held_usd={held[pair].get('value_usd'):.2f} "
+                    f"(escalating auto-repair)"
                 )
             continue
         # pick lowest stop for long
@@ -548,7 +787,9 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
                 pass
         stop_pxs = [s for s in stop_pxs if s > 0]
         if not stop_pxs:
-            alerts.append(f"SL_NO_PRICE {pair} orders={len(orders)}")
+            # Open order objects but no parseable stop px — still risk; try repair.
+            naked_for_repair.append(pair)
+            notes.append(f"SL_NO_PRICE {pair} orders={len(orders)} (escalating auto-repair)")
             continue
         sp = min(stop_pxs)
         if entry > 0 and sp >= entry * 0.995:
@@ -564,6 +805,24 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
                 notes.append(f"SL_WIDE {pair} stop={sp:.6g} entry={entry:.6g} dd={dd:.3%} (check preserve/ratchet)")
             else:
                 notes.append(f"SL_OK {pair} stop={sp:.6g} entry={entry:.6g} dd={dd:.3%}")
+
+    # P0 escalation: true naked active bags → auto-reattach; TG only on failure.
+    if naked_for_repair:
+        # de-dupe while preserving order
+        seen_n: set = set()
+        naked_unique: List[str] = []
+        for p in naked_for_repair:
+            if p not in seen_n:
+                seen_n.add(p)
+                naked_unique.append(p)
+        repair_results = escalate_naked_active_bags(
+            naked_unique,
+            held,
+            marks,
+            alerts=alerts,
+            notes=notes,
+            dry_run=False,
+        )
 
     # Ignore pre-fix incident noise (UNI stale peak + TP-as-manual disposition).
     # Monitor is for re-entries AFTER operator release / lot-bind fix.
@@ -584,9 +843,24 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
             # confirm exchange
             ex = (_exchange_stops([pair]) or {}).get(pair) or []
             if not ex:
-                alerts.append(
-                    f"BUY_NO_SL {pair} age_min={age_m:.1f} ts={b.get('timestamp')} order={str(b.get('order_id') or '')[:10]}"
-                )
+                # Escalate fresh-buy naked same as held naked (financial risk P0).
+                if pair not in (naked_for_repair or []) and pair in held and not pair.startswith("PAXG"):
+                    notes.append(
+                        f"BUY_NO_SL {pair} age_min={age_m:.1f} (escalating auto-repair)"
+                    )
+                    br = escalate_naked_active_bags(
+                        [pair],
+                        held,
+                        marks,
+                        alerts=alerts,
+                        notes=notes,
+                        dry_run=False,
+                    )
+                    repair_results.extend(br)
+                else:
+                    alerts.append(
+                        f"BUY_NO_SL {pair} age_min={age_m:.1f} ts={b.get('timestamp')} order={str(b.get('order_id') or '')[:10]}"
+                    )
             else:
                 notes.append(f"BUY_SL_EXCHANGE_OK ledger_false {pair}")
         elif sl_ok:
@@ -654,6 +928,8 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
         "notes": notes[:40],
         "peak_r": peak_r,
         "peak_lot_pairs": sorted(peak_lot.keys()),
+        "naked_auto_repair": repair_results,
+        "naked_detected": list(naked_for_repair) if naked_for_repair else [],
         "ok": len(alerts) == 0,
     }
     # P1 sentiment-fade shadow (no live sell; dual_peak owns live structure exits)
@@ -785,10 +1061,17 @@ def evaluate(lookback_hours: float = 12.0) -> Dict[str, Any]:
     except Exception as _ie:
         result["ignition_scout_error"] = str(_ie)
 
+    # Sticky SL alerts: keep full list on disk; TG only pageable set.
+    # held_usd jitters every tick — fingerprint is pair-stable.
+    page_alerts = filter_sticky_alerts_for_page(alerts, notes, alert_seen)
+    _save_alert_seen(alert_seen)
+
     # Recompute ok after late hooks (dual-peak / fade / scout) may append alerts.
-    result["alerts"] = alerts
+    # ok=True only when nothing remains pageable (deduped sticky = quiet TG).
+    result["alerts"] = page_alerts
+    result["alerts_all"] = alerts
     result["notes"] = notes[:50]
-    result["ok"] = len(alerts) == 0
+    result["ok"] = len(page_alerts) == 0
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(result, indent=2) + "\n")

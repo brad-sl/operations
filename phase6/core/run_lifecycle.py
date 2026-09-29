@@ -80,7 +80,8 @@ DEFAULTS_P2: Dict[str, Any] = {
     "mode": "shadow",  # shadow | live | off
     "mfe_stall_bars": 2,  # daily bars without new high while still green
     "failed_high_off_peak": 0.03,
-    "min_peak_return": 0.02,  # only dual-peak trim if had some MFE
+    # Meat bar: align with tp_arm so dual-peak is not a 0R / noise-peak exit
+    "min_peak_return": 0.04,
     "sent_fade_delta": 0.30,  # slightly tighter than pure fade 0.40 for dual
     "sent_fade_floor": 0.20,
     "climax_vol_ratio": 1.8,
@@ -101,7 +102,8 @@ DEFAULTS_P2: Dict[str, Any] = {
     # --- P0 2026-08-26: stop red shredder / sticky dual cascade ---
     # No half-trim while mark < entry*(1+min_green). SL still owns downside.
     "dual_peak_require_mark_ge_entry": True,
-    "dual_peak_min_green_pct": 0.0,
+    # P1 2026-09-28: real green meat before half-trim (LINK 0R heat-death lesson)
+    "dual_peak_min_green_pct": 0.04,
     "extension_partial_require_mark_ge_entry": True,
     # Max dual_peak live/shadow emits per lot until rearm (new peak after last dual)
     "dual_peak_max_trims_per_lot": 1,
@@ -812,10 +814,10 @@ def evaluate_dual_peak_exits(
     fade_d = _f(c.get("sent_fade_delta"), 0.30)
     fade_f = _f(c.get("sent_fade_floor"), 0.20)
     off_thr = _f(c.get("failed_high_off_peak"), 0.03)
-    min_peak = _f(c.get("min_peak_return"), 0.02)
+    min_peak = _f(c.get("min_peak_return"), 0.04)
     dual_frac = max(0.0, min(1.0, _f(c.get("dual_trim_frac"), 0.50)))
     ext_frac = max(0.0, min(1.0, _f(c.get("extension_partial_frac"), 0.33)))
-    min_green = _f(c.get("dual_peak_min_green_pct"), 0.0)
+    min_green = _f(c.get("dual_peak_min_green_pct"), 0.04)
     require_green_dual = bool(c.get("dual_peak_require_mark_ge_entry", True))
     require_green_ext = bool(c.get("extension_partial_require_mark_ge_entry", True))
     max_dual_trims = max(0, int(c.get("dual_peak_max_trims_per_lot") or 1))
@@ -926,16 +928,20 @@ def evaluate_dual_peak_exits(
                 # no rearm peak recorded → stay locked after first dual
                 dual_episode_blocked = True
 
-        # Dual peak: price rolling AND sent fading → scale before dump
-        if price_hit and sent_hit and peak_ret >= min_peak * 0.5:
+        # Dual peak: price rolling AND sent fading → scale before dump.
+        # Full min_peak (not 0.5×) — noise peaks must not half-trim (LINK 0R lesson).
+        if price_hit and sent_hit and peak_ret >= min_peak - 1e-12:
             if dual_episode_blocked:
                 pass  # spent episode; wait new peak or SL
             elif require_green_dual and not mark_ge_entry:
-                pass  # red bag → no half-trim (SL path owns downside)
+                pass  # red/flat-under-meat → no half-trim (SL owns downside)
             else:
                 dp_reasons = list(reasons)
                 if mark_ge_entry:
                     dp_reasons.append("mark_ge_entry")
+                dp_reasons.append(f"peak_ret={peak_ret:.3f}>=min_peak={min_peak:.3f}")
+                if min_green > 0:
+                    dp_reasons.append(f"min_green={min_green:.3f}")
                 events.append(
                     DualPeakEvent(
                         pair=pair,

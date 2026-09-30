@@ -115,10 +115,46 @@ def test_fresh_lot_amid_ghost_layers_trusted() -> None:
     assert basis == "ledger_avg_cost", basis
 
 
+def test_dual_peak_remainder_full_cover_promotes_trusted() -> None:
+    """After half-trim, exchange qty fully covered by open layers → trusted avg (not forever LIFO)."""
+    trades = [
+        {"timestamp": "2026-09-26T18:51:00Z", "side": "BUY", "qty": 1.76, "entry_price": 14.159},
+        {"timestamp": "2026-09-27T04:01:00Z", "side": "BUY", "qty": 4.46, "entry_price": 14.097},
+        {
+            "timestamp": "2026-09-27T15:50:00Z",
+            "side": "SELL",
+            "qty": 3.11,
+            "exit_price": 14.097,
+        },
+    ]
+    px, basis = average_cost_from_trades(trades, expected_qty=3.11)
+    assert px is not None, (px, basis)
+    assert basis == "ledger_avg_cost", basis
+    # FIFO remainder after selling 3.11 from first layers lands on 3.11 @ 14.097
+    # (or LIFO blend if only cover-slice path). Either is trusted math — not soft LIFO tag.
+    assert abs(px - 14.097) < 1e-4 or abs(px - (1.35 * 14.097 + 1.76 * 14.159) / 3.11) < 1e-4, (
+        px,
+        basis,
+    )
+
+def test_incomplete_lifo_cover_stays_untrusted_tag() -> None:
+    """Partial layer cover must not promote — soft LIFO only."""
+    trades = [
+        {"timestamp": "2026-09-01T00:00:00Z", "side": "BUY", "qty": 1.0, "entry_price": 10.0},
+    ]
+    px, basis = average_cost_from_trades(trades, expected_qty=5.0)
+    # 1.0 covers only 20% of 5.0 → incomplete
+    assert basis in ("ledger_lifo_exchange_qty", "ledger_exchange_qty_mismatch"), basis
+    if basis == "ledger_lifo_exchange_qty":
+        assert px is not None
+
+
 if __name__ == "__main__":
     test_sell_without_exit_price_reduces_layers()
     test_flat_ledger_with_exchange_qty_refuses_last_buy()
     test_qty_mismatch_refuses_invented_last_buy()
     test_matched_avg_cost_ok()
     test_fresh_lot_amid_ghost_layers_trusted()
+    test_dual_peak_remainder_full_cover_promotes_trusted()
+    test_incomplete_lifo_cover_stays_untrusted_tag()
     print("position cost basis sell qty isolation PASS")

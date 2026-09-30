@@ -307,7 +307,11 @@ def render_ab_card(payload: Dict[str, Any]) -> str:
         f"Jaccard={cmp_.get('jaccard')} · judged={((payload.get('judge_stats') or {}).get('judged'))}",
         "",
         f"**Auto mark (heuristic, not Brad):** `{rel.get('auto_mark')}` — {rel.get('auto_why')}",
-        f"**Your mark:** reply `dose ab b_better` / `a_better` / `mixed` (optional)",
+        (
+            f"**Brad mark:** `{rel.get('brad_mark')}`"
+            if rel.get("brad_mark")
+            else "**Your mark:** reply `dose ab b_better` / `a_better` / `mixed` (optional)"
+        ),
         "",
         "## A — published (live TG)",
     ]
@@ -378,7 +382,10 @@ def format_tg_card(payload: Dict[str, Any]) -> str:
         for n in notes:
             lines.append(f"  · {n}")
     lines.append("")
-    lines.append("Mark: dose ab b_better | a_better | mixed")
+    if rel.get("brad_mark"):
+        lines.append(f"Brad mark: `{rel.get('brad_mark')}`")
+    else:
+        lines.append("Mark: dose ab b_better | a_better | mixed")
     return "\n".join(lines)
 
 
@@ -529,3 +536,100 @@ def run_locked_ab(
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     return payload
+
+
+def record_brad_mark(
+    mark: str,
+    *,
+    latest_path: Optional[Path] = None,
+    history_path: Optional[Path] = None,
+    card_path: Optional[Path] = None,
+    source: str = "operator_chat",
+) -> Dict[str, Any]:
+    """Write Brad gut mark onto today's locked A/B latest + matching history row.
+
+    Choices: b_better | a_better | mixed. Does not change live dose or trade paths.
+    """
+    allowed = {"b_better", "a_better", "mixed"}
+    m = str(mark or "").strip().lower()
+    m = m.replace("dose ab", "").replace("dose_ab", "").strip()
+    m = m.replace("-", "_").replace(" ", "_")
+    if m not in allowed:
+        return {
+            "ok": False,
+            "error": f"invalid_mark:{mark!r}",
+            "allowed": sorted(allowed),
+        }
+
+    latest_path = latest_path or DAILY_DOSE_JEV_AB_LATEST
+    history_path = history_path or DAILY_DOSE_JEV_AB_HISTORY
+    card_path = card_path or DAILY_DOSE_JEV_AB_CARD
+    if not latest_path.is_file():
+        return {"ok": False, "error": "no_latest_ab", "path": str(latest_path)}
+
+    payload = json.loads(latest_path.read_text(encoding="utf-8"))
+    rel = dict(payload.get("relevance") or {})
+    prev = rel.get("brad_mark")
+    now = datetime.now(timezone.utc).isoformat()
+    rel["brad_mark"] = m
+    rel["brad_mark_ts"] = now
+    rel["brad_mark_source"] = source
+    payload["relevance"] = rel
+    latest_path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+
+    dose_day = str(payload.get("dose_day") or "")
+    hist_updated = False
+    if history_path.is_file() and dose_day:
+        rows: List[Dict[str, Any]] = []
+        for line in history_path.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                continue
+        for i in range(len(rows) - 1, -1, -1):
+            if str(rows[i].get("dose_day") or "") == dose_day:
+                rows[i]["brad_mark"] = m
+                rows[i]["brad_mark_ts"] = now
+                rows[i]["brad_mark_source"] = source
+                hist_updated = True
+                break
+        if hist_updated:
+            history_path.write_text(
+                "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in rows),
+                encoding="utf-8",
+            )
+        else:
+            with history_path.open("a", encoding="utf-8") as f:
+                f.write(
+                    json.dumps(
+                        {
+                            "ts": now,
+                            "dose_day": dose_day,
+                            "brad_mark": m,
+                            "brad_mark_only": True,
+                            "source": source,
+                        },
+                        ensure_ascii=False,
+                    )
+                    + "\n"
+                )
+            hist_updated = True
+
+    try:
+        card_path.write_text(render_ab_card(payload), encoding="utf-8")
+    except Exception:
+        pass
+
+    return {
+        "ok": True,
+        "dose_day": dose_day,
+        "brad_mark": m,
+        "previous_brad_mark": prev,
+        "auto_mark": rel.get("auto_mark"),
+        "hist_updated": hist_updated,
+        "latest_path": str(latest_path),
+        "not_a_trade_signal": True,
+    }

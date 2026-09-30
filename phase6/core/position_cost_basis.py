@@ -121,17 +121,26 @@ def average_cost_from_trades(
                     and abs(q_last - expected_qty) / expected_qty <= 0.05
                 ):
                     return float(px_last), "ledger_avg_cost"
-                # Soft dash estimate via LIFO slice — tagged untrusted for live TP.
+                # Exchange qty fully covered by newest open layers (LIFO cover).
+                # This is real inventory math — promote to trusted avg cost so live TP
+                # can fire. Partial/incomplete cover stays untrusted (ghost risk).
                 cost = 0.0
                 need = expected_qty
                 for q, px in reversed(layers):
                     if need <= 1e-12:
                         break
+                    if px <= 0 or q <= 0:
+                        continue
                     take = min(need, q)
                     cost += take * px
                     need -= take
-                if need / expected_qty < 0.02:
-                    return cost / expected_qty, "ledger_lifo_exchange_qty"
+                if need / expected_qty < 0.02 and cost > 0:
+                    # Full cover from open layers — verified slice, not a phantom flag.
+                    return cost / expected_qty, "ledger_avg_cost"
+                # Incomplete cover — soft dash only, never live TP.
+                if expected_qty - need > 1e-12 and cost > 0:
+                    covered = expected_qty - need
+                    return cost / covered, "ledger_lifo_exchange_qty"
                 # Do NOT fall through to last_buy_ledger_drift — refuse.
                 return None, "ledger_exchange_qty_mismatch"
         cost_total = sum(q * px for q, px in layers)

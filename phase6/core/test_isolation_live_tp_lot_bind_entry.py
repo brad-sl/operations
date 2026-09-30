@@ -40,9 +40,12 @@ def test_entry_source_trusted_helper() -> None:
     assert entry_source_trusted_for_live("last_buy_flat") is False
     assert entry_source_trusted_for_live("ledger_flat_exchange_open") is False
     assert entry_source_trusted_for_live("ledger_lifo_exchange_qty") is False
+    assert entry_source_trusted_for_live("position.entry_price+ledger_lifo_exchange_qty") is False
     assert entry_source_trusted_for_live("ledger_last_buy") is False
     assert entry_source_trusted_for_live("unknown") is False
     assert entry_source_trusted_for_live("position.entry_price") is False
+    # Full-cover promote uses ledger_avg_cost (trusted)
+    assert entry_source_trusted_for_live("position.entry_price+ledger_avg_cost") is True
 
 
 def test_untrusted_entry_no_live_exit() -> None:

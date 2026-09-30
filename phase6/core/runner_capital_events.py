@@ -876,6 +876,12 @@ def load_buy_block_status(
     except Exception:
         pass
 
+    # NEEDLE-06: washout (RSI<40) after green TP — short block, never SL blocks
+    try:
+        out = _apply_post_tp_washout_early_release(out, now=now)
+    except Exception:
+        pass
+
     return out
 
 
@@ -988,6 +994,108 @@ def _apply_post_tp_structure_early_release(
         except Exception as e:
             logger.debug("[POST-TP] structure check fail %s: %s", pair, e)
             continue
+    for p in drop:
+        blocks.pop(p, None)
+    return blocks
+
+
+def _post_tp_washout_cfg() -> Dict[str, Any]:
+    """Brad 2026-09-29: after green TP, washout RSI may re-enter in 2–4h.
+
+    SL / process-bug stops keep the long block. Fail-open to enabled with
+    conservative floors if config missing.
+    """
+    defaults = {
+        "enabled": True,
+        "min_hours_floor": 2.0,
+        "rsi_wash_max": 40.0,
+    }
+    try:
+        from phase6.core.shadow_tp import load_exit_automation
+
+        tp = (load_exit_automation().get("take_profit") or {})
+        if tp.get("post_tp_washout_release_enabled") is not None:
+            defaults["enabled"] = bool(tp.get("post_tp_washout_release_enabled"))
+        if tp.get("post_tp_washout_min_hours_floor") is not None:
+            defaults["min_hours_floor"] = float(tp["post_tp_washout_min_hours_floor"])
+        if tp.get("post_tp_washout_rsi_max") is not None:
+            defaults["rsi_wash_max"] = float(tp["post_tp_washout_rsi_max"])
+    except Exception:
+        pass
+    return defaults
+
+
+def _load_rsi_map_for_washout() -> Dict[str, float]:
+    path = STATE_DIR / "rsi_cache.json"
+    if not path.is_file():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    blob = raw.get("rsi") if isinstance(raw, dict) else None
+    if not isinstance(blob, dict):
+        return {}
+    out: Dict[str, float] = {}
+    for k, v in blob.items():
+        pair = str(k).strip().upper()
+        val = v
+        if isinstance(v, dict):
+            val = v.get("rsi")
+        try:
+            out[pair] = float(val)
+        except (TypeError, ValueError):
+            continue
+    return out
+
+
+def _apply_post_tp_washout_early_release(
+    blocks: Dict[str, Dict[str, Any]],
+    *,
+    now: float,
+    rsi_map: Optional[Dict[str, float]] = None,
+) -> Dict[str, Dict[str, Any]]:
+    """Drop post_tp / lifecycle blocks when RSI is washed and min hours elapsed.
+
+    Never drops post_sl_rebuy_block / stop-sourced blocks.
+    """
+    cfg = _post_tp_washout_cfg()
+    if not cfg.get("enabled", True):
+        return blocks
+    floor_h = float(cfg.get("min_hours_floor") or 2.0)
+    rsi_max = float(cfg.get("rsi_wash_max") or 40.0)
+    rsi = rsi_map if rsi_map is not None else _load_rsi_map_for_washout()
+    drop: List[str] = []
+    for pair, meta in list(blocks.items()):
+        if not isinstance(meta, dict):
+            continue
+        reason = str(meta.get("reason") or "")
+        if reason not in ("post_tp_rebuy_block", "post_lifecycle_rebuy_block"):
+            continue
+        try:
+            bh = float(meta.get("block_hours") or 24.0)
+            left = float(meta.get("hours_remaining") or 0.0)
+            elapsed = max(0.0, bh - left)
+        except (TypeError, ValueError):
+            continue
+        if elapsed < floor_h:
+            continue
+        r = rsi.get(str(pair).upper())
+        if r is None:
+            continue
+        try:
+            rv = float(r)
+        except (TypeError, ValueError):
+            continue
+        if rv > rsi_max:
+            continue
+        drop.append(pair)
+        logger.info(
+            "[POST-TP] washout early-release %s rsi=%.1f elapsed_h=%.1f",
+            pair,
+            rv,
+            elapsed,
+        )
     for p in drop:
         blocks.pop(p, None)
     return blocks

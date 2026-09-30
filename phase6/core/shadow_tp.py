@@ -311,8 +311,12 @@ def resolve_entry(
             except (TypeError, ValueError):
                 pass
 
-    # Trusted state: enrich / recompute already stamped basis
+    # Trusted state: enrich / recompute already stamped basis.
+    # If stamp is untrusted (LIFO soft / last_buy / etc.), re-verify via ledger
+    # instead of freezing live TP forever on a label (Brad 2026-09-29).
     if position and position.get("entry_basis"):
+        basis_stamp = str(position.get("entry_basis") or "")
+        stamped_px = None
         for k in ("entry_price", "avg_entry", "cost_basis"):
             v = position.get(k)
             if v is None:
@@ -322,7 +326,16 @@ def resolve_entry(
             except (TypeError, ValueError):
                 continue
             if f > 0:
-                return f, f"position.{k}+{position.get('entry_basis')}"
+                stamped_px = f
+                src = f"position.{k}+{basis_stamp}"
+                if entry_source_trusted_for_live(src) or entry_source_trusted_for_live(
+                    basis_stamp
+                ):
+                    return f, src
+                break
+        # fall through to ledger verify when stamp untrusted
+    else:
+        stamped_px = None
 
     try:
         from phase6.core.position_cost_basis import average_cost_for_pair
@@ -331,12 +344,21 @@ def resolve_entry(
         untrusted_tag: Optional[str] = None
         entry, basis = average_cost_for_pair(TradeLedger(), pair, expected_qty=q)
         if entry and float(entry) > 0:
-            return float(entry), str(basis or "ledger_lot")
+            b = str(basis or "ledger_lot")
+            # Prefer verified ledger over stale untrusted position stamp
+            if entry_source_trusted_for_live(b) or "avg_cost" in b.lower():
+                return float(entry), b
+            # still return ledger figure for r math; trust gate uses source tag
+            return float(entry), b
         if basis and str(basis) not in ("unknown",):
             untrusted_tag = str(basis)
     except Exception as e:
         logger.debug("shadow_tp lot basis %s: %s", pair, e)
         untrusted_tag = None
+
+    # Last resort: untrusted stamp still usable for shadow display / r only
+    if stamped_px and stamped_px > 0 and position and position.get("entry_basis"):
+        return stamped_px, f"position.entry_price+{position.get('entry_basis')}"
 
     if position:
         for k in ("entry_price", "avg_entry", "cost_basis", "basis"):

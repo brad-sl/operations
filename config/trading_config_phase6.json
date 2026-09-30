@@ -36,7 +36,7 @@
     "multi_tenant_enabled": false,
     "deploy_min_rsi": 30.0,
     "allocator": {
-      "min_move_usd": 50.0,
+      "min_move_usd": 25.0,
       "min_score_delta": 0.05,
       "cooldown_hours": 6.0,
       "dd_threshold_pct": 0.08,
@@ -55,14 +55,14 @@
   "risk_management": {
     "max_daily_loss_pct": 0.02,
     "var_threshold": 0.015,
-    "stop_loss_pct": 0.03,
+    "stop_loss_pct": 0.08,
     "take_profit_pct": null,
     "min_reserve_usd": 50.0,
     "deploy_pct": 0.72,
     "adaptive_sl": true,
-    "sl_base_pct": 0.03,
-    "sl_min_pct": 0.015,
-    "sl_max_pct": 0.05,
+    "sl_base_pct": 0.08,
+    "sl_min_pct": 0.06,
+    "sl_max_pct": 0.12,
     "sl_attach_safety_ratio": 0.98,
     "dust_sweep_after_sl": true,
     "dust_sweep_max_usd": 25.0,
@@ -118,6 +118,10 @@
       "graduate_min_rt": 2,
       "graduate_on_tp": true,
       "note": "No-history / ungraduated ADDs: tryout size + max 6 concurrent first-fill seats (Brad GO 2026-09-26 funnel headroom). min_move 25 matches $25 tryout shell. Not a hard block."
+    },
+    "needle04_apply": {
+      "ts": "2026-09-30T05:05:00Z",
+      "note": "Brad GO live knobs NEEDLE-04: 8% floor vs 0.9% taker. sl_min 6% so adaptive cannot return 3%."
     }
   },
   "preserve_mode": {
@@ -253,7 +257,7 @@
     "max_pair_weight_recovery": 0.35,
     "max_single_share_of_free_cash": 0.5,
     "enforce_rebalance_cap": true,
-    "min_move_usd": 50.0,
+    "min_move_usd": 25.0,
     "sentiment_fade": {
       "mode": "shadow",
       "fade_delta": 0.4,
@@ -296,7 +300,7 @@
     "allow_add_phase_ge": false,
     "add_phase_ge_size_frac": 0.0,
     "min_holding_usd_for_add": 25.0,
-    "min_move_usd": 50.0,
+    "min_move_usd": 25.0,
     "fail_open_on_missing_candles": false,
     "ext_rsi_min_from_low_10d": 0.12,
     "exhaust_min_from_low_10d": 0.1
@@ -365,7 +369,7 @@
       "extension_partial_require_mark_ge_entry": true,
       "dual_peak_max_trims_per_lot": 1,
       "dual_peak_rearm_on_new_peak": true,
-      "note": "P0-20260826 no red half-trim + max 1 dual/lot. P1-20260928 meat gate: min_peak=min_green=tp_arm 4% — no 0R heat-death half-trim (LINK flat dual-peak lesson)."
+      "note": "P0-20260826 no red half-trim + max 1 dual/lot. P1-20260928 meat gate: min_peak=min_green=tp_arm 4% \u2014 no 0R heat-death half-trim (LINK flat dual-peak lesson)."
     }
   },
   "entry_execution": {

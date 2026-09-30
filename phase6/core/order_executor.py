@@ -73,11 +73,13 @@ class OrderExecutor:
         config_dict: Optional[Dict[str, Any]] = None,
         force_market: bool = False,
         elevated_tape: bool = False,
+        skip_sl: bool = False,
     ) -> Dict[str, Any]:
         """Execute BUY. Default path remains market IOC.
 
         Limit-first only when entry_execution.limit_first.enabled AND mode=limit_first*
         (runtime_knobs / config). Default OFF. Brad Phase B: branch exists, live flag off.
+        skip_sl: Stage 3 core sleeve — do not attach 3% native SL/TP.
         """
         if self.shadow_mode:
             # Shadow: use snapshot price as sim entry (not live trading)
@@ -181,6 +183,19 @@ class OrderExecutor:
             except Exception as pe:
                 self.logger.debug("pilot gate skipped: %s", pe)
 
+        if skip_sl and (not use_limit or force_market):
+            return {
+                "success": False,
+                "error": "core_refuses_market",
+                "pair": pair,
+                "action": "BUY",
+                "side": "BUY",
+                "execution_style": "aborted_core_market",
+                "fill_status": "none",
+                "sl_attached": False,
+                "tp_attached": False,
+            }
+
         if use_limit and policy.elevated_tape_policy == "abort" and elevated_tape:
             self.logger.info(
                 "[EXEC BUY] limit_first aborted elevated tape for %s (C align)", pair
@@ -217,7 +232,7 @@ class OrderExecutor:
                 except Exception:
                     pass
             result = self._execute_limit_first_buy(
-                pair, usd_amount, policy=policy, tp_pct=tp_pct
+                pair, usd_amount, policy=policy, tp_pct=tp_pct, skip_sl=skip_sl
             )
             if _record_pilot:
                 try:
@@ -261,7 +276,12 @@ class OrderExecutor:
             result = self._retry_with_backoff(_do_buy)
             if result.get("success"):
                 result = self._finalize_buy_fill(
-                    pair, usd_amount, result, tp_pct=tp_pct, execution_style="market_ioc"
+                    pair,
+                    usd_amount,
+                    result,
+                    tp_pct=tp_pct,
+                    execution_style="market_ioc",
+                    skip_sl=skip_sl,
                 )
             else:
                 result["sl_attached"] = False
@@ -304,6 +324,7 @@ class OrderExecutor:
         *,
         policy: Any,
         tp_pct: float = None,
+        skip_sl: bool = False,
     ) -> Dict[str, Any]:
         """Limit post-only rest → wait → cancel residual. No market fallback (Brad)."""
         from phase6.core.limit_first_buy import (
@@ -400,7 +421,7 @@ class OrderExecutor:
             # Brad 2026-09-04: tryout-size (or full market_fallback) → market IOC
             from phase6.core.limit_first_buy import should_market_fallback_on_unfilled
 
-            if should_market_fallback_on_unfilled(policy, usd_amount):
+            if (not skip_sl) and should_market_fallback_on_unfilled(policy, usd_amount):
                 self.logger.info(
                     "[LIMIT BUY] unfilled → market fallback %s $%.2f "
                     "(fallback=%s max_tryout=$%.2f)",
@@ -421,6 +442,7 @@ class OrderExecutor:
                         mkt,
                         tp_pct=tp_pct,
                         execution_style="limit_then_market_fallback",
+                        skip_sl=skip_sl,
                     )
                     result["limit_order_id"] = order_id
                     result["residual_cancelled"] = True
@@ -473,6 +495,7 @@ class OrderExecutor:
             execution_style=style,
             prefilled_entry=avg,
             prefilled_size=filled,
+            skip_sl=skip_sl,
         )
         result["fill_status"] = "partial" if filled + 1e-12 < base else "full"
         result["liquidity"] = "M"  # post_only intent; fee audit confirms later
@@ -488,6 +511,7 @@ class OrderExecutor:
         execution_style: str = "market_ioc",
         prefilled_entry: float = 0.0,
         prefilled_size: float = 0.0,
+        skip_sl: bool = False,
     ) -> Dict[str, Any]:
         """Shared post-place fill + SL attach (ENG-S3 settlement ownership)."""
         order_id = result.get("order_id")
@@ -518,30 +542,70 @@ class OrderExecutor:
 
         sl_result = False
         tp_result = False
-        if self.stop_loss_manager and (entry_price > 0 or size > 0):
-            sl_result = self.stop_loss_manager.attach_stop_loss(
-                pair,
-                entry_price,
-                size,
-                anchor_entry=entry_price if entry_price > 0 else None,
-                order_id=order_id if order_id else None,
-                fresh_buy=True,
+        if skip_sl:
+            self.logger.info(
+                f"[SL/TP] skip_sl for {pair}: entry=${entry_price:.4f} size={size:.8f} "
+                f"style={execution_style} (core sleeve — no 3% SL)"
             )
-            effective_tp = tp_pct
-            if effective_tp is None:
-                try:
-                    from phase6.core.shadow_tp import effective_tp_pct_for_buy
-
-                    cfg = getattr(self.stop_loss_manager, "config", None) or {}
-                    if not isinstance(cfg, dict) or "take_profit" not in cfg:
-                        cfg = None
-                    effective_tp = effective_tp_pct_for_buy(cfg)
-                except Exception:
-                    effective_tp = None
-            if effective_tp and effective_tp > 0:
-                tp_result = self.stop_loss_manager.attach_take_profit(
-                    pair, entry_price, size, effective_tp
+        elif self.stop_loss_manager and (entry_price > 0 or size > 0):
+            defer_sl = False
+            try:
+                from phase6.core.same_session_sl_guard import (
+                    is_limit_first_style,
+                    record_limit_first_fill,
+                    should_defer_sl_attach,
                 )
+
+                if is_limit_first_style(execution_style):
+                    record_limit_first_fill(
+                        pair,
+                        entry_price=entry_price,
+                        size=size,
+                        order_id=str(order_id or "") if order_id else None,
+                        execution_style=str(execution_style or ""),
+                    )
+                    defer_sl, dreason, drem = should_defer_sl_attach(
+                        pair, execution_style=execution_style
+                    )
+                    if defer_sl:
+                        self.logger.info(
+                            "[SL/TP] NEEDLE-04 defer attach %s style=%s (%s, %.1fm left)",
+                            pair,
+                            execution_style,
+                            dreason,
+                            drem,
+                        )
+                        result["sl_deferred"] = True
+                        result["sl_defer_reason"] = dreason
+            except Exception as de:
+                self.logger.debug("same-session SL guard skipped: %s", de)
+                defer_sl = False
+            if not defer_sl:
+                sl_result = self.stop_loss_manager.attach_stop_loss(
+                    pair,
+                    entry_price,
+                    size,
+                    anchor_entry=entry_price if entry_price > 0 else None,
+                    order_id=order_id if order_id else None,
+                    fresh_buy=True,
+                )
+                effective_tp = tp_pct
+                if effective_tp is None:
+                    try:
+                        from phase6.core.shadow_tp import effective_tp_pct_for_buy
+
+                        cfg = getattr(self.stop_loss_manager, "config", None) or {}
+                        if not isinstance(cfg, dict) or "take_profit" not in cfg:
+                            cfg = None
+                        effective_tp = effective_tp_pct_for_buy(cfg)
+                    except Exception:
+                        effective_tp = None
+                if effective_tp and effective_tp > 0:
+                    tp_result = self.stop_loss_manager.attach_take_profit(
+                        pair, entry_price, size, effective_tp
+                    )
+            else:
+                effective_tp = None
             self.logger.info(
                 f"[SL/TP] Post-buy for {pair}: entry=${entry_price:.4f} size={size:.8f} "
                 f"SL={sl_result} TP={tp_result} tp_pct={effective_tp} style={execution_style}"

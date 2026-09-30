@@ -149,6 +149,43 @@ class StopLossManager:
         except Exception as pe:
             logger.debug("[SL] preserve attach skip check failed: %s", pe)
 
+        # NEEDLE-03 Stage 3 core sleeve: do not attach 3% native SL
+        try:
+            from phase6.core.paths import PROJECT_ROOT
+
+            skip_path = PROJECT_ROOT / "data" / "state" / "core_skip_sl_pairs.json"
+            if skip_path.exists():
+                import json as _json
+
+                raw = _json.loads(skip_path.read_text())
+                skip = {str(x).upper() for x in (raw.get("pairs") or [])}
+                if str(pair or "").upper() in skip:
+                    pct_chk = sl_pct
+                    if pct_chk is None:
+                        pct_chk = self.get_sl_pct(pair) if hasattr(self, "get_sl_pct") else self.default_sl_pct
+                    if float(pct_chk or 0) < 0.06:
+                        logger.info("[SL] SKIP attach on core sleeve %s (NEEDLE-03 tight SL %.1f%%)", pair, 100*float(pct_chk or 0))
+                        return False
+                    logger.info("[SL] core sleeve %s allowing structure SL %.1f%% (NEEDLE-04 apply)", pair, 100*float(pct_chk))
+        except Exception as ce:
+            logger.debug("[SL] core skip check failed: %s", ce)
+
+        # NEEDLE-04: do not attach inside limit_first same-session hold
+        try:
+            from phase6.core.same_session_sl_guard import should_defer_sl_attach
+
+            defer, dreason, drem = should_defer_sl_attach(pair)
+            if defer:
+                logger.info(
+                    "[SL] SKIP attach %s same-session hold (%s, %.1fm left)",
+                    pair,
+                    dreason,
+                    drem,
+                )
+                return False
+        except Exception as se:
+            logger.debug("[SL] same-session guard check failed: %s", se)
+
         # Pre-flight settlement poll (ANALYST-20260705-005 / 007)
         from phase6.core.sl_preflight import (
             settlement_poll_params,

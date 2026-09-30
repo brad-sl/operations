@@ -189,6 +189,72 @@ class TradeLedger:
         with open(csv_path, "a") as f:
             f.write(line)
 
+        try:
+            self._dual_write_phase6_db(trade)
+        except Exception:
+            pass
+
+    def _phase6_db_path(self) -> Path:
+        return Path(self.base_dir) / "data" / "phase6.db"
+
+    def _dual_write_phase6_db(self, trade: Dict[str, Any]) -> None:
+        """NEEDLE-10: keep phase6.db trades in lockstep with jsonl (deduped)."""
+        db = self._phase6_db_path()
+        if not db.exists():
+            return
+        import sqlite3
+
+        ts = str(trade.get("timestamp") or "")
+        pair = str(trade.get("pair") or "")
+        side = str(trade.get("side") or "").upper()
+        oid = str(trade.get("order_id") or "").strip()
+        source = f"ledger_dual:{oid[:16]}" if oid else "ledger_dual"
+        qty = trade.get("qty") or trade.get("amount") or 0
+        px = (
+            trade.get("average_filled_price")
+            or trade.get("entry_price")
+            or trade.get("exit_price")
+            or 0
+        )
+        pnl = trade.get("pnl")
+        pnl_pct = trade.get("pnl_pct")
+        exit_px = trade.get("exit_price")
+        status = str(trade.get("exchange_status") or trade.get("status") or "FILLED")
+        con = sqlite3.connect(str(db), timeout=10)
+        try:
+            if oid:
+                row = con.execute(
+                    "SELECT 1 FROM trades WHERE source=? LIMIT 1", (source,)
+                ).fetchone()
+                if row:
+                    return
+            else:
+                row = con.execute(
+                    "SELECT 1 FROM trades WHERE ts=? AND pair=? AND side=? AND source LIKE 'ledger_dual%' LIMIT 1",
+                    (ts, pair, side),
+                ).fetchone()
+                if row:
+                    return
+            con.execute(
+                """INSERT INTO trades (ts, pair, side, amount, price, pnl, status, exit_price, pnl_pct, source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    ts,
+                    pair,
+                    side,
+                    float(qty or 0),
+                    float(px or 0) if px not in (None, "") else None,
+                    None if pnl in (None, "") else float(pnl),
+                    status,
+                    None if exit_px in (None, "") else float(exit_px),
+                    None if pnl_pct in (None, "") else float(pnl_pct),
+                    source,
+                ),
+            )
+            con.commit()
+        finally:
+            con.close()
+
     def _order_id_already_logged(self, order_id: str, lookback: int = 500) -> bool:
         """True if order_id already appears in the recent JSONL tail."""
         oid = str(order_id or "").strip()

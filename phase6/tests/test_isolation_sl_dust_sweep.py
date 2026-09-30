@@ -148,6 +148,8 @@ def test_sweep_orphan_refuses_full_tryout_bag():
     assert results[0].get("skip_reason") in {
         "above_max_usd_full_bag",
         "held_under_stop_not_dust",
+        "needle07_full_bag",
+        "held_under_stop_not_dust",
         "above_max_usd",
     }, results[0]
     print("[ORPHAN] full tryout bag refused OK")

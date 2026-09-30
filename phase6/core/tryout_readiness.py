@@ -586,6 +586,20 @@ def build_live_tryout_readiness(*, write: bool = True) -> Dict[str, Any]:
                         pass
         if eng is None:
             eng = 0.0
+        # NEEDLE-02: RSI-door pair X overlay — latch then probe, never full-bag cache.
+        try:
+            from phase6.core.tryout_sent_latch import active_latch_for_pair
+
+            lat = active_latch_for_pair(p, floor=floor)
+            if lat and lat.get("cleared_sent") is not None:
+                eng = float(lat["cleared_sent"])
+            else:
+                probe = _read_json(PROJECT_ROOT / "data" / "state" / "rsi_event_x_probe_latest.json")
+                xs = (probe.get("x_scores") or {}).get(p) or {}
+                if xs.get("sentiment") is not None:
+                    eng = float(xs["sentiment"])
+        except Exception:
+            pass
         eng_map[p] = eng
 
         x_raw, x_pc = _pair_score(meta["x"], p)

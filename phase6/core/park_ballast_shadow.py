@@ -148,20 +148,30 @@ def estimate_basket_30d_ret_pct(
 
 
 def crypto_util_pct_from_live() -> Optional[float]:
+    """Risk util = non-stable non-PAXG MTM / equity.
+
+    USD+USDC+USDT are cash (powder/park). PAXG is preserve, not crypto risk.
+    Do NOT use (total - cash_usd): cash_usd is USD-only and treats USDC as crypto.
+    """
     live = _load_json(LIVE_STATE)
     try:
-        total = float(live.get("total_usd") or live.get("total_holdings_value") or 0)
-        cash = float(live.get("cash_usd") or 0)
+        total = float(live.get("total_usd") or 0)
         if total <= 0:
             return None
-        # crypto ≈ non-cash; crude
-        crypto = max(0.0, total - cash)
-        # subtract PAXG if listed in balances
-        bals = live.get("balances") or {}
-        if isinstance(bals, dict) and "PAXG" in bals:
-            # unknown px here; ignore small error
-            pass
-        return crypto / total
+        preserve = frozenset({"PAXG"})
+        crypto = 0.0
+        for p in live.get("positions") or []:
+            if not isinstance(p, dict):
+                continue
+            pair = str(p.get("pair") or p.get("product_id") or "")
+            base = pair.split("-")[0].upper() if pair else ""
+            if not base or base in STABLE or base in preserve:
+                continue
+            try:
+                crypto += float(p.get("value_usd") or 0)
+            except (TypeError, ValueError):
+                continue
+        return max(0.0, crypto) / total
     except Exception:
         return None
 

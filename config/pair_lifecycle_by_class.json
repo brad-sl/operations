@@ -1,0 +1,10 @@
+{
+  "schema": "pair_lifecycle_by_class_cfg_v1",
+  "measure_only": true,
+  "live_apply": false,
+  "lookback_days": 90,
+  "compare_min_n": 8,
+  "edge_min_n": 20,
+  "note": "Class×lifecycle measure board (Brad GO 2026-09-29). Soft-up door RTs feed this. No auto threshold tune. Extend class_map for new names; defaults cover basket/tryout core.",
+  "class_map": {}
+}

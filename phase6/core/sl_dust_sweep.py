@@ -34,6 +34,8 @@ DEFAULT_MAX_USD = 25.0
 # Orphan cycle path: true dust only. Tryout seats are $25–$75 — never auto-sweep those.
 # Incident 2026-09-23: LINK $25 full bag sold as dust_sweep_orphan under shared $50 cap.
 DEFAULT_ORPHAN_MAX_USD = 5.0
+# NEEDLE-07: even if orphan_max is loosened, never market-sell a real seat.
+BAG_NEVER_SWEEP_USD = 15.0
 DEFAULT_MIN_USD = 0.50
 DEFAULT_MAX_FRAC_OF_FILL = 0.06  # 2% buffer + slack
 STABLE = frozenset({"USD", "USDC", "USDT", "DAI", "EUR", "GBP"})
@@ -501,9 +503,24 @@ def sweep_orphan_dust(
         qty = bal["qty"] if bal["qty"] > 0 else float(c["amount"])
         # Hard refuse full tryout/seat bags even if config was loosened.
         # Prefer total wallet (avail+hold) so stop-held bags aren't "orphan dust".
+        # NEEDLE-07: never flatten a real bag (tryout $25 / core). Snapshot lie
+        # of "dust" is not enough if live total ≥ $15.
         total_usd = float(bal.get("usd_total") or 0.0)
         if total_usd <= 0:
             total_usd = usd
+        snap_usd = float(c.get("value_usd") or 0.0)
+        if total_usd >= BAG_NEVER_SWEEP_USD or usd >= BAG_NEVER_SWEEP_USD or snap_usd >= BAG_NEVER_SWEEP_USD:
+            results.append(
+                {
+                    "pair": pair,
+                    "success": False,
+                    "skipped": True,
+                    "skip_reason": "needle07_full_bag",
+                    "value_usd": max(total_usd, usd, snap_usd),
+                    "cap_usd": cap,
+                }
+            )
+            continue
         if total_usd > cap or usd > cap:
             results.append(
                 {

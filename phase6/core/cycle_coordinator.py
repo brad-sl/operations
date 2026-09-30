@@ -36,6 +36,16 @@ class CycleCoordinator:
                 [e.get("event_type") for e in new_capital_events],
             )
 
+        try:
+            from phase6.core.same_session_sl_guard import process_deferred_sl_attaches
+
+            slm = getattr(runner, "stop_loss_manager", None)
+            drained = process_deferred_sl_attaches(slm)
+            if drained:
+                logger.info("[CYCLE %s] deferred_sl=%s", cycle_num, drained)
+        except Exception as de:
+            logger.debug("[CYCLE] deferred SL drain skipped: %s", de)
+
         now = datetime.now()
         time_due = runner._should_rebalance(now)
         hybrid_due = False
@@ -43,6 +53,8 @@ class CycleCoordinator:
             hybrid_due = runner._evaluate_hybrid_rebalance()
         rebalance_needed = time_due or hybrid_due
         runner._update_price_history_and_calculate_rsi()
+        self._maybe_clip_unwind(runner)
+        self._maybe_rsi_event_x(runner)
 
         self._run_unified_evaluation(runner)
         if not rebalance_needed:
@@ -118,6 +130,46 @@ class CycleCoordinator:
         except Exception as exc:
             logger.debug("[PARK-PACKAGE] skipped: %s", exc)
 
+    def _maybe_clip_unwind(self, runner: Phase6Runner) -> None:
+        """NEEDLE-01: capped USDC→USD when USD is short of wave reserve."""
+        try:
+            from phase6.core.deploy_clip_unwind import maybe_cycle_clip_unwind
+
+            out = maybe_cycle_clip_unwind(runner)
+            if out.get("plan", {}).get("action") == "unwind":
+                logger.info(
+                    "[NEEDLE-01] unwind=$%s skipped=%s ok=%s reason=%s",
+                    (out.get("plan") or {}).get("unwind_usd"),
+                    out.get("skipped"),
+                    out.get("ok"),
+                    out.get("reason"),
+                )
+        except Exception as exc:
+            logger.debug("[NEEDLE-01] clip unwind skipped: %s", exc)
+
+    def _maybe_rsi_event_x(self, runner: Phase6Runner) -> None:
+        """NEEDLE-02 live floor: RSI wash → pair-only X. Budget-capped. No orders."""
+        try:
+            from phase6.core.rsi_event_x_probe import run_probe
+
+            spend = str(getattr(runner, "mode", "") or "") == "live"
+            result = run_probe(
+                dry_run=not spend,
+                spend_x=spend,
+                top_k=2,
+                floor=0.30,
+                rsi_max=40.0,
+            )
+            if result.get("spend_x_executed") or result.get("fetched"):
+                logger.info(
+                    "[NEEDLE-02] probe fetched=%s spend=%s %s",
+                    result.get("fetched"),
+                    result.get("spend_x_executed"),
+                    (result.get("plain_english") or "")[:180],
+                )
+        except Exception as exc:
+            logger.debug("[NEEDLE-02] rsi-event X skipped: %s", exc)
+
     def _maybe_tryout_readiness_board(self, runner: Phase6Runner) -> None:
         """PC-03: refresh tryout sleeve readiness board (floors SSOT, eng clock, can_buy) each cycle."""
         try:
@@ -130,6 +182,12 @@ class CycleCoordinator:
                     payload.get("eligible_tryout_pairs"),
                 )
             # drought is honest output; no log spam
+            try:
+                from phase6.core.needle08_ignition_rank import rank_from_scout_board
+
+                rank_from_scout_board(write=True)
+            except Exception:
+                pass
         except Exception as exc:
             logger.debug("[TRYOUT-READINESS] refresh skipped: %s", exc)
 

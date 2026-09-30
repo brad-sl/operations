@@ -13,7 +13,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from phase6.core.daily_dose_jev_ab import DoseAbConfig, run_locked_ab  # noqa: E402
+from phase6.core.daily_dose_jev_ab import (  # noqa: E402
+    DoseAbConfig,
+    record_brad_mark,
+    run_locked_ab,
+)
 from phase6.core.paths import (  # noqa: E402
     DAILY_DOSE_JEV_AB_CARD,
     DAILY_DOSE_JEV_AB_LATEST,
@@ -28,7 +32,17 @@ def main() -> int:
     ap.add_argument("--print-card", action="store_true")
     ap.add_argument("--print-tg", action="store_true", help="Short operator card (stdout)")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument(
+        "--brad-mark",
+        choices=["b_better", "a_better", "mixed"],
+        help="Record Brad gut mark on today's locked A/B (no re-judge)",
+    )
     args = ap.parse_args()
+
+    if args.brad_mark:
+        out = record_brad_mark(args.brad_mark, source="cli")
+        print(json.dumps(out, indent=2))
+        return 0 if out.get("ok") else 2
 
     cfg = DoseAbConfig(top_n=args.top, max_judge=args.max_judge, dry_run=args.dry_run)
     payload = run_locked_ab(cfg=cfg)

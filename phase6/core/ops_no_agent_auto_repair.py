@@ -191,7 +191,10 @@ def wrapper_needs_venv_pin(text: str, path: Path) -> bool:
             return True
         # has venv path — OK unless only in a comment
         return False
-    if re.search(r"exec python3 |PY=python3|PYTHON:-python3|#!/usr/bin/env python3", text):
+    # bare python (incl. "python " without 3, or python - << heredoc) for project scripts
+    if re.search(r"(?:^|[\s;])python(?:\s+[^/]|$|\s+-|\s*<<)", text, re.M):
+        return True
+    if re.search(r"exec python3 |^python3 |PY=python3|PYTHON:-python3|#!/usr/bin/env python3", text):
         return True
     if "source .venv" in text and re.search(r"\bpython3\b", text):
         return True

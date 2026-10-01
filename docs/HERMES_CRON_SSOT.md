@@ -1,6 +1,6 @@
 # Hermes cron SSOT (Phase 6 + host)
 
-**Updated:** 2026-09-09  
+**Updated:** 2026-10-01  
 **Law:** **Do not put Phase 6 / sentiment / X / Apify / runner monitors on Linux `crontab`.**  
 User crontab is comment-only. Backup: `~/.hermes/cron/linux-crontab.bak.20260813`.
 
@@ -60,6 +60,7 @@ daily-dose 08:00 ·
 | `phase6-rsi-event-x-tryout-shadow` `36a4ade79e1c` | RSI-wash + stale eng → top-2 would-query/tryout shadow · **07:20/11:20/15:20/19:20 PT** · **local only** (no TG) · **no orders / no paid X** |
 | `phase6-knife-filter-shadow` `5bd102bfd07e` | Luck ladder R1 knife vs wash arms CF · **07:30/19:30 PT** · **local only** (no TG — board is ATTENTION_ONLY / not daily-useful) · **no orders / no live block** |
 | `phase6-tryout-scale-up-live-approval` `229007957afb` | R5 live scale path **approval ping** · **09:40/15:40/21:40 PT** (after shadow :35) · TG **only if armed + n_planned>0** · 12h fingerprint dedupe · **plan only — never money** · wrapper `run_tryout_scale_up_live_approval.sh` |
+| `phase6-tryout-scale-window-board` `4f523c7d2efc` | Dead kindling **board ping** · **09:45/15:45/21:45 PT** (after scale-up :40) · TG **only if n_would_eject>0** · 12h fingerprint dedupe · **measure only — never money** · registry ghosts skipped · wrapper `run_tryout_scale_window_board.sh` · kill `data/state/tryout_scale_window_KILL` |
 | `phase6-promote-graduation-chart` `af423d285b52` | P2 promote funnel SVG + claim bar · **12:40 PT daily** (after pick-metrics) · TG short · dash `/api/promote-graduation` |
 | `phase6-regime-arm-switch-metrics` `5036cfdbc289` | P3 flip success join · after switch cron · TG short · dash `/api/regime-arm-metrics` · claim OFF until N |
 | `phase6-regime-climate-weather` `2c2a52981860` | Climate vs weather multi-horizon + dwell · **07:50 PT daily** · local crumbs · measure-only · never flips REGIME-CASH · plan `docs/plans/2026-09-21-regime-climate-weather-boundaries.md` |

@@ -108,6 +108,19 @@ class TestRegistryClose(unittest.TestCase):
         self.assertEqual(len(c), 1)
         self.assertEqual(c[0]["cron_name"], "phase6-x")
 
+    def test_bash_bare_python_no3_needs_pin(self):
+        # Covers goldilocks-style bare "python " (not python3) + heredoc python
+        text = """#!/usr/bin/env bash
+cd /x
+{
+  python scripts/phase6/run_foo.py
+} >> log 2>&1
+python - <<'PY' >> log
+print(1)
+PY
+"""
+        self.assertTrue(m.wrapper_needs_venv_pin(text, Path("/tmp/fake.sh")))
+
 
 if __name__ == "__main__":
     unittest.main()

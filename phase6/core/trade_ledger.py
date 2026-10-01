@@ -7,12 +7,15 @@ Persistent trade logging (JSONL + daily CSV)
 See docs/DATA_FLOW_AND_LOCATIONS.md and phase6/core/paths.py for paths and rules."""
 
 import json
+import logging
 from datetime import datetime, date, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .context import AccountContext
+
+logger = logging.getLogger(__name__)
 
 
 def _utc_iso_z(dt: Optional[datetime] = None) -> str:
@@ -151,6 +154,69 @@ class TradeLedger:
                     trade["indicators_at_trade"] = indicators_for_trade_pair(str(pair))
                 except Exception:
                     pass
+
+        # Tryout exit taxonomy on every SELL (CLOSED_* class for scoreboards)
+        try:
+            from phase6.core.tryout_exit_taxonomy import stamp_exit_taxonomy
+
+            trade = stamp_exit_taxonomy(trade)
+        except Exception as e:
+            # TL-P1-SWALLOW: never silent — stamp failure still logs trade
+            logger.warning("tryout exit taxonomy stamp failed pair=%s: %s", pair, e)
+            trade.setdefault("exit_taxonomy_error", str(e))
+
+        # On SELL: close tryout open-lot registry + dwell terminal (best-effort, logged)
+        try:
+            side_u = str(trade.get("side") or "").upper()
+            if side_u == "SELL" and pair:
+                try:
+                    from phase6.core.tryout_seat_ledger import close_tryout_lot
+
+                    close_res = close_tryout_lot(
+                        str(pair),
+                        exit_class=trade.get("exit_class"),
+                        reason=str(
+                            trade.get("reason")
+                            or trade.get("exit_reason")
+                            or trade.get("signal_source")
+                            or ""
+                        ),
+                    )
+                    if isinstance(close_res, dict) and not close_res.get("ok", True):
+                        logger.warning(
+                            "close_tryout_lot not ok pair=%s res=%s", pair, close_res
+                        )
+                        trade["tryout_lot_close"] = close_res
+                    else:
+                        trade["tryout_lot_close"] = (
+                            close_res if isinstance(close_res, dict) else {"ok": True}
+                        )
+                except Exception as e:
+                    logger.warning("close_tryout_lot failed pair=%s: %s", pair, e)
+                    trade["tryout_lot_close_error"] = str(e)
+                try:
+                    from phase6.core.pair_funnel_dwell import on_tryout_exit
+
+                    on_tryout_exit(
+                        str(pair),
+                        exit_reason=str(
+                            trade.get("reason")
+                            or trade.get("exit_reason")
+                            or trade.get("signal_source")
+                            or ""
+                        ),
+                        meta={
+                            "exit_class": trade.get("exit_class"),
+                            "order_id": trade.get("order_id"),
+                            "pnl": trade.get("pnl"),
+                            "hook_source": "trade_ledger",
+                        },
+                    )
+                except Exception as e:
+                    logger.warning("on_tryout_exit failed pair=%s: %s", pair, e)
+                    trade["tryout_dwell_exit_error"] = str(e)
+        except Exception as e:
+            logger.warning("tryout SELL post-hooks failed pair=%s: %s", pair, e)
 
         # Write full record (with possible influence_stack, regime, per-signal details) to JSONL
         with open(self.jsonl_path, "a") as f:

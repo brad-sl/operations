@@ -45,6 +45,7 @@ APPROVAL_SEEN_PATH = STATE_DIR / "tryout_scale_up_live_approval_seen.json"
 APPROVAL_DEDUPE_HOURS = 12.0
 
 # Safety defaults — tighter than shadow band; never exceed shadow step
+# Grow honesty: ONE mid-flight kindling step per lot forever (no pyramid cosplay).
 LIVE_SAFETY: Dict[str, Any] = {
     "max_steps_per_utc_day": 1,
     "max_usd_per_utc_day": 50.0,
@@ -52,6 +53,8 @@ LIVE_SAFETY: Dict[str, Any] = {
     "min_step_usd": 15.0,
     "require_cf_bar": True,
     "allow_pairs": None,  # None = any would_scale; or list pin
+    "one_step_per_lot": True,  # hard: live_scaled lot never plans another step
+    "max_total_after_step_usd_hard": 100.0,  # shell+one step ceiling
 }
 
 
@@ -359,7 +362,11 @@ def plan_live_steps(
 
     max_step = min(_f(c.get("step_usd"), 25.0), _f(safety.get("max_step_usd"), 25.0))
     min_step = _f(safety.get("min_step_usd"), 15.0)
-    max_total = _f(c.get("max_total_after_step_usd"), 100.0)
+    max_total = min(
+        _f(c.get("max_total_after_step_usd"), 100.0),
+        _f(safety.get("max_total_after_step_usd_hard"), 100.0),
+    )
+    one_step = bool(safety.get("one_step_per_lot", True))
     allow = safety.get("allow_pairs")
     allow_set = None
     if isinstance(allow, (list, tuple, set)):
@@ -427,6 +434,13 @@ def plan_live_steps(
             meta = lots[pair] if isinstance(lots[pair], dict) else {}
             if meta.get("live_scaled") or meta.get("status") == "live_open":
                 reasons.append("already_live_scaled_this_lot")
+            # Grow honesty: refuse second step even if flags drifted
+            if one_step and (
+                bool(meta.get("live_scaled"))
+                or int(meta.get("n_live_steps") or 0) >= 1
+            ):
+                if "already_live_scaled_this_lot" not in reasons:
+                    reasons.append("one_step_per_lot")
             # paper_open / paper_scaled: allow live plan (C seed) — do not block
         if not armed:
             reasons.append("live_apply_not_armed")

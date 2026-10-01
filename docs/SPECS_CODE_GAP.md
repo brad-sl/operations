@@ -1,8 +1,8 @@
 # Specs ↔ Code Gap Analysis (Phase 6 platform)
 
 **ID:** `P6-SPECS-CODE-GAP-20260807`  
-**Date:** 2026-08-07 · **addendum pointer:** 2026-08-31  
-**Status:** LIVING SNAPSHOT (not exhaustive line-by-line audit) — **§2 rows on global TP / park package / limit-first are stale; see addendum**  
+**Date:** 2026-08-07 · **addendum pointer:** 2026-10-01 (tryout B–G) · prior 2026-08-31  
+**Status:** LIVING SNAPSHOT (not exhaustive line-by-line audit) — **§2 rows on global TP / park package / limit-first are stale; see addenda**  
 **Companion:** [`docs/SPECS_INDEX.md`](SPECS_INDEX.md)  
 **Phase 4/5/6 missed-functionality review (2026-08-31):** [`reports/PHASE_456_MISSED_FUNCTIONALITY_REVIEW_2026-08-31.md`](../reports/PHASE_456_MISSED_FUNCTIONALITY_REVIEW_2026-08-31.md)  
 **Not the same as:** [`docs/research/BACKTEST_LIVE_GAP_MATRIX.md`](research/BACKTEST_LIVE_GAP_MATRIX.md) (sim path A/B vs live knobs for ANALYST-OPT)
@@ -16,6 +16,22 @@
 | Limit-first buys | (not listed) | **Phase D pilot ON** (caps 3/$300) |
 | `max_daily_loss` | (not flagged) | Config **loaded**; **no phase6/core enforcer** (legacy only). **PARKED 2026-08-31** (Brad) — CF weak; complexity > return. Honesty-only later optional. See `reports/MAX_DAILY_LOSS_CORR_BREAKER_CF.md` |
 | Correlation breaker | (not flagged) | Module exists; **not on live runner**. **PARKED 2026-08-31** (Brad) — dark/LEGACY; no promote. CF: `reports/MAX_DAILY_LOSS_CORR_BREAKER_CF.md` |
+
+### Addendum 2026-10-01 — tryout lifecycle B–G (process tax)
+
+| Spec / surface | Coded? | Live? | Gap type | Notes |
+|----------------|--------|-------|----------|-------|
+| Tryout process SSOT | Yes | Doc law | B | `docs/features/TRYOUT_LIFECYCLE_PROCESS.md` ACTIVE |
+| Exit taxonomy CLOSED_* | Yes | Stamp on SELL | B | `tryout_exit_taxonomy` + ledger hook |
+| Seat ledger read API | Yes | Signals + state | B | `tryout_seat_ledger`; reserve/release write still A |
+| Ghost purge open_lots | Yes | Auto on window eval + SELL close | B | ZEC purged 2026-10-01; archive jsonl |
+| Signals `·scale:` chip | Yes | Display | B | open/pending/live/dead/ghost |
+| Scale-window auto eject | Yes | **OFF** `live_apply=false` | C/D | Operator `--go` only until Brad arm |
+| Decision discipline | Yes | **Shadow** | D | No live flip this ship |
+| Grow one-step forever | Yes | Plan guards | B | `one_step_per_lot` + $100 hard total |
+| Soft-up single door_package | Partial | Soft-up still nested | A | Defer rewrite until door expiry 2026-10-06 |
+
+Conformance: `reports/TRYOUT_LIFECYCLE_BG_CONFORMANCE_2026-10-01.md`. Isolation: `scripts/phase6/test_isolation_tryout_lifecycle_bg.py`.
 
 ---
 

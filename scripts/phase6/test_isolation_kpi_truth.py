@@ -17,6 +17,8 @@ sys.path.insert(0, str(ROOT))
 from phase6.core.dashboard_serve_helpers import (
     compute_period_performance,
     fast_observability_metrics,
+    merge_ops_kpi_scalars,
+    ops_kpi_scalars_complete,
 )
 
 
@@ -144,10 +146,44 @@ def test_equity_trend_has_points_and_health():
     print("PASS: equity trend series + health label")
 
 
+def test_merge_ops_kpi_thin_poll_keeps_last_good():
+    """Thin concurrent /api/metrics (util/SL only) must not blank Accept/Rebal/Replay."""
+    full = {
+        "utilization": 0.32,
+        "proposal_acceptance": 0.0008,
+        "sl_success_rate": 1.0,
+        "churn": 4.4,
+        "rebalance_count": 22,
+        "recovery_attempts": 0,
+        "replay_match_rate": 1.0,
+    }
+    thin = {
+        "utilization": 0.3187,
+        "proposal_acceptance": None,
+        "sl_success_rate": 1.0,
+        "churn": 0,  # empty arch4, not real zero turnover
+        "rebalance_count": None,
+        "recovery_attempts": None,
+        "replay_match_rate": None,
+    }
+    assert ops_kpi_scalars_complete(full)
+    assert not ops_kpi_scalars_complete(thin)
+    merged = merge_ops_kpi_scalars(thin, full)
+    assert merged["utilization"] == 0.3187  # live util updates
+    assert merged["sl_success_rate"] == 1.0
+    assert merged["proposal_acceptance"] == 0.0008
+    assert merged["rebalance_count"] == 22
+    assert merged["replay_match_rate"] == 1.0
+    assert merged["churn"] == 4.4  # not wiped to 0
+    assert merged["recovery_attempts"] == 0
+    print("PASS: thin ops KPI poll merges last-good (no Accept/Rebal/Replay flash)")
+
+
 if __name__ == "__main__":
     test_period_n_a_for_missing_snapshot()
     test_util_from_live_holdings()
     test_sl_ok_from_positions_not_fake_zero()
     test_live_state_if_present()
     test_equity_trend_has_points_and_health()
+    test_merge_ops_kpi_thin_poll_keeps_last_good()
     print("ALL KPI TRUTH ISOLATION TESTS PASSED")

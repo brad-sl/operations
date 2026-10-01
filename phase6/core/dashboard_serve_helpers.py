@@ -3,10 +3,11 @@
 
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 
 def _parse_ts(ts: str) -> Optional[datetime]:
@@ -517,6 +518,64 @@ def win_ratio_from_positions(positions: list) -> float:
     return round(wins / len(trading), 3)
 
 
+# Ops KPI scalars that must not flash "--" / 0 when a thin poll misses DB overlay.
+OPS_KPI_SCALAR_KEYS = (
+    "utilization",
+    "proposal_acceptance",
+    "sl_success_rate",
+    "churn",
+    "rebalance_count",
+    "recovery_attempts",
+    "replay_match_rate",
+    "total_trades",
+    "win_rate",
+)
+
+
+def merge_ops_kpi_scalars(
+    current: Dict[str, Any] | None,
+    previous: Dict[str, Any] | None,
+) -> Dict[str, Any]:
+    """Fill null ops tiles from last-good; do not let a thin poll blank Accept/Rebal/Replay.
+
+    Under concurrent dashboard load, fast_observability sometimes misses DB overlay
+    (accept/rebal/replay None, churn 0 from empty arch4). UI treated that as a full
+    paint and wiped good tiles until a later full response (~30s). Merge last-good
+    so partial responses only update live fields (util/SL) and keep DB-backed tiles.
+    """
+    cur = dict(current or {})
+    prev = previous or {}
+    # Detect thin *before* filling nulls — missing DB overlay, not a real zero book.
+    thin = (
+        cur.get("proposal_acceptance") is None
+        or cur.get("rebalance_count") is None
+        or cur.get("replay_match_rate") is None
+    )
+    out = dict(cur)
+    for key in OPS_KPI_SCALAR_KEYS:
+        if out.get(key) is None and prev.get(key) is not None:
+            out[key] = prev[key]
+    # Thin path: churn 0 from empty arch4 is not real zero-turnover — keep last-good.
+    if (
+        thin
+        and (out.get("churn") is None or float(out.get("churn") or 0) == 0.0)
+        and prev.get("churn") is not None
+        and float(prev.get("churn") or 0) > 0
+    ):
+        out["churn"] = prev["churn"]
+    return out
+
+
+def ops_kpi_scalars_complete(metrics: Dict[str, Any] | None) -> bool:
+    """True when DB-backed ops tiles are present (not just live util/SL)."""
+    m = metrics or {}
+    return (
+        m.get("proposal_acceptance") is not None
+        or m.get("rebalance_count") is not None
+        or m.get("replay_match_rate") is not None
+    )
+
+
 def fast_observability_metrics(db_path: Path, live_state: dict, timeout: float = 0.4) -> Dict[str, Any]:
     """Lightweight SQL (no v_dashboard_metrics) + live_state arch4 overlay.
 
@@ -836,3 +895,215 @@ def recovery_policy_dashboard_summary() -> Dict[str, Any]:
     except Exception:
         return out
     return out
+
+
+def _iso_age_min(ts: Any, now: Optional[datetime] = None) -> Optional[float]:
+    """Minutes since ISO timestamp; None if unparsable."""
+    if ts is None:
+        return None
+    try:
+        s = str(ts).strip()
+        if not s:
+            return None
+        if s.endswith("Z"):
+            s = s[:-1] + "+00:00"
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        n = now or datetime.now(timezone.utc)
+        return round(max(0.0, (n - dt).total_seconds() / 60.0), 1)
+    except Exception:
+        return None
+
+
+def load_pair_signal_refresh_meta(pairs: Optional[List[str]] = None) -> Dict[str, Any]:
+    """Per-pair RSI/X refresh stamps for Signals popups (display only).
+
+    RSI: 15m cache batch timestamp (and per-pair when available).
+    Sentiment/X: paid X cache timestamp + optional RSI-event probe last spend.
+    Opportunistic path exists (rsi_event_x_probe) — spend only on wash+stale doors.
+    """
+    now = datetime.now(timezone.utc)
+    want = {str(p) for p in (pairs or []) if p} if pairs is not None else None
+    by_pair: Dict[str, Any] = {}
+
+    def _row(pair: str) -> Dict[str, Any]:
+        r = by_pair.get(pair)
+        if r is None:
+            r = {}
+            by_pair[pair] = r
+        return r
+
+    rsi_batch_ts = None
+    try:
+        raw = json.loads(Path("data/state/rsi_cache.json").read_text())
+        rsi_batch_ts = raw.get("timestamp") or raw.get("as_of")
+        rsi_block = raw.get("rsi") or {}
+        for pair, info in rsi_block.items():
+            if want is not None and pair not in want:
+                continue
+            row = _row(str(pair))
+            pts = None
+            if isinstance(info, dict):
+                pts = info.get("ts") or info.get("timestamp") or info.get("as_of")
+            row["rsi_as_of"] = pts or rsi_batch_ts
+            row["rsi_age_min"] = _iso_age_min(row["rsi_as_of"], now)
+            row["rsi_source"] = "rsi_cache.json"
+    except Exception:
+        pass
+
+    # Paid X per-pair stamps (live gate path when present)
+    try:
+        xc = json.loads(Path("data/state/x_sentiment_cache.json").read_text())
+        # cache may be {pair: {...}} or nested under scores
+        block = xc.get("scores") if isinstance(xc.get("scores"), dict) else xc
+        if isinstance(block, dict):
+            for pair, info in block.items():
+                if pair in ("timestamp", "as_of", "mode", "schema_version", "note"):
+                    continue
+                if want is not None and pair not in want:
+                    continue
+                if not isinstance(info, dict):
+                    continue
+                row = _row(str(pair))
+                xts = info.get("timestamp") or info.get("ts") or info.get("as_of")
+                if xts:
+                    row["x_as_of"] = xts
+                    row["x_age_min"] = _iso_age_min(xts, now)
+                    row["x_post_count"] = info.get("post_count")
+                    row["x_source"] = "x_sentiment_cache"
+    except Exception:
+        pass
+
+    # Sentiment cache batch (scorer path)
+    sent_batch_ts = None
+    try:
+        sc = json.loads(Path("data/state/sentiment_cache.json").read_text())
+        sent_batch_ts = sc.get("timestamp") or sc.get("as_of")
+    except Exception:
+        pass
+
+    # Sent latch (composer hold after clear)
+    try:
+        latch = json.loads(Path("data/state/tryout_sent_latch.json").read_text())
+        pairs_l = latch.get("pairs") or {}
+        if isinstance(pairs_l, dict):
+            for pair, info in pairs_l.items():
+                if want is not None and pair not in want:
+                    continue
+                if not isinstance(info, dict):
+                    continue
+                row = _row(str(pair))
+                lat = info.get("latched_at") or info.get("as_of")
+                if lat:
+                    row["sent_latch_at"] = lat
+                    row["sent_latch_age_min"] = _iso_age_min(lat, now)
+                    row["sent_latch_source"] = info.get("source")
+    except Exception:
+        pass
+
+    # RSI-event opportunistic X probe — last spend per pair from events + latest
+    probe_as_of = None
+    probe_plain = None
+    probe_spend = None
+    try:
+        latest = json.loads(Path("data/state/rsi_event_x_probe_latest.json").read_text())
+        probe_as_of = latest.get("as_of")
+        probe_plain = latest.get("plain_english")
+        probe_spend = bool(latest.get("spend_x_executed"))
+        fetched = latest.get("fetched") or []
+        if isinstance(fetched, list):
+            for item in fetched:
+                pair = None
+                fts = probe_as_of
+                if isinstance(item, str):
+                    pair = item
+                elif isinstance(item, dict):
+                    pair = item.get("pair") or item.get("product_id")
+                    fts = item.get("as_of") or item.get("timestamp") or probe_as_of
+                if not pair:
+                    continue
+                if want is not None and pair not in want:
+                    continue
+                row = _row(str(pair))
+                row["rsi_event_x_as_of"] = fts
+                row["rsi_event_x_age_min"] = _iso_age_min(fts, now)
+                row["rsi_event_x_source"] = "rsi_event_x_probe"
+    except Exception:
+        pass
+
+    # Walk recent probe events for last successful pair spend (more durable than latest-only)
+    try:
+        evp = Path("data/state/rsi_event_x_probe_events.jsonl")
+        if evp.exists():
+            # last ~400 lines is enough
+            lines = evp.read_text(errors="replace").splitlines()[-400:]
+            last_spend: Dict[str, str] = {}
+            for line in lines:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    ev = json.loads(line)
+                except Exception:
+                    continue
+                if not ev.get("spend_x_executed") and not ev.get("fetched"):
+                    continue
+                ts = ev.get("as_of") or ev.get("timestamp")
+                fetched = ev.get("fetched") or []
+                pairs_hit = []
+                if isinstance(fetched, list):
+                    for item in fetched:
+                        if isinstance(item, str):
+                            pairs_hit.append(item)
+                        elif isinstance(item, dict):
+                            p = item.get("pair") or item.get("product_id")
+                            if p:
+                                pairs_hit.append(str(p))
+                # also latch_writes keys
+                lw = ev.get("latch_writes") or {}
+                if isinstance(lw, dict):
+                    pairs_hit.extend(str(k) for k in lw.keys())
+                for pair in pairs_hit:
+                    if want is not None and pair not in want:
+                        continue
+                    if ts:
+                        last_spend[pair] = str(ts)
+            for pair, ts in last_spend.items():
+                row = _row(pair)
+                # Prefer event spend stamp when newer / only source
+                prev = row.get("rsi_event_x_as_of")
+                if not prev or str(ts) >= str(prev):
+                    row["rsi_event_x_as_of"] = ts
+                    row["rsi_event_x_age_min"] = _iso_age_min(ts, now)
+                    row["rsi_event_x_source"] = "rsi_event_x_probe_events"
+    except Exception:
+        pass
+
+    # Fill sentiment_as_of fallback from batch if pair has no x stamp
+    for pair, row in list(by_pair.items()):
+        if row.get("x_as_of") is None and sent_batch_ts:
+            row["sentiment_batch_as_of"] = sent_batch_ts
+            row["sentiment_batch_age_min"] = _iso_age_min(sent_batch_ts, now)
+        if row.get("rsi_as_of") is None and rsi_batch_ts:
+            row["rsi_as_of"] = rsi_batch_ts
+            row["rsi_age_min"] = _iso_age_min(rsi_batch_ts, now)
+
+    return {
+        "by_pair": by_pair,
+        "rsi_batch_as_of": rsi_batch_ts,
+        "rsi_batch_age_min": _iso_age_min(rsi_batch_ts, now),
+        "sentiment_batch_as_of": sent_batch_ts,
+        "sentiment_batch_age_min": _iso_age_min(sent_batch_ts, now),
+        "rsi_event_probe": {
+            "as_of": probe_as_of,
+            "age_min": _iso_age_min(probe_as_of, now),
+            "spend_x_executed": probe_spend,
+            "plain_english": probe_plain,
+            "path": "rsi_event_x_probe",
+            "note": (
+                "Opportunistic X: RSI-wash + stale sentiment doors only "
+                "(not every pair every cycle). Idle when no trigger."
+            ),
+        },
+    }

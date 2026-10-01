@@ -50,7 +50,35 @@ def test_recovery_summary_shape():
     print("PASS recovery_summary", s.get("label"), "active=", s.get("active"))
 
 
+def test_pair_signal_refresh_meta_shape():
+    from phase6.core.dashboard_serve_helpers import load_pair_signal_refresh_meta
+
+    meta = load_pair_signal_refresh_meta(["BTC-USD", "LINK-USD", "TIA-USD"])
+    assert isinstance(meta, dict)
+    assert "by_pair" in meta
+    assert "rsi_event_probe" in meta
+    probe = meta.get("rsi_event_probe") or {}
+    assert probe.get("path") == "rsi_event_x_probe"
+    assert "note" in probe
+    bp = meta.get("by_pair") or {}
+    # At least one of basket pairs should carry an RSI or X stamp when caches exist
+    assert any(
+        (bp.get(p) or {}).get("rsi_as_of") or (bp.get(p) or {}).get("x_as_of")
+        for p in ("BTC-USD", "LINK-USD", "TIA-USD")
+    ), bp
+    print(
+        "PASS refresh_meta",
+        "rsi_batch=",
+        meta.get("rsi_batch_as_of"),
+        "probe_spend=",
+        probe.get("spend_x_executed"),
+        "n_pairs=",
+        len(bp),
+    )
+
+
 if __name__ == "__main__":
     test_short_gate_label_maps()
     test_recovery_summary_shape()
+    test_pair_signal_refresh_meta_shape()
     print("OK")

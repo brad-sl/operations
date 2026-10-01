@@ -1,0 +1,29 @@
+{
+  "schema": "tryout_scale_window_v1",
+  "enabled": true,
+  "live_apply": false,
+  "min_hold_hours": 2.0,
+  "max_hold_hours_no_scale": 36.0,
+  "eject_phase_ge": 3,
+  "require_not_live_scaled": true,
+  "eject_on_structure_break": true,
+  "eject_on_structure_unknown_after_h": 12.0,
+  "eject_on_dead_sent": true,
+  "dead_sent_max": 0.05,
+  "neg_sent_max": 0.0,
+  "min_shell_usd": 15.0,
+  "max_shell_usd": 100.0,
+  "post_eject_pair_cooloff_hours": 6.0,
+  "ballast_pairs": [
+    "BTC-USD",
+    "BTC-USDC",
+    "ETH-USD",
+    "ETH-USDC",
+    "PAXG-USD",
+    "PAXG-USDC",
+    "USDC-USD",
+    "USD-USD"
+  ],
+  "note": "Shell = option on kindling. Dead scale path → full exit. live_apply false until Brad arms auto; operator CLI --go still works (Brad GO C 2026-10-01).",
+  "updated": "2026-10-01"
+}

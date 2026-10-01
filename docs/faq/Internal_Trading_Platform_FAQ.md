@@ -171,12 +171,14 @@ Same audit labels 90d buys: heat rules are strict (few pure heat-chases). **proc
 
 ## Tryout happy path & plain-English glossary (staff)
 
-**Context:** Phase 6 recovery / quality_tryout / luck-ladder work (2026-09).  
-**Plans:** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`, `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`, `reports/LUCK_LADDER_STATUS_LATEST.md`  
+**Context:** Phase 6 recovery / quality_tryout / luck-ladder work (2026-09+).  
+**Process SSOT (bag state machine, kindling, scale-window, gaps):** [`docs/features/TRYOUT_LIFECYCLE_PROCESS.md`](../features/TRYOUT_LIFECYCLE_PROCESS.md) — **prefer this for tryout bag flow.**  
+**Plans (evidence, not live numbers):** `docs/plans/2026-09-15-luck-ladder-platform-refine.md`, `docs/plans/2026-09-15-rsi-event-x-tryout-shadow.md`, `reports/LUCK_LADDER_STATUS_LATEST.md`  
 **Full lifecycle (Fresh vs Takeover, Manage stages, coverage tags):** `docs/features/CRYPTO_PROCESS_LIFECYCLE.md`  
 **Trader voice one-pager:** `docs/features/CRYPTO_PROCESS_TRADER_VOICE.md`  
 **Takeover normalize playbook:** `docs/features/TAKEOVER_NORMALIZE_PLAYBOOK.md`  
-**Mode default:** measure/shadow first; **no** live knobs, auto-buy, or promote without Brad GO.
+**Mode default:** measure/shadow first; **no** live knobs, auto-buy, or promote without Brad GO.  
+**Live shell (verify config):** **$25** × **max 6** new seats/day + **6** concurrent open tryouts (not legacy $75×2).
 
 ### What is the “happy path” for a trading pair?
 
@@ -185,13 +187,15 @@ Same audit labels 90d buys: heat rules are strict (few pure heat-chases). **proc
 ```text
 eligible door
   → RSI wash (event path, not only 09:00/21:00 clock)
-  → knife OK (reclaim / no new low / not elev stand-down C)
-  → sent is real (≥ tryout floor when we decide)
-  → top 1–2 rank wins the $75 seat (when several flip)
-  → $75 limit-first tryout + SL attached (naked-bag fail-closed)
+  → knife OK (reclaim / no new low / not elev stand-down C)  [shadow until GO]
+  → sent is real (≥ tryout floor ~0.30 when we decide)
+  → top dual-clear rank wins the $25 shell (seat headroom 6/day)
+  → $25 limit-first tryout + SL attached (naked-bag fail-closed)
   → episode/lot id true (buy → protective → exit attributable)
+  → kindling path open (phase 1–2 + structure + R band) OR scale-window eject
+  → optional one +$25 kindling step (CLI GO) — shell is an option on scale, not a mini-bag
   → exit nets > fee + SL process tax (or controlled loss + cooloff)
-  → size up only on graduation packet
+  → size beyond kindling only on graduation packet + Brad GO
   → regime still allows (tryout overlay; membership swaps stay OFF)
   → promote only on evidence + Brad GO
 ```
@@ -203,7 +207,9 @@ eligible door
 | **Knife filter** | Reclaim / hold / not elevated-hot tape (R1 shadow) | Live block until GO |
 | **Sent real** | Fresh X (or latch) ≥ tryout floor (~0.30 sleeve) at decision | Aged eng ~0 with tile “BUY” |
 | **Rank** | Best qualified of top 1–2 doors | Deepest RSI only / random washed name |
-| **Entry** | Micro $75, max 2 seats, limit-first, SL on | Full sleeve, market-fee grind |
+| **Entry** | Micro **$25**, max **6** seats/day + 6 open, limit-first, SL on | Full sleeve, market-fee grind |
+| **Kindling** | One +$25 add if live_signal bar true + GO | Babysit dead phase-3 shell |
+| **Scale-window** | Dead kindling → full eject (board measure; auto OFF) | Ride to SL by default |
 | **Episode** | `bag_id` / lot ties lifecycle | Soup of unlinked fills |
 | **Exit** | TP/trail/time evidence beats ride-to-SL after fees (R2) | Hope fixed TP before SL |
 | **Size** | Step-up only after packet (R5) | One green tryout → full risk |
@@ -238,7 +244,7 @@ eligible door
 **Time-boxed extra tryout eligibility** under recovery armor — same **micro risk caps**, wider *who may be considered*.
 
 - Recovery mode is normally tight (ledger quality, tier rules, etc.).
-- **`basket_tryout_thaw`:** temporary window allowing listed **tier B** basket seats into the tryout funnel under **$75** and **max 2 seats**; hard blocks / missfire / ledger fails still bind.
+- **`basket_tryout_thaw`:** temporary window allowing listed basket seats into the tryout funnel under live shell caps (**$25** / seat counters); hard blocks / missfire / ledger fails still bind.
 - **Door** = allowed to *compete* for a tryout — **not** “we bought it.”
 - Thaw ≠ promote, ≠ full size, ≠ tier-C free-for-all. When the window expires, those seats can close again unless something else qualifies them.
 - Ops: check `config/regime_cash_policy.json` → `quality_tryout.v2.basket_tryout_thaw` (enabled + expiry). Rollback: disable thaw, rewrite scoreboard, restart runner (Brad GO).
@@ -261,7 +267,7 @@ eligible door
 
 | Term | One-liner |
 |------|-----------|
-| **Tryout** | Micro live sleeve ($75 / ≤2 seats) under quality gates — not full deployment |
+| **Tryout** | Micro live sleeve (**$25** / ≤6 seats day+open) under quality gates — timed option on kindling, not full deployment |
 | **Door / seat** | Eligibility to be considered for tryout capital |
 | **Empty funnel** | Structure or tiles look busy but **no** deployable buys (sent/armor/blocks) |
 | **Process tax** | Manufactured loss path (esp. SL leakage / fee grind), not “missing alpha” |
@@ -286,4 +292,4 @@ eligible door
 
 ---
 
-*Last updated: 2026-09-15 — tryout happy path + wash/sent/thaw/knife glossary; prior 2026-08-30 macro/fee sections retained*
+*Last updated: 2026-10-01 — link TRYOUT_LIFECYCLE_PROCESS SSOT; shell $25×6; kindling + scale-window in happy path. Prior 2026-09-15 glossary; 2026-08-30 macro/fee retained.*

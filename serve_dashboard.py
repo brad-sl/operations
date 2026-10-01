@@ -32,6 +32,8 @@ from phase6.core.dashboard_serve_helpers import (
     compute_equity_trend,
     win_ratio_from_positions,
     fast_observability_metrics,
+    merge_ops_kpi_scalars,
+    ops_kpi_scalars_complete,
 )
 
 PORT = 8502
@@ -42,6 +44,8 @@ LEDGER = TradeLedger()
 CACHE_PATH = BASE / "data/state/phase6_live_state.json"
 DB_PATH = BASE / "data/phase6.db"
 DB_READ_TIMEOUT = 0.35  # never block the HTTP server on runner WAL writes
+# Last full-ish /api/metrics scalars — thin concurrent polls must not blank Ops KPIs.
+_METRICS_LAST_GOOD: Dict[str, Any] | None = None
 
 
 def enrich_live_state(state: dict | None) -> dict | None:
@@ -875,7 +879,25 @@ def _metrics_from_live_state(reason: str = "", message: str = "", db_metrics: di
         elif metrics.get("sl_success_rate") is None and db_sl is not None:
             metrics["sl_success_rate"] = None  # unknown → UI shows --
 
-    status = "ok" if (db_metrics or utilization is not None) else "degraded"
+    # Sticky last-good for DB-backed tiles (Accept/Rebal/Replay/…). Thin polls under
+    # concurrent load return util/SL only and used to flash Ops KPIs back to "--".
+    global _METRICS_LAST_GOOD
+    metrics = merge_ops_kpi_scalars(metrics, _METRICS_LAST_GOOD)
+    if ops_kpi_scalars_complete(metrics) or _METRICS_LAST_GOOD is None:
+        # Always seed; upgrade whenever we have DB-backed completeness.
+        seed = {k: metrics.get(k) for k in (
+            "utilization", "proposal_acceptance", "sl_success_rate", "churn",
+            "rebalance_count", "recovery_attempts", "replay_match_rate",
+            "total_trades", "win_rate",
+        )}
+        if ops_kpi_scalars_complete(metrics):
+            _METRICS_LAST_GOOD = seed
+        elif _METRICS_LAST_GOOD is None:
+            _METRICS_LAST_GOOD = seed
+        else:
+            _METRICS_LAST_GOOD = merge_ops_kpi_scalars(seed, _METRICS_LAST_GOOD)
+
+    status = "ok" if (db_metrics or utilization is not None or ops_kpi_scalars_complete(metrics)) else "degraded"
     source = (
         "fast_observability + live holdings/SL"
         if reason == "cache_first_live"
@@ -949,8 +971,10 @@ def fetch_dashboard_metrics():
         st = load_live_state() or {}
         pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
         try:
-            fut = pool.submit(fast_observability_metrics, DB_PATH, st, 0.8)
-            fast = fut.result(timeout=1.2)
+            # Slightly longer under concurrent poll load so Accept/Rebal/Replay
+            # land more often; last-good merge still covers residual thin replies.
+            fut = pool.submit(fast_observability_metrics, DB_PATH, st, 1.5)
+            fast = fut.result(timeout=2.0)
         except Exception:
             fast = None
         finally:
@@ -1329,12 +1353,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             recovery_summary: Dict[str, Any] = {}
             try:
                 from phase6.core.dashboard_serve_helpers import (
+                    load_pair_signal_refresh_meta,
                     recovery_policy_dashboard_summary,
                     short_gate_label,
                 )
                 recovery_summary = recovery_policy_dashboard_summary() or {}
             except Exception:
                 recovery_summary = {}
+                load_pair_signal_refresh_meta = None  # type: ignore
                 try:
                     from phase6.core.dashboard_serve_helpers import short_gate_label
                 except Exception:
@@ -1342,12 +1368,50 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
             # Preserve config basket order (not A→Z cache union).
             pairs = list(basket)
+            refresh_meta: Dict[str, Any] = {}
+            refresh_by: Dict[str, Any] = {}
+            try:
+                if load_pair_signal_refresh_meta is not None:
+                    refresh_meta = load_pair_signal_refresh_meta(pairs) or {}
+                    refresh_by = refresh_meta.get("by_pair") or {}
+            except Exception:
+                refresh_meta = {}
+                refresh_by = {}
+            # Tryout scale_path chip (open/pending/live/dead/ghost) — display only
+            scale_path_by: Dict[str, Any] = {}
+            seat_ledger_summary: Dict[str, Any] = {}
+            try:
+                from phase6.core.tryout_seat_ledger import (
+                    build_seat_ledger,
+                    scale_path_for_pairs,
+                )
+
+                seat_ledger_summary = build_seat_ledger(
+                    pairs=pairs, persist=False, held_map=held_usd_map
+                ) or {}
+                scale_path_by = scale_path_for_pairs(
+                    pairs, ledger=seat_ledger_summary
+                ) or {}
+            except Exception as e:
+                # TL-P2-SIGNALS-EX: do not silent-none — log + surface error flag
+                import logging as _logging
+
+                _logging.getLogger(__name__).warning(
+                    "pair-signals tryout scale_path/seat_ledger failed: %s", e
+                )
+                scale_path_by = {}
+                seat_ledger_summary = {
+                    "error": str(e),
+                    "n_open_shells": None,
+                    "n_ghosts": None,
+                }
             rows = []
             blocked_pairs = []
             gated_pairs = []
             for pair in pairs:
                 r = rsi_map.get(pair) or {}
                 s = sent_map.get(pair) or {}
+                rf = refresh_by.get(pair) or {}
                 rsi_v = r.get("rsi")
                 if rsi_v is None:
                     rsi_v = 50.0
@@ -1580,6 +1644,44 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "add_block_reason": add_block_reason,
                     "target_pair_weight": (add_room_meta or {}).get("target_pair_weight"),
                     "min_move_usd": (add_room_meta or {}).get("min_move_usd"),
+                    # Refresh stamps (RSI cache + paid X + opportunistic RSI-event probe)
+                    "rsi_as_of": rf.get("rsi_as_of") or r.get("ts"),
+                    "rsi_age_min": rf.get("rsi_age_min"),
+                    "x_as_of": rf.get("x_as_of"),
+                    "x_age_min": rf.get("x_age_min"),
+                    "x_post_count": rf.get("x_post_count"),
+                    "sent_latch_at": rf.get("sent_latch_at"),
+                    "sent_latch_age_min": rf.get("sent_latch_age_min"),
+                    "sent_latch_source": rf.get("sent_latch_source"),
+                    "rsi_event_x_as_of": rf.get("rsi_event_x_as_of"),
+                    "rsi_event_x_age_min": rf.get("rsi_event_x_age_min"),
+                    "sentiment_batch_as_of": rf.get("sentiment_batch_as_of")
+                    or (sent_meta or {}).get("timestamp"),
+                    "sentiment_batch_age_min": rf.get("sentiment_batch_age_min"),
+                    # Tryout scale path (timed option on kindling) — not deploy
+                    "scale_path": (scale_path_by.get(pair) or {}).get("scale_path")
+                    or (scale_path_by.get(str(pair).upper()) or {}).get("scale_path")
+                    or "none",
+                    "scale_path_label": (scale_path_by.get(pair) or {}).get(
+                        "scale_path_label"
+                    )
+                    or (scale_path_by.get(str(pair).upper()) or {}).get(
+                        "scale_path_label"
+                    )
+                    or "none",
+                    "scale_live_scaled": bool(
+                        (scale_path_by.get(pair) or scale_path_by.get(str(pair).upper()) or {}).get(
+                            "live_scaled"
+                        )
+                    ),
+                    "scale_would_eject": bool(
+                        (scale_path_by.get(pair) or scale_path_by.get(str(pair).upper()) or {}).get(
+                            "would_eject"
+                        )
+                    ),
+                    "scale_lot_status": (
+                        scale_path_by.get(pair) or scale_path_by.get(str(pair).upper()) or {}
+                    ).get("lot_status"),
                 })
             ok = bool(rows)
             regime_label = None
@@ -1599,6 +1701,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "·block-max = held stack add-risk budget $0 / below min_move "
                 "(over target weight, zero risk budget, or gap). "
                 "·ready requires entry clear + not cooldown + not block-max. "
+                "scale: open|pending|live|dead|ghost = tryout kindling path "
+                "(dead = would scale-window eject; ghost = registry tax). "
                 "When X is aged-out, Sent. and Status *show* free/Adanos preview "
                 "(sentiment_show / status_show) with ·prev — live gates still use aged X. "
                 "Preview BUY is amber, never ·ready. "
@@ -1619,6 +1723,20 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 "add_room": add_room_meta,
                 "entry_floors": entry_floors,
                 "recovery": recovery_summary,
+                "tryout_seats": {
+                    "seats_today": seat_ledger_summary.get("seats_today"),
+                    "max_new_seats_per_day": seat_ledger_summary.get(
+                        "max_new_seats_per_day"
+                    ),
+                    "n_open_shells": seat_ledger_summary.get("n_open_shells"),
+                    "open_shells": seat_ledger_summary.get("open_shells") or [],
+                    "n_ghosts": seat_ledger_summary.get("n_ghosts"),
+                    "ghosts": seat_ledger_summary.get("ghosts") or [],
+                    "n_dead_kindling": seat_ledger_summary.get("n_dead_kindling"),
+                    "dead_kindling": seat_ledger_summary.get("dead_kindling") or [],
+                    "n_live_kindled": seat_ledger_summary.get("n_live_kindled"),
+                    "error": seat_ledger_summary.get("error"),
+                },
                 "regime": regime_label,
                 "rsi_source": rsi_src,
                 "sentiment_source": (sent_meta or {}).get("source"),
@@ -1631,6 +1749,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     "non_zero_raw": teed_bundle.get("non_zero_raw"),
                     "sources": teed_bundle.get("sources"),
                     "note": teed_bundle.get("note"),
+                },
+                "refresh": {
+                    "rsi_batch_as_of": refresh_meta.get("rsi_batch_as_of"),
+                    "rsi_batch_age_min": refresh_meta.get("rsi_batch_age_min"),
+                    "sentiment_batch_as_of": refresh_meta.get("sentiment_batch_as_of")
+                    or (sent_meta or {}).get("timestamp"),
+                    "sentiment_batch_age_min": refresh_meta.get("sentiment_batch_age_min"),
+                    "rsi_event_probe": refresh_meta.get("rsi_event_probe") or {},
                 },
                 "formula": formula,
                 "last_updated": datetime.now(timezone.utc).isoformat(),

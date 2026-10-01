@@ -6,9 +6,9 @@
 | **Status** | `DRAFT` · living coverage map (not a ship commit) |
 | **Class** | FEAT / PRODUCT VOICE |
 | **Owner** | Brad + platform |
-| **Updated** | 2026-09-19 |
+| **Updated** | 2026-10-01 |
 | **Supersedes for navigation** | Do **not** implement from `docs/FUNCTIONAL_SPEC.md` (LEGACY). Prefer this + `docs/SPECS_INDEX.md` + live config. |
-| **Companions** | [`CRYPTO_PROCESS_TRADER_VOICE.md`](./CRYPTO_PROCESS_TRADER_VOICE.md) (client copy) · [`TAKEOVER_NORMALIZE_PLAYBOOK.md`](./TAKEOVER_NORMALIZE_PLAYBOOK.md) (ops) · `docs/faq/Internal_Trading_Platform_FAQ.md` · `docs/plans/2026-09-11-platform-completeness.md` · `docs/plans/2026-09-15-luck-ladder-platform-refine.md` · `docs/SPECS_CODE_GAP.md` |
+| **Companions** | [`TRYOUT_LIFECYCLE_PROCESS.md`](./TRYOUT_LIFECYCLE_PROCESS.md) (**tryout bag** state machine / gaps) · [`CRYPTO_PROCESS_TRADER_VOICE.md`](./CRYPTO_PROCESS_TRADER_VOICE.md) (client copy) · [`TAKEOVER_NORMALIZE_PLAYBOOK.md`](./TAKEOVER_NORMALIZE_PLAYBOOK.md) (ops) · `docs/faq/Internal_Trading_Platform_FAQ.md` · `docs/plans/2026-09-11-platform-completeness.md` · `docs/plans/2026-09-15-luck-ladder-platform-refine.md` · `docs/SPECS_CODE_GAP.md` |
 
 ---
 
@@ -119,7 +119,7 @@ Learn runs **continuously** beside Care/Grow (not only at the end).
 | Mode detect Fresh vs Takeover | Scenario classification | **PARTIAL** |
 | Smart Park / powder / PAXG micro | Undeployed cash control arm | **LIVE** (micro; full package careful) |
 | Roster (basket seats) | Who *may* sit — not who is bought | **LIVE** (manual/dual_agree GO; auto swaps **OFF**) |
-| Initial deploy policy | Size shells, seats/day, tryout vs full | **LIVE** ($25×4 tryout shell as of 2026-09-19 door package; confirm live config) |
+| Initial deploy policy | Size shells, seats/day, tryout vs full | **LIVE** (**$25×6** seats/day + 6 open — confirm `quality_tryout`; bag flow → [`TRYOUT_LIFECYCLE_PROCESS.md`](./TRYOUT_LIFECYCLE_PROCESS.md)) |
 
 **Gap:** one operator “onboarding wizard” that chooses Fresh vs Takeover and shows plain-English consequences.
 
@@ -173,9 +173,11 @@ Learn runs **continuously** beside Care/Grow (not only at the end).
 | Mid-flight scale-up (R5) | One step add on tryout bag | **SHADOW** + **ARMED** live path |
 | Approval ping | TG when `n_planned > 0` | **LIVE** cron (plan only) |
 | Money apply | CLI `--apply --go --no-dry-run` | **ARMED** · not auto |
+| Scale-window eject | Dead kindling → full shell exit | **LIVE** measure board · operator `--go` · auto `live_apply` **OFF** |
 | CF / waive budget | Evidence bar or capped waive | **PARTIAL** (waive seeds path data ≠ edge) |
 
-**Rule:** Grow ≠ Open. Adds are Manage, not Provision.
+**Rule:** Grow ≠ Open. Adds are Manage, not Provision.  
+**Rule:** Shell without live scale path = inventory tax → scale-window (see tryout process SSOT).
 
 ---
 
@@ -276,7 +278,7 @@ Fresh path looked **much more profitable** in historical init comparisons. That 
 | Qualify doors | B+ | Tryout/thaw/sent live; knife still shadow |
 | Open tryout | B | Path works in windows; funnel reliability not solved |
 | Care exits | B− | Stack live; **process tax not won** |
-| Grow scale-up | B− | Armed + approval TG; money E2E unproven |
+| Grow scale-up | B− | Armed + approval TG; money E2E thin; scale-window measure shipped 2026-10-01 |
 | Rotate membership | B | GO tools; auto correctly OFF |
 | Learn / luck ladder | B | Rich shadows; promote still human |
 | Graduate/promote | C+ | Partial size/name; PC-08 gap |
@@ -304,8 +306,9 @@ Fresh path looked **much more profitable** in historical init comparisons. That 
 3. ~~Trader-facing one-pager~~ → **DONE draft:** [`CRYPTO_PROCESS_TRADER_VOICE.md`](./CRYPTO_PROCESS_TRADER_VOICE.md).  
 4. Productize **Close Down** one-call (shared Fresh/Takeover).  
 5. Implement playbook T0–T2 state artifact + naked-bag dashboard tile (see playbook §9).  
-6. Refresh FAQ happy path numbers ($25×4, door dates, R5 approval).  
-7. Only then: Scaling-1000 onboarding UX that offers Fresh (default) vs Takeover (advanced).
+6. ~~Refresh FAQ happy path numbers~~ → **partial 2026-10-01** ($25×6 + tryout process SSOT); keep door dates honest.  
+7. Execute tryout process **Staff-next** (ghost purge, scale chip, seat ledger) in [`TRYOUT_LIFECYCLE_PROCESS.md`](./TRYOUT_LIFECYCLE_PROCESS.md).  
+8. Only then: Scaling-1000 onboarding UX that offers Fresh (default) vs Takeover (advanced).
 
 ---
 
@@ -315,3 +318,4 @@ Fresh path looked **much more profitable** in historical init comparisons. That 
 |------|--------|
 | 2026-09-19 | Initial draft from Brad lifecycle outline + Fresh/Takeover onboarding concept; coverage tags vs live Phase 6. |
 | 2026-09-19 | Child specs: trader voice one-pager + Takeover normalize playbook; companions linked. |
+| 2026-10-01 | Link tryout bag process SSOT; shell $25×6; scale-window row under Grow. |

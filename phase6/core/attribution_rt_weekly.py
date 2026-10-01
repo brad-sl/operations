@@ -81,31 +81,57 @@ def _pnl(row: Mapping[str, Any]) -> float:
 
 
 def classify_exit_reason(row: Mapping[str, Any]) -> str:
-    reason = str(
-        row.get("reason") or row.get("exit_reason") or row.get("done_reason") or ""
-    ).strip()
-    r = reason.lower()
-    if not r:
-        return "blank_untagged"
-    if any(k in r for k in ("stop_loss", "stop-loss", "exchange_stop", "sl_hit", "sl_")):
-        return "sl_exchange"
-    if "dust_sweep" in r:
-        return "dust_sweep"
-    if any(k in r for k in ("take_profit", "fixed_tp", "trail")):
-        return "tp_profit"
-    if "dual_peak" in r or "lifecycle_dual_peak" in r:
-        return "dual_peak"
-    if "lifecycle_extension" in r or "extension_partial" in r:
-        return "lifecycle_partial"
-    if "hard_exit" in r or "regime_hard_exit" in r:
-        return "hard_exit"
-    if "rotation" in r:
-        return "rotation"
-    if "operator" in r or "manual" in r or "preserve_disarm" in r:
-        return "operator_manual"
-    if "test_cleanup" in r or "cleanup" in r:
-        return "test_cleanup"
-    return "other"
+    """Map exit reason → attribution bucket (delegates to tryout_exit_taxonomy SSOT)."""
+    try:
+        from phase6.core.tryout_exit_taxonomy import classify_exit_reason_attr
+
+        bucket = classify_exit_reason_attr(row)
+        # Preserve finer weekly labels where taxonomy collapses
+        reason = str(
+            row.get("reason") or row.get("exit_reason") or row.get("done_reason") or ""
+        ).strip().lower()
+        if bucket == "other":
+            if "lifecycle_extension" in reason or "extension_partial" in reason:
+                return "lifecycle_partial"
+            if "rotation" in reason:
+                return "rotation"
+            if "test_cleanup" in reason or "cleanup" in reason:
+                return "test_cleanup"
+            if "hard_exit" in reason or "regime_hard_exit" in reason:
+                return "hard_exit"
+        if bucket == "tp_profit" and (
+            "lifecycle_extension" in reason or "extension_partial" in reason
+        ):
+            return "lifecycle_partial"
+        return bucket
+    except Exception:
+        reason = str(
+            row.get("reason") or row.get("exit_reason") or row.get("done_reason") or ""
+        ).strip()
+        r = reason.lower()
+        if not r:
+            return "blank_untagged"
+        if any(k in r for k in ("stop_loss", "stop-loss", "exchange_stop", "sl_hit", "sl_")):
+            return "sl_exchange"
+        if "dust_sweep" in r:
+            return "dust_sweep"
+        if any(k in r for k in ("take_profit", "fixed_tp", "trail")):
+            return "tp_profit"
+        if "dual_peak" in r or "lifecycle_dual_peak" in r:
+            return "dual_peak"
+        if "lifecycle_extension" in r or "extension_partial" in r:
+            return "lifecycle_partial"
+        if "hard_exit" in r or "regime_hard_exit" in r:
+            return "hard_exit"
+        if "rotation" in r:
+            return "rotation"
+        if "operator" in r or "manual" in r or "preserve_disarm" in r:
+            return "operator_manual"
+        if "test_cleanup" in r or "cleanup" in r:
+            return "test_cleanup"
+        if "tryout_scale_window" in r or "scale_window_eject" in r:
+            return "scale_window_eject"
+        return "other"
 
 
 def is_process_tax(bucket: str) -> bool:

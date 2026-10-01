@@ -159,34 +159,44 @@ def is_terminal_stage(stage_id: str, cfg: Optional[Dict[str, Any]] = None) -> bo
 
 
 def classify_exit_stage(exit_reason: Any, cfg: Optional[Dict[str, Any]] = None) -> str:
-    """Map ledger/exit reason → terminal stage id (config-aware labels only)."""
-    r = str(exit_reason or "").lower()
-    if any(
-        k in r
-        for k in (
-            "stop",
-            "sl_",
-            "_sl",
-            "stop_loss",
-            "missfire",
-            "hard_exit",
-            "liquidation",
+    """Map ledger/exit reason → terminal stage id (tryout_exit_taxonomy SSOT)."""
+    try:
+        from phase6.core.tryout_exit_taxonomy import (
+            classify_closed_class,
+            closed_class_to_dwell_stage,
         )
-    ):
-        return "exit_sl"
-    if any(
-        k in r
-        for k in (
-            "take_profit",
-            "tp_",
-            "trail",
-            "dual_peak",
-            "profit",
-            "fixed_tp",
-        )
-    ):
-        return "exit_tp"
-    return "exit_other"
+
+        return closed_class_to_dwell_stage(classify_closed_class(exit_reason))
+    except Exception:
+        r = str(exit_reason or "").lower()
+        if any(
+            k in r
+            for k in (
+                "stop",
+                "sl_",
+                "_sl",
+                "stop_loss",
+                "missfire",
+                "hard_exit",
+                "liquidation",
+            )
+        ):
+            return "exit_sl"
+        if any(
+            k in r
+            for k in (
+                "take_profit",
+                "tp_",
+                "trail",
+                "dual_peak",
+                "profit",
+                "fixed_tp",
+            )
+        ):
+            return "exit_tp"
+        if "tryout_scale_window" in r or "scale_window" in r:
+            return "exit_scale_window"
+        return "exit_other"
 
 
 @dataclass

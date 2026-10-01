@@ -144,6 +144,64 @@ def main() -> int:
         else:
             print("dry_run OK")
 
+    # --- dry_run with cancelled stops must reattach (never naked) ---
+    dry_reattach_calls = []
+
+    def _dry_reattach(*a, **k):
+        dry_reattach_calls.append(k)
+        return {"ok": True, "action": "reattach", "size": 1.0}
+
+    with patch(
+        "phase6.core.sl_preflight.cancel_open_stops_for_pair", return_value=1
+    ), patch(
+        "phase6.core.sl_preflight.poll_available_after_cancel", return_value=True
+    ), patch(
+        "phase6.core.protected_market_exit.reattach_stop_after_exit",
+        side_effect=_dry_reattach,
+    ):
+        ex3b = MagicMock()
+        ex3b.get_crypto_available.return_value = 1.0
+        ex3b.quantize_size.side_effect = lambda p, q: float(q)
+        pe3b = protected_market_exit(
+            ex3b, "SOL-USD", frac=1.0, dry_run=True, ledger=False, entry_price=100.0
+        )
+        if not pe3b.get("success"):
+            fails.append(f"dry_run_with_cancel success: {pe3b}")
+        elif not dry_reattach_calls:
+            fails.append("dry_run with cancelled stops must reattach SL")
+        elif not pe3b.get("sl_reattach_after_dry_run", {}).get("ok"):
+            fails.append(f"dry_run missing sl_reattach_after_dry_run: {pe3b}")
+        elif pe3b.get("naked_risk"):
+            fails.append(f"dry_run must not set naked_risk when reattach ok: {pe3b}")
+        elif ex3b.place_market_sell.called:
+            fails.append("dry_run must not sell (cancel path)")
+        else:
+            print("dry_run_reattach_after_cancel OK")
+
+    # --- dry_run reattach fail → naked_risk, success=False ---
+    with patch(
+        "phase6.core.sl_preflight.cancel_open_stops_for_pair", return_value=1
+    ), patch(
+        "phase6.core.sl_preflight.poll_available_after_cancel", return_value=True
+    ), patch(
+        "phase6.core.protected_market_exit.reattach_stop_after_exit",
+        return_value={"ok": False, "error": "attach_stop_loss_returned_false"},
+    ):
+        ex3c = MagicMock()
+        ex3c.get_crypto_available.return_value = 1.0
+        ex3c.quantize_size.side_effect = lambda p, q: float(q)
+        pe3c = protected_market_exit(
+            ex3c, "SOL-USD", frac=1.0, dry_run=True, ledger=False, entry_price=100.0
+        )
+        if pe3c.get("success"):
+            fails.append(f"dry_run reattach fail must not success=True: {pe3c}")
+        elif not pe3c.get("naked_risk"):
+            fails.append(f"dry_run reattach fail must set naked_risk: {pe3c}")
+        elif "dry_run_sl_reattach_failed" not in str(pe3c.get("error") or ""):
+            fails.append(f"dry_run reattach fail error tag: {pe3c}")
+        else:
+            print("dry_run_naked_risk_on_reattach_fail OK")
+
     # --- resolve base helper ---
     with patch(
         "phase6.core.sl_preflight.cancel_open_stops_for_pair", return_value=2

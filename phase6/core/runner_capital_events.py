@@ -92,6 +92,13 @@ def _reason_is_strategy_profit_exit(reason: str) -> bool:
         or r.startswith("operator_exit")
     ):
         return True
+    # Tryout scale-window eject (Brad GO C 2026-10-01): dead kindling path → free powder
+    if (
+        "tryout_scale_window" in r
+        or r.startswith("tryout_scale_window_eject")
+        or "scale_window_eject" in r
+    ):
+        return True
     return False
 
 

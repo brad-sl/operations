@@ -388,6 +388,45 @@ def protected_market_exit(
         result["success"] = True
         result["skipped"] = False
         result["note"] = "dry_run_no_order"
+        # CRITICAL: dry_run still cancels stops above — never leave bag naked
+        if result.get("cancelled_stops") and (base_qty > 0 or qty_full_hint > 0):
+            _restore_sl(base_qty or qty_full_hint, "sl_reattach_after_dry_run")
+            sl_info = result.get("sl_reattach_after_dry_run") or {}
+            # Reattach must actually land; otherwise surface naked risk (do not
+            # claim a clean dry success that silently left the bag uncovered).
+            if not bool(sl_info.get("ok")) and str(sl_info.get("action") or "") != "skip_empty":
+                result["success"] = False
+                result["error"] = (
+                    "dry_run_sl_reattach_failed:"
+                    + str(sl_info.get("error") or "unknown")[:120]
+                )
+                result["naked_risk"] = True
+                logger.error(
+                    "[PROTECTED-EXIT] DRY-RUN left %s potentially naked after cancel "
+                    "(reattach failed: %s) — operator/monitor must fix ASAP",
+                    pair,
+                    sl_info.get("error"),
+                )
+                try:
+                    # Best-effort second pass: mark price as anchor if entry missing
+                    if sl_info.get("error") == "no_entry_anchor" and mark_price > 0:
+                        _restore_sl(
+                            base_qty or qty_full_hint,
+                            "sl_reattach_after_dry_run_retry",
+                        )
+                        # Prefer mark as entry for retry path via entry_price arg
+                        # (reattach_stop_after_exit already falls back to get_price;
+                        # if still bad, naked_risk stays.)
+                        sl2 = result.get("sl_reattach_after_dry_run_retry") or {}
+                        if bool(sl2.get("ok")):
+                            result["success"] = True
+                            result["naked_risk"] = False
+                            result["error"] = None
+                            result["note"] = "dry_run_no_order_sl_reattached_on_retry"
+                except Exception as e2:
+                    logger.error(
+                        "[PROTECTED-EXIT] dry-run SL retry exception %s: %s", pair, e2
+                    )
         return result
 
     if not hasattr(exchange, "place_market_sell"):

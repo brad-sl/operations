@@ -75,21 +75,84 @@ def _action_sets(actions: Sequence[Any]) -> Tuple[Dict[str, float], Dict[str, fl
     return buys, sells, reasons
 
 
-def _holdings_usd(holdings: Optional[Dict[str, Any]]) -> Dict[str, float]:
+def _usd_from_position_row(v: Any) -> Optional[float]:
+    """Prefer value_usd; never treat bare coin qty as dollars.
+
+    BTC 2026-10-01 decision_context logged holdings_before BTC-USD=0.023 (qty)
+    while the SELL was ~$370 — root cause: amount/qty used as USD fallback.
+    """
+    if isinstance(v, dict):
+        for key in ("value_usd", "usd_value", "usd", "notional_usd", "market_value"):
+            if v.get(key) is not None:
+                usd = _f(v.get(key))
+                if usd is not None:
+                    return float(usd)
+        # qty * price only when both present — never amount alone
+        qty = None
+        for qk in ("qty", "quantity", "size", "amount"):
+            if v.get(qk) is not None:
+                qty = _f(v.get(qk))
+                if qty is not None:
+                    break
+        px = None
+        for pk in ("current_price", "price", "mark_price"):
+            if v.get(pk) is not None:
+                px = _f(v.get(pk))
+                if px is not None:
+                    break
+        if qty is not None and px is not None and px > 0:
+            return float(qty) * float(px)
+        return None
+    return _f(v)
+
+
+def _holdings_usd(holdings: Optional[Any]) -> Dict[str, float]:
     out: Dict[str, float] = {}
     if not holdings:
         return out
+    # List shape (dashboard / some exchange paths): [{pair, value_usd, amount, ...}, ...]
+    if isinstance(holdings, list):
+        for row in holdings:
+            if not isinstance(row, dict):
+                continue
+            pair = str(row.get("pair") or row.get("product_id") or "")
+            if not pair:
+                continue
+            if not pair.endswith("-USD") and "-" not in pair:
+                pair = f"{pair}-USD"
+            usd = _usd_from_position_row(row)
+            if usd is None:
+                continue
+            out[pair] = float(usd)
+        return out
     raw = holdings
-    if isinstance(holdings, dict) and "positions" in holdings and isinstance(holdings["positions"], dict):
-        raw = holdings.get("value_usd") or holdings["positions"]
+    if isinstance(holdings, dict) and "positions" in holdings:
+        pos = holdings.get("positions")
+        # Prefer dedicated value_usd map when it is scalar USD (not nested qty dicts)
+        vu = holdings.get("value_usd")
+        if isinstance(vu, dict) and vu:
+            sample = next(iter(vu.values()), None)
+            if not isinstance(sample, dict):
+                raw = vu
+            elif isinstance(pos, (dict, list)):
+                raw = pos
+            else:
+                raw = vu
+        elif isinstance(pos, (dict, list)):
+            raw = pos
+    if isinstance(raw, list):
+        return _holdings_usd(raw)
     if not isinstance(raw, dict):
         return out
     for k, v in raw.items():
         pair = str(k)
-        if isinstance(v, dict):
-            usd = _f(v.get("value_usd") if v.get("value_usd") is not None else v.get("amount"))
-        else:
-            usd = _f(v)
+        if pair in ("verified", "error", "positions", "value_usd", "total", "cash"):
+            continue
+        if not pair.endswith("-USD") and "-" not in pair and isinstance(v, (int, float, dict)):
+            # bare base symbol → pair form when numeric/dict
+            if isinstance(v, dict) or True:
+                pair = f"{pair}-USD" if not pair.endswith("-USD") else pair
+        usd = _usd_from_position_row(v)
         if usd is None:
             continue
         out[pair] = float(usd)

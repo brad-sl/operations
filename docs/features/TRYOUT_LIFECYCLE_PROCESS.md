@@ -126,7 +126,7 @@ GHOST_REGISTRY
 2. **Ballast never tryout-eject** — BTC/ETH/PAXG/USDC paths out of scale-window money.
 3. **BookRebalance does not mint tryout seats** — seats = `TryoutSeatBuy` / first_fill intake only.
 4. **Grow ≠ Open** — kindling is one add on held shell; not a new door.
-5. **Money defaults OFF** — scale-up apply, scale-window auto, discipline live_apply, knife live_gate need Brad GO.
+5. **Money arms (Brad GO 2026-10-01 ON)** — scale-window auto-eject, scale-up autonomous kindling, discipline live_apply, knife live_gate. Kill files still freeze each path. 7d anomaly monitor through ~2026-10-08.
 6. **Perma-block rare** — funnel (tier/thaw/missfire/novelty/post-SL/regime) is default toxicity filter.
 7. **Paper MTM ≠ fill PnL** — no FOMO size from Paper %.
 8. **`live_scaled` is money truth** — `paper_scaled` never blocks or proves live kindling alone.
@@ -140,7 +140,7 @@ GHOST_REGISTRY
 ```text
 eligible doors (quality_tryout.v2 + thaw + force_eligible + hard/missfire)
   → RSI wash (door max_rsi; event path optional)
-  → sent real (paid X / latch ≥ floor)     [knife = SHADOW only]
+  → sent real (paid X / latch ≥ floor)     [knife live_gate ON — primary arm rsi_reclaim can skip seat]
   → rank / seat headroom (day + concurrent)
   → limit-first $shell
   → SL attach fail-closed
@@ -151,7 +151,8 @@ eligible doors (quality_tryout.v2 + thaw + force_eligible + hard/missfire)
 |-------|------------------|--------|
 | Door scoreboard | `recovery_tryout_qualify.evaluate_pair_tryout` | LIVE |
 | RSI-event + X probe + seat | `rsi_event_tryout_seat_composer` → `TryoutSeatBuyAction` | LIVE path; cron money OFF unless GO flags |
-| Decision discipline | `tryout_decision_discipline` on composer candidates | SHADOW |
+| Decision discipline | `tryout_decision_discipline` on composer candidates | **LIVE** (Brad GO 2026-10-01) |
+| Knife live gate | `knife_filter` → composer skip on primary arm deny | **LIVE** (`config/knife_filter.json`) |
 | First-fill size/seat cap | `first_fill_probation.filter_trade_plan_first_fill` | LIVE (rebalance ADD path) |
 | Limit-first | `entry_execution.limit_first` | LIVE pilot |
 | Lot register | `tryout_scale_up_shadow.register_tryout_open_lot` | LIVE on seat buy |

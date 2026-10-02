@@ -22,7 +22,36 @@ def normalize_position_values(raw: Any) -> Dict[str, float]:
         if not pair.endswith("-USD") and "-" not in pair:
             pair = f"{pair}-USD"
         if isinstance(v, dict):
-            out[pair] = float(v.get("value_usd", v.get("amount", 0.0)) or 0.0)
+            # Prefer value_usd / usd_value; qty*price before bare amount (BTC qty≠USD)
+            usd = None
+            for key in ("value_usd", "usd_value", "usd", "notional_usd", "market_value"):
+                if v.get(key) is not None:
+                    try:
+                        usd = float(v.get(key) or 0.0)
+                        break
+                    except (TypeError, ValueError):
+                        usd = None
+            if usd is None:
+                try:
+                    qty = float(
+                        v.get("qty")
+                        if v.get("qty") is not None
+                        else v.get("quantity")
+                        if v.get("quantity") is not None
+                        else v.get("amount")
+                        or 0.0
+                    )
+                    px = float(
+                        v.get("current_price")
+                        if v.get("current_price") is not None
+                        else v.get("price")
+                        if v.get("price") is not None
+                        else 0.0
+                    )
+                    usd = qty * px if px > 0 else None
+                except (TypeError, ValueError):
+                    usd = None
+            out[pair] = float(usd or 0.0)
         else:
             out[pair] = float(v or 0.0)
     return out

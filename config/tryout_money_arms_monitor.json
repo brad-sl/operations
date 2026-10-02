@@ -1,0 +1,30 @@
+{
+  "schema": "tryout_money_arms_monitor_v1",
+  "enabled": true,
+  "armed_at": "2026-10-01T15:25:00Z",
+  "monitor_until": "2026-10-08T15:25:00Z",
+  "brad_go": "2026-10-01 enable all 4 money arms + 7d anomaly watch",
+  "arms": {
+    "scale_window_auto_eject": true,
+    "scale_up_kindling_auto": true,
+    "decision_discipline_live": true,
+    "knife_live_gate": true
+  },
+  "anomaly_thresholds": {
+    "max_auto_ejects_per_utc_day": 4,
+    "max_kindling_steps_per_utc_day": 2,
+    "max_discipline_skip_streak": 8,
+    "max_knife_block_streak": 12,
+    "max_ghosts": 2,
+    "flag_naked_sl": true,
+    "flag_cooloff_breach_buy": true,
+    "flag_same_pair_reentry_lt_cooloff_h": 48.0
+  },
+  "kill_files": {
+    "scale_window": "data/state/tryout_scale_window_KILL",
+    "scale_up": "data/state/tryout_scale_up_live_KILL",
+    "seat": "data/state/rsi_event_tryout_seat_KILL",
+    "knife": "data/state/knife_filter_live_KILL"
+  },
+  "note": "Measure + TG on anomaly only. Never flips knobs off without Brad GO (except kill files). Expires after monitor_until — job should self-quiet."
+}

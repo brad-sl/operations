@@ -110,7 +110,11 @@ def autonomous_apply_allowed(pol: Optional[Dict[str, Any]] = None) -> bool:
         return False
     if not bool(p.get("auto_armed")):
         return False
-    if manual_go_count(p) < int(p.get("required_manual_gos") or DEFAULT_REQUIRED):
+    # Brad force-arm (explicit GO) bypasses remaining manual GO count.
+    force_ok = bool(p.get("force_armed_by_brad"))
+    if not force_ok and manual_go_count(p) < int(
+        p.get("required_manual_gos") or DEFAULT_REQUIRED
+    ):
         return False
     # Path still needs decision.live_apply + no KILL file
     try:
@@ -171,7 +175,16 @@ def arm_autonomous(*, force: bool = False) -> Dict[str, Any]:
     p["auto_armed"] = True
     p["kill"] = False
     p["arm_refused"] = None
-    p["note"] = f"Scale-up autonomous armed at {_utc_iso()} after {n} GOs"
+    if force and n < need:
+        p["force_armed_by_brad"] = True
+        p["force_armed_at"] = _utc_iso()
+        p["note"] = (
+            f"Scale-up autonomous FORCE-armed by Brad GO at {_utc_iso()} "
+            f"(gos {n}/{need} waived)"
+        )
+    else:
+        p["force_armed_by_brad"] = bool(p.get("force_armed_by_brad"))
+        p["note"] = f"Scale-up autonomous armed at {_utc_iso()} after {n} GOs"
     p["updated_at"] = _utc_iso()
     _write(LADDER_PATH, p)
     return p

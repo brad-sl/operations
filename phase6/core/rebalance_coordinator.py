@@ -216,11 +216,38 @@ class RebalanceCoordinator:
                         )
 
                         # Normalize current_positions to {pair: float_usd_value} for allocator
-                        # (raw from portfolio can be dicts with "value_usd" etc.)
+                        # Prefer value_usd; never treat bare coin qty as dollars (BTC 2026-10-01).
                         norm_allocs = {}
                         for k, v in (current_positions or {}).items():
                             if isinstance(v, dict):
-                                norm_allocs[k] = float(v.get("value_usd", v.get("amount", 0.0)))
+                                usd = None
+                                for key in ("value_usd", "usd_value", "usd", "notional_usd"):
+                                    if v.get(key) is not None:
+                                        try:
+                                            usd = float(v.get(key) or 0.0)
+                                            break
+                                        except (TypeError, ValueError):
+                                            usd = None
+                                if usd is None:
+                                    try:
+                                        qty = float(
+                                            v.get("qty")
+                                            if v.get("qty") is not None
+                                            else v.get("quantity")
+                                            if v.get("quantity") is not None
+                                            else v.get("amount")
+                                            or 0.0
+                                        )
+                                        px = float(
+                                            v.get("current_price")
+                                            if v.get("current_price") is not None
+                                            else v.get("price")
+                                            or 0.0
+                                        )
+                                        usd = qty * px if px > 0 else 0.0
+                                    except (TypeError, ValueError):
+                                        usd = 0.0
+                                norm_allocs[k] = float(usd or 0.0)
                             else:
                                 norm_allocs[k] = float(v) if v else 0.0
 

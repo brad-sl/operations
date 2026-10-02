@@ -604,3 +604,186 @@ def _write_md(summary: Dict[str, Any]) -> None:
 
 def telegram_summary(summary: Dict[str, Any]) -> str:
     return str(summary.get("plain_english") or "knife_filter_shadow empty")
+
+
+# ---------------------------------------------------------------------------
+# Live gate (Brad GO 2026-10-01) — composer buy block only; no orders here.
+# ---------------------------------------------------------------------------
+KNIFE_CONFIG_PATH = ROOT / "config" / "knife_filter.json"
+KNIFE_LIVE_KILL = STATE / "knife_filter_live_KILL"
+KNIFE_LIVE_LATEST = STATE / "knife_filter_live_gate_latest.json"
+
+
+def knife_live_kill_on() -> bool:
+    return KNIFE_LIVE_KILL.exists()
+
+
+def load_knife_live_config() -> Dict[str, Any]:
+    """Config SSOT for live_gate. Defaults keep gate OFF if file missing."""
+    raw = _read_json(KNIFE_CONFIG_PATH)
+    if not isinstance(raw, dict):
+        raw = {}
+    return {
+        "live_gate": bool(raw.get("live_gate", False)),
+        "primary_arm": str(raw.get("primary_arm") or "rsi_reclaim"),
+        "require_arms": list(raw.get("require_arms") or ["rsi_reclaim"]),
+        "rsi_wash_max": float(raw.get("rsi_wash_max") or 40.0),
+        "reclaim_lookback_bars": int(raw.get("reclaim_lookback_bars") or 6),
+        "delay_bars_min": int(raw.get("delay_bars_min") or 1),
+        "delay_bars_max": int(raw.get("delay_bars_max") or 3),
+        "horizon_bars": int(raw.get("horizon_bars") or 72),
+        "sl_pct": float(raw.get("sl_pct") or 0.04),
+        "tp_r": float(raw.get("tp_r") or 2.0),
+        "rt_cost": float(raw.get("rt_cost") or DEFAULT_RT_COST),
+        "paid_x": bool(raw.get("paid_x", False)),
+        "fail_open_on_error": bool(raw.get("fail_open_on_error", True)),
+    }
+
+
+def knife_config_from_live(cfg: Optional[Dict[str, Any]] = None) -> KnifeConfig:
+    c = cfg or load_knife_live_config()
+    return KnifeConfig(
+        rsi_wash_max=float(c.get("rsi_wash_max") or 40.0),
+        reclaim_lookback_bars=int(c.get("reclaim_lookback_bars") or 6),
+        delay_bars_min=int(c.get("delay_bars_min") or 1),
+        delay_bars_max=int(c.get("delay_bars_max") or 3),
+        horizon_bars=int(c.get("horizon_bars") or 72),
+        sl_pct=float(c.get("sl_pct") or 0.04),
+        tp_r=float(c.get("tp_r") or 2.0),
+        rt_cost=float(c.get("rt_cost") or DEFAULT_RT_COST),
+        live_gate=bool(c.get("live_gate")),
+        paid_x=bool(c.get("paid_x")),
+    )
+
+
+def evaluate_live_knife_for_pair(
+    pair: str,
+    *,
+    closes: Optional[Sequence[float]] = None,
+    cfg: Optional[Dict[str, Any]] = None,
+    write: bool = False,
+) -> Dict[str, Any]:
+    """Return allow/block for one pair against primary knife arm(s).
+
+    Fail-open on data errors when fail_open_on_error (default) so a dead
+    candle fetch does not freeze the whole seat loop.
+    """
+    live_cfg = cfg or load_knife_live_config()
+    pn = str(pair or "").strip().upper().replace("_", "-")
+    out: Dict[str, Any] = {
+        "pair": pn,
+        "ran": False,
+        "live_gate": bool(live_cfg.get("live_gate")) and not knife_live_kill_on(),
+        "allow": True,
+        "skip_seat": False,
+        "reason": "",
+        "primary_arm": live_cfg.get("primary_arm"),
+        "arms": {},
+        "error": None,
+    }
+    if knife_live_kill_on():
+        out["reason"] = "knife_kill"
+        out["ran"] = True
+        return out
+    if not bool(live_cfg.get("live_gate")):
+        out["reason"] = "live_gate_off"
+        out["ran"] = True
+        return out
+
+    kcfg = knife_config_from_live(live_cfg)
+    err: Optional[str] = None
+    series: Sequence[float]
+    if closes is not None:
+        series = list(closes)
+    else:
+        series, err = try_fetch_closes(pn)
+    if err and not series:
+        out["ran"] = True
+        out["error"] = err
+        if live_cfg.get("fail_open_on_error", True):
+            out["allow"] = True
+            out["skip_seat"] = False
+            out["reason"] = f"fail_open:{err[:80]}"
+        else:
+            out["allow"] = False
+            out["skip_seat"] = True
+            out["reason"] = f"fail_closed:{err[:80]}"
+        if write:
+            _write_json(KNIFE_LIVE_LATEST, {**out, "ts": _iso()})
+        return out
+
+    wash_idx = find_wash_index(series)
+    elev = elev_primary_from_closes(series)
+    arms = evaluate_arms_on_closes(
+        series, wash_idx=wash_idx, elev_primary=elev, cfg=kcfg
+    )
+    out["arms"] = arms
+    out["wash_idx"] = wash_idx
+    out["ran"] = True
+
+    require = list(live_cfg.get("require_arms") or [live_cfg.get("primary_arm") or "rsi_reclaim"])
+    blocked: List[str] = []
+    for arm in require:
+        a = arms.get(str(arm)) or {}
+        if not a.get("allow"):
+            blocked.append(f"{arm}:{a.get('reason') or 'deny'}")
+    if blocked:
+        out["allow"] = False
+        out["skip_seat"] = True
+        out["reason"] = "knife_deny:" + ",".join(blocked)
+    else:
+        out["allow"] = True
+        out["skip_seat"] = False
+        out["reason"] = "knife_allow:" + ",".join(str(a) for a in require)
+
+    if write:
+        _write_json(KNIFE_LIVE_LATEST, {**out, "ts": _iso()})
+        _append_jsonl(
+            CRUMBS,
+            {
+                "ts": _iso(),
+                "kind": "knife_live_gate",
+                "pair": pn,
+                "allow": out["allow"],
+                "reason": out["reason"],
+            },
+        )
+    return out
+
+
+def apply_knife_to_composer_candidate(
+    cand: Optional[Dict[str, Any]],
+    *,
+    closes: Optional[Sequence[float]] = None,
+    cfg: Optional[Dict[str, Any]] = None,
+    write: bool = True,
+) -> Dict[str, Any]:
+    """Composer hook. skip_seat only when live_gate ON and arm denies."""
+    live_cfg = cfg or load_knife_live_config()
+    if cand is None:
+        return {
+            "ran": False,
+            "skip_seat": False,
+            "reason": "no_candidate",
+            "live_gate": bool(live_cfg.get("live_gate")) and not knife_live_kill_on(),
+        }
+    pair = str(cand.get("pair") or "")
+    verdict = evaluate_live_knife_for_pair(
+        pair, closes=closes, cfg=live_cfg, write=write
+    )
+    return {
+        "ran": bool(verdict.get("ran")),
+        "skip_seat": bool(verdict.get("skip_seat")),
+        "allow": bool(verdict.get("allow", True)),
+        "live_gate": bool(verdict.get("live_gate")),
+        "reason": verdict.get("reason"),
+        "primary_arm": verdict.get("primary_arm"),
+        "arms": verdict.get("arms"),
+        "error": verdict.get("error"),
+        "pair": verdict.get("pair"),
+        "plain_english": (
+            f"knife {verdict.get('pair')} "
+            f"{'BLOCK' if verdict.get('skip_seat') else 'allow'} "
+            f"{verdict.get('reason')}"
+        ),
+    }

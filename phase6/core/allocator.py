@@ -138,6 +138,37 @@ class RotationStrategy:
             return True
         return False
 
+    @staticmethod
+    def _is_rsi_overbought_only_rotate_out(proposal: Proposal) -> bool:
+        """True when ROTATE_OUT/SELL is mean-reversion RSI>70 without bearish confirmation.
+
+        Brad GO 2026-10-02 core-sleeve: do not full-bag rotate on RSI overbought alone.
+        Dual-peak/meat (4%) or structure/SL owns the exit; negative sentiment confirms.
+        """
+        side = str(getattr(proposal, "side", "") or "").upper()
+        if side not in ("ROTATE_OUT", "SELL"):
+            return False
+        reason = str(getattr(proposal, "reason", "") or "").lower()
+        md = getattr(proposal, "metadata", None) or {}
+        if not isinstance(md, dict):
+            md = {}
+        try:
+            rsi = float(md.get("rsi")) if md.get("rsi") is not None else None
+        except (TypeError, ValueError):
+            rsi = None
+        try:
+            sent = float(md.get("sentiment")) if md.get("sentiment") is not None else 0.0
+        except (TypeError, ValueError):
+            sent = 0.0
+        # Confirmed bearish stack may still rotate (RSI OB + negative sent)
+        if "negative sentiment" in reason or sent < -0.2:
+            return False
+        if "rsi overbought" in reason:
+            return True
+        if rsi is not None and rsi > 70.0:
+            return True
+        return False
+
     def decide(
         self,
         proposals: List[Proposal],
@@ -242,14 +273,28 @@ class RotationStrategy:
         # Identify weak (exit candidates) from proposals: low score or explicit HOLD/ROTATE_OUT
         weak_pairs = []
         strong_pairs = []
+        rsi_ob_hold_core: List[str] = []
         for p in proposals:
             # SL-04 strengthened: use min_score_delta for weak threshold (was hardcoded 0.4)
             weak_thresh = 0.5 - self.config.min_score_delta
             if p.side in ("ROTATE_OUT", "SELL") or (p.side == "HOLD" and p.score < weak_thresh):
                 if current_allocs.get(p.pair, 0) > 0:
                     if not emergency_recovery or p.score < 0.2:
-                        weak_pairs.append(p.pair)
-            
+                        # Core-sleeve guard (Brad GO 2026-10-02): RSI>70 mean-reversion
+                        # alone is NOT a full-bag rotation. Dual-peak/meat owns green exits;
+                        # SL owns structure breaks. BTC 2026-10-01 sold strength into grind.
+                        if self._is_rsi_overbought_only_rotate_out(p) and not emergency_recovery:
+                            rsi_ob_hold_core.append(p.pair)
+                            logger.info(
+                                "[CORE-SLEEVE] hold %s — RSI-overbought ROTATE_OUT alone "
+                                "(score=%.3f reason=%s); dual-peak/meat or structure owns exit",
+                                p.pair,
+                                float(p.score or 0.0),
+                                (p.reason or "")[:80],
+                            )
+                        else:
+                            weak_pairs.append(p.pair)
+
             # Aggressive RECOVERY: relax BUY gates
             min_buy_score = (0.3 if emergency_recovery else 0.55) / max(regime_mult, 0.7)
             # >= so emergency min_buy_score=0.3 includes exact 0.3 ROTATE_IN
@@ -264,6 +309,17 @@ class RotationStrategy:
         max_strong = 3 if emergency_recovery else 2
         top_strong = [p for p, _ in strong_pairs[:max_strong]]
 
+        # Sell-only rotation guard (Brad GO 2026-10-02): if thesis is "rotate" but no
+        # eligible ROTATE_IN ≥ min_buy, prefer hold core over naked cash park.
+        # Hard stops still fire below. Emergency recovery may still free weak bags.
+        sell_only_hold_core = False
+        if weak_pairs and not top_strong and not emergency_recovery:
+            sell_only_hold_core = True
+            logger.info(
+                "[CORE-SLEEVE] sell-only rotation blocked — weak=%s but no ROTATE_IN≥min_buy; hold core",
+                weak_pairs,
+            )
+            weak_pairs = []
 
         # Hard stops + drawdown force (SL-04: real price drawdown using recent_prices + keep entry for SL-02 compat)
         for pair in list(current_allocs.keys()):
@@ -353,7 +409,18 @@ class RotationStrategy:
 
         plan.new_allocations = current_allocs.copy()
         plan.expected_exposure = sum(current_allocs.values()) / total_capital if total_capital > 0 else 0.0
-        plan.notes = f"rotations={plan.rotations}, stops={plan.stops}, dd_exits={plan.drawdown_exits}, force_re={plan.force_re_evaluate}, available_for_redeploy={round(total_available,2)}"
+        note_bits = [
+            f"rotations={plan.rotations}",
+            f"stops={plan.stops}",
+            f"dd_exits={plan.drawdown_exits}",
+            f"force_re={plan.force_re_evaluate}",
+            f"available_for_redeploy={round(total_available, 2)}",
+        ]
+        if rsi_ob_hold_core:
+            note_bits.append(f"core_sleeve_rsi_ob_hold={rsi_ob_hold_core}")
+        if sell_only_hold_core:
+            note_bits.append("core_sleeve_sell_only_hold=1")
+        plan.notes = ", ".join(note_bits)
 
         # Apply min_move filter to final actions (churn control)
         filtered_actions = [a for a in plan.actions if abs(a.get("usd", 0)) >= self.config.min_move_usd]

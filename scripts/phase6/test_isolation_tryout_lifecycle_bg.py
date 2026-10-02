@@ -188,14 +188,17 @@ class TestGrowHonesty(unittest.TestCase):
         self.assertLessEqual(float(LIVE_SAFETY.get("max_total_after_step_usd_hard") or 0), 100.0)
 
 
-class TestDisciplineShadowStaysOff(unittest.TestCase):
-    def test_live_apply_false(self):
+class TestDisciplineAndScaleWindowArmed(unittest.TestCase):
+    def test_live_apply_true_after_brad_go(self):
+        """Brad GO 2026-10-01 armed both; isolation asserts ON not OFF."""
         cfg = json.loads(
             (ROOT / "config" / "tryout_decision_discipline.json").read_text()
         )
-        self.assertFalse(bool(cfg.get("live_apply")))
+        self.assertTrue(bool(cfg.get("live_apply")))
         sw = json.loads((ROOT / "config" / "tryout_scale_window.json").read_text())
-        self.assertFalse(bool(sw.get("live_apply")))
+        self.assertTrue(bool(sw.get("live_apply")))
+        knife = json.loads((ROOT / "config" / "knife_filter.json").read_text())
+        self.assertTrue(bool(knife.get("live_gate")))
 
 
 if __name__ == "__main__":

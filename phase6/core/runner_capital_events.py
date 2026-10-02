@@ -70,8 +70,31 @@ def _reason_is_stop_exchange(reason: str) -> bool:
     )
 
 
+def _reason_is_strategy_rotation(reason: str) -> bool:
+    """True for ARCH-4 / rotation_catch_wave executor sells — not operator liquidations.
+
+    BTC 2026-10-01: exit_weak_for_rotation mis-tagged as manual_liquidation_to_cash
+    → 48h rebuy block after a bot rotation. Strategy rotation must free powder, not park it.
+    """
+    r = str(reason or "").lower()
+    if not r:
+        return False
+    tokens = (
+        "exit_weak_for_rotation",
+        "opportunistic_rotation_from_weak",
+        "rotation_catch_wave",
+        "rotation_exchange",
+        "arch4_rotation",
+        "arch4_rebalance",
+        "hard_stop_drawdown",
+        "hard_stop_low_conviction",
+        "light_tilt_cash",  # rare sell side; never manual
+    )
+    return any(t in r for t in tokens)
+
+
 def _reason_is_strategy_profit_exit(reason: str) -> bool:
-    """True for live TP + lifecycle trims — bot exits, not operator manual liquidations."""
+    """True for live TP + lifecycle trims + strategy rotation — bot exits, not operator manual."""
     r = str(reason or "").lower()
     if not r:
         return False
@@ -98,6 +121,9 @@ def _reason_is_strategy_profit_exit(reason: str) -> bool:
         or r.startswith("tryout_scale_window_eject")
         or "scale_window_eject" in r
     ):
+        return True
+    # ARCH-4 rotation / catch-wave (Brad GO 2026-10-02): never 48h manual block
+    if _reason_is_strategy_rotation(r):
         return True
     return False
 
@@ -742,6 +768,22 @@ def load_buy_block_status(
             if sf.exists():
                 data = json.loads(sf.read_text())
                 cooldown_maps.append((data.get("manual_sell_cooldown") or {}, "runner_state"))
+        except Exception:
+            pass
+        # Tryout scale-window post-eject cooloff file (audit + belt if capital store races)
+        try:
+            cool_path = STATE_DIR / "tryout_scale_window_cooloff.json"
+            if cool_path.exists():
+                raw = json.loads(cool_path.read_text(encoding="utf-8"))
+                pairs = (raw or {}).get("pairs") if isinstance(raw, dict) else None
+                if isinstance(pairs, dict) and pairs:
+                    flat: Dict[str, Any] = {}
+                    for p, meta in pairs.items():
+                        if isinstance(meta, dict):
+                            flat[str(p)] = meta.get("expires_ts")
+                        else:
+                            flat[str(p)] = meta
+                    cooldown_maps.append((flat, "tryout_scale_window_cooloff"))
         except Exception:
             pass
 

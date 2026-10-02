@@ -1,7 +1,7 @@
 {
   "schema": "tryout_scale_window_v1",
   "enabled": true,
-  "live_apply": false,
+  "live_apply": true,
   "min_hold_hours": 2.0,
   "max_hold_hours_no_scale": 36.0,
   "eject_phase_ge": 3,
@@ -13,7 +13,7 @@
   "neg_sent_max": 0.0,
   "min_shell_usd": 15.0,
   "max_shell_usd": 100.0,
-  "post_eject_pair_cooloff_hours": 6.0,
+  "post_eject_pair_cooloff_hours": 48.0,
   "ballast_pairs": [
     "BTC-USD",
     "BTC-USDC",
@@ -24,6 +24,7 @@
     "USDC-USD",
     "USD-USD"
   ],
-  "note": "Shell = option on kindling. Dead scale path → full exit. live_apply false until Brad arms auto; operator CLI --go still works (Brad GO C 2026-10-01).",
+  "note": "Shell = option on kindling. Dead scale path → full exit. Brad GO 2026-10-01 live_apply ON — board cron auto-ejects would_eject shells (require_would_eject + cooloff + kill file). Operator CLI --go still works. post_eject_pair_cooloff_hours SSOT 48h.",
+  "brad_go_live_apply_at": "2026-10-01T15:25:00Z",
   "updated": "2026-10-01"
 }

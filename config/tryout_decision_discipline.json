@@ -1,7 +1,8 @@
 {
   "schema": "tryout_decision_discipline_v1",
-  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. live_apply OFF until Brad GO + calibration N.",
-  "live_apply": false,
+  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. Brad GO 2026-10-01 live_apply ON — composer can skip/reduce seats.",
+  "live_apply": true,
+  "brad_go_live_apply_at": "2026-10-01T15:25:00Z",
   "shadow_log": true,
   "source": "rohonchain_jev_process_map_2026-09-26",
   "judgments": {

@@ -37,6 +37,7 @@ CRUMBS_PATH = STATE_DIR / "tryout_scale_window_crumbs.jsonl"
 KILL_PATH = STATE_DIR / "tryout_scale_window_KILL"
 EJECT_RESULT_PATH = STATE_DIR / "tryout_scale_window_eject_latest.json"
 BOARD_SEEN_PATH = STATE_DIR / "tryout_scale_window_board_seen.json"
+COOLOFF_PATH = STATE_DIR / "tryout_scale_window_cooloff.json"
 BOARD_DEDUPE_HOURS = 12.0
 
 # Ledger / capital reason — must match runner_capital_events strategy-exit allowlist
@@ -68,11 +69,12 @@ DEFAULTS: Dict[str, Any] = {
     "neg_sent_max": 0.0,  # strictly negative
     "min_shell_usd": 15.0,
     "max_shell_usd": 100.0,  # still tryout-sized
-    "post_eject_pair_cooloff_hours": 6.0,  # don't re-seat same corpse immediately
+    "post_eject_pair_cooloff_hours": 48.0,  # same-pair re-seat block after eject (config SSOT)
     "ballast_pairs": list(STICKY_NEVER_EJECT),
     "note": (
         "Shell = option on kindling. Dead scale path → full exit. "
-        "live_apply false until Brad arms auto; operator CLI --go still works."
+        "live_apply false until Brad arms auto; operator CLI --go still works. "
+        "post_eject_pair_cooloff_hours blocks re-seat via capital_controls + cooloff file."
     ),
 }
 
@@ -559,14 +561,84 @@ def mark_lot_ejected(
         logger.warning("dwell on_tryout_exit %s: %s", pn, e)
 
 
-def set_post_eject_cooloff(pair: str, hours: float) -> None:
-    """Short same-pair rebuy cooloff so corpse is not instantly re-seated."""
-    if hours <= 0:
-        return
-    pn = _norm_pair(pair)
+def _load_cooloff_file() -> Dict[str, Any]:
     try:
-        import time
+        if COOLOFF_PATH.exists():
+            raw = json.loads(COOLOFF_PATH.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                return raw
+    except Exception as e:
+        logger.warning("cooloff file read: %s", e)
+    return {"schema": "tryout_scale_window_cooloff_v1", "pairs": {}}
 
+
+def _save_cooloff_file(blob: Dict[str, Any]) -> None:
+    COOLOFF_PATH.parent.mkdir(parents=True, exist_ok=True)
+    blob = dict(blob)
+    blob["schema"] = "tryout_scale_window_cooloff_v1"
+    blob["updated_at"] = _utc_iso()
+    COOLOFF_PATH.write_text(json.dumps(blob, indent=2, default=str) + "\n", encoding="utf-8")
+
+
+def set_post_eject_cooloff(pair: str, hours: float) -> Dict[str, Any]:
+    """Same-pair rebuy cooloff so dead shells are not instantly re-seated.
+
+    Writes two durable surfaces (both read by load_buy_block_status / process-tax):
+      1) capital_controls store ``manual_sell_cooldown``
+      2) data/state/tryout_scale_window_cooloff.json (audit + recovery if store races)
+
+    Hours SSOT: config ``post_eject_pair_cooloff_hours`` (default 48).
+    Returns receipt; raises only on total write failure after retries logged.
+    """
+    import time
+
+    out: Dict[str, Any] = {
+        "pair": "",
+        "hours": float(hours or 0.0),
+        "ok": False,
+        "expires_ts": None,
+        "capital_ok": False,
+        "file_ok": False,
+    }
+    if hours <= 0:
+        out["ok"] = True
+        out["skipped"] = "hours_le_0"
+        return out
+    pn = _norm_pair(pair)
+    out["pair"] = pn
+    exp_ts = time.time() + float(hours) * 3600.0
+    out["expires_ts"] = exp_ts
+    out["expires_at"] = datetime.fromtimestamp(exp_ts, tz=timezone.utc).isoformat()
+
+    # 1) Dedicated cooloff file (always attempt first — simple durable audit)
+    try:
+        blob = _load_cooloff_file()
+        pairs = blob.get("pairs")
+        if not isinstance(pairs, dict):
+            pairs = {}
+        pairs[pn] = {
+            "expires_ts": exp_ts,
+            "expires_at": out["expires_at"],
+            "hours": float(hours),
+            "reason": "tryout_scale_window_eject",
+            "set_at": _utc_iso(),
+        }
+        # prune expired
+        now = time.time()
+        pairs = {
+            k: v
+            for k, v in pairs.items()
+            if isinstance(v, dict) and float(v.get("expires_ts") or 0) > now
+        }
+        blob["pairs"] = pairs
+        _save_cooloff_file(blob)
+        out["file_ok"] = True
+    except Exception as e:
+        logger.warning("post_eject cooloff file %s: %s", pn, e)
+        out["file_err"] = str(e)[:160]
+
+    # 2) capital_controls store — process-tax / seat buy SSOT path
+    try:
         from phase6.core.capital_controls_store import (
             load_account_capital_state,
             primary_account_id,
@@ -578,13 +650,29 @@ def set_post_eject_cooloff(pair: str, hours: float) -> None:
         cd = st.get("manual_sell_cooldown")
         if not isinstance(cd, dict):
             cd = {}
-        cd[pn] = time.time() + float(hours) * 3600.0
+        # keep longer of existing vs new (don't shorten a longer block)
+        prev = float(cd.get(pn) or 0.0)
+        cd[pn] = max(prev, exp_ts)
         st["manual_sell_cooldown"] = cd
         # ensure we do NOT park cash — eject is process exit, powder stays deployable
         st["manual_liquidation_cash_hold_usd"] = 0.0
         save_account_capital_state(aid, st)
+        # verify read-back
+        st2 = load_account_capital_state(aid)
+        got = float((st2.get("manual_sell_cooldown") or {}).get(pn) or 0.0)
+        if got >= exp_ts - 1.0:
+            out["capital_ok"] = True
+        else:
+            out["capital_err"] = f"readback_miss got={got} want>={exp_ts}"
+            logger.error("post_eject cooloff capital readback fail %s: %s", pn, out["capital_err"])
     except Exception as e:
-        logger.warning("post_eject cooloff %s: %s", pn, e)
+        logger.error("post_eject cooloff capital %s: %s", pn, e)
+        out["capital_err"] = str(e)[:160]
+
+    out["ok"] = bool(out["capital_ok"] or out["file_ok"])
+    if not out["ok"]:
+        logger.error("post_eject cooloff TOTAL FAIL %s hours=%s", pn, hours)
+    return out
 
 
 def eject_pair(
@@ -681,7 +769,16 @@ def eject_pair(
             order_id=pe.get("order_id"),
             meta={"filled_qty": pe.get("filled_qty"), "exit_price": pe.get("exit_price")},
         )
-        set_post_eject_cooloff(pn, _f(c.get("post_eject_pair_cooloff_hours"), 6.0))
+        cool_h = _f(c.get("post_eject_pair_cooloff_hours"), 48.0)
+        cool = set_post_eject_cooloff(pn, cool_h)
+        result["cooloff"] = cool
+        if not cool.get("ok"):
+            result["cooloff_failed"] = True
+            logger.error(
+                "eject %s succeeded but cooloff failed — pair may re-seat: %s",
+                pn,
+                cool,
+            )
         # force zero cash hold if disposition raced
         try:
             from phase6.core.capital_controls_store import (
@@ -753,6 +850,76 @@ def eject_pairs(
     }
     _write_json(EJECT_RESULT_PATH, summary)
     _append_crumb({"kind": "eject", "ts": _utc_iso(), **{k: summary[k] for k in ("dry_run", "go", "n", "n_ok")}})
+    return summary
+
+
+def auto_eject_if_armed(
+    *,
+    dry_run: bool = False,
+    exchange: Any = None,
+    cfg: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """When config live_apply ON and no kill: eject current would_eject shells.
+
+    Safety belt: require_would_eject=True always. Returns skipped payload when
+    not armed. Cron should call this after board refresh.
+    """
+    c = cfg or load_cfg()
+    if kill_switch_on():
+        out = {
+            "schema": SCHEMA,
+            "as_of": _utc_iso(),
+            "ran": False,
+            "skipped": "kill_switch",
+            "n_ok": 0,
+            "n": 0,
+        }
+        _append_crumb({"kind": "auto_eject_skip", "ts": _utc_iso(), "reason": "kill"})
+        return out
+    if not bool(c.get("live_apply")):
+        out = {
+            "schema": SCHEMA,
+            "as_of": _utc_iso(),
+            "ran": False,
+            "skipped": "live_apply_off",
+            "n_ok": 0,
+            "n": 0,
+        }
+        return out
+    board = evaluate_open_tryouts(cfg=c)
+    pairs = list(board.get("would_eject_pairs") or [])
+    if not pairs:
+        out = {
+            "schema": SCHEMA,
+            "as_of": _utc_iso(),
+            "ran": False,
+            "skipped": "no_would_eject",
+            "n_ok": 0,
+            "n": 0,
+            "board": {"n_would_eject": 0, "pairs": []},
+        }
+        _write_json(EJECT_RESULT_PATH, {**out, "kind": "auto_eject_idle"})
+        return out
+    summary = eject_pairs(
+        pairs,
+        dry_run=bool(dry_run),
+        go=True,
+        exchange=exchange,
+        cfg=c,
+        require_would_eject=True,
+    )
+    summary["ran"] = True
+    summary["kind"] = "auto_eject"
+    summary["source"] = "live_apply_cron"
+    _append_crumb(
+        {
+            "kind": "auto_eject",
+            "ts": _utc_iso(),
+            "pairs": pairs,
+            "n_ok": summary.get("n_ok"),
+            "dry_run": bool(dry_run),
+        }
+    )
     return summary
 
 

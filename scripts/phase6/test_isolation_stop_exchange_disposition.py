@@ -266,10 +266,64 @@ def test_lifecycle_dual_peak_not_manual():
         print("PASS lifecycle_dual_peak classifies as tp")
 
 
+def test_exit_weak_for_rotation_not_manual():
+    """ARCH-4 rotation must not stamp 48h manual block (BTC 2026-10-01)."""
+    with tempfile.TemporaryDirectory() as td:
+        trades = Path(td) / "trades.jsonl"
+        ts = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        trades.write_text(
+            json.dumps(
+                {
+                    "pair": "BTC-USD",
+                    "side": "SELL",
+                    "reason": "exit_weak_for_rotation",
+                    "signal_source": "arch4_rotation",
+                    "timestamp": ts,
+                }
+            )
+            + "\n"
+        )
+        stop, tp, manual = split_disposition_pairs_by_ledger(
+            ["BTC-USD"], window_hours=48, jsonl_path=trades
+        )
+        assert stop == [] and manual == [] and tp == ["BTC-USD"], (stop, tp, manual)
+
+        state = Path(td) / "state.json"
+        state.write_text("{}")
+        runner = MagicMock()
+        runner.state_file = str(state)
+        runner._manual_liquidation_cash_hold_usd = 0.0
+        runner._manual_sell_cooldown = {}
+        runner.stop_loss_coordinator = MagicMock(client=None)
+        settings = {
+            "manual_sell_hold_cash": True,
+            "manual_sell_block_rebuy_hours": 48.0,
+            "stop_loss_exchange_hold_cash": True,
+            "stop_loss_exchange_block_rebuy_hours": 72.0,
+            "stop_loss_ledger_lookback_hours": 48.0,
+            "manual_sell_cancel_stops": False,
+            "ledger_jsonl_path": str(trades),
+        }
+        event = {
+            "event_type": "manual_liquidation_to_cash",
+            "pairs_sold": ["BTC-USD"],
+            "pair_deltas": {"BTC-USD": -366.4},
+            "cash_delta_usd": 366.4,
+            "sold_usd": 366.4,
+        }
+        apply_manual_disposition(runner, event, settings)
+        assert event["action"] == "take_profit_no_cash_hold", event.get("action")
+        assert getattr(runner, "_manual_liquidation_cash_hold_usd", 0) == 0.0
+        data = json.loads(state.read_text())
+        assert "BTC-USD" not in (data.get("manual_sell_cooldown") or {})
+        print("PASS exit_weak_for_rotation not manual")
+
+
 if __name__ == "__main__":
     test_split_and_apply_stop_exchange()
     test_stop_exchange_hold_cash_true_72h()
     test_take_profit_not_manual_cash_hold()
     test_lifecycle_extension_partial_not_manual_cash_hold()
     test_lifecycle_dual_peak_not_manual()
+    test_exit_weak_for_rotation_not_manual()
     print("ALL PASS")

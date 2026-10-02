@@ -186,7 +186,9 @@ def test_kill_blocks() -> None:
 def test_config_file_loads() -> None:
     cfg = tdd.load_config()
     assert cfg.get("schema") == tdd.SCHEMA
-    assert cfg.get("live_apply") is False
+    # Brad GO 2026-10-01: live_apply may be True; shape must still load
+    assert "live_apply" in cfg
+    assert isinstance(cfg.get("live_apply"), bool)
 
 
 def main() -> int:

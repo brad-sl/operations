@@ -464,6 +464,16 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         logger.warning("tryout_decision_discipline failed: %s", de)
         discipline_block = {"ran": False, "error": str(de), "skip_seat": False}
 
+    # Knife live gate (Luck R1): when live_gate ON, primary arm can skip seat.
+    knife_block: Optional[Dict[str, Any]] = None
+    try:
+        from phase6.core.knife_filter_shadow import apply_knife_to_composer_candidate
+
+        knife_block = apply_knife_to_composer_candidate(cand, write=True)
+    except Exception as ke:
+        logger.warning("knife live gate failed: %s", ke)
+        knife_block = {"ran": False, "error": str(ke), "skip_seat": False}
+
     seat_receipt = None
     seat_skipped_reason = None
     if cand is None:
@@ -471,6 +481,10 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
     elif isinstance(discipline_block, dict) and discipline_block.get("skip_seat"):
         seat_skipped_reason = "discipline_abstain:" + str(
             discipline_block.get("rung") or discipline_block.get("action") or "block"
+        )
+    elif isinstance(knife_block, dict) and knife_block.get("skip_seat"):
+        seat_skipped_reason = "knife_deny:" + str(
+            knife_block.get("reason") or knife_block.get("primary_arm") or "block"
         )
     else:
         money = bool(cfg.go_buy) and (not cfg.dry_run_buy)
@@ -545,6 +559,12 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
             f"setup={discipline_block.get('setup_quality')} "
             f"live={discipline_block.get('live_apply')} "
             f"would_block={discipline_block.get('would_block_if_live')}"
+        )
+    if isinstance(knife_block, dict) and knife_block.get("ran"):
+        plain_bits.append(
+            f"knife live={knife_block.get('live_gate')} "
+            f"skip={knife_block.get('skip_seat')} "
+            f"{knife_block.get('reason')}"
         )
     if seat_receipt:
         plain_bits.append(
@@ -660,14 +680,26 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         }
         if isinstance(discipline_block, dict)
         else None,
+        "knife": {
+            "ran": (knife_block or {}).get("ran"),
+            "live_gate": (knife_block or {}).get("live_gate"),
+            "skip_seat": (knife_block or {}).get("skip_seat"),
+            "allow": (knife_block or {}).get("allow"),
+            "reason": (knife_block or {}).get("reason"),
+            "primary_arm": (knife_block or {}).get("primary_arm"),
+            "error": (knife_block or {}).get("error"),
+            "plain": (knife_block or {}).get("plain_english"),
+        }
+        if isinstance(knife_block, dict)
+        else None,
         "seat_skipped_reason": seat_skipped_reason,
         "seat_receipt": seat_receipt,
         "plain_english": " | ".join(plain_bits),
         "note": (
             "Composer only. Scans all regime tryout-eligible doors. "
             "System loop when policy autonomous+armed: RSI→gate-grade sent→$shell. "
-            "Discipline shadow logs atomic judgments (live_apply OFF until GO). "
-            "Not book_rebalance. Kill file freezes money."
+            "Discipline live_apply + knife live_gate can skip/reduce seats (Brad GO 2026-10-01). "
+            "Not book_rebalance. Kill files freeze money."
         ),
     }
     # Quiet approval card (empty when no dual-clear / deduped / already autonomous)

@@ -2,6 +2,7 @@
 """Isolation: tryout scale-window kill — dead kindling → would_eject; ballast safe."""
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -32,6 +33,7 @@ class TestTryoutScaleWindow(unittest.TestCase):
             "KILL_PATH": tw.KILL_PATH,
             "EJECT_RESULT_PATH": tw.EJECT_RESULT_PATH,
             "BOARD_SEEN_PATH": tw.BOARD_SEEN_PATH,
+            "COOLOFF_PATH": tw.COOLOFF_PATH,
         }
         tw.STATE_DIR = self.state
         tw.CONFIG_PATH = self.cfg_path
@@ -40,6 +42,7 @@ class TestTryoutScaleWindow(unittest.TestCase):
         tw.KILL_PATH = self.state / "KILL"
         tw.EJECT_RESULT_PATH = self.state / "eject_latest.json"
         tw.BOARD_SEEN_PATH = self.state / "board_seen.json"
+        tw.COOLOFF_PATH = self.state / "cooloff.json"
 
     def tearDown(self) -> None:
         tw = self.tw
@@ -178,6 +181,31 @@ class TestTryoutScaleWindow(unittest.TestCase):
             row = tw.evaluate_pair("ZEC-USD", lot=lot, held_usd=0.0, cfg=tw.DEFAULTS)
         self.assertFalse(row["would_eject"])
         self.assertEqual(row["status"], "registry_ghost")
+
+    def test_post_eject_cooloff_file_and_config_default(self) -> None:
+        """Cooloff hours are config SSOT; file write is durable even if capital store mocked."""
+        tw = self.tw
+        self.assertGreaterEqual(float(tw.DEFAULTS["post_eject_pair_cooloff_hours"]), 24.0)
+        with mock.patch.object(
+            tw,
+            "set_post_eject_cooloff",
+            wraps=None,
+        ):
+            pass
+        # Direct file path: capital store may fail in isolation; file must still land
+        with mock.patch.dict("sys.modules", {}):
+            # Force capital path failure by patching import target
+            import phase6.core.capital_controls_store as ccs
+
+            with mock.patch.object(ccs, "primary_account_id", side_effect=RuntimeError("iso")):
+                out = tw.set_post_eject_cooloff("LINK-USD", 48.0)
+        self.assertTrue(out.get("file_ok"), out)
+        self.assertTrue(out.get("ok"), out)
+        self.assertFalse(out.get("capital_ok"), out)
+        blob = json.loads(tw.COOLOFF_PATH.read_text(encoding="utf-8"))
+        self.assertIn("LINK-USD", blob.get("pairs") or {})
+        exp = float((blob["pairs"]["LINK-USD"]).get("expires_ts") or 0)
+        self.assertGreater(exp, 0)
 
 
 if __name__ == "__main__":

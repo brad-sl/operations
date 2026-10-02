@@ -1,0 +1,19 @@
+{
+  "schema": "knife_filter_v1",
+  "live_gate": true,
+  "primary_arm": "rsi_reclaim",
+  "require_arms": ["rsi_reclaim"],
+  "rsi_wash_max": 40.0,
+  "reclaim_lookback_bars": 6,
+  "delay_bars_min": 1,
+  "delay_bars_max": 3,
+  "horizon_bars": 72,
+  "sl_pct": 0.04,
+  "tp_r": 2.0,
+  "rt_cost": 0.016,
+  "paid_x": false,
+  "fail_open_on_error": true,
+  "note": "Brad GO 2026-10-01: live_gate ON. Composer skips seat when primary arm denies (default rsi_reclaim). Kill: data/state/knife_filter_live_KILL. Shadow board still measure-only.",
+  "brad_go_at": "2026-10-01T15:25:00Z",
+  "updated": "2026-10-01"
+}

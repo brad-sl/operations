@@ -7,5 +7,10 @@ ui_meta:
   hermes-bots:
     sectionId: sec-mtmipt91-5qg25
     sectionName: Crypto Bot
+    shape: circle
+    color: hsl(210 68% 58%)
+    imageKind: shape
+    title: ''
+    custom: true
 _ui_meta_revisions:
-  hermes-bots: 2
+  hermes-bots: 3

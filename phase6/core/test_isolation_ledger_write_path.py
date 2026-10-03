@@ -48,7 +48,15 @@ def test_order_executor_writes_buy_when_ledger_wired(tmp_path: Path) -> None:
         trade_ledger=ledger,
     )
 
-    def fake_finalize(pair, usd_amount, result, tp_pct=None, execution_style="market_ioc"):
+    def fake_finalize(
+        pair,
+        usd_amount,
+        result,
+        tp_pct=None,
+        execution_style="market_ioc",
+        skip_sl: bool = False,
+    ):
+        # Must accept skip_sl — OrderExecutor.execute_buy forwards it (core-sleeve path).
         out = dict(result)
         out.update(
             {
@@ -63,6 +71,7 @@ def test_order_executor_writes_buy_when_ledger_wired(tmp_path: Path) -> None:
                 "execution_style": execution_style,
                 "fill_status": "full",
                 "fill_verified": True,
+                "skip_sl": bool(skip_sl),
             }
         )
         return out

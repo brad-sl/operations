@@ -410,14 +410,16 @@
                     <i class="fa-solid fa-filter-circle-dollar"></i> Promote lifecycle
                     <span class="metric-label-wrap font-normal">
                         <button type="button" class="metric-help-btn" aria-label="Promote lifecycle"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
-                        <div class="metric-tip" role="tooltip">Seat → signal → fill → win for Brad-promoted picks. Measure-only — never auto-promotes or ejects. claim_allowed stays OFF until N clears the bar. Not a live order board.</div>
+                        <div class="metric-tip" role="tooltip">Seat → signal → fill → win history board. Closed stages (filled_win/loss) are not a live queue — h→fill is time-to-first-fill latency, not wait age. Membership Manager seats eligibility (≤1/day, dust-only REMOVE); dual_agree still manual. claim_allowed OFF until N clears.</div>
                     </span>
                 </h2>
                 <span id="promote-claim-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">claim --</span>
                 <span id="promote-path-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">path --</span>
+                <span id="promote-mm-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300">mgr --</span>
                 <span id="promote-choke-badge" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-amber-950 text-amber-300">choke --</span>
             </div>
             <p id="promote-plain" class="text-xs text-slate-400 mb-4">Loading promote board…</p>
+            <p id="promote-mm-plain" class="text-[11px] text-slate-500 mb-3">Membership manager…</p>
             <div id="promote-tiles" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mb-4 text-center"></div>
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-3 mb-4">
                 <div class="bg-slate-950/60 rounded-2xl border border-slate-800 p-2 overflow-hidden">
@@ -438,15 +440,17 @@
                     <thead class="text-slate-500 border-b border-slate-800">
                         <tr>
                             <th class="py-1 pr-2 font-medium">Add</th>
+                            <th class="py-1 pr-2 font-medium">Ep</th>
                             <th class="py-1 pr-2 font-medium">Stage</th>
                             <th class="py-1 pr-2 font-medium">Outcome</th>
                             <th class="py-1 pr-2 font-medium">Paper 7d</th>
                             <th class="py-1 pr-2 font-medium">PnL</th>
-                            <th class="py-1 font-medium">h→fill</th>
+                            <th class="py-1 font-medium">h→fill*</th>
                         </tr>
                     </thead>
                     <tbody id="promote-episodes"></tbody>
                 </table>
+                <p class="text-[10px] text-slate-600 mt-1 px-1">*h→fill = historical hours to first fill on closed episodes — not current queue age.</p>
             </div>
         </div>
 
@@ -1981,14 +1985,31 @@
                 chokeEl.title = choke.why || go.choke_why || '';
             }
             if (plain) plain.textContent = go.plain_english || 'Promote lifecycle (measure-only).';
+            const mm = data.membership_manager || {};
+            const mmPlain = document.getElementById('promote-mm-plain');
+            const mmBadge = document.getElementById('promote-mm-badge');
+            if (mmBadge) {
+                const st = (mm.last && mm.last.status) || (mm.enabled ? 'armed' : 'off');
+                const kill = mm.kill ? 'KILL' : st;
+                _badge(mmBadge, 'mgr ' + kill, !mm.kill && mm.live_apply === true);
+                mmBadge.title = (mm.plain_english || '') + (mm.last && mm.last.plain_english ? ' | ' + mm.last.plain_english : '');
+            }
+            if (mmPlain) {
+                const last = mm.last || {};
+                const pairBit = (last.remove && last.add) ? (last.remove + '→' + last.add) : 'no swap yet';
+                mmPlain.textContent = (mm.plain_english || 'Membership manager')
+                    + ' · last=' + (last.status || '--') + ' ' + pairBit
+                    + ' · today=' + (mm.applies_today ?? 0) + '/' + (mm.max_per_day ?? 1)
+                    + (mm.brad_in_path ? ' · Brad-in-path ⚠️' : ' · Brad out of path');
+            }
             if (tiles) {
                 tiles.innerHTML = [
                     _tile('Seated', fun.n_seated ?? '--'),
-                    _tile('Signaled', fun.n_signaled ?? '--', _fmtPct01(fun.rate_signal_given_seat) + ' of seat'),
+                    _tile('Open eps', data.n_episodes_open ?? go.n_episodes_open ?? '--', 'live queue'),
+                    _tile('Closed eps', data.n_episodes_closed ?? go.n_episodes_closed ?? '--', 'history'),
                     _tile('Filled', fun.n_filled ?? '--', _fmtPct01(fun.rate_fill_given_signal) + ' of sig'),
                     _tile('Win|fill', fun.n_filled_win ?? 0, _fmtPct01(fun.rate_win_given_fill_closed)),
                     _tile('Paper hit7', _fmtPct01(paper.hit_rate_positive_7d), 'n=' + (paper.n_picks ?? '--')),
-                    _tile('Talk', go.promote_talk_ok ? 'OK' : 'NO', 'auto-promote off'),
                 ].join('');
             }
             const cacheBust = Date.now();
@@ -2001,22 +2022,32 @@
             setImg('promote-chart-outcomes', '/charts/promote-graduation/outcomes.svg');
             setImg('promote-chart-paper', '/charts/promote-graduation/paper.svg');
             if (body) {
-                const eps = (data.episodes || []).slice().sort((a, b) => String(b.promoted_at || '').localeCompare(String(a.promoted_at || '')));
+                // Prefer open episodes first, then recent closed (honest queue vs history)
+                const eps = (data.episodes || []).slice().sort((a, b) => {
+                    const ao = a.episode_open ? 0 : 1;
+                    const bo = b.episode_open ? 0 : 1;
+                    if (ao !== bo) return ao - bo;
+                    return String(b.promoted_at || '').localeCompare(String(a.promoted_at || ''));
+                });
                 if (!eps.length) {
-                    body.innerHTML = '<tr><td colspan="6" class="py-2 text-slate-500">No promote episodes</td></tr>';
+                    body.innerHTML = '<tr><td colspan="7" class="py-2 text-slate-500">No promote episodes</td></tr>';
                 } else {
                     body.innerHTML = eps.map(e => {
                         const pair = (e.add_pair || '').replace('-USD', '');
                         const ret = e.paper_ret_7d_pct;
                         const retCls = ret == null ? 'text-slate-400' : (Number(ret) >= 0 ? 'text-emerald-400' : 'text-rose-400');
                         const pnl = e.realized_pnl_sum;
+                        const ep = e.episode_open ? 'open' : (e.status || 'closed');
+                        const epCls = e.episode_open ? 'text-amber-300' : 'text-slate-500';
+                        const hFill = e.hours_to_first_fill == null ? '--' : _fmtNum(e.hours_to_first_fill, 0) + 'h';
                         return `<tr class="border-b border-slate-800/80">
                             <td class="py-1.5 pr-2 text-slate-200">${pair}</td>
+                            <td class="py-1.5 pr-2 ${epCls}">${ep}</td>
                             <td class="py-1.5 pr-2 text-slate-400">${e.stage || '--'}</td>
                             <td class="py-1.5 pr-2 text-slate-300">${(e.outcome_class || '').replace(/_/g, ' ') || '--'}</td>
                             <td class="py-1.5 pr-2 tabular-nums ${retCls}">${ret == null ? '--' : (Number(ret) >= 0 ? '+' : '') + _fmtNum(ret, 1) + '%'}</td>
                             <td class="py-1.5 pr-2 tabular-nums text-slate-300">${pnl == null ? '--' : '$' + _fmtNum(pnl, 2)}</td>
-                            <td class="py-1.5 tabular-nums text-slate-400">${e.hours_to_first_fill == null ? '--' : _fmtNum(e.hours_to_first_fill, 0) + 'h'}</td>
+                            <td class="py-1.5 tabular-nums text-slate-400" title="historical latency, not queue age">${hFill}</td>
                         </tr>`;
                     }).join('');
                 }

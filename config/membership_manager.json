@@ -1,0 +1,27 @@
+{
+  "schema": "membership_manager_v1",
+  "updated": "2026-10-03",
+  "enabled": true,
+  "brad_go": "2026-10-03_self_regulating_membership",
+  "live_apply": true,
+  "max_per_day": 1,
+  "protect_usd": 5.0,
+  "override_novelty": true,
+  "override_missfire": false,
+  "allow_residual_hold": false,
+  "dual_agree_auto": false,
+  "sources": {
+    "preferred_arm_cf": true,
+    "contender_vs_weak": true
+  },
+  "contender": {
+    "min_quality": 0.55,
+    "min_delta_vs_weak": 0.08,
+    "require_promote_eligible": true,
+    "skip_pump_names": true
+  },
+  "sticky": ["BTC-USD", "ETH-USD"],
+  "kill_file": "data/state/membership_manager_KILL",
+  "also_honor_preferred_arm_kill": true,
+  "note": "Self-regulating membership (Brad GO 2026-10-03). Seat eligibility only — no orders. Preferred-arm CF first; else contender vs weakest flat non-sticky. dual_agree stays manual. Kill: touch data/state/membership_manager_KILL"
+}

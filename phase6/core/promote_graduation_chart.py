@@ -198,6 +198,20 @@ def build_episodes(
             m7 = marks.get("7d") or {}
             paper_ex7 = _f(m7.get("excess_vs_remove_pct"))
 
+        # Episode hygiene (Brad 2026-10-03): closed terminal stages are NOT a live queue.
+        # hours_to_first_fill is historical latency, not "still waiting".
+        raw_status = str(row.get("status") or g.get("status") or "").strip().lower()
+        terminal = stage in ("filled_win", "filled_loss", "stale_no_signal")
+        if raw_status in ("closed", "done", "complete", "resolved"):
+            status = "closed"
+        elif terminal:
+            status = "closed"
+        elif stage in ("filled_open", "signaled", "blocked_no_fill", "seated"):
+            status = "open" if raw_status not in ("closed", "done") else "closed"
+        else:
+            status = raw_status or "open"
+        episode_open = status == "open" and not terminal
+
         episodes.append(
             {
                 "pick_id": pid or None,
@@ -205,12 +219,15 @@ def build_episodes(
                 "remove_pair": row.get("remove_pair") or g.get("remove_pair"),
                 "promoted_at": row.get("promoted_at") or g.get("promoted_at"),
                 "source": row.get("source") or g.get("source"),
-                "status": row.get("status") or "open",
+                "status": status,
+                "episode_open": episode_open,
                 "stage": stage,
                 "signaled": bool(g.get("signaled")),
                 "filled": bool(g.get("filled")),
                 "hours_to_first_signal": _f(g.get("hours_to_first_signal")),
                 "hours_to_first_fill": _f(g.get("hours_to_first_fill")),
+                # Honest label: latency is closed-history, not queue age
+                "hours_to_first_fill_is_queue_age": False,
                 "realized_pnl_sum": _f(g.get("realized_pnl_sum")),
                 "paper_ret_7d_pct": paper_7d,
                 "paper_excess_7d_pct": paper_ex7,
@@ -688,6 +705,8 @@ def build_chart(
     timing = timing_stats(episodes)
     choke = choke_point(funnel)
 
+    n_open_eps = sum(1 for e in episodes if e.get("episode_open"))
+    n_closed_eps = len(episodes) - n_open_eps
     promote_talk_ok = bool(paper.get("claim_allowed") and _i(funnel.get("n_filled_win")) >= 3)
     go = {
         "promote_talk_ok": promote_talk_ok,
@@ -700,15 +719,27 @@ def build_chart(
             else ("ATTENTION" if not promote_talk_ok else "REVIEW")
         ),
         "plain_english": (
-            f"promotes={funnel.get('n_seated')} sig={funnel.get('n_signaled')} "
-            f"fill={funnel.get('n_filled')} win={funnel.get('n_filled_win')} "
-            f"choke={choke.get('id')} paper_hit7={paper.get('hit_rate_positive_7d')} "
-            f"claim={paper.get('claim_allowed')}."
+            f"promotes={funnel.get('n_seated')} open_eps={n_open_eps} closed_eps={n_closed_eps} "
+            f"sig={funnel.get('n_signaled')} fill={funnel.get('n_filled')} "
+            f"win={funnel.get('n_filled_win')} choke={choke.get('id')} "
+            f"paper_hit7={paper.get('hit_rate_positive_7d')} claim={paper.get('claim_allowed')}. "
+            f"h→fill is historical latency on closed fills — not queue age."
         ),
+        "n_episodes_open": n_open_eps,
+        "n_episodes_closed": n_closed_eps,
     }
 
     # idle DQ candidates (observe only)
     idle_flagged = list(idle.get("idle_flagged_pairs") or []) if idle else []
+
+    # Membership manager snapshot (seat eligibility; Brad out of path)
+    mm_dash: Dict[str, Any] = {}
+    try:
+        from phase6.core.membership_manager import dashboard_payload as _mm_dash
+
+        mm_dash = _mm_dash()
+    except Exception as e:  # noqa: BLE001
+        mm_dash = {"status": "unavailable", "error": f"{type(e).__name__}:{e}"}
 
     payload: Dict[str, Any] = {
         "schema": SCHEMA,
@@ -722,6 +753,9 @@ def build_chart(
         "go_nogo": go,
         "episodes": episodes,
         "n_episodes": len(episodes),
+        "n_episodes_open": n_open_eps,
+        "n_episodes_closed": n_closed_eps,
+        "membership_manager": mm_dash,
         "dq_observe": {
             "mode": idle.get("mode") if idle else "observe_only",
             "hard_eject": bool(idle.get("hard_eject")) if idle else False,

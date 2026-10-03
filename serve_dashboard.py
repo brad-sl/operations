@@ -2099,9 +2099,26 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                         data = {"status": "error", "message": "invalid payload"}
                     else:
                         data = {**data, "status": "ok"}
+                    # live membership manager snapshot (seat eligibility; Brad out of path)
+                    try:
+                        from phase6.core.membership_manager import dashboard_payload as _mm_dash
+
+                        data["membership_manager"] = _mm_dash()
+                    except Exception as _mme:  # noqa: BLE001
+                        data["membership_manager"] = {
+                            "status": "unavailable",
+                            "error": f"{type(_mme).__name__}:{_mme}",
+                        }
                     self.send_json(data)
             except Exception as e:
                 self.send_json({"status": "error", "message": str(e)[:200], "measure_only": True})
+        elif path == '/api/membership-manager':
+            try:
+                from phase6.core.membership_manager import dashboard_payload as _mm_dash
+
+                self.send_json({**_mm_dash(), "status": "ok"})
+            except Exception as e:
+                self.send_json({"status": "error", "message": str(e)[:200]})
         elif path == '/api/platform-metrics-spine':
             try:
                 p = BASE / "data" / "state" / "platform_metrics_spine_latest.json"

@@ -138,34 +138,79 @@ class RotationStrategy:
             return True
         return False
 
-    @staticmethod
-    def _is_rsi_overbought_only_rotate_out(proposal: Proposal) -> bool:
+    # Reason tokens that mean RSI mean-reversion OB (not string-fragile single phrase)
+    _RSI_OB_REASON_MARKERS = (
+        "rsi overbought",
+        "rsi_overbought",
+        "rsi-overbought",
+        "rsi>70",
+        "rsi > 70",
+        "rsi>=70",
+        "rsi >= 70",
+        "overbought rsi",
+        "rsi_ob",
+        "mean-reversion sell",
+        "mean reversion sell",
+    )
+
+    @classmethod
+    def _reason_looks_rsi_overbought(cls, reason: str) -> bool:
+        r = str(reason or "").lower()
+        if not r:
+            return False
+        if any(m in r for m in cls._RSI_OB_REASON_MARKERS):
+            return True
+        # bare "overbought" only when RSI token also present (avoid stoch-only)
+        if "overbought" in r and "rsi" in r:
+            return True
+        return False
+
+    @classmethod
+    def _is_rsi_overbought_only_rotate_out(cls, proposal: Proposal) -> bool:
         """True when ROTATE_OUT/SELL is mean-reversion RSI>70 without bearish confirmation.
 
         Brad GO 2026-10-02 core-sleeve: do not full-bag rotate on RSI overbought alone.
         Dual-peak/meat (4%) or structure/SL owns the exit; negative sentiment confirms.
+
+        Detection prefers metadata RSI, then multi-token reason phrases (not one fragile
+        substring). A differently worded OB reason without md RSI still holds when the
+        reason clearly names RSI overbought.
         """
         side = str(getattr(proposal, "side", "") or "").upper()
         if side not in ("ROTATE_OUT", "SELL"):
             return False
-        reason = str(getattr(proposal, "reason", "") or "").lower()
+        reason = str(getattr(proposal, "reason", "") or "")
         md = getattr(proposal, "metadata", None) or {}
         if not isinstance(md, dict):
             md = {}
-        try:
-            rsi = float(md.get("rsi")) if md.get("rsi") is not None else None
-        except (TypeError, ValueError):
-            rsi = None
+        rsi = None
+        for key in ("rsi", "rsi_14", "rsi14", "RSI"):
+            if md.get(key) is not None:
+                try:
+                    rsi = float(md.get(key))
+                    break
+                except (TypeError, ValueError):
+                    pass
+        if rsi is None:
+            ind = md.get("indicators") if isinstance(md.get("indicators"), dict) else {}
+            for key in ("rsi", "rsi_14", "rsi14"):
+                if ind.get(key) is not None:
+                    try:
+                        rsi = float(ind.get(key))
+                        break
+                    except (TypeError, ValueError):
+                        pass
         try:
             sent = float(md.get("sentiment")) if md.get("sentiment") is not None else 0.0
         except (TypeError, ValueError):
             sent = 0.0
+        reason_l = reason.lower()
         # Confirmed bearish stack may still rotate (RSI OB + negative sent)
-        if "negative sentiment" in reason or sent < -0.2:
+        if "negative sentiment" in reason_l or sent < -0.2:
             return False
-        if "rsi overbought" in reason:
-            return True
         if rsi is not None and rsi > 70.0:
+            return True
+        if cls._reason_looks_rsi_overbought(reason):
             return True
         return False
 
@@ -279,21 +324,24 @@ class RotationStrategy:
             weak_thresh = 0.5 - self.config.min_score_delta
             if p.side in ("ROTATE_OUT", "SELL") or (p.side == "HOLD" and p.score < weak_thresh):
                 if current_allocs.get(p.pair, 0) > 0:
-                    if not emergency_recovery or p.score < 0.2:
-                        # Core-sleeve guard (Brad GO 2026-10-02): RSI>70 mean-reversion
-                        # alone is NOT a full-bag rotation. Dual-peak/meat owns green exits;
-                        # SL owns structure breaks. BTC 2026-10-01 sold strength into grind.
-                        if self._is_rsi_overbought_only_rotate_out(p) and not emergency_recovery:
-                            rsi_ob_hold_core.append(p.pair)
-                            logger.info(
-                                "[CORE-SLEEVE] hold %s — RSI-overbought ROTATE_OUT alone "
-                                "(score=%.3f reason=%s); dual-peak/meat or structure owns exit",
-                                p.pair,
-                                float(p.score or 0.0),
-                                (p.reason or "")[:80],
-                            )
-                        else:
-                            weak_pairs.append(p.pair)
+                    # Core-sleeve guard (Brad GO 2026-10-02 / review 2026-10-02):
+                    # RSI>70 mean-reversion alone is NEVER a full-bag rotation — including
+                    # thin-book emergency_recovery. Emergency may free truly weak non-RSI
+                    # bags (score < 0.2); dual-peak/meat owns green; SL owns structure.
+                    # BTC 2026-10-01 sold strength into grind on RSI-OB-only.
+                    if self._is_rsi_overbought_only_rotate_out(p):
+                        rsi_ob_hold_core.append(p.pair)
+                        logger.info(
+                            "[CORE-SLEEVE] hold %s — RSI-overbought ROTATE_OUT alone "
+                            "(score=%.3f reason=%s emergency=%s); dual-peak/meat or "
+                            "structure owns exit",
+                            p.pair,
+                            float(p.score or 0.0),
+                            (p.reason or "")[:80],
+                            emergency_recovery,
+                        )
+                    elif not emergency_recovery or p.score < 0.2:
+                        weak_pairs.append(p.pair)
 
             # Aggressive RECOVERY: relax BUY gates
             min_buy_score = (0.3 if emergency_recovery else 0.55) / max(regime_mult, 0.7)

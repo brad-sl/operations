@@ -8,11 +8,14 @@ Product bar (Brad 2026-10-01):
 Standing rules
 --------------
 • Decision = this module. Money mechanics = protected_market_exit.
-• Default live_apply OFF (config). Operator CLI can eject with explicit --go.
+• DEFAULTS.live_apply is false (safe code default). Live money = config SSOT:
+  Brad GO 2026-10-01 set config live_apply true (board cron auto-ejects).
+  Kill file freezes. Operator CLI --go still works.
+• Cooloff SSOT: config post_eject_pair_cooloff_hours (DEFAULTS 24h as of 2026-10-02).
 • Tryout-shell / open-lot registry only — never BTC/ETH/PAXG ballast.
 • One full flat per pair; no half-trim here (that is dual-peak's job).
 • No cash-hold on eject reason (strategy/process exit, not discretionary park).
-• Shadow board always records would_eject; live money needs arm + GO.
+• Board always records would_eject; auto money needs config live_apply + no kill.
 
 Does NOT replace SL / trail TP / dual-peak. Orthogonal: those need meat or -3%;
 this frees shells that will never kindle.
@@ -69,12 +72,12 @@ DEFAULTS: Dict[str, Any] = {
     "neg_sent_max": 0.0,  # strictly negative
     "min_shell_usd": 15.0,
     "max_shell_usd": 100.0,  # still tryout-sized
-    "post_eject_pair_cooloff_hours": 48.0,  # same-pair re-seat block after eject (config SSOT)
+    "post_eject_pair_cooloff_hours": 24.0,  # same-pair re-seat block after eject (config SSOT)
     "ballast_pairs": list(STICKY_NEVER_EJECT),
     "note": (
         "Shell = option on kindling. Dead scale path → full exit. "
-        "live_apply false until Brad arms auto; operator CLI --go still works. "
-        "post_eject_pair_cooloff_hours blocks re-seat via capital_controls + cooloff file."
+        "DEFAULTS.live_apply false; live config may be true after Brad GO. "
+        "post_eject_pair_cooloff_hours default 24h (config SSOT)."
     ),
 }
 
@@ -539,15 +542,28 @@ def mark_lot_ejected(
     reason: str = EJECT_REASON,
     order_id: Optional[str] = None,
     meta: Optional[Dict[str, Any]] = None,
+    skip_dwell: bool = False,
 ) -> None:
-    """Clear open-lot registry + dwell exit hook after successful flat."""
+    """Clear open-lot registry after successful flat.
+
+    Dwell/on_tryout_exit: only when skip_dwell=False. Live eject goes through
+    protected_market_exit → TradeLedger SELL which already runs close_tryout_lot
+    + on_tryout_exit — set skip_dwell=True there to avoid double dwell (P2).
+    """
     pn = _norm_pair(pair)
     try:
-        from phase6.core import tryout_scale_up_shadow as shadow
+        from phase6.core.tryout_seat_ledger import close_tryout_lot
 
-        shadow._clear_open_lot(pn)  # type: ignore[attr-defined]
-    except Exception as e:
-        logger.warning("clear open lot %s: %s", pn, e)
+        close_tryout_lot(pn, exit_class=None, reason=reason, keep_scored_meta=False)
+    except Exception:
+        try:
+            from phase6.core import tryout_scale_up_shadow as shadow
+
+            shadow._clear_open_lot(pn)  # type: ignore[attr-defined]
+        except Exception as e:
+            logger.warning("clear open lot %s: %s", pn, e)
+    if skip_dwell:
+        return
     try:
         from phase6.core.pair_funnel_dwell import on_tryout_exit
 
@@ -555,7 +571,7 @@ def mark_lot_ejected(
             pn,
             exit_reason=reason,
             exit_ts=_utc_iso(),
-            meta={"order_id": order_id, **(meta or {})},
+            meta={"order_id": order_id, "hook_source": "scale_window_mark", **(meta or {})},
         )
     except Exception as e:
         logger.warning("dwell on_tryout_exit %s: %s", pn, e)
@@ -587,7 +603,7 @@ def set_post_eject_cooloff(pair: str, hours: float) -> Dict[str, Any]:
       1) capital_controls store ``manual_sell_cooldown``
       2) data/state/tryout_scale_window_cooloff.json (audit + recovery if store races)
 
-    Hours SSOT: config ``post_eject_pair_cooloff_hours`` (default 48).
+    Hours SSOT: config ``post_eject_pair_cooloff_hours`` (default 24).
     Returns receipt; raises only on total write failure after retries logged.
     """
     import time
@@ -754,22 +770,35 @@ def eject_pair(
     )
     result["protected_exit"] = pe
     result["success"] = bool(pe.get("success")) or (
-        dry_run and not pe.get("error")
+        dry_run and not pe.get("error") and not pe.get("naked_risk")
     )
     if dry_run:
-        result["success"] = True
+        # SW-03: never claim dry success if cancel left bag naked
+        if pe.get("naked_risk") or (
+            pe.get("error") and str(pe.get("error")).startswith("dry_run_sl_reattach")
+        ):
+            result["success"] = False
+            result["error"] = pe.get("error") or "dry_run_naked_risk"
+            result["naked_risk"] = True
+        else:
+            result["success"] = True
         result["would_sell_qty_hint"] = hint
         result["mark"] = mark
         return result
 
     if pe.get("success"):
+        # Ledger already ran close_tryout_lot + on_tryout_exit — skip dwell here
         mark_lot_ejected(
             pn,
             reason=reason,
             order_id=pe.get("order_id"),
             meta={"filled_qty": pe.get("filled_qty"), "exit_price": pe.get("exit_price")},
+            skip_dwell=True,
         )
-        cool_h = _f(c.get("post_eject_pair_cooloff_hours"), 48.0)
+        cool_h = _f(
+            c.get("post_eject_pair_cooloff_hours"),
+            float(DEFAULTS.get("post_eject_pair_cooloff_hours") or 24.0),
+        )
         cool = set_post_eject_cooloff(pn, cool_h)
         result["cooloff"] = cool
         if not cool.get("ok"):

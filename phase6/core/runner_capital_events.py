@@ -115,17 +115,29 @@ def _reason_is_strategy_profit_exit(reason: str) -> bool:
         or r.startswith("operator_exit")
     ):
         return True
-    # Tryout scale-window eject (Brad GO C 2026-10-01): dead kindling path → free powder
-    if (
-        "tryout_scale_window" in r
-        or r.startswith("tryout_scale_window_eject")
-        or "scale_window_eject" in r
-    ):
+    # Tryout scale-window eject: strategy (not manual) for disposition split —
+    # must NOT fall through to manual_liquidation cash-hold.
+    # Post-TP rebuy block is skipped separately in load_buy_block_status;
+    # cooloff SSOT = set_post_eject_cooloff only (HYPE 2026-10-02 double-block).
+    if _reason_is_scale_window_eject(r):
         return True
     # ARCH-4 rotation / catch-wave (Brad GO 2026-10-02): never 48h manual block
+    # Kept in profit-exit classifier so capital layer treats rotation as strategy, not manual.
     if _reason_is_strategy_rotation(r):
         return True
     return False
+
+
+def _reason_is_scale_window_eject(reason: str) -> bool:
+    """Dead-kindling full exit — cooloff via set_post_eject_cooloff, not post_tp stack."""
+    r = str(reason or "").lower()
+    if not r:
+        return False
+    return (
+        "tryout_scale_window" in r
+        or r.startswith("tryout_scale_window_eject")
+        or "scale_window_eject" in r
+    )
 
 
 def _reason_is_lifecycle_exit(reason: str) -> bool:
@@ -847,6 +859,10 @@ def load_buy_block_status(
                     continue
                 # Don't double-count stops that also matched profit keywords
                 if _reason_is_stop_exchange(reason):
+                    continue
+                # Scale-window eject cooloff is SSOT elsewhere (config hours + cooloff file).
+                # Do not stack a second post_tp_rebuy_block on top (HYPE 2026-10-02).
+                if _reason_is_scale_window_eject(reason):
                     continue
                 ts = _parse_trade_ts(str(t.get("timestamp", "")))
                 if ts is None or ts < tp_cutoff:

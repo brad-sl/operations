@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Set
@@ -23,6 +25,7 @@ logger = logging.getLogger(__name__)
 SCHEMA = "tryout_seat_ledger_v1"
 STATE_DIR = PROJECT_ROOT / "data" / "state"
 OPEN_LOTS_PATH = STATE_DIR / "tryout_scale_up_open_lots.json"
+OPEN_LOTS_LOCK_PATH = STATE_DIR / "tryout_scale_up_open_lots.lock"
 LATEST_PATH = STATE_DIR / "tryout_seat_ledger_latest.json"
 SCALE_WINDOW_LATEST = STATE_DIR / "tryout_scale_window_latest.json"
 GHOST_ARCHIVE_PATH = STATE_DIR / "tryout_open_lot_ghosts.jsonl"
@@ -85,6 +88,48 @@ def _write_json(path: Path, obj: Any) -> None:
     path.write_text(json.dumps(obj, indent=2, default=str) + "\n")
 
 
+class _OpenLotsFileLock:
+    """Best-effort exclusive lock for open_lots.json (POSIX flock; no-op fallback)."""
+
+    def __init__(self, lock_path: Path = OPEN_LOTS_LOCK_PATH, timeout_s: float = 5.0):
+        self.lock_path = lock_path
+        self.timeout_s = timeout_s
+        self._fd: Optional[int] = None
+
+    def __enter__(self) -> "_OpenLotsFileLock":
+        self.lock_path.parent.mkdir(parents=True, exist_ok=True)
+        self._fd = os.open(str(self.lock_path), os.O_CREAT | os.O_RDWR, 0o644)
+        deadline = time.time() + self.timeout_s
+        while True:
+            try:
+                import fcntl
+
+                fcntl.flock(self._fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return self
+            except ImportError:
+                # Non-POSIX: skip lock rather than block money path
+                return self
+            except (BlockingIOError, OSError):
+                if time.time() >= deadline:
+                    logger.warning("open_lots lock timeout after %.1fs — proceeding unlocked", self.timeout_s)
+                    return self
+                time.sleep(0.05)
+
+    def __exit__(self, *args: Any) -> None:
+        if self._fd is not None:
+            try:
+                import fcntl
+
+                fcntl.flock(self._fd, fcntl.LOCK_UN)
+            except Exception:
+                pass
+            try:
+                os.close(self._fd)
+            except Exception:
+                pass
+            self._fd = None
+
+
 def load_open_lots_raw() -> Dict[str, Any]:
     reg = _load_json(OPEN_LOTS_PATH, {"schema": "tryout_scale_up_v1", "lots": {}})
     if not isinstance(reg, dict):
@@ -93,6 +138,12 @@ def load_open_lots_raw() -> Dict[str, Any]:
     if not isinstance(lots, dict):
         reg["lots"] = {}
     return reg
+
+
+def write_open_lots_raw(reg: Dict[str, Any]) -> None:
+    """Atomic-ish write under flock so purge/close/register don't clobber each other."""
+    with _OpenLotsFileLock():
+        _write_json(OPEN_LOTS_PATH, reg)
 
 
 def load_held_usd_map() -> Dict[str, float]:
@@ -564,7 +615,7 @@ def purge_ghost_lots(
             "n_removed": len(removed),
             "pairs": result["removed_pairs"],
         }
-        _write_json(OPEN_LOTS_PATH, reg)
+        write_open_lots_raw(reg)
         result["wrote"] = str(OPEN_LOTS_PATH)
         # refresh ledger snapshot
         try:
@@ -605,13 +656,13 @@ def close_tryout_lot(
             lots[pn] = prev
             reg["lots"] = lots
             reg["updated_at"] = _utc_iso()
-            _write_json(OPEN_LOTS_PATH, reg)
+            write_open_lots_raw(reg)
             return {"ok": True, "pair": pn, "action": "marked_flat_pending_score", "lot": prev}
 
     lots.pop(pn, None)
     reg["lots"] = lots
     reg["updated_at"] = _utc_iso()
-    _write_json(OPEN_LOTS_PATH, reg)
+    write_open_lots_raw(reg)
     try:
         GHOST_ARCHIVE_PATH.parent.mkdir(parents=True, exist_ok=True)
         with GHOST_ARCHIVE_PATH.open("a") as f:

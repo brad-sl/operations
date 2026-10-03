@@ -128,10 +128,40 @@ class TestTryoutScaleWindow(unittest.TestCase):
         self.assertEqual(r2.get("error"), "ballast_refused")
 
     def test_capital_reason_is_strategy(self) -> None:
-        from phase6.core.runner_capital_events import _reason_is_strategy_profit_exit
+        from phase6.core.runner_capital_events import (
+            _reason_is_scale_window_eject,
+            _reason_is_strategy_profit_exit,
+            load_buy_block_status,
+        )
+        import tempfile
+        from pathlib import Path
+        from datetime import datetime, timezone
 
+        # Disposition: eject is strategy (not manual cash-park)
         self.assertTrue(_reason_is_strategy_profit_exit("tryout_scale_window_eject"))
         self.assertTrue(_reason_is_strategy_profit_exit("TRYOUT_SCALE_WINDOW_EJECT"))
+        self.assertTrue(_reason_is_scale_window_eject("tryout_scale_window_eject"))
+
+        # Buy-block: eject must NOT mint post_tp on top of cooloff SSOT
+        with tempfile.TemporaryDirectory() as td:
+            trades = Path(td) / "trades.jsonl"
+            ts = datetime.now(timezone.utc).isoformat()
+            trades.write_text(
+                json.dumps(
+                    {
+                        "pair": "HYPE-USD",
+                        "side": "SELL",
+                        "reason": "tryout_scale_window_eject",
+                        "timestamp": ts,
+                    }
+                )
+                + "\n"
+            )
+            blocks = load_buy_block_status(
+                jsonl_path=trades,
+                include_runtime_controls=False,
+            )
+            self.assertNotIn("HYPE-USD", blocks, blocks)
 
     def test_board_tg_dedupe_and_empty(self) -> None:
         tw = self.tw

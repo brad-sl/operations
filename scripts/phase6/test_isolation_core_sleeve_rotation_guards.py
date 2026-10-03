@@ -312,12 +312,106 @@ def test_holdings_usd_prefers_value_not_qty() -> None:
     print("PASS holdings_usd_prefers_value_not_qty")
 
 
+def test_rsi_ob_reason_variants_without_md() -> None:
+    """Review #5: differently worded OB reason (no md RSI) still holds core."""
+    from phase6.core.allocator import AllocatorConfig, RotationStrategy
+    from phase6.core.evaluation import Proposal
+
+    cfg = AllocatorConfig(min_move_usd=50.0, min_score_delta=0.05, cooldown_hours=0.0)
+    strat = RotationStrategy(cfg)
+    for reason in (
+        "RSI>70 mean-reversion sell",
+        "overbought RSI extension",
+        "rsi_ob signal",
+        "Mean reversion sell after stretch",
+    ):
+        proposals = [
+            Proposal(
+                pair="BTC-USD",
+                side="ROTATE_OUT",
+                score=0.4,
+                reason=reason,
+                source="signal_generator",
+                confidence=0.4,
+                metadata={"sentiment": 0.05},  # no rsi key
+            ),
+            Proposal(
+                pair="ETH-USD",
+                side="HOLD",
+                score=0.5,
+                reason="No strong signal",
+                source="signal_generator",
+                metadata={},
+            ),
+            Proposal(
+                pair="SOL-USD",
+                side="HOLD",
+                score=0.5,
+                reason="No strong signal",
+                source="signal_generator",
+                metadata={},
+            ),
+        ]
+        allocs = {"BTC-USD": 370.0, "ETH-USD": 246.0, "SOL-USD": 77.0, "PAXG-USD": 79.0}
+        plan = strat.decide(
+            proposals=proposals,
+            current_allocs=dict(allocs),
+            cash_usd=500.0,
+            total_capital=sum(allocs.values()) + 500.0,
+        )
+        sells = [a for a in plan.actions if a.get("action") == "SELL" and a.get("pair") == "BTC-USD"]
+        assert not sells, f"reason={reason!r} must hold; got {plan.actions}"
+    print("PASS rsi_ob_reason_variants_without_md")
+
+
+def test_emergency_thin_book_still_holds_rsi_ob() -> None:
+    """Review #6: ≤2 bags emergency must NOT full-rotate on RSI-OB-only."""
+    from phase6.core.allocator import AllocatorConfig, RotationStrategy
+    from phase6.core.evaluation import Proposal
+
+    cfg = AllocatorConfig(min_move_usd=50.0, min_score_delta=0.05, cooldown_hours=0.0)
+    strat = RotationStrategy(cfg)
+    proposals = [
+        Proposal(
+            pair="BTC-USD",
+            side="ROTATE_OUT",
+            score=0.4,
+            reason="RSI overbought",
+            source="signal_generator",
+            confidence=0.4,
+            metadata={"rsi": 72.0, "sentiment": 0.1},
+        ),
+        Proposal(
+            pair="ETH-USD",
+            side="HOLD",
+            score=0.5,
+            reason="No strong signal",
+            source="signal_generator",
+            metadata={"rsi": 50.0},
+        ),
+    ]
+    # Only 2 held bags → emergency_recovery True historically bypassed core-sleeve
+    allocs = {"BTC-USD": 370.0, "ETH-USD": 246.0}
+    plan = strat.decide(
+        proposals=proposals,
+        current_allocs=dict(allocs),
+        cash_usd=500.0,
+        total_capital=sum(allocs.values()) + 500.0,
+    )
+    sells = [a for a in plan.actions if a.get("action") == "SELL" and a.get("pair") == "BTC-USD"]
+    assert not sells, f"thin-book emergency must still hold RSI-OB BTC; got {plan.actions} notes={plan.notes}"
+    assert "core_sleeve_rsi_ob_hold" in (plan.notes or "")
+    print("PASS emergency_thin_book_still_holds_rsi_ob")
+
+
 def main() -> int:
     test_rsi_overbought_only_holds_core()
     test_confirmed_bearish_rsi_ob_still_rotates()
     test_sell_only_holds_core()
     test_exit_weak_not_manual_48h()
     test_holdings_usd_prefers_value_not_qty()
+    test_rsi_ob_reason_variants_without_md()
+    test_emergency_thin_book_still_holds_rsi_ob()
     print("ALL PASS test_isolation_core_sleeve_rotation_guards")
     return 0
 

@@ -6,7 +6,7 @@
 | **Status** | `ACTIVE` · living process map (operator law for *shape*; money still config + Brad GO) |
 | **Class** | FEAT / PROCESS |
 | **Owner** | Brad + platform |
-| **Updated** | 2026-10-01 (B–G simplify ship) |
+| **Updated** | 2026-10-02 (money arms ON honesty + cooloff 24h + review fixes) |
 | **Mission** | Less process tax, more recycled powder on real scale paths — trust before alpha claims |
 | **Companions** | [`CRYPTO_PROCESS_LIFECYCLE.md`](./CRYPTO_PROCESS_LIFECYCLE.md) (book-level) · [`Internal_Trading_Platform_FAQ.md`](../faq/Internal_Trading_Platform_FAQ.md) (glossary) · [`TRUST_FIRST_TRADING_ENGINE.md`](../sop/TRUST_FIRST_TRADING_ENGINE.md) · skill `phase6-risk-sizing-research` · cron SSOT `docs/HERMES_CRON_SSOT.md` |
 | **Live config** | `config/regime_cash_policy.json` → `quality_tryout` · `config/tryout_scale_up.json` · `config/tryout_scale_window.json` · `config/exit_automation.json` · `config/trading_config_phase6.json` → `run_lifecycle.dual_peak_exit` · `config/tryout_decision_discipline.json` |
@@ -28,7 +28,7 @@ If the scale window closes before a live add, **full shell exit** is the correct
 
 ## 1. Live numbers (verify config — do not trust stale prose)
 
-| Knob | Live (2026-10-01) | Where |
+| Knob | Live (verify config — 2026-10-02) | Where |
 |------|-------------------|--------|
 | Shell size | **$25** `abs_cap_usd` | `regime_cash_policy` → quality_tryout |
 | New seats / UTC day | **6** (USDT/stables excluded from burn) | same |
@@ -37,14 +37,16 @@ If the scale window closes before a live add, **full shell exit** is the correct
 | Sent floor (tryout) | **≥ 0.30** (quality sleeve) | qualify + latch |
 | RSI door | baseline **55**; soft-up proof **65** until door expiry | quality_tryout.v2 |
 | Soft-up door package | thaw + RSI65 + latch **180m** → **2026-10-06 21:00 PT** | quality_tryout.v2 windows |
-| Kindling step | **+$25**, max total after step **~$100** | `tryout_scale_up.json` |
+| Kindling step | **+$25**, max total after step **~$100** | `tryout_scale_up.json` + ladder force-armed |
 | Kindling bar (money) | hold≥**2h**, R **+0.8%…+3.5%**, phase **1–2**, structure OK, dwell **2** daily bars | profile `live_signal` |
-| Scale-window eject | measure board ON; **`live_apply: false`**; operator `--go` OK | `tryout_scale_window.json` |
-| Decision discipline | **shadow** (`live_apply: false`) | `tryout_decision_discipline.json` |
-| Knife filter | **shadow** | luck ladder R1 |
+| Scale-window eject | board ON; **`live_apply: true`** (Brad GO 2026-10-01) — cron auto-ejects `would_eject`; cooloff **24h** | `tryout_scale_window.json` |
+| Decision discipline | **`live_apply: true`** (Brad GO 2026-10-01) — composer skip/reduce | `tryout_decision_discipline.json` |
+| Knife filter | **`live_gate: true`** primary `rsi_reclaim` (Brad GO 2026-10-01) | `config/knife_filter.json` |
+| Post-eject cooloff | **24h** same-pair (was 48; Brad GO 2026-10-02) | `post_eject_pair_cooloff_hours` |
 | Trail / fixed TP | trail arm **+4%** / trail **2%**; fixed **+6%** fallback | `exit_automation.json` |
 | Dual-peak | live; meat gate peak/green **≥4%**; max 1 trim/lot | `dual_peak_exit` |
 | Perma-block | rare scars only (RAVE/UNI) | `buy_block_pairs` |
+| 7d money-arms monitor | TG on anomaly only through **2026-10-08** | cron `a0e2baebfd91` |
 
 **Stale doc debt:** FAQ / lifecycle still mention **$75 / max 2 seats** in places. **This file + live config win.**
 
@@ -206,10 +208,10 @@ open tryout lot, not live_scaled, not ballast, on-book
 
 | Piece | Module | Status |
 |-------|--------|--------|
-| Judgment + board | `tryout_scale_window` | LIVE measure |
-| Board cron | `phase6-tryout-scale-window-board` (`4f523c7d2efc`) | LIVE quiet |
-| Operator eject | `run_tryout_scale_window.py --eject … --go` | LIVE proven (TIA/LINK 2026-09-30) |
-| Auto eject | `live_apply` | **OFF** until GO |
+| Judgment + board | `tryout_scale_window` | LIVE board |
+| Board cron | `phase6-tryout-scale-window-board` (`4f523c7d2efc`) | LIVE + **auto-eject when config live_apply** |
+| Operator eject | `run_tryout_scale_window.py --eject … --go` | LIVE proven (TIA/LINK) |
+| Auto eject | `live_apply` | **ON** (Brad GO 2026-10-01) — kill file freezes |
 
 ### 3.5 Learn / Graduate
 
@@ -217,7 +219,7 @@ open tryout lot, not live_scaled, not ballast, on-book
 |-------|--------|------|
 | Luck ladder R0–R6 | SHADOW fleet | Controllable luck; not promote |
 | Pair funnel dwell monthly | LIVE measure | Stage dwell, not auto demote |
-| Decision discipline outcomes | SHADOW attach | Needs closed-loop N |
+| Decision discipline outcomes | **LIVE** attach + intake veto | Brad GO 2026-10-01; 7d monitor |
 | Name/size graduate | PARTIAL | Packet + GO; no auto-promote |
 | dual_agree | Signal only | ≠ membership / ≠ scale GO |
 
@@ -230,10 +232,11 @@ open tryout lot, not live_scaled, not ballast, on-book
 | `phase6-rsi-event-x-tryout-shadow` | R0 would-query board | OFF |
 | `phase6-rsi-event-x-probe` | Paid X on wash+stale | X spend only |
 | `phase6-rsi-event-tryout-seat-composer` | System seat loop | OFF unless explicit GO flags |
-| `phase6-knife-filter-shadow` | R1 knife arms | OFF |
-| `phase6-tryout-scale-up-shadow` | Measure CF | OFF |
-| `phase6-tryout-scale-up-live-approval` | Kindling plan TG | OFF |
-| `phase6-tryout-scale-window-board` | Dead-window alarm | OFF |
+| `phase6-knife-filter-shadow` | R1 knife board (measure) | OFF board money; **live_gate ON** in composer |
+| `phase6-tryout-scale-up-shadow` | Measure CF | OFF (measure) |
+| `phase6-tryout-scale-up-live-approval` | Kindling plan TG + autonomous when armed | **armed** Brad GO 2026-10-01 |
+| `phase6-tryout-scale-window-board` | Dead-window board + **auto-eject** | **ON money** when live_apply |
+| `phase6-tryout-money-arms-monitor-7d` | Anomaly TG 7d | alerts only through 2026-10-08 |
 | `phase6-pair-funnel-dwell-monthly` | Dwell report | OFF |
 | `phase6-reentry-sl-tp-monitor` | Naked/SL/TP trust | alerts only |
 
@@ -256,11 +259,11 @@ Severity: **P0** trust/money hole · **P1** process tax / false steering · **P2
 
 | ID | Gap | Evidence | Impact | Fix direction |
 |----|-----|----------|--------|----------------|
-| **TL-P1-01** | Dead kindling can still ride until human eject | `scale_window.live_apply=false`; TIA/LINK sat phase-3 | Inventory tax, blocked seats | Measure N on board → arm auto eject with confirm + caps |
-| **TL-P1-02** | Registry **ghosts** (e.g. ZEC `scored` after TP) | ~~open_lots~~ | Board noise | **SHIPPED 2026-10-01:** `purge_ghost_lots` on scale-window evaluate + SELL ledger close; ZEC purged live |
-| **TL-P1-03** | Dual intake without one seat ledger | two counters | Ops confusion | **SHIPPED:** `phase6/core/tryout_seat_ledger.py` + `/api/pair-signals.tryout_seats` (read API; reserve/release still follow-up) |
-| **TL-P1-04** | Decision discipline shadow-only | `live_apply:false` | Weak seats | **PREP only** — stays shadow until calibration N + Brad GO (no live flip) |
-| **TL-P1-05** | Knife filter shadow | R1 shadow | Knife SL tax | **PREP only** — shadow until honest N + GO |
+| **TL-P1-01** | Dead kindling can still ride until human eject | ~~live_apply false~~ | Inventory tax | **SHIPPED live:** Brad GO 2026-10-01 `live_apply=true` + board cron auto-eject; cooloff 24h (2026-10-02) |
+| **TL-P1-02** | Registry **ghosts** (e.g. ZEC `scored` after TP) | ~~open_lots~~ | Board noise | **SHIPPED 2026-10-01:** `purge_ghost_lots` + flock write (2026-10-02) |
+| **TL-P1-03** | Dual intake without one seat ledger | two counters | Ops confusion | **SHIPPED:** `tryout_seat_ledger.py` + Signals `tryout_seats` |
+| **TL-P1-04** | Decision discipline shadow-only | ~~live_apply false~~ | Weak seats | **LIVE** Brad GO 2026-10-01 — composer skip/reduce |
+| **TL-P1-05** | Knife filter shadow | ~~R1 only~~ | Knife SL tax | **LIVE gate** Brad GO 2026-10-01 `knife_filter.json` live_gate |
 | **TL-P1-06** | Exit reason soup | partial hooks | Can’t learn tax | **SHIPPED:** `tryout_exit_taxonomy` + ledger SELL stamp + dwell/attr delegate |
 | **TL-P1-07** | FAQ/lifecycle **$75×2** vs live **$25×6** | stale prose | Wrong size | **SHIPPED** in FAQ/SSOT (this file wins) |
 | **TL-P1-08** | `paper_scaled` vs `live_scaled` trap | lot meta | False scaled | **SHIPPED:** Signals `·scale:` chip uses live_scaled / would_eject path labels |
@@ -299,10 +302,10 @@ Ordered for **tax reduction first**, not feature count.
 - FAQ + SPECS_INDEX + lifecycle link here for **bag** flow.
 - Happy-path numbers **$25×6** (config still wins if drift).
 
-### Step B — Held shell tax  ✅ code (auto-eject still OFF)
+### Step B — Held shell tax  ✅ code + auto-eject ON (Brad GO 2026-10-01)
 
 1. Ghost purge on scale-window evaluate + SELL ledger close (`tryout_seat_ledger.purge_ghost_lots` / `close_tryout_lot`).
-2. Scale-window board stays ON; **`live_apply` remains false** until Brad GO + N.
+2. Scale-window board ON; **`live_apply: true`** — cron auto-ejects `would_eject` shells (cooloff 24h as of 2026-10-02).
 3. Signals: `·scale:open|pending|live|dead|ghost` chip + `tryout_seats` summary.
 
 ### Step C — One seat ledger  ✅ read API
@@ -311,11 +314,11 @@ Ordered for **tax reduction first**, not feature count.
 - `/api/pair-signals` exposes `tryout_seats` + per-row `scale_path`.
 - Follow-up: composer/rebalance `reserve_seat` / `release_seat` write path (not required for ops truth).
 
-### Step D — Intake quality without more doors  ✅ shadow prep
+### Step D — Intake quality without more doors  ✅ LIVE (Brad GO 2026-10-01)
 
 - Shell stays **$25×6**.
-- Discipline + knife **remain shadow** (`live_apply:false`) — no silent money veto.
-- Outcomes attach via taxonomy on SELL so calibration N can accumulate honestly.
+- Discipline **`live_apply: true`** + knife **`live_gate: true`** — composer can skip/reduce seats.
+- Outcomes attach via taxonomy on SELL; 7d anomaly monitor watches arms through 2026-10-08.
 
 ### Step E — Exit taxonomy + learn  ✅ stamp path
 
@@ -334,7 +337,8 @@ Ordered for **tax reduction first**, not feature count.
 
 - Soft-up door package **not** rewritten mid-window (expires 2026-10-06) — single `door_package` still follow-up.
 - `docs/SPECS_CODE_GAP.md` addendum: tryout lifecycle B–G ship.
-- Discipline/knife/scale-window `live_apply` remain **false** (asserted in isolation).
+- Money arms **ON** after Brad GO 2026-10-01 (config SSOT). Code DEFAULTS stay safe-false; isolation asserts config truth after GO.
+- 2026-10-02 review: cooloff fallback 24h, docs honesty, RSI-OB hold not emergency-bypass, dry-run SL hard guarantee, open_lots flock.
 
 ---
 

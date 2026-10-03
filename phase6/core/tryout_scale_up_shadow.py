@@ -29,6 +29,8 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
 
 from phase6.core.paths import PROJECT_ROOT
 
+# Prefer seat-ledger locked write when available (Brad review 2026-10-02)
+
 logger = logging.getLogger(__name__)
 
 SCHEMA = "tryout_scale_up_shadow_v1"
@@ -255,6 +257,15 @@ def _load_json(path: Path, default: Any) -> Any:
 
 def _write_json(path: Path, obj: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
+    # OPEN_LOTS: use seat-ledger flock so purge/close/register don't race
+    if path.resolve() == OPEN_LOTS_PATH.resolve():
+        try:
+            from phase6.core.tryout_seat_ledger import write_open_lots_raw
+
+            write_open_lots_raw(obj if isinstance(obj, dict) else {"lots": {}})
+            return
+        except Exception as e:
+            logger.warning("open_lots locked write fallback: %s", e)
     path.write_text(json.dumps(obj, indent=2, default=str) + "\n")
 
 

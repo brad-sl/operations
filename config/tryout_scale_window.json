@@ -17,7 +17,7 @@
   "repeat_eject_lookback_days": 7.0,
   "repeat_eject_min_count": 2,
   "repeat_eject_cooloff_hours": 72.0,
-  "rt_fee_rate_per_side": 0.006,
+  "rt_fee_rate_per_side": 0.009,
   "ballast_pairs": [
     "BTC-USD",
     "BTC-USDC",

@@ -77,7 +77,7 @@ DEFAULTS: Dict[str, Any] = {
     "repeat_eject_lookback_days": 7.0,
     "repeat_eject_min_count": 2,  # this eject inclusive
     "repeat_eject_cooloff_hours": 72.0,  # escalated block after repeat dead shells
-    "rt_fee_rate_per_side": 0.006,  # measure-only Coinbase-ish taker estimate when fees missing
+    "rt_fee_rate_per_side": 0.009,  # measure-only; prefer live fee_tier snapshot (Intro ~0.9%)
     "ballast_pairs": list(STICKY_NEVER_EJECT),
     "note": (
         "Shell = option on kindling. Dead scale path → full exit. "
@@ -605,7 +605,7 @@ def _save_cooloff_file(blob: Dict[str, Any]) -> None:
 def estimate_rt_fees_usd(
     notional_usd: float,
     *,
-    rate_per_side: float = 0.006,
+    rate_per_side: float = 0.009,
 ) -> float:
     """Measure-only round-trip fee estimate when exchange fees missing on row."""
     n = max(0.0, float(notional_usd or 0.0))

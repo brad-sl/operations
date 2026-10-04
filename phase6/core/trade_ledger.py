@@ -111,15 +111,43 @@ def stamp_sell_pnl(trade: Dict[str, Any]) -> Dict[str, Any]:
         return trade
 
     gross = (exit_px - entry) * qty
+    # Prefer explicit RT / side fees so eject measurement is not fee-blind.
     fee = 0.0
-    for k in ("fee_usd", "fees", "total_fees", "commission", "fee"):
-        v = trade.get(k)
-        if v is None or v == "":
-            continue
+    if trade.get("rt_fee_usd") not in (None, ""):
         try:
-            fee += abs(float(v))
+            fee = abs(float(trade["rt_fee_usd"]))
         except (TypeError, ValueError):
-            continue
+            fee = 0.0
+    if fee <= 0:
+        side_keys = (
+            "fee_usd",
+            "sell_fee_usd",
+            "exit_fee_usd",
+            "fees",
+            "total_fees",
+            "commission",
+            "fee",
+        )
+        seen = 0.0
+        for k in side_keys:
+            v = trade.get(k)
+            if v is None or v == "":
+                continue
+            try:
+                seen = max(seen, abs(float(v)))  # don't double-count aliases
+            except (TypeError, ValueError):
+                continue
+        fee = seen
+        # Add entry leg when present (round-trip honesty for tryout shells)
+        for k in ("entry_fee_usd", "buy_fee_usd"):
+            v = trade.get(k)
+            if v is None or v == "":
+                continue
+            try:
+                fee += abs(float(v))
+                break
+            except (TypeError, ValueError):
+                continue
     net = gross - fee
     trade["pnl"] = round(net, 6)
     trade["pnl_usd"] = round(net, 6)
@@ -127,6 +155,7 @@ def stamp_sell_pnl(trade: Dict[str, Any]) -> Dict[str, Any]:
     trade["pnl_gross"] = round(gross, 6)
     if fee > 0:
         trade["fee_usd_applied"] = round(fee, 6)
+        trade["rt_fee_usd"] = round(fee, 6)
         trade["pnl_stamp"] = "entry_exit_qty_net_fees"
     else:
         trade["pnl_stamp"] = "entry_exit_qty_gross"

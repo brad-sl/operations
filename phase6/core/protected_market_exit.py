@@ -252,6 +252,9 @@ def _ledger_sell(
     reason: str,
     signal_source: str,
     entry_price: float = 0.0,
+    fee_usd: Optional[float] = None,
+    entry_fee_usd: Optional[float] = None,
+    entry_order_id: Optional[str] = None,
 ) -> Optional[str]:
     try:
         from phase6.core.trade_ledger import TradeLedger
@@ -269,6 +272,23 @@ def _ledger_sell(
         }
         if entry_price > 0:
             row["entry_price"] = entry_price
+        # Fee honesty (P2 eject audit): stamp exchange fees when known so
+        # stamp_sell_pnl nets RT cost instead of fee-blind gross "wins".
+        if fee_usd is not None:
+            try:
+                sf = abs(float(fee_usd))
+                row["sell_fee_usd"] = sf
+                row["fee_usd"] = sf
+                row["total_fees"] = sf
+            except (TypeError, ValueError):
+                pass
+        if entry_fee_usd is not None:
+            try:
+                row["entry_fee_usd"] = abs(float(entry_fee_usd))
+            except (TypeError, ValueError):
+                pass
+        if entry_order_id:
+            row["entry_order_id"] = str(entry_order_id)
         TradeLedger().log_trade(row)
         return None
     except Exception as e:
@@ -508,6 +528,7 @@ def protected_market_exit(
     # Fill details
     exit_px = _f(mark_price, 0.0)
     filled = sell_qty
+    sell_fee: Optional[float] = None
     if oid and hasattr(exchange, "get_order_fill_details"):
         try:
             time.sleep(0.5)
@@ -516,6 +537,15 @@ def protected_market_exit(
                 exit_px = _f(fill["average_filled_price"])
             if _f(fill.get("filled_size")) > 0:
                 filled = _f(fill["filled_size"])
+            for _fk in ("total_fees", "fee_usd", "fees", "fee"):
+                _fv = fill.get(_fk)
+                if _fv is None or _fv == "":
+                    continue
+                try:
+                    sell_fee = abs(float(_fv))
+                    break
+                except (TypeError, ValueError):
+                    continue
         except Exception:
             pass
     if exit_px <= 0 and hasattr(exchange, "get_price"):
@@ -525,6 +555,9 @@ def protected_market_exit(
             pass
     result["exit_price"] = exit_px
     result["filled_qty"] = filled
+    if sell_fee is not None:
+        result["sell_fee_usd"] = sell_fee
+        result["total_fees"] = sell_fee
 
     if ledger:
         err = _ledger_sell(
@@ -535,6 +568,7 @@ def protected_market_exit(
             reason=reason,
             signal_source=signal_source or reason,
             entry_price=_f(entry_price, 0.0),
+            fee_usd=sell_fee,
         )
         if err:
             result["ledger_error"] = err

@@ -73,11 +73,17 @@ DEFAULTS: Dict[str, Any] = {
     "min_shell_usd": 15.0,
     "max_shell_usd": 100.0,  # still tryout-sized
     "post_eject_pair_cooloff_hours": 24.0,  # same-pair re-seat block after eject (config SSOT)
+    # Process-tax hygiene (not edge claim): 2nd+ dead eject in lookback → longer cooloff
+    "repeat_eject_lookback_days": 7.0,
+    "repeat_eject_min_count": 2,  # this eject inclusive
+    "repeat_eject_cooloff_hours": 72.0,  # escalated block after repeat dead shells
+    "rt_fee_rate_per_side": 0.006,  # measure-only Coinbase-ish taker estimate when fees missing
     "ballast_pairs": list(STICKY_NEVER_EJECT),
     "note": (
         "Shell = option on kindling. Dead scale path → full exit. "
         "DEFAULTS.live_apply false; live config may be true after Brad GO. "
-        "post_eject_pair_cooloff_hours default 24h (config SSOT)."
+        "post_eject_pair_cooloff_hours default 24h (config SSOT). "
+        "repeat_eject → 72h cooloff = less churn tax, not alpha."
     ),
 }
 
@@ -596,6 +602,122 @@ def _save_cooloff_file(blob: Dict[str, Any]) -> None:
     COOLOFF_PATH.write_text(json.dumps(blob, indent=2, default=str) + "\n", encoding="utf-8")
 
 
+def estimate_rt_fees_usd(
+    notional_usd: float,
+    *,
+    rate_per_side: float = 0.006,
+) -> float:
+    """Measure-only round-trip fee estimate when exchange fees missing on row."""
+    n = max(0.0, float(notional_usd or 0.0))
+    r = max(0.0, float(rate_per_side or 0.0))
+    return round(n * r * 2.0, 6)
+
+
+def count_recent_scale_window_ejects(
+    pair: str,
+    *,
+    lookback_days: float = 7.0,
+    now: Optional[datetime] = None,
+    ledger_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """Count tryout_scale_window_eject SELLs for pair in lookback (process-tax)."""
+    pn = _norm_pair(pair)
+    now = now or _utc_now()
+    cut = now.timestamp() - float(lookback_days) * 86400.0
+    path = ledger_path or (PROJECT_ROOT / "trades" / "phase6_trades.jsonl")
+    n = 0
+    times: List[str] = []
+    if path.is_file():
+        try:
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except json.JSONDecodeError:
+                    continue
+                if not isinstance(row, dict):
+                    continue
+                if str(row.get("side") or "").upper() != "SELL":
+                    continue
+                rsn = str(row.get("reason") or row.get("exit_reason") or "").lower()
+                if "tryout_scale_window_eject" not in rsn and "scale_window_eject" not in rsn:
+                    continue
+                rp = _norm_pair(str(row.get("pair") or row.get("product_id") or ""))
+                if rp != pn:
+                    continue
+                ts = row.get("timestamp") or row.get("ts") or row.get("time") or ""
+                try:
+                    from dateutil import parser as _dp  # type: ignore
+
+                    t = _dp.isoparse(str(ts))
+                    if t.tzinfo is None:
+                        t = t.replace(tzinfo=timezone.utc)
+                    if t.timestamp() >= cut:
+                        n += 1
+                        times.append(str(ts))
+                except Exception:
+                    # count undated recent-looking rows conservatively as in-window
+                    n += 1
+                    times.append(str(ts))
+        except Exception as e:
+            logger.warning("count_recent_ejects %s: %s", pn, e)
+    return {
+        "pair": pn,
+        "n": n,
+        "lookback_days": float(lookback_days),
+        "times": times[-8:],
+    }
+
+
+def effective_post_eject_cooloff_hours(
+    pair: str,
+    cfg: Optional[Dict[str, Any]] = None,
+    *,
+    now: Optional[datetime] = None,
+    include_this_eject: bool = True,
+) -> Dict[str, Any]:
+    """Base cooloff, or escalated after repeat dead ejects in lookback.
+
+    Hygiene only — not an edge claim. 2nd eject in 7d → longer same-pair block.
+    """
+    c = cfg or load_cfg()
+    base = _f(
+        c.get("post_eject_pair_cooloff_hours"),
+        float(DEFAULTS.get("post_eject_pair_cooloff_hours") or 24.0),
+    )
+    lookback = _f(c.get("repeat_eject_lookback_days"), 7.0)
+    min_n = int(c.get("repeat_eject_min_count") or DEFAULTS.get("repeat_eject_min_count") or 2)
+    escalated = _f(
+        c.get("repeat_eject_cooloff_hours"),
+        float(DEFAULTS.get("repeat_eject_cooloff_hours") or 72.0),
+    )
+    hist = count_recent_scale_window_ejects(pair, lookback_days=lookback, now=now)
+    # include_this_eject: ledger may not yet have this fill when called post-success
+    n = int(hist.get("n") or 0) + (1 if include_this_eject else 0)
+    # if ledger already has this eject, don't double-count
+    if include_this_eject and int(hist.get("n") or 0) >= min_n:
+        n = int(hist.get("n") or 0)
+    hours = base
+    reason = "base"
+    if n >= min_n:
+        hours = max(base, escalated)
+        reason = f"repeat_eject_n={n}_ge_{min_n}"
+    return {
+        "pair": _norm_pair(pair),
+        "hours": float(hours),
+        "base_hours": float(base),
+        "escalated_hours": float(escalated),
+        "n_recent_ejects": int(hist.get("n") or 0),
+        "n_for_gate": n,
+        "min_count": min_n,
+        "lookback_days": float(lookback),
+        "reason": reason,
+        "hist_times": hist.get("times") or [],
+    }
+
+
 def set_post_eject_cooloff(pair: str, hours: float) -> Dict[str, Any]:
     """Same-pair rebuy cooloff so dead shells are not instantly re-seated.
 
@@ -795,12 +917,28 @@ def eject_pair(
             meta={"filled_qty": pe.get("filled_qty"), "exit_price": pe.get("exit_price")},
             skip_dwell=True,
         )
-        cool_h = _f(
-            c.get("post_eject_pair_cooloff_hours"),
-            float(DEFAULTS.get("post_eject_pair_cooloff_hours") or 24.0),
-        )
+        cool_meta = effective_post_eject_cooloff_hours(pn, c, include_this_eject=False)
+        cool_h = float(cool_meta.get("hours") or 24.0)
         cool = set_post_eject_cooloff(pn, cool_h)
+        cool["repeat_policy"] = cool_meta
         result["cooloff"] = cool
+        # Measure-only fee estimate for honesty when fill fees missing
+        try:
+            notional = abs(_f(pe.get("filled_qty")) * _f(pe.get("exit_price") or mark))
+            if notional <= 0 and hint > 0 and mark > 0:
+                notional = float(hint) * float(mark)
+            fee_est = estimate_rt_fees_usd(
+                notional,
+                rate_per_side=_f(c.get("rt_fee_rate_per_side"), 0.006),
+            )
+            result["fee_measure"] = {
+                "notional_usd": round(notional, 4),
+                "rt_fee_est_usd": fee_est,
+                "rate_per_side": _f(c.get("rt_fee_rate_per_side"), 0.006),
+                "note": "estimate only when exchange fees absent — not P&L truth",
+            }
+        except Exception as e:
+            result["fee_measure_err"] = str(e)[:120]
         if not cool.get("ok"):
             result["cooloff_failed"] = True
             logger.error(

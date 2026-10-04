@@ -15,7 +15,9 @@ from phase6.core.add_risk_sizer import (
     resolve_add_risk_factors,
     compute_max_add_usd,
     report_open_pairs_add_room,
+    resolve_deployable_cash_usd,
 )
+
 
 
 def test_bull_clips_fat_link_style_add():
@@ -235,6 +237,29 @@ def test_open_pairs_report_marks_over_target():
     assert by["PAXG-USD"]["max_add_usd"] is not None
 
 
+def test_resolve_deployable_cash_includes_usdc():
+    """W-MATRIX-CASH-SLICE-USDC: parked USDC counts as deployable free cash."""
+    cash, d = resolve_deployable_cash_usd(
+        {
+            "balances": [
+                {"currency": "USD", "available": 200.0},
+                {"currency": "USDC", "available": 1500.0},
+            ]
+        }
+    )
+    assert abs(cash - 1700.0) < 0.01, (cash, d)
+    assert abs(d["usd"] - 200.0) < 0.01
+    assert abs(d["usdc"] - 1500.0) < 0.01
+    cash_usd_only, d2 = resolve_deployable_cash_usd(
+        {"balances": [{"currency": "USD", "available": 200.0}, {"currency": "USDC", "available": 1500.0}]},
+        include_usdc=False,
+    )
+    assert abs(cash_usd_only - 200.0) < 0.01
+    # cash_usd field alone still works
+    cash3, _ = resolve_deployable_cash_usd({"cash_usd": 99.0})
+    assert abs(cash3 - 99.0) < 0.01
+
+
 def main() -> int:
     test_bull_clips_fat_link_style_add()
     test_new_pair_unchanged()
@@ -243,6 +268,7 @@ def main() -> int:
     test_over_target_zero_room()
     test_filter_plan_clips()
     test_open_pairs_report_marks_over_target()
+    test_resolve_deployable_cash_includes_usdc()
     print("PASS add_risk_sizer isolation")
     return 0
 

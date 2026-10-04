@@ -237,6 +237,52 @@ class TestTryoutScaleWindow(unittest.TestCase):
         exp = float((blob["pairs"]["LINK-USD"]).get("expires_ts") or 0)
         self.assertGreater(exp, 0)
 
+    def test_repeat_eject_escalates_cooloff(self) -> None:
+        """2nd dead eject in lookback → 72h hygiene cooloff (not edge claim)."""
+        tw = self.tw
+        now = datetime(2026, 10, 4, 12, 0, tzinfo=timezone.utc)
+        times = [
+            (now - timedelta(days=2)).isoformat().replace("+00:00", "Z"),
+            (now - timedelta(days=1)).isoformat().replace("+00:00", "Z"),
+        ]
+        with mock.patch.object(
+            tw,
+            "count_recent_scale_window_ejects",
+            return_value={"n": 2, "times": times, "pair": "LINK-USD"},
+        ):
+            meta = tw.effective_post_eject_cooloff_hours(
+                "LINK-USD",
+                {
+                    **tw.DEFAULTS,
+                    "post_eject_pair_cooloff_hours": 24.0,
+                    "repeat_eject_min_count": 2,
+                    "repeat_eject_cooloff_hours": 72.0,
+                },
+                now=now,
+                include_this_eject=False,
+            )
+        self.assertEqual(meta["hours"], 72.0)
+        self.assertIn("repeat_eject", meta["reason"])
+
+        with mock.patch.object(
+            tw,
+            "count_recent_scale_window_ejects",
+            return_value={"n": 0, "times": [], "pair": "SOL-USD"},
+        ):
+            base = tw.effective_post_eject_cooloff_hours(
+                "SOL-USD",
+                tw.DEFAULTS,
+                now=now,
+                include_this_eject=False,
+            )
+        self.assertEqual(base["hours"], float(tw.DEFAULTS["post_eject_pair_cooloff_hours"]))
+        self.assertEqual(base["reason"], "base")
+
+    def test_estimate_rt_fees_measure(self) -> None:
+        tw = self.tw
+        est = tw.estimate_rt_fees_usd(25.0, rate_per_side=0.006)
+        self.assertAlmostEqual(est, 25.0 * 0.006 * 2, places=4)
+
 
 if __name__ == "__main__":
     unittest.main()

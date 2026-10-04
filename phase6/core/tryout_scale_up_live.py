@@ -253,6 +253,91 @@ class LiveScalePlan:
         return asdict(self)
 
 
+def _structure_ok_from_row(row: Dict[str, Any]) -> Optional[bool]:
+    """Prefer explicit bool; else detail.phase_struct.structure_ok."""
+    sk = row.get("structure_ok")
+    if isinstance(sk, bool):
+        return sk
+    detail = row.get("detail") if isinstance(row.get("detail"), dict) else {}
+    ps = detail.get("phase_struct") if isinstance(detail.get("phase_struct"), dict) else {}
+    psk = ps.get("structure_ok")
+    if isinstance(psk, bool):
+        return psk
+    return None
+
+
+def _phase_from_row(row: Dict[str, Any]) -> Optional[int]:
+    ph = row.get("phase")
+    if isinstance(ph, int):
+        return ph
+    if ph is not None:
+        try:
+            return int(ph)
+        except (TypeError, ValueError):
+            pass
+    detail = row.get("detail") if isinstance(row.get("detail"), dict) else {}
+    ps = detail.get("phase_struct") if isinstance(detail.get("phase_struct"), dict) else {}
+    pph = ps.get("phase")
+    if pph is not None:
+        try:
+            return int(pph)
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _resolve_kindling_tape(row: Dict[str, Any], cfg: Dict[str, Any]) -> Dict[str, Any]:
+    """Copy row and fill phase/structure when missing (W-KINDLING-STRUCTURE-DATA).
+
+    Paper-scaled skip rows used to leave structure_ok=None; live plan then
+    fail-closed on structure_unknown even when daily tape was decidable.
+    Re-resolve from daily OHLCV only when still unknown — never invent True.
+    """
+    out = dict(row)
+    detail = dict(out.get("detail") or {}) if isinstance(out.get("detail"), dict) else {}
+    sk = _structure_ok_from_row(out)
+    ph = _phase_from_row(out)
+    need = sk is None or ph is None or out.get("phase_dwell_ok") is None
+    if need:
+        try:
+            pair = shadow._norm_pair(out.get("pair") or "")
+            ps = shadow._phase_and_structure(pair, cfg)
+            if not isinstance(detail.get("phase_struct"), dict):
+                detail["phase_struct"] = ps
+            else:
+                # fill holes only
+                merged = dict(ps)
+                merged.update({k: v for k, v in detail["phase_struct"].items() if v is not None})
+                # prefer fresh structure_ok/phase when prior was null
+                if detail["phase_struct"].get("structure_ok") is None and ps.get("structure_ok") is not None:
+                    merged["structure_ok"] = ps.get("structure_ok")
+                if detail["phase_struct"].get("phase") is None and ps.get("phase") is not None:
+                    merged["phase"] = ps.get("phase")
+                detail["phase_struct"] = merged
+            detail["structure_reresolved"] = True
+            if sk is None and isinstance(ps.get("structure_ok"), bool):
+                out["structure_ok"] = bool(ps["structure_ok"])
+                sk = out["structure_ok"]
+            if ph is None and ps.get("phase") is not None:
+                try:
+                    out["phase"] = int(ps["phase"])
+                    ph = out["phase"]
+                except (TypeError, ValueError):
+                    pass
+            if out.get("phase_dwell_ok") is None and ps.get("phase_dwell_ok") is not None:
+                out["phase_dwell_ok"] = ps.get("phase_dwell_ok")
+            if ps.get("phase_history") and not out.get("phase_history"):
+                out["phase_history"] = list(ps.get("phase_history") or [])
+        except Exception as e:
+            detail["structure_reresolve_error"] = str(e)
+    if sk is not None and not isinstance(out.get("structure_ok"), bool):
+        out["structure_ok"] = sk
+    if ph is not None and out.get("phase") is None:
+        out["phase"] = ph
+    out["detail"] = detail
+    return out
+
+
 def _signal_bar_reasons(row: Dict[str, Any], cfg: Dict[str, Any]) -> List[str]:
     """Kindling checks on a candidate row (phase/structure/R/hold/dwell).
 
@@ -275,7 +360,7 @@ def _signal_bar_reasons(row: Dict[str, Any], cfg: Dict[str, Any]) -> List[str]:
         reasons.append(f"r={r:.4f}>max {rmax} (bank_zone_or_extended)")
 
     allow = {int(x) for x in (cfg.get("require_phase_in") or [1, 2])}
-    phase = row.get("phase")
+    phase = _phase_from_row(row)
     if phase is None:
         reasons.append("phase_unknown")
     elif int(phase) not in allow:
@@ -301,7 +386,7 @@ def _signal_bar_reasons(row: Dict[str, Any], cfg: Dict[str, Any]) -> List[str]:
         # else: no dwell evidence in row → tip phase already checked; dwell deferred
 
     if bool(cfg.get("require_structure_ok", True)):
-        sk = row.get("structure_ok")
+        sk = _structure_ok_from_row(row)
         if sk is None:
             reasons.append("structure_unknown")
         elif not sk:
@@ -377,12 +462,12 @@ def plan_live_steps(
     planned_n = 0
     signal_blocked_n = 0
 
-    for row in decisions:
-        if not isinstance(row, dict):
+    for row_in in decisions:
+        if not isinstance(row_in, dict):
             continue
-        pair = shadow._norm_pair(row.get("pair") or "")
-        status = str(row.get("status") or "")
-        reasons_shadow = list(row.get("reasons") or [])
+        pair = shadow._norm_pair(row_in.get("pair") or "")
+        status = str(row_in.get("status") or "")
+        reasons_shadow = list(row_in.get("reasons") or [])
         # B paper CF leg already registered → still eligible for C live plan
         paper_leg = (
             status == "skip"
@@ -390,10 +475,16 @@ def plan_live_steps(
         ) or (
             status == "skip"
             and "already_paper_scaled_cf_leg" in reasons_shadow
+        ) or (
+            status == "skip"
+            and "already_scaled_this_lot" in reasons_shadow
         )
         if status != "would_scale" and not paper_leg:
             continue
         reasons: List[str] = []
+
+        # Fill missing phase/structure before kindling bar (paper-skip nulls).
+        row = _resolve_kindling_tape(row_in, c)
 
         # --- Kindling / signal bar (always; cfg may be measure only in tests) ---
         sig_reasons = _signal_bar_reasons(row, c)
@@ -462,9 +553,7 @@ def plan_live_steps(
                 unrealized_r=_f(row.get("unrealized_r")),
                 hold_hours=row.get("hold_hours"),
                 phase=row.get("phase") if isinstance(row.get("phase"), int) else None,
-                structure_ok=row.get("structure_ok")
-                if isinstance(row.get("structure_ok"), bool)
-                else None,
+                structure_ok=_structure_ok_from_row(row),
                 status=st,
                 reasons=reasons
                 or ["ready_for_apply_when_go", "live_signal_bar"],
@@ -478,6 +567,11 @@ def plan_live_steps(
                         if isinstance(row.get("detail"), dict)
                         else None
                     ),
+                    "structure_reresolved": bool(
+                        (row.get("detail") or {}).get("structure_reresolved")
+                    )
+                    if isinstance(row.get("detail"), dict)
+                    else False,
                     "cf_gate": cf_gate,
                     "armed": armed,
                 },

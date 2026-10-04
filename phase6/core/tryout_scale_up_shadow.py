@@ -589,6 +589,8 @@ def evaluate_scale_up(
 
     # already stepped? check open lots registry
     # paper_scaled alone must NOT block live C apply — only live_scaled does.
+    # W-KINDLING-STRUCTURE-DATA: paper/skip early-returns still resolve phase+structure
+    # so live plan does not inherit structure_ok=None → structure_unknown fail-closed.
     open_reg = _load_json(OPEN_LOTS_PATH, {"lots": {}})
     lots = open_reg.get("lots") if isinstance(open_reg, dict) else {}
     if isinstance(lots, dict) and pair in lots:
@@ -608,31 +610,59 @@ def evaluate_scale_up(
             )
         if meta.get("scaled") and meta.get("status") == "paper_open":
             # already have paper CF leg — shadow would_scale once only
+            # Still attach live-signal phase/structure for the live plan path.
+            ps_paper = (
+                phase_struct
+                if phase_struct is not None
+                else _phase_and_structure(pair, c)
+            )
+            ph_p = ps_paper.get("phase")
+            sk_p = ps_paper.get("structure_ok")
             return ScaleDecision(
                 pair,
                 "skip",
                 held,
                 r,
                 hold_h,
-                meta.get("phase") if isinstance(meta.get("phase"), int) else None,
-                None,
+                int(ph_p) if ph_p is not None else (
+                    meta.get("phase") if isinstance(meta.get("phase"), int) else None
+                ),
+                bool(sk_p) if isinstance(sk_p, bool) else None,
                 0.0,
                 ["already_paper_scaled_cf_leg"],
-                {"lot": lot, "reg": meta, "paper_cf_leg": True},
+                {
+                    "lot": lot,
+                    "reg": meta,
+                    "paper_cf_leg": True,
+                    "phase_struct": ps_paper,
+                    "structure_resolved_on_paper_skip": True,
+                },
             )
         if meta.get("scaled") and not meta.get("status"):
-            # legacy rows treated as paper
+            # legacy rows treated as paper — same structure resolve
+            ps_leg = (
+                phase_struct
+                if phase_struct is not None
+                else _phase_and_structure(pair, c)
+            )
+            ph_l = ps_leg.get("phase")
+            sk_l = ps_leg.get("structure_ok")
             return ScaleDecision(
                 pair,
                 "skip",
                 held,
                 r,
                 hold_h,
-                None,
-                None,
+                int(ph_l) if ph_l is not None else None,
+                bool(sk_l) if isinstance(sk_l, bool) else None,
                 0.0,
                 ["already_scaled_this_lot"],
-                {"lot": lot, "reg": meta},
+                {
+                    "lot": lot,
+                    "reg": meta,
+                    "phase_struct": ps_leg,
+                    "structure_resolved_on_paper_skip": True,
+                },
             )
 
     if hold_h is not None and hold_h < _f(c.get("min_hold_hours"), 2.0):

@@ -17,6 +17,85 @@ from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 logger = logging.getLogger(__name__)
 
+
+def resolve_deployable_cash_usd(
+    live: Optional[Dict[str, Any]] = None,
+    *,
+    cash_usd_fallback: float = 0.0,
+    include_usdc: bool = True,
+    include_usdt: bool = False,
+) -> Tuple[float, Dict[str, Any]]:
+    """USD powder + parked USDC as deployable free cash for add-risk / matrix.
+
+    Brad GO 2026-10-04 (W-MATRIX-CASH-SLICE-USDC): USDC is idle yield park, still
+    usable for trades — liquidate in chunks via powder top-up, refill when quiet.
+    Better than nothing in bear/flat. Does NOT treat USDC as a trade seat.
+
+    Prefer explicit balances[] legs. Fall back to cash_usd (+ usdc field) so older
+    live-state shapes still work. Equity reserve still applies on top in max_add.
+    """
+    detail: Dict[str, Any] = {
+        "usd": 0.0,
+        "usdc": 0.0,
+        "usdt": 0.0,
+        "include_usdc": bool(include_usdc),
+        "include_usdt": bool(include_usdt),
+        "source": "fallback",
+    }
+    usd = 0.0
+    usdc = 0.0
+    usdt = 0.0
+    if isinstance(live, dict):
+        bals = live.get("balances")
+        if isinstance(bals, list) and bals:
+            for row in bals:
+                if not isinstance(row, dict):
+                    continue
+                cur = str(row.get("currency") or row.get("ccy") or "").upper()
+                bal = _f(row.get("available") if row.get("available") is not None else row.get("balance"), 0.0)
+                if cur == "USD":
+                    usd = bal
+                elif cur == "USDC":
+                    usdc = bal
+                elif cur == "USDT":
+                    usdt = bal
+            detail["source"] = "balances"
+        # cash_positions fold (pair form)
+        if usd <= 0 and usdc <= 0:
+            for row in live.get("cash_positions") or []:
+                if not isinstance(row, dict):
+                    continue
+                pair = str(row.get("pair") or "").upper()
+                val = _f(row.get("value_usd") or row.get("balance") or row.get("amount"), 0.0)
+                if pair in ("USD", "USD-USD"):
+                    usd = max(usd, val)
+                elif pair in ("USDC", "USDC-USD"):
+                    usdc = max(usdc, val)
+                elif pair in ("USDT", "USDT-USD"):
+                    usdt = max(usdt, val)
+            if usd > 0 or usdc > 0:
+                detail["source"] = "cash_positions"
+        if usd <= 0:
+            usd = _f(live.get("cash_usd") or live.get("usd") or live.get("usd_balance"), 0.0)
+            if usd > 0 and detail["source"] == "fallback":
+                detail["source"] = "cash_usd_field"
+        if usdc <= 0:
+            usdc = _f(live.get("usdc") or live.get("usdc_usd") or live.get("usdc_balance"), 0.0)
+    if usd <= 0 and usdc <= 0 and cash_usd_fallback > 0:
+        usd = float(cash_usd_fallback)
+        detail["source"] = "cash_usd_fallback"
+    detail["usd"] = round(usd, 4)
+    detail["usdc"] = round(usdc, 4)
+    detail["usdt"] = round(usdt, 4)
+    total = usd
+    if include_usdc:
+        total += usdc
+    if include_usdt:
+        total += usdt
+    detail["deployable_cash_usd"] = round(max(0.0, total), 4)
+    return max(0.0, float(total)), detail
+
+
 # Defaults when regime table omits keys (bull-ish single gear).
 _DEFAULT_FACTORS: Dict[str, Any] = {
     "enabled": True,
@@ -543,6 +622,15 @@ def filter_trade_plan_add_risk(runner: Any, plan: Any) -> Any:
         return plan
 
     positions, equity, cash = _position_snapshot(runner)
+    # Prefer USD+USDC deployable (W-MATRIX-CASH-SLICE-USDC) when exchange readable
+    try:
+        from phase6.core.runner_capital_events import _cash_usd_from_runner
+
+        cash_ex = _f(_cash_usd_from_runner(runner), 0.0)
+        if cash_ex > cash + 1.0:  # USDC leg present beyond USD-only snapshot
+            cash = cash_ex
+    except Exception:
+        pass
     if equity <= 0:
         # try live state path
         try:
@@ -552,7 +640,8 @@ def filter_trade_plan_add_risk(runner: Any, plan: Any) -> Any:
             p = Path("data/state/phase6_live_state.json")
             if p.exists():
                 live = json.loads(p.read_text())
-                cash = _f(live.get("cash_usd"), cash)
+                cash_dep, _cd = resolve_deployable_cash_usd(live, cash_usd_fallback=cash)
+                cash = cash_dep if cash_dep > 0 else _f(live.get("cash_usd"), cash)
                 equity = _f(live.get("total_usd") or live.get("equity_usd"), equity)
                 for row in live.get("positions") or []:
                     if not isinstance(row, dict):
@@ -881,7 +970,7 @@ def load_add_room_by_pair_for_dashboard() -> Dict[str, Any]:
 
     positions = live.get("positions") or live.get("trading_positions") or []
     equity = _f(live.get("total_usd") or live.get("equity_usd"), 0.0)
-    cash = _f(live.get("cash_usd"), 0.0)
+    cash, cash_detail = resolve_deployable_cash_usd(live, cash_usd_fallback=_f(live.get("cash_usd"), 0.0))
     if equity <= 0 and isinstance(positions, list):
         equity = sum(_f(r.get("value_usd"), 0.0) for r in positions if isinstance(r, dict)) + cash
 
@@ -981,4 +1070,6 @@ def load_add_room_by_pair_for_dashboard() -> Dict[str, Any]:
         "enabled": bool(factors.enabled),
         "equity_usd": round(equity, 2),
         "cash_usd": round(cash, 2),
+        "cash_breakdown": cash_detail,
+        "note": "cash_usd = deployable USD+USDC (USDC chunk-liquidate via powder top-up)",
     }

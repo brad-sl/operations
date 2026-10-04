@@ -297,6 +297,59 @@ def test_live_signal_blocks_measure_phase5_would_scale():
     assert any("signal_bar:" in r for r in p["plans"][0]["reasons"])
 
 
+def test_structure_ok_from_row_prefers_phase_struct():
+    """W-KINDLING-STRUCTURE-DATA: null top-level still reads detail.phase_struct."""
+    assert live._structure_ok_from_row({"structure_ok": True}) is True
+    assert live._structure_ok_from_row({"structure_ok": False}) is False
+    assert live._structure_ok_from_row(
+        {"structure_ok": None, "detail": {"phase_struct": {"structure_ok": True}}}
+    ) is True
+    assert live._structure_ok_from_row({}) is None
+
+
+def test_paper_scaled_row_not_structure_unknown_when_phase_struct_true():
+    """Paper CF skip must not fail-close live plan on structure_unknown if structure known."""
+    decision = {
+        "live_apply": True,
+        "cf_bar": {"require": False, "max_waived_steps": 2, "waived_steps_used": 0},
+    }
+    row = {
+        "pair": "SOL-USD",
+        "status": "skip",
+        "held_usd": 25.0,
+        "step_usd": 0.0,
+        "unrealized_r": 0.012,
+        "hold_hours": 6.0,
+        "phase": None,
+        "structure_ok": None,  # legacy paper skip left null
+        "reasons": ["already_paper_scaled_cf_leg"],
+        "detail": {
+            "paper_cf_leg": True,
+            "phase_struct": {"phase": 2, "structure_ok": True},
+        },
+    }
+    with patch.object(live, "load_decision", return_value=decision), patch.object(
+        live, "kill_switch_on", return_value=False
+    ), patch.object(live, "load_daily", return_value={
+        "utc_day": "2026-09-19", "n_steps": 0, "usd_spent": 0.0, "pairs": [], "events": []
+    }), patch.object(shadow, "_load_json", return_value={"lots": {}}), patch.object(
+        live, "_write_json"
+    ), patch.object(
+        shadow, "_phase_and_structure", return_value={"phase": 2, "structure_ok": True}
+    ):
+        p = live.plan_live_steps(
+            decisions=[row],
+            board={"cf": {"n": 12, "edge_class": "ATTENTION_ONLY_scale_helps"}},
+            decision=decision,
+            cfg=shadow.load_cfg(profile="live_signal"),
+            now=datetime(2026, 9, 19, 12, 0, tzinfo=timezone.utc),
+        )
+    plan0 = p["plans"][0]
+    reasons = " ".join(str(x) for x in (plan0.get("reasons") or []))
+    assert "structure_unknown" not in reasons, plan0
+    assert plan0.get("structure_ok") is True
+
+
 if __name__ == "__main__":
     test_not_armed_blocks_plan()
     test_armed_cf_waived_plans()
@@ -309,4 +362,7 @@ if __name__ == "__main__":
     test_apply_refuses_when_not_armed_even_with_go()
     test_daily_cap_blocks_second()
     test_live_signal_blocks_measure_phase5_would_scale()
+    test_structure_ok_from_row_prefers_phase_struct()
+    test_paper_scaled_row_not_structure_unknown_when_phase_struct_true()
     print("ALL PASS isolation_tryout_scale_up_live")
+

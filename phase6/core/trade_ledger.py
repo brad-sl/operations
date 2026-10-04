@@ -44,6 +44,98 @@ def _normalize_trade_timestamp(raw: Any) -> str:
         return _utc_iso_z()
 
 
+def _f_num(v: Any, default: float = 0.0) -> float:
+    try:
+        if v is None or v == "":
+            return float(default)
+        return float(v)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def stamp_sell_pnl(trade: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    W-EJECT-PNL-STAMP / honesty: every SELL with entry+exit+qty must carry
+    realized pnl (+ pct). Scale-window ejects historically logged prices but
+    left pnl null → weekly analyst WR/PnL under-count.
+
+    - Does not overwrite an existing numeric pnl (caller already computed).
+    - Gross = (exit - entry) * qty; subtract fee_usd/fees when present.
+    - Also fills pnl_usd / realized_pnl aliases for scoreboard readers.
+    """
+    if not isinstance(trade, dict):
+        return trade
+    side = str(trade.get("side") or trade.get("action") or "").upper()
+    if side not in ("SELL", "SELL_SHORT", "EXIT"):
+        return trade
+
+    entry = _f_num(
+        trade.get("entry_price")
+        or trade.get("avg_entry")
+        or trade.get("cost_basis")
+        or trade.get("basis_price"),
+        0.0,
+    )
+    exit_px = _f_num(
+        trade.get("exit_price")
+        or trade.get("average_filled_price")
+        or trade.get("fill_price")
+        or trade.get("price"),
+        0.0,
+    )
+    qty = _f_num(
+        trade.get("qty")
+        or trade.get("filled_qty")
+        or trade.get("amount")
+        or trade.get("size"),
+        0.0,
+    )
+
+    existing = trade.get("pnl")
+    if existing is not None and existing != "":
+        p = _f_num(existing, float("nan"))
+        if p == p:  # not NaN
+            # still backfill aliases + pct if missing
+            trade.setdefault("pnl_usd", round(p, 6))
+            trade.setdefault("realized_pnl", round(p, 6))
+            if trade.get("pnl_pct") in (None, "") and entry > 0 and qty > 0:
+                notional = entry * qty
+                if notional > 0:
+                    trade["pnl_pct"] = round(100.0 * p / notional, 4)
+            return trade
+        # non-numeric existing → recompute below
+
+
+    if entry <= 0 or exit_px <= 0 or qty <= 0:
+        trade.setdefault("pnl_stamp", "missing_entry_exit_or_qty")
+        return trade
+
+    gross = (exit_px - entry) * qty
+    fee = 0.0
+    for k in ("fee_usd", "fees", "total_fees", "commission", "fee"):
+        v = trade.get(k)
+        if v is None or v == "":
+            continue
+        try:
+            fee += abs(float(v))
+        except (TypeError, ValueError):
+            continue
+    net = gross - fee
+    trade["pnl"] = round(net, 6)
+    trade["pnl_usd"] = round(net, 6)
+    trade["realized_pnl"] = round(net, 6)
+    trade["pnl_gross"] = round(gross, 6)
+    if fee > 0:
+        trade["fee_usd_applied"] = round(fee, 6)
+        trade["pnl_stamp"] = "entry_exit_qty_net_fees"
+    else:
+        trade["pnl_stamp"] = "entry_exit_qty_gross"
+    notional = entry * qty
+    if notional > 0 and trade.get("pnl_pct") in (None, ""):
+        trade["pnl_pct"] = round(100.0 * net / notional, 4)
+    return trade
+
+
 class TradeLedger:
     """Handles persistent trade logging for Phase 6."""
 
@@ -154,6 +246,16 @@ class TradeLedger:
                     trade["indicators_at_trade"] = indicators_for_trade_pair(str(pair))
                 except Exception:
                     pass
+
+        # Realized PnL on SELL when entry+exit+qty known (W-EJECT-PNL-STAMP).
+        # Must run before taxonomy/dwell hooks so meta.pnl is not null.
+        try:
+            side_pre = str(trade.get("side") or trade.get("action") or "").upper()
+            if side_pre in ("SELL", "SELL_SHORT", "EXIT"):
+                trade = stamp_sell_pnl(trade)
+        except Exception as e:
+            logger.warning("stamp_sell_pnl failed pair=%s: %s", pair, e)
+            trade.setdefault("pnl_stamp_error", str(e)[:160])
 
         # Tryout exit taxonomy on every SELL (CLOSED_* class for scoreboards)
         try:

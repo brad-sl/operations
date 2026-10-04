@@ -348,6 +348,31 @@ def _seed_hypotheses(summary: Mapping[str, Any], context: Mapping[str, Any]) -> 
                 "priority": "P1",
             }
         )
+    msm_raw = context.get("membership_sizing_matrix") if isinstance(context, dict) else None
+    msm: Dict[str, Any] = msm_raw if isinstance(msm_raw, dict) else {}
+    block_n = len(msm.get("block_max_held") or (context.get("matrix_block_max_held") if isinstance(context, dict) else None) or [])
+    inc_n = int(msm.get("n_inconsistent") or 0)
+    if block_n >= 2:
+        seeds.append(
+            {
+                "id": "seed_matrix_block_max",
+                "theme": "matrix_room",
+                "hint": (
+                    f"Matrix: {block_n} held bags with max_add=$0 — review binding budgets + role_law vs "
+                    "flat add-risk knobs; matrix is rulebook not stone (optimize w/ Brad GO)."
+                ),
+                "priority": "P1",
+            }
+        )
+    if inc_n > 0:
+        seeds.append(
+            {
+                "id": "seed_matrix_inconsistent",
+                "theme": "matrix_policy_drift",
+                "hint": f"Matrix inconsistencies n={inc_n} — fix policy drift before adding new digs.",
+                "priority": "P0",
+            }
+        )
     if not seeds:
         seeds.append(
             {
@@ -361,6 +386,126 @@ def _seed_hypotheses(summary: Mapping[str, Any], context: Mapping[str, Any]) -> 
             }
         )
     return seeds
+
+
+def _matrix_snapshot_for_review() -> Dict[str, Any]:
+    """Fresh membership sizing matrix slice for weekly analyst (rulebook + live room)."""
+    out: Dict[str, Any] = {
+        "product_note": (
+            "Membership sizing matrix is the live rulebook for class/role/scale-path/regime room — "
+            "not stone. Weekly analyst must review rules + live room and may suggest optimizations "
+            "(measure-only; Brad GO before knobs)."
+        ),
+        "paths": {
+            "config": "config/membership_sizing_matrix.json",
+            "state": "data/state/membership_sizing_matrix_latest.json",
+            "docs": "docs/features/MEMBERSHIP_SIZING_MATRIX.md",
+            "cli": "python scripts/phase6/run_membership_sizing_matrix.py --filter block_max",
+        },
+    }
+    try:
+        from phase6.core.membership_sizing_matrix import build_matrix, load_config, load_regime_sheet
+
+        matrix = build_matrix(persist=True)
+        cfg = load_config()
+        regime_sheet = load_regime_sheet()
+        rows = [r for r in (matrix.get("rows") or []) if isinstance(r, dict)]
+        by_role: Dict[str, int] = Counter(str(r.get("role") or "unknown") for r in rows)
+        by_scale: Dict[str, int] = Counter(
+            str(r.get("scale_path_live") or r.get("scale_path") or r.get("scale_path_law") or "none")
+            for r in rows
+        )
+        by_class: Dict[str, int] = Counter(str(r.get("class") or "unknown") for r in rows)
+        block_max = []
+        kindling = []
+        ballast = []
+        for r in rows:
+            held = float(r.get("held_usd") or 0)
+            max_add = float(r.get("max_add_usd") or 0)
+            slim = {
+                "pair": r.get("pair"),
+                "class": r.get("class"),
+                "role": r.get("role"),
+                "scale_path_law": r.get("scale_path_law"),
+                "scale_path_live": r.get("scale_path_live") or r.get("scale_path"),
+                "held_usd": r.get("held_usd"),
+                "max_add_usd": r.get("max_add_usd"),
+                "block_reason": r.get("block_reason") or r.get("binding_budget"),
+                "pyramid_allowed": r.get("pyramid_allowed"),
+                "target_pair_weight": r.get("target_pair_weight"),
+                "target_pair_usd": r.get("target_pair_usd"),
+                "can_eject_scale_window": r.get("can_eject_scale_window"),
+                "membership_remove": r.get("membership_remove"),
+                "kindling_eligible": r.get("kindling_eligible"),
+                "inconsistencies": r.get("inconsistencies") or [],
+            }
+            if held > 5 and max_add <= 0:
+                block_max.append(slim)
+            if str(slim.get("scale_path_law") or "") == "kindling_once" or slim.get("kindling_eligible"):
+                if held > 0 or slim.get("scale_path_live") not in (None, "none"):
+                    kindling.append(slim)
+            if str(slim.get("role") or "").startswith(("ballast", "preserve")) or slim.get("role") in (
+                "ballast_core",
+                "preserve_ballast",
+            ):
+                if held > 0:
+                    ballast.append(slim)
+        inconsistencies = matrix.get("inconsistencies") or []
+        if not inconsistencies:
+            inconsistencies = []
+            for r in rows:
+                for inc in r.get("inconsistencies") or []:
+                    inconsistencies.append({"pair": r.get("pair"), "issue": inc})
+        live_ar = regime_sheet.get("live_add_risk") or {}
+        out.update(
+            {
+                "as_of": matrix.get("as_of") or matrix.get("generated_at"),
+                "regime": matrix.get("regime") or regime_sheet.get("live_regime"),
+                "n_rows": len(rows),
+                "counts_by_role": dict(by_role),
+                "counts_by_class": dict(by_class),
+                "counts_by_scale_path": dict(by_scale),
+                "role_law": cfg.get("role_law") or {},
+                "regime_live_add_risk": {
+                    "allow_pyramid": live_ar.get("allow_pyramid"),
+                    "k_profit": live_ar.get("k_profit"),
+                    "h_add": live_ar.get("h_add"),
+                    "H_book": live_ar.get("H_book"),
+                    "target_pair_weight": live_ar.get("target_pair_weight"),
+                    "rebalance_cap_usd": live_ar.get("rebalance_cap_usd"),
+                },
+                "regime_sheet_keys": sorted(
+                    [k for k in (regime_sheet.get("by_regime") or regime_sheet.get("regimes") or {})]
+                )[:12]
+                if isinstance(regime_sheet.get("by_regime") or regime_sheet.get("regimes"), dict)
+                else list((regime_sheet or {}).keys())[:12],
+                "block_max_held": block_max[:16],
+                "kindling_rows": kindling[:12],
+                "ballast_held": ballast[:12],
+                "inconsistencies": inconsistencies[:20],
+                "n_inconsistent": len(inconsistencies),
+                "held_rows": [
+                    {
+                        "pair": r.get("pair"),
+                        "role": r.get("role"),
+                        "class": r.get("class"),
+                        "held_usd": r.get("held_usd"),
+                        "max_add_usd": r.get("max_add_usd"),
+                        "scale_path_law": r.get("scale_path_law"),
+                        "block_reason": r.get("block_reason") or r.get("binding_budget"),
+                    }
+                    for r in rows
+                    if float(r.get("held_usd") or 0) > 1
+                ][:20],
+            }
+        )
+    except Exception as e:
+        stale = _load_json(PROJECT_ROOT / "data" / "state" / "membership_sizing_matrix_latest.json")
+        out["error"] = str(e)[:240]
+        if isinstance(stale, dict):
+            out["stale_as_of"] = stale.get("as_of")
+            out["n_rows_stale"] = len(stale.get("rows") or [])
+    return out
 
 
 def _live_context() -> Dict[str, Any]:
@@ -413,25 +558,14 @@ def _live_context() -> Dict[str, Any]:
         }
         ctx["util_pct"] = util
 
-    msm = _load_json(PROJECT_ROOT / "data" / "state" / "membership_sizing_matrix_latest.json")
-    if isinstance(msm, dict):
-        rows = msm.get("rows") or []
-        block_max = [
-            {
-                "pair": r.get("pair"),
-                "role": r.get("role"),
-                "scale_path": r.get("scale_path"),
-                "max_add_usd": r.get("max_add_usd"),
-                "block_reason": r.get("block_reason"),
-                "held_usd": r.get("held_usd"),
-            }
-            for r in rows
-            if isinstance(r, dict) and float(r.get("max_add_usd") or 0) <= 0 and float(r.get("held_usd") or 0) > 5
-        ][:12]
-        ctx["matrix_block_max_held"] = block_max
-        ctx["matrix_regime"] = (msm.get("regime") or msm.get("live_regime") or ctx.get("regime"))
+    # Membership sizing matrix is in weekly analyst scope (rulebook, not stone).
+    msm = _matrix_snapshot_for_review()
+    if isinstance(msm, dict) and msm:
+        ctx["membership_sizing_matrix"] = msm
         if msm.get("regime"):
             ctx["regime"] = msm.get("regime")
+        ctx["matrix_block_max_held"] = msm.get("block_max_held") or []
+        ctx["matrix_regime"] = msm.get("regime")
 
     attr = _load_json(PROJECT_ROOT / "data" / "state" / "attribution_rt_weekly_latest.json")
     if isinstance(attr, dict):
@@ -496,9 +630,10 @@ def build_fact_pack(
         "seed_hypotheses": seeds,
         "agent_brief": {
             "mission": (
-                "Review prior 7d trades + free quest outside history; propose concrete ways to improve "
-                "deposit-adj take-home (~5%/mo north star). Prefer less process tax and higher quality "
-                "scale/membership over new digs."
+                "Review prior 7d trades + Membership Sizing Matrix rulebook + free quest outside history; "
+                "propose concrete ways to improve deposit-adj take-home (~5%/mo north star). Prefer less "
+                "process tax and higher quality scale/membership over new digs. Matrix is the current "
+                "regime rulebook — not stone; suggest optimizations with evidence."
             ),
             "rules": [
                 "Ground every claim in fact pack numbers or cited state files.",
@@ -506,14 +641,18 @@ def build_fact_pack(
                 "Honesty over cosmetics; paper MTM ≠ filled PnL.",
                 "If N is thin, say so — no edge theater.",
                 "Separate process tax vs true alpha miss.",
-                "Quest OK: membership matrix, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell.",
+                "MUST review membership_sizing_matrix in context (role_law, regime add-risk, block_max, inconsistencies, kindling vs ballast).",
+                "Quest OK: matrix CLI/API, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell, prior week continuity/notepad.",
+                "Use job notepad + continuity for week-over-week memory (open suggestions, GO status).",
             ],
             "output_contract": [
                 "1) Week scorecard (PnL, WR, tax, util, regime) — 5 lines max",
                 "2) What worked / what hurt — bullets with $ or counts",
-                "3) Top 3–7 suggestions ranked P0/P1/P2 with: lever, expected effect, evidence, risk, GO needed?",
-                "4) Explicit non-suggestions (do not touch)",
-                "5) Optional: 1 measurement experiment for next week",
+                "3) Matrix rulebook review — what binds growth; any policy drift; 1–3 matrix optimization ideas",
+                "4) Top 3–7 suggestions ranked P0/P1/P2 with: lever, expected effect, evidence, risk, GO needed?",
+                "5) Explicit non-suggestions (do not touch)",
+                "6) Optional: 1 measurement experiment for next week",
+                "7) Update notepad keys: last_scorecard, open_suggestions, matrix_notes (short)",
             ],
         },
         "paths": {
@@ -570,6 +709,49 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
     lines.extend(["", "## Seed hypotheses (agent starting points)", ""])
     for h in payload.get("seed_hypotheses") or []:
         lines.append(f"- **{h.get('priority')}** `{h.get('id')}` ({h.get('theme')}): {h.get('hint')}")
+    msm = (ctx.get("membership_sizing_matrix") or {}) if isinstance(ctx, dict) else {}
+    if msm:
+        lines.extend(
+            [
+                "",
+                "## Membership sizing matrix (rulebook — not stone)",
+                "",
+                str(msm.get("product_note") or ""),
+                "",
+                f"- Regime: **{msm.get('regime')}** · rows **{msm.get('n_rows')}** · inconsistent **{msm.get('n_inconsistent')}**",
+                f"- Role counts: `{json.dumps(msm.get('counts_by_role') or {})}`",
+                f"- Scale-path counts: `{json.dumps(msm.get('counts_by_scale_path') or {})}`",
+                f"- Live add-risk: `{json.dumps(msm.get('regime_live_add_risk') or {})}`",
+                "",
+                "### Held bags",
+                "",
+            ]
+        )
+        for r in msm.get("held_rows") or []:
+            lines.append(
+                f"- {r.get('pair')}: role={r.get('role')} held=${r.get('held_usd')} "
+                f"max_add=${r.get('max_add_usd')} path={r.get('scale_path_law')} "
+                f"block={r.get('block_reason')}"
+            )
+        lines.extend(["", "### Block-max held (max_add=$0)", ""])
+        for r in msm.get("block_max_held") or []:
+            lines.append(
+                f"- {r.get('pair')}: {r.get('role')} held=${r.get('held_usd')} · {r.get('block_reason')}"
+            )
+        if msm.get("inconsistencies"):
+            lines.extend(["", "### Inconsistencies", ""])
+            for inc in msm.get("inconsistencies") or []:
+                if isinstance(inc, dict):
+                    lines.append(f"- {inc.get('pair')}: {inc.get('issue')}")
+                else:
+                    lines.append(f"- {inc}")
+        lines.extend(
+            [
+                "",
+                f"CLI: `{((msm.get('paths') or {}).get('cli'))}`",
+                f"Docs: `{((msm.get('paths') or {}).get('docs'))}`",
+            ]
+        )
     lines.extend(
         [
             "",
@@ -625,11 +807,16 @@ def format_tg_card(payload: Mapping[str, Any], *, suggestions: Optional[Sequence
     sb = ctx.get("scoreboard") or {}
     wr = s.get("exit_wr")
     wr_s = f"{float(wr)*100:.0f}%" if wr is not None else "—"
+    msm = ctx.get("membership_sizing_matrix") or {}
     lines = [
         "📊 Analyst weekly 7d trade review",
         f"PnL ${s.get('realized_pnl_usd')} · WR {wr_s} · tax ${s.get('process_tax_usd')} · util {nav.get('util_pct')}%",
         f"Primary B/S {s.get('n_primary_buys')}/{s.get('n_primary_sells')} · same-day loops {s.get('same_day_buy_sell_pair_days')}",
         f"Path {sb.get('path_health') or '—'} · goal {sb.get('goal_label') or '—'} · regime {ctx.get('regime') or sb.get('regime') or '—'}",
+        (
+            f"Matrix: rows {msm.get('n_rows')} · block_max_held {len(msm.get('block_max_held') or [])} · "
+            f"inconsistent {msm.get('n_inconsistent')} · pyramid {((msm.get('regime_live_add_risk') or {}).get('allow_pyramid'))}"
+        ),
     ]
     if suggestions:
         lines.append("Top ideas:")

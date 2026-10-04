@@ -1,8 +1,10 @@
 # Analyst weekly 7d trade review — ship receipt
 
 **Date:** 2026-10-04  
-**Brad GO:** Sunday analyst review of prior 7d trades + return-improvement suggestions  
-**Job:** `phase6-analyst-weekly-trade-review` · id `6752ed0b0dec` · `0 17 * * 0` PT  
+**Brad GO:** Sunday analyst review of prior 7d trades + Membership Sizing Matrix rulebook + return-improvement suggestions  
+**Job:** `phase6-analyst-weekly-trade-review` (`6752ed0b0dec`)  
+**Memory:** continuity ON + durable notepad (`last_scorecard`, `open_suggestions`, `matrix_notes`, `go_queue`)  
+**Matrix scope:** rulebook not stone — weekly must review role_law / add-risk / block_max / inconsistencies · id `6752ed0b0dec` · `0 17 * * 0` PT  
 
 ## Why
 

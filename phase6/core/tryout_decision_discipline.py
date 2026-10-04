@@ -102,7 +102,8 @@ def load_config(path: Optional[Path] = None) -> Dict[str, Any]:
             "thresholds": {
                 "min_setup_score": 1.5,
                 "min_setup_confidence": 0.55,
-                "min_sent_clear_noul": 0.30,
+                "min_sent_clear_noul": 0.55,
+                "min_eng_absolute": 0.35,
                 "max_toxic_source_noul": 0.50,
                 "min_latch_fresh_noul": 0.40,
                 "behavior_skip_labels": ["fast_tryout_exit", "sl_heavy"],
@@ -360,9 +361,10 @@ def evaluate_judgments(snap: Dict[str, Any], cfg: Optional[Dict[str, Any]] = Non
         reg_ok = 0.3
     else:
         reg_ok = 0.0
-    # 0–3 score
+    # 0–3 score — Brad GO P2 2026-10-04: weight eng/sent + wash over seat trivia
+    # (TP winners were strong-sent mid-RSI, not deep-wash weak-sent)
     setup = 3.0 * (
-        0.30 * sent_v + 0.25 * src_v + 0.20 * rsi_v + 0.15 * reg_ok + 0.10 * seat_v
+        0.40 * sent_v + 0.25 * src_v + 0.20 * rsi_v + 0.10 * reg_ok + 0.05 * seat_v
     )
     confs = [j.confidence for j in out if j.id != "setup_quality"]
     setup_conf = sum(confs) / len(confs) if confs else 0.4
@@ -396,7 +398,8 @@ def compose_policy(
 
     min_setup = _f(thr.get("min_setup_score"), 1.5)
     min_conf = _f(thr.get("min_setup_confidence"), 0.55)
-    min_sent = _f(thr.get("min_sent_clear_noul"), 0.30)
+    min_sent = _f(thr.get("min_sent_clear_noul"), 0.55)
+    min_eng_abs = _f(thr.get("min_eng_absolute"), 0.35)
     max_toxic = _f(thr.get("max_toxic_source_noul"), 0.50)
     # eng_source_grade is inverted toxic: low grade = toxic. Treat grade < (1-max_toxic) as toxic.
     min_src_grade = 1.0 - max_toxic
@@ -411,11 +414,19 @@ def compose_policy(
     action = ACT_BUY_FULL
     size_frac = 1.0
     reasons: List[str] = []
+    eng_raw = snap.get("eng")
+    eng_f = None if eng_raw is None else _f(eng_raw)
 
     # --- hard ladder (first match) ---
     if snap.get("kill") or jval("regime_door") == "blocked":
         rung, action, size_frac = "kill_or_regime", ACT_STAND_DOWN, 0.0
         reasons.append("hard_block_kill_or_regime")
+    elif eng_f is None or eng_f < min_eng_abs:
+        # P2 signal-first: absolute eng bar (TP-winner band), independent of noul scale
+        rung, action, size_frac = "weak_eng_money_bar", ACT_STAND_DOWN, 0.0
+        reasons.append(
+            f"eng={eng_f if eng_f is not None else 'missing'}<{min_eng_abs:g} money_bar"
+        )
     elif _f(jval("eng_source_grade"), 1.0) < min_src_grade:
         rung, action, size_frac = "toxic_source", ACT_STAND_DOWN, 0.0
         reasons.append(f"toxic_or_weak_src grade={jval('eng_source_grade')}")

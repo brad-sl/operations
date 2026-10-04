@@ -296,15 +296,16 @@ class TestActionDryAndLive(unittest.TestCase):
 
 
 class TestComposerSelect(unittest.TestCase):
-    def test_picks_deeper_wash_clearing_floor(self):
+    def test_picks_stronger_eng_over_deeper_wash(self):
+        """P2 signal-first: strong eng + mid RSI beats deep-wash weaker eng."""
         rows = [
-            {"pair": "AAA-USD", "rsi": 38, "fetched_raw": 0.35},
-            {"pair": "BBB-USD", "rsi": 22, "fetched_raw": 0.32},
+            {"pair": "AAA-USD", "rsi": 38, "fetched_raw": 0.45},  # TP-path band
+            {"pair": "BBB-USD", "rsi": 22, "fetched_raw": 0.36},  # deeper wash, weaker eng
             {"pair": "CCC-USD", "rsi": 20, "fetched_raw": 0.10},  # under floor
         ]
         c = select_buy_candidate(rows, floor=0.30)
         self.assertIsNotNone(c)
-        self.assertEqual(c["pair"], "BBB-USD")
+        self.assertEqual(c["pair"], "AAA-USD")
 
     def test_override_pair(self):
         rows = [
@@ -317,6 +318,15 @@ class TestComposerSelect(unittest.TestCase):
     def test_none_when_no_clear(self):
         rows = [{"pair": "AAA-USD", "rsi": 20, "fetched_raw": 0.1}]
         self.assertIsNone(select_buy_candidate(rows, floor=0.30))
+
+    def test_floor_035_kills_weak_clear(self):
+        rows = [
+            {"pair": "WEAK-USD", "rsi": 25, "fetched_raw": 0.32},
+            {"pair": "STRONG-USD", "rsi": 40, "fetched_raw": 0.40},
+        ]
+        c = select_buy_candidate(rows, floor=0.35)
+        self.assertIsNotNone(c)
+        self.assertEqual(c["pair"], "STRONG-USD")
 
 
 if __name__ == "__main__":

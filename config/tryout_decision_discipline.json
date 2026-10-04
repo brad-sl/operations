@@ -1,8 +1,9 @@
 {
   "schema": "tryout_decision_discipline_v1",
-  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. Brad GO 2026-10-01 live_apply ON — composer can skip/reduce seats.",
+  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. Brad GO 2026-10-01 live_apply ON — composer can skip/reduce seats. Brad GO 2026-10-04 P2: signal-first money bar (eng≥0.35) — core vs tryout by RSI+sent+TP path, not ballast-before-shell.",
   "live_apply": true,
   "brad_go_live_apply_at": "2026-10-01T15:25:00Z",
+  "brad_go_p2_signal_first_at": "2026-10-04T21:15:00Z",
   "shadow_log": true,
   "source": "rohonchain_jev_process_map_2026-09-26",
   "judgments": {
@@ -19,10 +20,11 @@
     ]
   },
   "thresholds": {
-    "note": "Live only when live_apply=true. Shadow always records would_*.",
+    "note": "Live only when live_apply=true. Shadow always records would_*. P2: min_eng_absolute matches TP-winner band (~0.35+); weak-sent opens are STAND_DOWN.",
     "min_setup_score": 1.5,
     "min_setup_confidence": 0.55,
-    "min_sent_clear_noul": 0.30,
+    "min_sent_clear_noul": 0.55,
+    "min_eng_absolute": 0.35,
     "max_toxic_source_noul": 0.50,
     "min_latch_fresh_noul": 0.40,
     "behavior_skip_labels": ["fast_tryout_exit", "sl_heavy"],

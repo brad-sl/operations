@@ -271,7 +271,9 @@
           "XRP-USD",
           "ZEC-USD"
         ],
-        "min_sentiment": 0.3,
+        "min_sentiment": 0.35,
+        "brad_go_p2_signal_first": "2026-10-04",
+        "p2_note": "Brad GO P2: strong RSI+sent first (TP winners ~sent≥0.35). Weak-sent shells are process tax. Powder/USDC only when nothing clears. Not core-before-tryout.",
         "max_rsi": 55.0,
         "min_rsi": 0.0,
         "max_new_seats_per_day": 6,
@@ -376,7 +378,7 @@
             "shell": {
               "abs_cap_usd": 25.0,
               "max_new_seats_per_day": 6,
-              "min_sentiment": 0.3
+              "min_sentiment": 0.35
             },
             "doors": [
               "basket_tryout_thaw",

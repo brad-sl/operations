@@ -21,7 +21,8 @@ def _cfg_live(tmp: Path, live: bool = False) -> Dict:
         "thresholds": {
             "min_setup_score": 1.5,
             "min_setup_confidence": 0.55,
-            "min_sent_clear_noul": 0.30,
+            "min_sent_clear_noul": 0.55,
+            "min_eng_absolute": 0.35,
             "max_toxic_source_noul": 0.50,
             "min_latch_fresh_noul": 0.40,
             "behavior_skip_labels": ["fast_tryout_exit", "sl_heavy"],
@@ -169,6 +170,71 @@ def test_behavior_skip_with_n() -> None:
         assert res["policy"]["would_block_if_live"] is True
 
 
+def test_weak_eng_money_bar_stand_down() -> None:
+    """P2: eng under absolute money bar (0.35) never seats even if floor is lower."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        tdd.STATE_DIR = tmp  # type: ignore[attr-defined]
+        tdd.LATEST_PATH = tmp / "latest.json"  # type: ignore[attr-defined]
+        tdd.PROFILES_PATH = tmp / "profiles.json"  # type: ignore[attr-defined]
+        cfg = _cfg_live(tmp, live=True)
+        res = tdd.evaluate_candidate(
+            pair="HYPE-USD",
+            rsi=28.0,
+            eng=0.32,  # clears old 0.30 floor, fails P2 0.35 money bar
+            eng_source="paid_x_probe",
+            floor=0.30,
+            shell_usd=25.0,
+            regime={"strategy_mode": "deploy", "allow_new_buys": True},
+            latch_age_min=5.0,
+            seats_used_today=0,
+            seats_max_day=6,
+            persist=False,
+            cfg=cfg,
+        )
+        assert res["policy"]["action"] == tdd.ACT_STAND_DOWN, res["policy"]
+        assert any("money_bar" in r for r in (res["policy"].get("reasons") or [])), res["policy"]
+        block = tdd.apply_to_composer_candidate(
+            {"pair": "HYPE-USD", "rsi": 28, "eng": 0.32, "eng_source": "paid_x"},
+            regime={"strategy_mode": "deploy", "allow_new_buys": True},
+            shell_usd=25.0,
+            floor=0.30,
+            persist=False,
+            cfg=cfg,
+        )
+        assert block["skip_seat"] is True
+
+
+def test_strong_eng_still_full_buy() -> None:
+    """LINK-class TP winner band still clears full shell under P2."""
+    with tempfile.TemporaryDirectory() as td:
+        tmp = Path(td)
+        tdd.STATE_DIR = tmp  # type: ignore[attr-defined]
+        tdd.LATEST_PATH = tmp / "latest.json"  # type: ignore[attr-defined]
+        tdd.PROFILES_PATH = tmp / "profiles.json"  # type: ignore[attr-defined]
+        cfg = _cfg_live(tmp, live=True)
+        res = tdd.evaluate_candidate(
+            pair="LINK-USD",
+            rsi=46.0,
+            eng=0.54,
+            eng_source="paid_x_probe",
+            floor=0.35,
+            rsi_max=55.0,
+            shell_usd=25.0,
+            regime={"strategy_mode": "deploy", "allow_new_buys": True, "regime": "flat"},
+            seats_used_today=1,
+            seats_max_day=6,
+            open_tryout_seats=1,
+            max_open_tryout=6,
+            latch_age_min=10.0,
+            latch_ttl_min=180.0,
+            persist=False,
+            cfg=cfg,
+        )
+        assert res["policy"]["action"] == tdd.ACT_BUY_FULL, res["policy"]
+        assert res["policy"]["apply_block"] is False
+
+
 def test_kill_blocks() -> None:
     cfg = _cfg_live(Path("/tmp"), live=False)
     res = tdd.evaluate_candidate(
@@ -198,6 +264,8 @@ def main() -> int:
         test_live_apply_blocks_seat,
         test_shadow_does_not_skip,
         test_behavior_skip_with_n,
+        test_weak_eng_money_bar_stand_down,
+        test_strong_eng_still_full_buy,
         test_kill_blocks,
         test_config_file_loads,
     ]

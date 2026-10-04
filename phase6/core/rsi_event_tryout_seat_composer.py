@@ -76,7 +76,7 @@ def _f(x: Any, default: float = 0.0) -> float:
 def resolve_regime_tryout_defaults() -> Dict[str, Any]:
     """Pull floor / max_rsi / abs_cap / eligible doors from live quality_tryout policy."""
     out: Dict[str, Any] = {
-        "floor": 0.30,
+        "floor": 0.35,
         "rsi_max": 55.0,
         "abs_cap_usd": 25.0,
         "max_new_seats_per_day": 4,
@@ -215,7 +215,13 @@ def select_buy_candidate(
     pair_override: str = "",
     rsi_max: float = 55.0,
 ) -> Optional[Dict[str, Any]]:
-    """Pick best dual-clear row: eng>=floor AND RSI<=rsi_max (regime door). Prefer deeper wash."""
+    """Pick best dual-clear row: eng>=floor AND RSI<=rsi_max.
+
+    Brad GO P2 2026-10-04 — signal-first (not ballast-before-shell, not core-first):
+    rank by **strong eng** first, then wash depth, with a small bonus for the
+    mid-RSI band that printed TP winners (~30–52). Weak-sent deep washes lose
+    to strong-sent mid-RSI when both clear the floor.
+    """
     override = _norm_pair(pair_override)
     scored: List[Tuple[float, Dict[str, Any]]] = []
     for raw in rows:
@@ -239,8 +245,20 @@ def select_buy_candidate(
         else:
             if rsi_f is None:
                 rsi_f = 50.0
-        # deeper wash + higher eng
-        rank = (float(rsi_max) - float(rsi_f)) * 2.0 + float(c["eng"]) * 10.0
+        eng_f = float(c["eng"])
+        wash = max(0.0, float(rsi_max) - float(rsi_f))
+        # TP-path band bonus (stamped winners sat mid-RSI + strong sent)
+        tp_band = 8.0 if 30.0 <= float(rsi_f) <= 52.0 else 0.0
+        # eng dominates; wash is tie-break / secondary (was inverted before P2)
+        rank = eng_f * 120.0 + wash * 1.0 + tp_band
+        c = dict(c)
+        c["rank_score"] = round(rank, 4)
+        c["rank_components"] = {
+            "eng": eng_f,
+            "wash": round(wash, 4),
+            "tp_band": tp_band,
+            "formula": "eng*120 + wash + tp_band(30-52)",
+        }
         scored.append((rank, c))
     if not scored:
         return None

@@ -52,10 +52,11 @@ daily-dose 08:00 ·
 ## phase6-analyst-weekly-trade-review (Brad GO 2026-10-04)
 - Schedule: `0 17 * * 0` America/Los_Angeles (Sundays **17:00 PT**) — job_id `6752ed0b0dec`
 - Script (pre-agent fact pack): `~/.hermes/scripts/run_analyst_weekly_trade_review.sh` → `phase6/scripts/run_analyst_weekly_trade_review_cron.sh`
-- Agent skills: `crypto-analyst-scenario-run`, `phase6-analyst-daily-review`, `phase6-risk-sizing-research`
-- Behavior: rebuild 7d fact pack from ledger + attribution + scoreboard + matrix context → **agent** writes ranked return-improvement suggestions (may quest outside trade history)
+- Agent skills: `crypto-analyst-scenario-run`, `phase6-analyst-daily-review`, `phase6-risk-sizing-research`, `phase6-capital-and-dashboard-kpis`
+- Behavior: rebuild 7d fact pack (ledger + attribution + scoreboard + **Membership Sizing Matrix rulebook**) → **agent** ranked return suggestions (may quest outside trades)
+- Matrix scope: rulebook **not stone** — weekly reviews role_law / flat add-risk / block_max / inconsistencies and may suggest optimizations (Brad GO before knobs)
 - Delivery: **telegram** full operator card; disk `reports/ANALYST_WEEKLY_TRADE_REVIEW_LATEST.md` (facts) + `reports/ANALYST_WEEKLY_TRADE_REVIEW_AGENT_LATEST.md` (agent)
-- Continuity: **on** (dedupe vs prior Sunday)
+- Memory: **continuity ON** + durable **notepad** keys `last_scorecard` / `open_suggestions` / `matrix_notes` / `go_queue` (week-over-week)
 - Guardrails: **measure/suggest only** · no knobs · no orders · no live_apply · honesty over cosmetics · thin-N no edge theater
 - CLI: `scripts/phase6/run_analyst_weekly_trade_review.py --days 7`
 - Isolation: `scripts/phase6/test_isolation_analyst_weekly_trade_review.py`

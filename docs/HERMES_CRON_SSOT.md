@@ -1,6 +1,6 @@
 # Hermes cron SSOT (Phase 6 + host)
 
-**Updated:** 2026-10-03  
+**Updated:** 2026-10-04  
 **Law:** **Do not put Phase 6 / sentiment / X / Apify / runner monitors on Linux `crontab`.**  
 User crontab is comment-only. Backup: `~/.hermes/cron/linux-crontab.bak.20260813`.
 
@@ -47,7 +47,19 @@ daily-dose 08:00 ·
 |-----|---------------|---------|-------|
 | `trial-closeout-watch` | `20 9,18 * * *` | telegram (conditional) | Scans trials past `final_at` still open + `REPORT_READY`/`REVIEW_PENDING` overdue. Writes `docs/testing/inbox/OVERDUE_*.md` or `REVIEW_*.md`. **TG only when n_actions≥1** (fingerprint moved or high severity). Never auto-decides. Disk: `data/state/trial_closeout_watch_latest.{json,md,txt}`. Wrapper: `~/.hermes/scripts/run_trial_closeout_watch.sh`. |
 
-**analyst-daily-review 10:15 TG short-delta only (silent if signal unchanged)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30
+**analyst-daily-review 10:15 TG short-delta only (silent if signal unchanged)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30 · **analyst weekly 7d trade review Sun 17:00 TG** (`6752ed0b0dec`)
+
+## phase6-analyst-weekly-trade-review (Brad GO 2026-10-04)
+- Schedule: `0 17 * * 0` America/Los_Angeles (Sundays **17:00 PT**) — job_id `6752ed0b0dec`
+- Script (pre-agent fact pack): `~/.hermes/scripts/run_analyst_weekly_trade_review.sh` → `phase6/scripts/run_analyst_weekly_trade_review_cron.sh`
+- Agent skills: `crypto-analyst-scenario-run`, `phase6-analyst-daily-review`, `phase6-risk-sizing-research`
+- Behavior: rebuild 7d fact pack from ledger + attribution + scoreboard + matrix context → **agent** writes ranked return-improvement suggestions (may quest outside trade history)
+- Delivery: **telegram** full operator card; disk `reports/ANALYST_WEEKLY_TRADE_REVIEW_LATEST.md` (facts) + `reports/ANALYST_WEEKLY_TRADE_REVIEW_AGENT_LATEST.md` (agent)
+- Continuity: **on** (dedupe vs prior Sunday)
+- Guardrails: **measure/suggest only** · no knobs · no orders · no live_apply · honesty over cosmetics · thin-N no edge theater
+- CLI: `scripts/phase6/run_analyst_weekly_trade_review.py --days 7`
+- Isolation: `scripts/phase6/test_isolation_analyst_weekly_trade_review.py`
+- State: `data/state/analyst_weekly_trade_review_latest.json` · agent mirror `..._agent_latest.json`
 
 ### D — Shadow / research still active (own state only — **not** config writers)
 | Job | Why still on |

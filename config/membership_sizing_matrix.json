@@ -1,0 +1,66 @@
+{
+  "schema": "membership_sizing_matrix_v1",
+  "updated": "2026-10-04",
+  "brad_go": "2026-10-04_membership_sizing_matrix_ssot",
+  "enabled": true,
+  "note": "Law only — numbers for add_risk/regime come from regime_cash_policy.json (not duplicated here). Compiler joins class + role + live room.",
+  "class_order": [
+    "sticky_core",
+    "liquid_core",
+    "graduated",
+    "novelty_restricted",
+    "novelty_blocked"
+  ],
+  "role_law": {
+    "ballast_core": {
+      "scale_path": "add_risk_pyramid",
+      "can_eject_scale_window": false,
+      "first_fill_haircut": false,
+      "membership_remove": "never",
+      "kindling_eligible": false,
+      "pairs": ["BTC-USD", "ETH-USD"]
+    },
+    "preserve_ballast": {
+      "scale_path": "none",
+      "can_eject_scale_window": false,
+      "first_fill_haircut": false,
+      "membership_remove": "never",
+      "kindling_eligible": false,
+      "pairs": ["PAXG-USD"],
+      "note": "Preserve MICRO + E1 — not crypto add-risk ladder; never tryout kindling"
+    },
+    "tryout_shell": {
+      "scale_path": "kindling_once",
+      "can_eject_scale_window": true,
+      "first_fill_haircut": true,
+      "membership_remove": "dust_only",
+      "kindling_eligible": true,
+      "note": "Timed option on one kindling step; dead window → full eject"
+    },
+    "liquid_held": {
+      "scale_path": "add_risk_pyramid",
+      "can_eject_scale_window": false,
+      "first_fill_haircut": true,
+      "membership_remove": "m_gate",
+      "kindling_eligible": false,
+      "note": "Basket major held as stack — factor add-risk only"
+    },
+    "cash_like": {
+      "scale_path": "none",
+      "can_eject_scale_window": false,
+      "first_fill_haircut": false,
+      "membership_remove": "never",
+      "kindling_eligible": false,
+      "pairs": ["USD-USD", "USDC-USD", "USDT-USD"]
+    }
+  },
+  "inconsistency_rules": [
+    "sticky_or_ballast_must_not_kindling",
+    "preserve_must_not_kindling",
+    "kindling_requires_non_ballast",
+    "scale_window_eject_false_for_ballast",
+    "first_fill_exempt_matches_sticky"
+  ],
+  "regime_policy_path": "config/regime_cash_policy.json",
+  "state_path": "data/state/membership_sizing_matrix_latest.json"
+}

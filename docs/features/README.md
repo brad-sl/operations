@@ -18,6 +18,7 @@
 | — | [PARK_USDC_PAXG_OPERATOR_CHECKLIST.md](./PARK_USDC_PAXG_OPERATOR_CHECKLIST.md) | OPS companion |
 | FEAT-CRYPTO-PROCESS-LIFECYCLE-2026-09 | [CRYPTO_PROCESS_LIFECYCLE.md](./CRYPTO_PROCESS_LIFECYCLE.md) | DRAFT coverage map · Fresh vs Takeover · Manage stages |
 | FEAT-TRYOUT-LIFECYCLE-PROCESS-2026-10 | [TRYOUT_LIFECYCLE_PROCESS.md](./TRYOUT_LIFECYCLE_PROCESS.md) | DRAFT SSOT · tryout bag state machine · kindling · scale-window · gaps |
+| FEAT-MEMBERSHIP-SIZING-MATRIX-2026-10 | [MEMBERSHIP_SIZING_MATRIX.md](./MEMBERSHIP_SIZING_MATRIX.md) | ACTIVE measure · class×role×regime×live room filterable SSOT |
 | FEAT-CRYPTO-PROCESS-TRADER-VOICE-2026-09 | [CRYPTO_PROCESS_TRADER_VOICE.md](./CRYPTO_PROCESS_TRADER_VOICE.md) | DRAFT client/trader plain-English one-pager |
 | FEAT-TAKEOVER-NORMALIZE-2026-09 | [TAKEOVER_NORMALIZE_PLAYBOOK.md](./TAKEOVER_NORMALIZE_PLAYBOOK.md) | DRAFT ops playbook · protect→classify→normalize |
 
@@ -28,4 +29,4 @@
 3. Doctrine/PRD that is not a single shippable feature stays in `docs/research/` but is linked from the index.  
 4. Do not put SEO/SEM client work here (`docs/PROJECT_BOUNDARY.md`).
 
-*Last registry sync: 2026-10-01*
+*Last registry sync: 2026-10-04*

@@ -454,6 +454,49 @@
             </div>
         </div>
 
+        <!-- Membership × sizing matrix SSOT (filterable law + live room) -->
+        <div class="mt-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
+            <div class="flex flex-wrap items-center gap-2 mb-4">
+                <h2 class="font-semibold flex items-center gap-2">
+                    <i class="fa-solid fa-table-cells"></i> Membership sizing
+                    <span class="metric-label-wrap font-normal">
+                        <button type="button" class="metric-help-btn" aria-label="Membership sizing matrix"><i class="fa-regular fa-circle-question text-[10px]"></i></button>
+                        <div class="metric-tip" role="tooltip">Filterable SSOT: class × role × regime × scale-path × live max_add. BTC/ETH = ballast add-risk; tryout = kindling_once + eject; PAXG = preserve none. Numbers from regime_cash_policy + add_room — not folklore. Measure-only.</div>
+                    </span>
+                </h2>
+                <span id="msm-regime-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">regime --</span>
+                <span id="msm-pyramid-badge" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">pyramid --</span>
+                <span id="msm-incon-badge" class="ml-auto text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">incon --</span>
+            </div>
+            <p id="msm-plain" class="text-xs text-slate-400 mb-3">Loading membership sizing matrix…</p>
+            <div class="flex flex-wrap gap-1.5 mb-3 text-[10px]" id="msm-filters">
+                <button type="button" data-msm-filter="" class="msm-chip px-2 py-0.5 rounded-full bg-sky-950 text-sky-300 border border-sky-800">all</button>
+                <button type="button" data-msm-filter="basket" class="msm-chip px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">basket</button>
+                <button type="button" data-msm-filter="block_max" class="msm-chip px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">block-max</button>
+                <button type="button" data-msm-filter="role=ballast_core" class="msm-chip px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">ballast</button>
+                <button type="button" data-msm-filter="role=tryout_shell" class="msm-chip px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">tryout</button>
+                <button type="button" data-msm-filter="scale_path=kindling_once" class="msm-chip px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">kindling</button>
+                <button type="button" data-msm-filter="inconsistent" class="msm-chip px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">inconsistent</button>
+            </div>
+            <div class="overflow-auto text-xs">
+                <table class="w-full text-left">
+                    <thead class="text-slate-500 border-b border-slate-800">
+                        <tr>
+                            <th class="py-1 pr-2 font-medium">Pair</th>
+                            <th class="py-1 pr-2 font-medium">Class</th>
+                            <th class="py-1 pr-2 font-medium">Role</th>
+                            <th class="py-1 pr-2 font-medium">Scale</th>
+                            <th class="py-1 pr-2 font-medium">Held</th>
+                            <th class="py-1 pr-2 font-medium">Max add</th>
+                            <th class="py-1 font-medium">Block</th>
+                        </tr>
+                    </thead>
+                    <tbody id="msm-rows"></tbody>
+                </table>
+            </div>
+            <p id="msm-regime-line" class="text-[10px] text-slate-600 mt-2"></p>
+        </div>
+
         <!-- P3 Regime arm switch metrics (measure-only) -->
         <div class="mt-8 bg-slate-900 border border-slate-800 rounded-3xl p-6 section-card">
             <div class="flex flex-wrap items-center gap-2 mb-4">
@@ -1077,6 +1120,7 @@
                 fetchData('/api/brief'),
                 fetchData('/api/promote-graduation', 4000),
                 fetchData('/api/regime-arm-metrics', 4000),
+                fetchData('/api/membership-sizing-matrix?basket=1', 8000),
             ];
             const settled = await Promise.allSettled(endpoints);
             const balData = pickPayload('balances', settledValue(settled[0]));
@@ -1093,10 +1137,12 @@
             const briefData = pickPayload('brief', settledValue(settled[7]));
             const promoteData = pickPayload('promote', settledValue(settled[8]), (p) => !!(p && p.status === 'ok' && p.schema));
             const regimeData = pickPayload('regimeArm', settledValue(settled[9]), (p) => !!(p && p.status === 'ok' && p.schema));
+            const msmData = pickPayload('msm', settledValue(settled[10]), (p) => !!(p && p.status === 'ok' && Array.isArray(p.rows)));
             // Update recovery with current position count
             if (typeof updateRecoveryStatus === 'function') updateRecoveryStatus(posData);
             if (typeof updatePromoteGraduation === 'function') updatePromoteGraduation(promoteData);
             if (typeof updateRegimeArmMetrics === 'function') updateRegimeArmMetrics(regimeData);
+            if (typeof updateMembershipSizingMatrix === 'function') updateMembershipSizingMatrix(msmData);
 
             // Header/Balance - runner live_state.json (ground truth); DB views are fallback only
             const totalEl = document.getElementById('total-balance');
@@ -2053,6 +2099,108 @@
                 }
             }
         }
+
+        let _msmCache = null;
+        let _msmFilter = '';
+
+        function _msmApplyFilter(rows, filter) {
+            const f = String(filter || '');
+            if (!f) return rows || [];
+            if (f === 'basket') return (rows || []).filter(r => r.in_basket);
+            if (f === 'block_max') return (rows || []).filter(r => r.block_max);
+            if (f === 'inconsistent') return (rows || []).filter(r => (r.inconsistencies || []).length);
+            if (f.startsWith('role=')) {
+                const v = f.slice(5);
+                return (rows || []).filter(r => String(r.role) === v);
+            }
+            if (f.startsWith('scale_path=')) {
+                const v = f.slice(11);
+                return (rows || []).filter(r => String(r.scale_path_law) === v);
+            }
+            if (f.startsWith('class=')) {
+                const v = f.slice(6);
+                return (rows || []).filter(r => String(r.class) === v);
+            }
+            return rows || [];
+        }
+
+        function updateMembershipSizingMatrix(data) {
+            const plain = document.getElementById('msm-plain');
+            const body = document.getElementById('msm-rows');
+            const regLine = document.getElementById('msm-regime-line');
+            if (data && data.status === 'ok' && Array.isArray(data.rows)) {
+                _msmCache = data;
+            }
+            const src = _msmCache;
+            if (!src) {
+                if (plain) plain.textContent = 'Membership sizing matrix not built yet.';
+                return;
+            }
+            const rs = src.regime_sheet || {};
+            const live = rs.live_add_risk || {};
+            const counts = src.counts || {};
+            const nIncon = (src.inconsistencies || []).length || counts.n_inconsistent || 0;
+            _badge(document.getElementById('msm-regime-badge'), 'regime ' + (rs.live_regime || src.add_room_meta?.regime || '--'), true);
+            const pyr = !!live.allow_pyramid;
+            _badge(document.getElementById('msm-pyramid-badge'), 'pyramid ' + (pyr ? 'ON' : 'OFF'), pyr);
+            _badge(document.getElementById('msm-incon-badge'), 'incon ' + nIncon, nIncon === 0);
+            if (plain) plain.textContent = src.plain_english || 'Membership × sizing matrix.';
+            if (regLine) {
+                regLine.textContent = 'flat factors: k_profit=' + (live.k_profit ?? '--')
+                    + ' · h_add=' + (live.h_add ?? '--')
+                    + ' · H_book=' + (live.H_book ?? '--')
+                    + ' · target_w=' + (live.target_pair_weight ?? '--')
+                    + ' · cash_frac=' + (live.cash_frac ?? '--')
+                    + ' · equity=$' + _fmtNum((src.add_room_meta || {}).equity_usd, 0);
+            }
+            const rows = _msmApplyFilter(src.rows || [], _msmFilter);
+            if (body) {
+                if (!rows.length) {
+                    body.innerHTML = '<tr><td colspan="7" class="py-2 text-slate-500">No rows for filter</td></tr>';
+                } else {
+                    body.innerHTML = rows.map(r => {
+                        const pair = String(r.pair || '').replace('-USD', '');
+                        const held = r.held_usd == null ? '--' : '$' + _fmtNum(r.held_usd, 0);
+                        const madd = r.max_add_usd == null ? '—' : '$' + _fmtNum(r.max_add_usd, 0);
+                        const block = r.block_max
+                            ? ('· ' + (r.block_reason || 'block'))
+                            : (r.block_reason || 'ok');
+                        const incon = (r.inconsistencies || []).length
+                            ? ' text-rose-400'
+                            : '';
+                        const scale = String(r.scale_path_law || '--').replace(/_/g, ' ');
+                        return `<tr class="border-b border-slate-800/80${incon}">
+                            <td class="py-1.5 pr-2 text-slate-200" title="${r.pair || ''}">${pair}</td>
+                            <td class="py-1.5 pr-2 text-slate-400">${String(r.class || '--').replace(/_/g, ' ')}</td>
+                            <td class="py-1.5 pr-2 text-slate-300">${String(r.role || '--').replace(/_/g, ' ')}</td>
+                            <td class="py-1.5 pr-2 text-sky-300">${scale}</td>
+                            <td class="py-1.5 pr-2 tabular-nums text-slate-300">${held}</td>
+                            <td class="py-1.5 pr-2 tabular-nums ${r.block_max ? 'text-amber-300' : 'text-emerald-400'}">${madd}</td>
+                            <td class="py-1.5 text-slate-400 truncate max-w-[9rem]" title="${r.block_reason || ''}">${block}</td>
+                        </tr>`;
+                    }).join('');
+                }
+            }
+        }
+
+        // Filter chips for membership sizing matrix
+        (function bindMsmFilters() {
+            const host = document.getElementById('msm-filters');
+            if (!host || host.dataset.bound) return;
+            host.dataset.bound = '1';
+            host.addEventListener('click', (ev) => {
+                const btn = ev.target && ev.target.closest ? ev.target.closest('[data-msm-filter]') : null;
+                if (!btn) return;
+                _msmFilter = btn.getAttribute('data-msm-filter') || '';
+                host.querySelectorAll('.msm-chip').forEach(el => {
+                    el.classList.remove('bg-sky-950', 'text-sky-300', 'border-sky-800');
+                    el.classList.add('bg-slate-800', 'text-slate-400', 'border-slate-700');
+                });
+                btn.classList.remove('bg-slate-800', 'text-slate-400', 'border-slate-700');
+                btn.classList.add('bg-sky-950', 'text-sky-300', 'border-sky-800');
+                if (_msmCache) updateMembershipSizingMatrix(_msmCache);
+            });
+        })();
 
         function updateRegimeArmMetrics(data) {
             const plain = document.getElementById('regime-plain');

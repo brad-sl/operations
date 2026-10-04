@@ -2119,6 +2119,65 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 self.send_json({**_mm_dash(), "status": "ok"})
             except Exception as e:
                 self.send_json({"status": "error", "message": str(e)[:200]})
+        elif path == '/api/membership-sizing-matrix':
+            # Filterable class × role × regime × scale-path × live room SSOT (measure-only)
+            try:
+                from urllib.parse import parse_qs, urlparse
+
+                from phase6.core.membership_sizing_matrix import (
+                    build_matrix,
+                    filter_rows,
+                    load_latest,
+                    pair_card,
+                )
+
+                qs = parse_qs(urlparse(self.path).query)
+                pair = (qs.get("pair") or [None])[0]
+                check_only = (qs.get("check") or [""])[0].lower() in ("1", "true", "yes")
+                # Prefer fresh compile; fall back to latest snapshot on failure
+                try:
+                    data = build_matrix(persist=True)
+                except Exception:
+                    data = load_latest() or {}
+                    if not data:
+                        raise
+                    data = {**data, "stale_snapshot": True}
+                if pair:
+                    card = pair_card(str(pair), data)
+                    self.send_json({**card, "status": "ok", "measure_only": True})
+                    return
+                kw = {}
+                if (qs.get("block_max") or [""])[0].lower() in ("1", "true", "yes"):
+                    kw["block_max"] = True
+                if (qs.get("inconsistent") or [""])[0].lower() in ("1", "true", "yes"):
+                    kw["inconsistent_only"] = True
+                if (qs.get("class") or [None])[0]:
+                    kw["class_"] = str((qs.get("class") or [""])[0])
+                if (qs.get("role") or [None])[0]:
+                    kw["role"] = str((qs.get("role") or [""])[0])
+                if (qs.get("scale_path") or [None])[0]:
+                    kw["scale_path"] = str((qs.get("scale_path") or [""])[0])
+                if (qs.get("basket") or [""])[0].lower() in ("1", "true", "yes"):
+                    kw["in_basket"] = True
+                rows = filter_rows(data, **kw) if kw else list(data.get("rows") or [])
+                out = {
+                    **data,
+                    "rows": rows,
+                    "status": "ok",
+                    "measure_only": True,
+                    "filter_applied": kw or None,
+                }
+                if check_only:
+                    out["check_ok"] = not bool(data.get("inconsistencies"))
+                self.send_json(out)
+            except Exception as e:
+                self.send_json(
+                    {
+                        "status": "error",
+                        "message": str(e)[:200],
+                        "measure_only": True,
+                    }
+                )
         elif path == '/api/platform-metrics-spine':
             try:
                 p = BASE / "data" / "state" / "platform_metrics_spine_latest.json"

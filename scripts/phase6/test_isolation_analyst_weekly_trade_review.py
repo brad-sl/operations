@@ -168,7 +168,13 @@ class TestAnalystWeeklyTradeReview(unittest.TestCase):
         self.assertIn("seed_hypotheses", payload)
         card = m.format_tg_card(payload)
         self.assertIn("Analyst weekly 7d", card)
+        self.assertIn("plain English", card)
         self.assertIn("PnL", card)
+        brief = payload.get("agent_brief") or {}
+        contract = brief.get("output_contract") or []
+        self.assertTrue(any(str(x).startswith("0) PLAIN ENGLISH") for x in contract))
+        rules = brief.get("rules") or []
+        self.assertTrue(any("Plain English" in str(x) for x in rules))
 
     def test_tg_card_with_suggestions(self) -> None:
         payload = {

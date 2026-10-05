@@ -644,8 +644,10 @@ def build_fact_pack(
                 "MUST review membership_sizing_matrix in context (role_law, regime add-risk, block_max, inconsistencies, kindling vs ballast).",
                 "Quest OK: matrix CLI/API, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell, prior week continuity/notepad.",
                 "Use job notepad + continuity for week-over-week memory (open suggestions, GO status).",
+                "Brad 2026-10-04: Telegram MUST open with Plain English section 0 before any shorthand scorecard — no second-pass decode required.",
             ],
             "output_contract": [
+                "0) PLAIN ENGLISH FIRST (mandatory) — 6–10 short lines Brad can read without a glossary: week $ + win-rate honest/fee-aware; what made vs burned money; growing vs treading water vs leaking + why; what is blocked in plain words; what needs Brad GO vs already self-running; one bottom-line stay/fix/don't-touch. Decode any later shorthand here (WR util MTD gap-to-5% eject kindling ballast block_max min_move cash_slice STABILIZE flat-B CF TP RT-fees).",
                 "1) Week scorecard (PnL, WR, tax, util, regime) — 5 lines max",
                 "2) What worked / what hurt — bullets with $ or counts",
                 "3) Matrix rulebook review — what binds growth; any policy drift; 1–3 matrix optimization ideas",
@@ -801,6 +803,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
 
 
 def format_tg_card(payload: Mapping[str, Any], *, suggestions: Optional[Sequence[str]] = None) -> str:
+    """Short no_agent fallback card. Prefer agent path which opens with plain English."""
     s = payload.get("summary") or {}
     ctx = payload.get("context") or {}
     nav = ctx.get("nav") or {}
@@ -808,11 +811,36 @@ def format_tg_card(payload: Mapping[str, Any], *, suggestions: Optional[Sequence
     wr = s.get("exit_wr")
     wr_s = f"{float(wr)*100:.0f}%" if wr is not None else "—"
     msm = ctx.get("membership_sizing_matrix") or {}
+    pnl = s.get("realized_pnl_usd")
+    tax = s.get("process_tax_usd")
+    util = nav.get("util_pct")
+    path = sb.get("path_health") or "—"
+    goal = sb.get("goal_label") or "—"
+    regime = ctx.get("regime") or sb.get("regime") or "—"
     lines = [
-        "📊 Analyst weekly 7d trade review",
-        f"PnL ${s.get('realized_pnl_usd')} · WR {wr_s} · tax ${s.get('process_tax_usd')} · util {nav.get('util_pct')}%",
+        "Analyst weekly 7d — plain English",
+        (
+            f"Closed-trade P&L about ${pnl} this week; win rate on exits {wr_s} "
+            f"(thin sample — not a skill claim)."
+        ),
+        (
+            f"Tagged process tax ${tax}. Book using ~{util}% of capital. "
+            f"Market posture: {regime}; path {path}; goal label {goal}."
+        ),
+        (
+            f"Primary buys/sells {s.get('n_primary_buys')}/{s.get('n_primary_sells')}; "
+            f"same-day buy+sell pair-days {s.get('same_day_buy_sell_pair_days')} "
+            f"(churn signal if high)."
+        ),
+        (
+            f"Sizing matrix: {msm.get('n_rows')} rows; "
+            f"{len(msm.get('block_max_held') or [])} held names at add-cap; "
+            f"{msm.get('n_inconsistent')} rule mismatches."
+        ),
+        "Shorthand card follows for scanners; full plain decode is the Sunday agent report.",
+        f"PnL ${pnl} · WR {wr_s} · tax ${tax} · util {util}%",
         f"Primary B/S {s.get('n_primary_buys')}/{s.get('n_primary_sells')} · same-day loops {s.get('same_day_buy_sell_pair_days')}",
-        f"Path {sb.get('path_health') or '—'} · goal {sb.get('goal_label') or '—'} · regime {ctx.get('regime') or sb.get('regime') or '—'}",
+        f"Path {path} · goal {goal} · regime {regime}",
         (
             f"Matrix: rows {msm.get('n_rows')} · block_max_held {len(msm.get('block_max_held') or [])} · "
             f"inconsistent {msm.get('n_inconsistent')} · pyramid {((msm.get('regime_live_add_risk') or {}).get('allow_pyramid'))}"
@@ -828,7 +856,8 @@ def format_tg_card(payload: Mapping[str, Any], *, suggestions: Optional[Sequence
             lines.append("Seed themes:")
             for i, h in enumerate(seeds[:4], 1):
                 lines.append(f"{i}. [{h.get('priority')}] {h.get('theme')}: {str(h.get('hint') or '')[:120]}")
-    lines.append(f"Full: reports/ANALYST_WEEKLY_TRADE_REVIEW_LATEST.md")
+    lines.append("Full: reports/ANALYST_WEEKLY_TRADE_REVIEW_LATEST.md")
+    lines.append("Agent plain-English SSOT: reports/ANALYST_WEEKLY_TRADE_REVIEW_AGENT_LATEST.md")
     return "\n".join(lines) + "\n"
 
 

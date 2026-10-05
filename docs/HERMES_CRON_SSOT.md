@@ -56,6 +56,7 @@ daily-dose 08:00 ·
 - Behavior: rebuild 7d fact pack (ledger + attribution + scoreboard + **Membership Sizing Matrix rulebook**) → **agent** ranked return suggestions (may quest outside trades)
 - Matrix scope: rulebook **not stone** — weekly reviews role_law / flat add-risk / block_max / inconsistencies and may suggest optimizations (Brad GO before knobs)
 - Delivery: **telegram** full operator card; disk `reports/ANALYST_WEEKLY_TRADE_REVIEW_LATEST.md` (facts) + `reports/ANALYST_WEEKLY_TRADE_REVIEW_AGENT_LATEST.md` (agent)
+- **Plain English first (Brad 2026-10-04):** Telegram **section 0** is a human decode (no glossary needed). Shorthand scorecard only *after* that. Job prompt + fact-pack `output_contract` both enforce it.
 - Memory: **continuity ON** + durable **notepad** keys `last_scorecard` / `open_suggestions` / `matrix_notes` / `go_queue` (week-over-week)
 - Guardrails: **measure/suggest only** · no knobs · no orders · no live_apply · honesty over cosmetics · thin-N no edge theater
 - CLI: `scripts/phase6/run_analyst_weekly_trade_review.py --days 7`

@@ -461,6 +461,25 @@ def evaluate_pair(
         out["status"] = "window_closed"
         out["scale_path"] = "dead"
         out["reasons"] = reasons
+        # Post-proof dwell: graduated names skip auto-eject (shadow unless live_apply)
+        try:
+            from phase6.core.post_proof_dwell import should_skip_scale_window_eject
+
+            sk = should_skip_scale_window_eject(pn, cfg=None, now=n)
+            out["post_proof_dwell"] = sk
+            if sk.get("skip"):
+                out["would_skip_eject_if_live"] = True
+                out["reasons"] = list(reasons) + ["post_proof_dwell_graduated"]
+                if sk.get("apply_skip"):
+                    # Live GO only: clear would_eject so auto path won't sell
+                    out["would_eject"] = False
+                    out["status"] = "dwell_hold"
+                    out["scale_path"] = "graduated_hold"
+                else:
+                    # Shadow: keep would_eject for board truth, flag skip intent
+                    out["status"] = "window_closed_dwell_shadow"
+        except Exception as e:
+            out["post_proof_dwell_error"] = str(e)[:120]
         return out
 
     # Still open path

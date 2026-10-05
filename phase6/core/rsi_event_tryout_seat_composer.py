@@ -492,6 +492,16 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         logger.warning("knife live gate failed: %s", ke)
         knife_block = {"ran": False, "error": str(ke), "skip_seat": False}
 
+    # Post-proof dwell: block tryout reincarnation after TP proof (shadow unless live_apply).
+    dwell_block: Optional[Dict[str, Any]] = None
+    try:
+        from phase6.core.post_proof_dwell import apply_to_composer_candidate as _ppd_apply
+
+        dwell_block = _ppd_apply(cand, persist=True)
+    except Exception as pe:
+        logger.warning("post_proof_dwell composer hook failed: %s", pe)
+        dwell_block = {"ran": False, "error": str(pe), "skip_seat": False}
+
     seat_receipt = None
     seat_skipped_reason = None
     if cand is None:
@@ -503,6 +513,10 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
     elif isinstance(knife_block, dict) and knife_block.get("skip_seat"):
         seat_skipped_reason = "knife_deny:" + str(
             knife_block.get("reason") or knife_block.get("primary_arm") or "block"
+        )
+    elif isinstance(dwell_block, dict) and dwell_block.get("skip_seat"):
+        seat_skipped_reason = "post_proof_dwell:" + str(
+            ",".join(dwell_block.get("reasons") or []) or "graduated_hold"
         )
     else:
         money = bool(cfg.go_buy) and (not cfg.dry_run_buy)
@@ -583,6 +597,13 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
             f"knife live={knife_block.get('live_gate')} "
             f"skip={knife_block.get('skip_seat')} "
             f"{knife_block.get('reason')}"
+        )
+    if isinstance(dwell_block, dict) and dwell_block.get("ran"):
+        plain_bits.append(
+            f"post_proof_dwell would_block={dwell_block.get('would_block_if_live')} "
+            f"skip={dwell_block.get('skip_seat')} "
+            f"live={dwell_block.get('live_apply')} "
+            f"reasons={dwell_block.get('reasons')}"
         )
     if seat_receipt:
         plain_bits.append(
@@ -709,6 +730,17 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
             "plain": (knife_block or {}).get("plain_english"),
         }
         if isinstance(knife_block, dict)
+        else None,
+        "post_proof_dwell": {
+            "ran": (dwell_block or {}).get("ran"),
+            "live_apply": (dwell_block or {}).get("live_apply"),
+            "skip_seat": (dwell_block or {}).get("skip_seat"),
+            "would_block_if_live": (dwell_block or {}).get("would_block_if_live"),
+            "reasons": (dwell_block or {}).get("reasons"),
+            "plain": (dwell_block or {}).get("plain_english"),
+            "error": (dwell_block or {}).get("error"),
+        }
+        if isinstance(dwell_block, dict)
         else None,
         "seat_skipped_reason": seat_skipped_reason,
         "seat_receipt": seat_receipt,

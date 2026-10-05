@@ -15,6 +15,7 @@
 | **Tryout bag process (seat→scale→eject)** | [`docs/features/TRYOUT_LIFECYCLE_PROCESS.md`](features/TRYOUT_LIFECYCLE_PROCESS.md) |
 | **Membership × sizing matrix (class×role×regime×live room)** | [`docs/features/MEMBERSHIP_SIZING_MATRIX.md`](features/MEMBERSHIP_SIZING_MATRIX.md) |
 | **Eject cohort card (% cleared kindling)** | [`docs/features/TRYOUT_EJECT_COHORT_CARD.md`](features/TRYOUT_EJECT_COHORT_CARD.md) |
+| **Post-proof dwell (graduate after TP)** | [`docs/features/POST_PROOF_DWELL_POLICY.md`](features/POST_PROOF_DWELL_POLICY.md) |
 | **Specs ↔ code gaps + deprecations** | `docs/SPECS_CODE_GAP.md` |
 | **Profitability / P&L-ranked gaps (2026-08-13)** | `reports/PLATFORM_PROFITABILITY_REVIEW_2026-08-13.md` |
 | **Cron SSOT (Hermes only)** | `docs/HERMES_CRON_SSOT.md` |
@@ -213,6 +214,7 @@
 | [`docs/features/TRYOUT_LIFECYCLE_PROCESS.md`](features/TRYOUT_LIFECYCLE_PROCESS.md) | FEAT/PROCESS | DRAFT SSOT | **Tryout bag** state machine · kindling · scale-window · gaps · simplify steps |
 | [`docs/features/MEMBERSHIP_SIZING_MATRIX.md`](features/MEMBERSHIP_SIZING_MATRIX.md) | FEAT/PROCESS | ACTIVE measure | **Class × role × regime × scale-path × live room** filterable SSOT |
 | [`docs/features/TRYOUT_EJECT_COHORT_CARD.md`](features/TRYOUT_EJECT_COHORT_CARD.md) | FEAT/PROCESS | ACTIVE measure | **Eject cohort**: hold/phase/structure/kindling/% cleared · fee-aware |
+| [`docs/features/POST_PROOF_DWELL_POLICY.md`](features/POST_PROOF_DWELL_POLICY.md) | FEAT/PROCESS | SHADOW+CF | **Post-proof dwell**: graduate after TP · block tryout reincarnation · live_apply OFF |
 | [`docs/features/CRYPTO_PROCESS_TRADER_VOICE.md`](features/CRYPTO_PROCESS_TRADER_VOICE.md) | FEAT | DRAFT | Trader-facing process one-pager (no coverage grades) |
 | [`docs/features/TAKEOVER_NORMALIZE_PLAYBOOK.md`](features/TAKEOVER_NORMALIZE_PLAYBOOK.md) | FEAT | DRAFT | Takeover normalize phases T0–T5 + checklist |
 

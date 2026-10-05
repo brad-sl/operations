@@ -346,6 +346,26 @@ class TradeLedger:
                 except Exception as e:
                     logger.warning("on_tryout_exit failed pair=%s: %s", pair, e)
                     trade["tryout_dwell_exit_error"] = str(e)
+                # Post-proof dwell: stamp graduate on TP meat / demote on SL (shadow-safe)
+                try:
+                    from phase6.core.post_proof_dwell import stamp_proof_from_sell
+
+                    ppd_res = stamp_proof_from_sell(trade, persist=True)
+                    if isinstance(ppd_res, dict):
+                        trade["post_proof_dwell"] = {
+                            k: ppd_res.get(k)
+                            for k in (
+                                "ok",
+                                "stamped",
+                                "demoted",
+                                "pair",
+                                "extended",
+                            )
+                            if k in ppd_res
+                        }
+                except Exception as e:
+                    logger.warning("post_proof_dwell stamp failed pair=%s: %s", pair, e)
+                    trade["post_proof_dwell_error"] = str(e)[:160]
         except Exception as e:
             logger.warning("tryout SELL post-hooks failed pair=%s: %s", pair, e)
 

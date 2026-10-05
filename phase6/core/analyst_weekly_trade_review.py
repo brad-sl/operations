@@ -617,6 +617,26 @@ def _live_context() -> Dict[str, Any]:
         else:
             ctx["eject_cohort_card"] = {"error": str(e)[:200]}
 
+    # Post-proof dwell board (measure/shadow — no live until Brad GO).
+    try:
+        from phase6.core.post_proof_dwell import load_config as _ppd_cfg
+        from phase6.core.post_proof_dwell import snapshot as _ppd_snap
+
+        ppd = _ppd_snap(cfg=_ppd_cfg())
+        cf = _load_json(PROJECT_ROOT / "data" / "state" / "post_proof_dwell_cf_latest.json")
+        ctx["post_proof_dwell"] = {
+            "as_of": ppd.get("as_of"),
+            "live_apply": ppd.get("live_apply"),
+            "n_graduated_active": ppd.get("n_graduated_active"),
+            "active_pairs": ppd.get("active_pairs"),
+            "plain": ppd.get("plain"),
+            "edge_class": ppd.get("edge_class"),
+            "cf_plain": (cf or {}).get("plain_english") if isinstance(cf, dict) else None,
+            "cf_edge": (cf or {}).get("edge_class") if isinstance(cf, dict) else None,
+        }
+    except Exception as e:
+        ctx["post_proof_dwell"] = {"error": str(e)[:200]}
+
     attr = _load_json(PROJECT_ROOT / "data" / "state" / "attribution_rt_weekly_latest.json")
     if isinstance(attr, dict):
         ctx["attribution_rt"] = {
@@ -693,7 +713,8 @@ def build_fact_pack(
                 "Separate process tax vs true alpha miss.",
                 "MUST review membership_sizing_matrix in context (role_law, regime add-risk, block_max, inconsistencies, kindling vs ballast).",
                 "MUST cite eject_cohort_card when scale-window ejects >0: % cleared live kindling, top kindling_block, fee-aware net (E-EJECT-COHORT-CARD is shipped measure SSOT — not a new experiment idea).",
-                "Quest OK: matrix CLI/API, eject cohort card, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell, prior week continuity/notepad.",
+                "MUST cite post_proof_dwell when TP winners re-seat as tryouts: graduated active count, live_apply flag (default OFF), CF edge class ATTENTION_ONLY_less_loss_path — do not claim buy/hold alpha.",
+                "Quest OK: matrix CLI/API, eject cohort card, post_proof_dwell CF/state, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell, prior week continuity/notepad.",
                 "Use job notepad + continuity for week-over-week memory (open suggestions, GO status).",
                 "Brad 2026-10-04: Telegram MUST open with Plain English section 0 before any shorthand scorecard — no second-pass decode required.",
             ],
@@ -703,10 +724,11 @@ def build_fact_pack(
                 "2) What worked / what hurt — bullets with $ or counts",
                 "3) Matrix rulebook review — what binds growth; any policy drift; 1–3 matrix optimization ideas",
                 "4) Eject cohort card (E-EJECT-COHORT-CARD) — n ejects, % cleared kindling, top blocks, fee net; plain one-liner",
-                "5) Top 3–7 suggestions ranked P0/P1/P2 with: lever, expected effect, evidence, risk, GO needed?",
-                "6) Explicit non-suggestions (do not touch)",
-                "7) Optional: 1 NEW measurement experiment only if gap remains (do not re-propose E-EJECT-COHORT-CARD — it is live)",
-                "8) Update notepad keys: last_scorecard, open_suggestions, matrix_notes, eject_cohort (short)",
+                "5) Post-proof dwell — graduated active, shadow would-block, CF sketch; promote/adjust only with evidence (live_apply stays OFF without Brad GO)",
+                "6) Top 3–7 suggestions ranked P0/P1/P2 with: lever, expected effect, evidence, risk, GO needed?",
+                "7) Explicit non-suggestions (do not touch)",
+                "8) Optional: 1 NEW measurement experiment only if gap remains (do not re-propose E-EJECT-COHORT-CARD or post-proof dwell core — both shipped measure/shadow)",
+                "9) Update notepad keys: last_scorecard, open_suggestions, matrix_notes, eject_cohort, post_proof_dwell (short)",
             ],
         },
         "paths": {

@@ -1,0 +1,39 @@
+{
+  "schema": "post_proof_dwell_v1",
+  "enabled": true,
+  "live_apply": false,
+  "shadow_log": true,
+  "note": "Measure+shadow only until Brad GO live. Kill file: data/state/post_proof_dwell_KILL",
+  "proof": {
+    "min_tp_net_usd": 0.50,
+    "min_tp_net_pct": 0.015,
+    "min_clean_green_rts": 2,
+    "clean_rt_lookback_days": 14,
+    "accept_live_kindling_fill": true
+  },
+  "dwell": {
+    "default_hours": 168,
+    "extend_hours_on_reproof": 168,
+    "max_hours": 504,
+    "sleeve_cap_usd": 150.0,
+    "sleeve_cap_nav_frac": 0.08
+  },
+  "tryout_block": {
+    "block_new_shell_while_graduated": true,
+    "post_tp_tryout_ban_hours": 48,
+    "post_tp_tryout_ban_if_not_graduated": true
+  },
+  "scale_window": {
+    "skip_eject_while_graduated": true
+  },
+  "demote": {
+    "on_sl": true,
+    "on_hard_dump": true,
+    "post_sl_cooloff_hours": 72
+  },
+  "paths": {
+    "state": "data/state/post_proof_dwell.json",
+    "shadow_crumbs": "data/state/post_proof_dwell_shadow_crumbs.jsonl",
+    "kill": "data/state/post_proof_dwell_KILL"
+  }
+}

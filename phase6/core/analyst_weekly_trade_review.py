@@ -373,6 +373,32 @@ def _seed_hypotheses(summary: Mapping[str, Any], context: Mapping[str, Any]) -> 
                 "priority": "P0",
             }
         )
+    # E-EJECT-COHORT-CARD (measure): % shells that ever cleared live kindling.
+    eject_raw = context.get("eject_cohort_card") if isinstance(context, dict) else None
+    eject: Dict[str, Any] = eject_raw if isinstance(eject_raw, dict) else {}
+    try:
+        n_ej = int(eject.get("n_ejects") or 0)
+    except (TypeError, ValueError):
+        n_ej = 0
+    pct = eject.get("pct_cleared_live_kindling")
+    if n_ej >= 3 and pct is not None:
+        try:
+            pct_f = float(pct)
+        except (TypeError, ValueError):
+            pct_f = None
+        if pct_f is not None and pct_f <= 0.05:
+            seeds.append(
+                {
+                    "id": "seed_eject_cohort_zero_kindling",
+                    "theme": "tryout_funnel",
+                    "hint": (
+                        f"E-EJECT-COHORT-CARD: {n_ej} scale-window ejects, "
+                        f"{pct_f * 100:.0f}% ever cleared live kindling — funnel is seat→eject, "
+                        "not seat→prove→add. Review hold/phase/structure/block (measure; no knobs)."
+                    ),
+                    "priority": "P1",
+                }
+            )
     if not seeds:
         seeds.append(
             {
@@ -567,6 +593,30 @@ def _live_context() -> Dict[str, Any]:
         ctx["matrix_block_max_held"] = msm.get("block_max_held") or []
         ctx["matrix_regime"] = msm.get("regime")
 
+    # E-EJECT-COHORT-CARD: hold/phase/structure/kindling/% cleared (measure-only).
+    try:
+        from phase6.core.tryout_eject_cohort_card import run_card, snapshot_for_analyst
+
+        eject_payload = run_card(lookback_days=14.0, write=True)
+        eject_snap = snapshot_for_analyst(eject_payload)
+        if isinstance(eject_snap, dict) and eject_snap:
+            ctx["eject_cohort_card"] = eject_snap
+    except Exception as e:
+        stale = _load_json(PROJECT_ROOT / "data" / "state" / "tryout_eject_cohort_weekly.json")
+        if isinstance(stale, dict) and stale:
+            try:
+                from phase6.core.tryout_eject_cohort_card import snapshot_for_analyst
+
+                ctx["eject_cohort_card"] = snapshot_for_analyst(stale)
+            except Exception:
+                ctx["eject_cohort_card"] = {
+                    "error": str(e)[:200],
+                    "stale_as_of": stale.get("as_of"),
+                    "n_ejects": (stale.get("scoreboard") or {}).get("n_ejects"),
+                }
+        else:
+            ctx["eject_cohort_card"] = {"error": str(e)[:200]}
+
     attr = _load_json(PROJECT_ROOT / "data" / "state" / "attribution_rt_weekly_latest.json")
     if isinstance(attr, dict):
         ctx["attribution_rt"] = {
@@ -642,7 +692,8 @@ def build_fact_pack(
                 "If N is thin, say so — no edge theater.",
                 "Separate process tax vs true alpha miss.",
                 "MUST review membership_sizing_matrix in context (role_law, regime add-risk, block_max, inconsistencies, kindling vs ballast).",
-                "Quest OK: matrix CLI/API, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell, prior week continuity/notepad.",
+                "MUST cite eject_cohort_card when scale-window ejects >0: % cleared live kindling, top kindling_block, fee-aware net (E-EJECT-COHORT-CARD is shipped measure SSOT — not a new experiment idea).",
+                "Quest OK: matrix CLI/API, eject cohort card, scale-window board, money-arms monitor, regime/add-risk, OPT leaderboard, dwell, prior week continuity/notepad.",
                 "Use job notepad + continuity for week-over-week memory (open suggestions, GO status).",
                 "Brad 2026-10-04: Telegram MUST open with Plain English section 0 before any shorthand scorecard — no second-pass decode required.",
             ],
@@ -651,10 +702,11 @@ def build_fact_pack(
                 "1) Week scorecard (PnL, WR, tax, util, regime) — 5 lines max",
                 "2) What worked / what hurt — bullets with $ or counts",
                 "3) Matrix rulebook review — what binds growth; any policy drift; 1–3 matrix optimization ideas",
-                "4) Top 3–7 suggestions ranked P0/P1/P2 with: lever, expected effect, evidence, risk, GO needed?",
-                "5) Explicit non-suggestions (do not touch)",
-                "6) Optional: 1 measurement experiment for next week",
-                "7) Update notepad keys: last_scorecard, open_suggestions, matrix_notes (short)",
+                "4) Eject cohort card (E-EJECT-COHORT-CARD) — n ejects, % cleared kindling, top blocks, fee net; plain one-liner",
+                "5) Top 3–7 suggestions ranked P0/P1/P2 with: lever, expected effect, evidence, risk, GO needed?",
+                "6) Explicit non-suggestions (do not touch)",
+                "7) Optional: 1 NEW measurement experiment only if gap remains (do not re-propose E-EJECT-COHORT-CARD — it is live)",
+                "8) Update notepad keys: last_scorecard, open_suggestions, matrix_notes, eject_cohort (short)",
             ],
         },
         "paths": {
@@ -711,6 +763,27 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
     lines.extend(["", "## Seed hypotheses (agent starting points)", ""])
     for h in payload.get("seed_hypotheses") or []:
         lines.append(f"- **{h.get('priority')}** `{h.get('id')}` ({h.get('theme')}): {h.get('hint')}")
+    eject = (ctx.get("eject_cohort_card") or {}) if isinstance(ctx, dict) else {}
+    if eject and not eject.get("error"):
+        lines.extend(
+            [
+                "",
+                "## E-EJECT-COHORT-CARD (measure SSOT)",
+                "",
+                f"- {eject.get('plain') or '—'}",
+                f"- n_ejects=**{eject.get('n_ejects')}** · % cleared live kindling=**{eject.get('pct_cleared_live_kindling')}** "
+                f"· paper_not_live=**{eject.get('n_paper_scaled_not_live')}**",
+                f"- structure false/unknown: **{eject.get('n_structure_false')}** / **{eject.get('n_structure_unknown')}**",
+                f"- hold_h mean/median: **{eject.get('hold_h_mean')}** / **{eject.get('hold_h_median')}**",
+                f"- fee-aware net **${eject.get('pnl_net_usd')}** · RT fees **${eject.get('rt_fee_usd')}** · "
+                f"fee-green **{eject.get('n_fee_aware_green')}** · wipe **{eject.get('n_gross_green_net_red')}**",
+                f"- top blocks: `{json.dumps(eject.get('kindling_block_top') or [])}`",
+                f"- paths: state `{eject.get('state_path')}` · report `{eject.get('report_path')}`",
+                "",
+            ]
+        )
+    elif eject.get("error"):
+        lines.extend(["", f"## E-EJECT-COHORT-CARD error: {eject.get('error')}", ""])
     msm = (ctx.get("membership_sizing_matrix") or {}) if isinstance(ctx, dict) else {}
     if msm:
         lines.extend(
@@ -837,15 +910,32 @@ def format_tg_card(payload: Mapping[str, Any], *, suggestions: Optional[Sequence
             f"{len(msm.get('block_max_held') or [])} held names at add-cap; "
             f"{msm.get('n_inconsistent')} rule mismatches."
         ),
-        "Shorthand card follows for scanners; full plain decode is the Sunday agent report.",
-        f"PnL ${pnl} · WR {wr_s} · tax ${tax} · util {util}%",
-        f"Primary B/S {s.get('n_primary_buys')}/{s.get('n_primary_sells')} · same-day loops {s.get('same_day_buy_sell_pair_days')}",
-        f"Path {path} · goal {goal} · regime {regime}",
-        (
-            f"Matrix: rows {msm.get('n_rows')} · block_max_held {len(msm.get('block_max_held') or [])} · "
-            f"inconsistent {msm.get('n_inconsistent')} · pyramid {((msm.get('regime_live_add_risk') or {}).get('allow_pyramid'))}"
-        ),
     ]
+    eject = ctx.get("eject_cohort_card") or {}
+    if eject and not eject.get("error"):
+        pct = eject.get("pct_cleared_live_kindling")
+        pct_s = "—" if pct is None else f"{float(pct) * 100:.0f}%"
+        lines.append(
+            f"Eject cohort: {eject.get('n_ejects')} shells; {pct_s} ever cleared kindling; "
+            f"fee-aware net ${eject.get('pnl_net_usd')} (fees ${eject.get('rt_fee_usd')})."
+        )
+    lines.extend(
+        [
+            "Shorthand card follows for scanners; full plain decode is the Sunday agent report.",
+            f"PnL ${pnl} · WR {wr_s} · tax ${tax} · util {util}%",
+            f"Primary B/S {s.get('n_primary_buys')}/{s.get('n_primary_sells')} · same-day loops {s.get('same_day_buy_sell_pair_days')}",
+            f"Path {path} · goal {goal} · regime {regime}",
+            (
+                f"Matrix: rows {msm.get('n_rows')} · block_max_held {len(msm.get('block_max_held') or [])} · "
+                f"inconsistent {msm.get('n_inconsistent')} · pyramid {((msm.get('regime_live_add_risk') or {}).get('allow_pyramid'))}"
+            ),
+        ]
+    )
+    if eject and not eject.get("error"):
+        lines.append(
+            f"Eject card: n={eject.get('n_ejects')} · %kindling={eject.get('pct_cleared_live_kindling')} · "
+            f"net=${eject.get('pnl_net_usd')}"
+        )
     if suggestions:
         lines.append("Top ideas:")
         for i, sug in enumerate(list(suggestions)[:5], 1):

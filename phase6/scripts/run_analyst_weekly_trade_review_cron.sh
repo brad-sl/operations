@@ -50,11 +50,22 @@ if state.exists():
         f"matrix_rows={msm.get('n_rows')} block_max_held={len(msm.get('block_max_held') or [])} "
         f"inconsistent={msm.get('n_inconsistent')}"
     )
+    eject = ctx.get("eject_cohort_card") or {}
+    if eject:
+        print(
+            f"eject_cohort n={eject.get('n_ejects')} "
+            f"pct_cleared_kindling={eject.get('pct_cleared_live_kindling')} "
+            f"net=${eject.get('pnl_net_usd')} fees=${eject.get('rt_fee_usd')} "
+            f"top_blocks={eject.get('kindling_block_top')}"
+        )
+        if eject.get("plain"):
+            print(f"eject_plain: {eject.get('plain')}")
     seeds = d.get("seed_hypotheses") or []
     if seeds:
         print("seeds:")
         for h in seeds[:6]:
             print(f"  - [{h.get('priority')}] {h.get('id')}: {str(h.get('hint') or '')[:140]}")
 print("Read STATE + REPORT before writing suggestions. Matrix is rulebook not stone.")
+print("E-EJECT-COHORT-CARD is live measure SSOT (do not re-propose as experiment).")
 print("No knobs / no orders. Use notepad + continuity for week-over-week memory.")
 PY

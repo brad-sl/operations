@@ -2,7 +2,7 @@
 
 **Canonical home for “where is the spec?”**  
 **Audience:** Brad, operators, Hermes/coding agents  
-**Updated:** 2026-10-04  
+**Updated:** 2026-10-05  
 **Repo root:** `projects/crypto-trading-bot` (paths below are from repo root)
 
 ---
@@ -14,6 +14,7 @@
 | **This index (you are here)** | `docs/SPECS_INDEX.md` |
 | **Tryout bag process (seat→scale→eject)** | [`docs/features/TRYOUT_LIFECYCLE_PROCESS.md`](features/TRYOUT_LIFECYCLE_PROCESS.md) |
 | **Membership × sizing matrix (class×role×regime×live room)** | [`docs/features/MEMBERSHIP_SIZING_MATRIX.md`](features/MEMBERSHIP_SIZING_MATRIX.md) |
+| **Eject cohort card (% cleared kindling)** | [`docs/features/TRYOUT_EJECT_COHORT_CARD.md`](features/TRYOUT_EJECT_COHORT_CARD.md) |
 | **Specs ↔ code gaps + deprecations** | `docs/SPECS_CODE_GAP.md` |
 | **Profitability / P&L-ranked gaps (2026-08-13)** | `reports/PLATFORM_PROFITABILITY_REVIEW_2026-08-13.md` |
 | **Cron SSOT (Hermes only)** | `docs/HERMES_CRON_SSOT.md` |
@@ -211,6 +212,7 @@
 | [`docs/features/CRYPTO_PROCESS_LIFECYCLE.md`](features/CRYPTO_PROCESS_LIFECYCLE.md) | FEAT | DRAFT | End-to-end lifecycle coverage · Fresh vs Takeover · prefer over LEGACY FUNCTIONAL_SPEC |
 | [`docs/features/TRYOUT_LIFECYCLE_PROCESS.md`](features/TRYOUT_LIFECYCLE_PROCESS.md) | FEAT/PROCESS | DRAFT SSOT | **Tryout bag** state machine · kindling · scale-window · gaps · simplify steps |
 | [`docs/features/MEMBERSHIP_SIZING_MATRIX.md`](features/MEMBERSHIP_SIZING_MATRIX.md) | FEAT/PROCESS | ACTIVE measure | **Class × role × regime × scale-path × live room** filterable SSOT |
+| [`docs/features/TRYOUT_EJECT_COHORT_CARD.md`](features/TRYOUT_EJECT_COHORT_CARD.md) | FEAT/PROCESS | ACTIVE measure | **Eject cohort**: hold/phase/structure/kindling/% cleared · fee-aware |
 | [`docs/features/CRYPTO_PROCESS_TRADER_VOICE.md`](features/CRYPTO_PROCESS_TRADER_VOICE.md) | FEAT | DRAFT | Trader-facing process one-pager (no coverage grades) |
 | [`docs/features/TAKEOVER_NORMALIZE_PLAYBOOK.md`](features/TAKEOVER_NORMALIZE_PLAYBOOK.md) | FEAT | DRAFT | Takeover normalize phases T0–T5 + checklist |
 
@@ -227,6 +229,7 @@
 | `FEAT-CRYPTO-PROCESS-LIFECYCLE-2026-09` | [CRYPTO_PROCESS_LIFECYCLE.md](features/CRYPTO_PROCESS_LIFECYCLE.md) | DRAFT coverage map | Core lifecycle · Fresh vs Takeover onboarding |
 | `FEAT-TRYOUT-LIFECYCLE-PROCESS-2026-10` | [TRYOUT_LIFECYCLE_PROCESS.md](features/TRYOUT_LIFECYCLE_PROCESS.md) | DRAFT process SSOT | Tryout shell → kindling → eject/exit · gap register |
 | `FEAT-MEMBERSHIP-SIZING-MATRIX-2026-10` | [MEMBERSHIP_SIZING_MATRIX.md](features/MEMBERSHIP_SIZING_MATRIX.md) | ACTIVE measure-only | Class × role × regime × scale-path × live max_add SSOT |
+| `FEAT-EJECT-COHORT-CARD-2026-10` | [TRYOUT_EJECT_COHORT_CARD.md](features/TRYOUT_EJECT_COHORT_CARD.md) | ACTIVE measure-only | Eject hold/phase/structure/kindling/% cleared · fee net |
 | `FEAT-CRYPTO-PROCESS-TRADER-VOICE-2026-09` | [CRYPTO_PROCESS_TRADER_VOICE.md](features/CRYPTO_PROCESS_TRADER_VOICE.md) | DRAFT trader copy | GTM / client voice |
 | `FEAT-TAKEOVER-NORMALIZE-2026-09` | [TAKEOVER_NORMALIZE_PLAYBOOK.md](features/TAKEOVER_NORMALIZE_PLAYBOOK.md) | DRAFT ops playbook | Takeover protect→classify→normalize |
 

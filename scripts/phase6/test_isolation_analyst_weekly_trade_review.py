@@ -133,6 +133,29 @@ class TestAnalystWeeklyTradeReview(unittest.TestCase):
         self.assertIn("seed_exit_wr", ids)
         self.assertIn("seed_underdeploy_flat", ids)
 
+    def test_seed_eject_cohort_zero_kindling(self) -> None:
+        summary = {
+            "exit_buckets": {},
+            "exit_reasons_top": [],
+            "process_tax_usd": 0.0,
+            "non_tax_usd": 0.0,
+            "exit_wr": None,
+            "n_primary_sells": 0,
+            "same_day_buy_sell_pair_days": 0,
+            "pairs_pnl_worst": [],
+        }
+        seeds = m._seed_hypotheses(
+            summary,
+            {
+                "eject_cohort_card": {
+                    "n_ejects": 8,
+                    "pct_cleared_live_kindling": 0.0,
+                }
+            },
+        )
+        ids = {s["id"] for s in seeds}
+        self.assertIn("seed_eject_cohort_zero_kindling", ids)
+
     def test_build_fact_pack_write(self) -> None:
         rows = [
             {
@@ -152,7 +175,18 @@ class TestAnalystWeeklyTradeReview(unittest.TestCase):
         self._write_ledger(rows)
         # monkeypatch live context to avoid heavy deps
         orig_ctx = m._live_context
-        m._live_context = lambda: {"regime": "flat", "util_pct": 18.0, "nav": {"equity": 2300, "util_pct": 18.0}}  # type: ignore
+        m._live_context = lambda: {  # type: ignore
+            "regime": "flat",
+            "util_pct": 18.0,
+            "nav": {"equity": 2300, "util_pct": 18.0},
+            "eject_cohort_card": {
+                "n_ejects": 8,
+                "pct_cleared_live_kindling": 0.0,
+                "pnl_net_usd": -2.99,
+                "rt_fee_usd": 3.28,
+                "plain": "8 ejects, 0% cleared kindling.",
+            },
+        }
         try:
             payload = m.build_fact_pack(
                 lookback_days=7,
@@ -170,11 +204,16 @@ class TestAnalystWeeklyTradeReview(unittest.TestCase):
         self.assertIn("Analyst weekly 7d", card)
         self.assertIn("plain English", card)
         self.assertIn("PnL", card)
+        self.assertIn("Eject cohort", card)
         brief = payload.get("agent_brief") or {}
         contract = brief.get("output_contract") or []
         self.assertTrue(any(str(x).startswith("0) PLAIN ENGLISH") for x in contract))
+        self.assertTrue(any("Eject cohort card" in str(x) for x in contract))
         rules = brief.get("rules") or []
         self.assertTrue(any("Plain English" in str(x) for x in rules))
+        self.assertTrue(any("eject_cohort_card" in str(x) for x in rules))
+        md = self.report.read_text(encoding="utf-8")
+        self.assertIn("E-EJECT-COHORT-CARD", md)
 
     def test_tg_card_with_suggestions(self) -> None:
         payload = {

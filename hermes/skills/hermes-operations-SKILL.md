@@ -147,6 +147,26 @@ When using the agent's `cronjob` tool (distinct from raw `hermes cron` CLI):
 - After create, always verify with `hermes cron list` (via terminal tool) — the list is the source of truth.
 - Long-running external calls (Apify Reddit/X sentiment) can timeout in interactive verification; the cron itself will execute the script in its own context.
 
+### jobs.json shape (edit pitfall)
+
+`~/.hermes/cron/jobs.json` is a **JSON array of job objects**, not a dict keyed by id.
+
+```python
+# WRONG — AttributeError / silent miss
+jobs = json.loads(path.read_text())
+job = jobs.get(job_id)
+
+# RIGHT
+jobs = json.loads(path.read_text())
+job = next((j for j in jobs if isinstance(j, dict) and j.get("id") == job_id), None)
+```
+
+Prefer `cronjob_manage` / Hermes cron tools over hand-editing when available. If you must patch a prompt in place, iterate the list and match `id`.
+
+### Agent-injected cron stdout
+
+When a Hermes cron uses a wrapper whose stdout is injected into an agent prompt: **empty stdout → Hermes skips the AI call**. Always emit a short non-empty fact header (state path, key counts) even if the heavy work logged only to a file.
+
 ## Stale no_agent Script Copies + Project Package Import Side Effects
 For `no_agent: true` cron jobs that reference a `script:` (e.g. report generators, refreshers) and import project modules:
 

@@ -1,9 +1,9 @@
 {
   "schema": "post_proof_dwell_v1",
   "enabled": true,
-  "live_apply": false,
+  "live_apply": true,
   "shadow_log": true,
-  "note": "Measure+shadow only until Brad GO live. Kill file: data/state/post_proof_dwell_KILL",
+  "note": "LIVE Brad GO 2026-10-06. Composer blocks tryout re-seat + scale-window skips eject while graduated. Kill file: data/state/post_proof_dwell_KILL",
   "proof": {
     "min_tp_net_usd": 0.50,
     "min_tp_net_pct": 0.015,

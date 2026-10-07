@@ -1,7 +1,7 @@
 # Post-Proof Dwell — Long-Term Policy Ruleset
 
 **ID:** `FEAT-POST-PROOF-DWELL-2026-10`  
-**Status:** DRAFT policy (measure → shadow → Brad GO live)  
+**Status:** LIVE (`config/post_proof_dwell.json` `live_apply: true` — Brad GO 2026-10-06). Kill file still honors OFF.  
 **Edge class default:** `ATTENTION_ONLY_less_loss_path` until multipair CF + live N clear a higher bar  
 **Date:** 2026-10-05  
 **Related:** tryout lifecycle, TCS post-TP rebuy, scale-window eject, membership sticky, eject cohort card

@@ -20,7 +20,7 @@
 | FEAT-TRYOUT-LIFECYCLE-PROCESS-2026-10 | [TRYOUT_LIFECYCLE_PROCESS.md](./TRYOUT_LIFECYCLE_PROCESS.md) | DRAFT SSOT · tryout bag state machine · kindling · scale-window · gaps |
 | FEAT-MEMBERSHIP-SIZING-MATRIX-2026-10 | [MEMBERSHIP_SIZING_MATRIX.md](./MEMBERSHIP_SIZING_MATRIX.md) | ACTIVE measure · class×role×regime×live room filterable SSOT |
 | FEAT-EJECT-COHORT-CARD-2026-10 | [TRYOUT_EJECT_COHORT_CARD.md](./TRYOUT_EJECT_COHORT_CARD.md) | ACTIVE measure · hold/phase/structure/kindling/% cleared · fee-aware |
-| FEAT-POST-PROOF-DWELL-2026-10 | [POST_PROOF_DWELL_POLICY.md](./POST_PROOF_DWELL_POLICY.md) | SHADOW+CF · graduate after TP · no tryout reincarnation · live_apply OFF |
+| FEAT-POST-PROOF-DWELL-2026-10 | [POST_PROOF_DWELL_POLICY.md](./POST_PROOF_DWELL_POLICY.md) | **LIVE** (Brad GO 2026-10-06) · graduate after TP · block tryout reincarnation · skip scale-window eject while graduated · kill file honored |
 | FEAT-CRYPTO-PROCESS-TRADER-VOICE-2026-09 | [CRYPTO_PROCESS_TRADER_VOICE.md](./CRYPTO_PROCESS_TRADER_VOICE.md) | DRAFT client/trader plain-English one-pager |
 | FEAT-TAKEOVER-NORMALIZE-2026-09 | [TAKEOVER_NORMALIZE_PLAYBOOK.md](./TAKEOVER_NORMALIZE_PLAYBOOK.md) | DRAFT ops playbook · protect→classify→normalize |
 

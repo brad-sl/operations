@@ -43,11 +43,28 @@ class TestTryoutScaleWindow(unittest.TestCase):
         tw.EJECT_RESULT_PATH = self.state / "eject_latest.json"
         tw.BOARD_SEEN_PATH = self.state / "board_seen.json"
         tw.COOLOFF_PATH = self.state / "cooloff.json"
+        # Isolate from live post_proof_dwell state (TIA/SOL may be graduated after GO).
+        self._ppd_patch = mock.patch(
+            "phase6.core.post_proof_dwell.should_skip_scale_window_eject",
+            return_value={
+                "pair": "",
+                "skip": False,
+                "reasons": ["iso_no_dwell"],
+                "live_apply": False,
+                "apply_skip": False,
+                "would_skip_if_live": False,
+            },
+        )
+        self._ppd_patch.start()
 
     def tearDown(self) -> None:
         tw = self.tw
         for k, v in self._orig.items():
             setattr(tw, k, v)
+        try:
+            self._ppd_patch.stop()
+        except Exception:
+            pass
         self.td.cleanup()
 
     def test_phase3_no_scale_would_eject(self) -> None:
@@ -64,10 +81,59 @@ class TestTryoutScaleWindow(unittest.TestCase):
         }
         with mock.patch.object(tw, "_phase_structure", return_value={"phase": 3, "structure_ok": None, "detail": {}}):
             with mock.patch.object(tw, "_sentiment_for", return_value=0.02):
-                with mock.patch.object(tw, "_held_usd_map", return_value={"TIA-USD": 25.0}):
-                    row = tw.evaluate_pair("TIA-USD", lot=lot, held_usd=25.0, cfg=tw.DEFAULTS)
+                with mock.patch.object(tw, "_held_usd_map", return_value={"HYPE-USD": 25.0}):
+                    row = tw.evaluate_pair("HYPE-USD", lot=lot, held_usd=25.0, cfg=tw.DEFAULTS)
         self.assertTrue(row["would_eject"], row)
         self.assertEqual(row["scale_path"], "dead")
+
+    def test_graduated_live_apply_clears_would_eject(self) -> None:
+        """When dwell live_apply + graduated, would_eject clears (money path hold)."""
+        tw = self.tw
+        self._ppd_patch.stop()
+        entry = (datetime.now(timezone.utc) - timedelta(hours=18)).isoformat()
+        lot = {
+            "tryout_shell": True,
+            "live_scaled": False,
+            "paper_scaled": True,
+            "status": "paper_open",
+            "entry_ts": entry,
+            "shell_usd": 25.0,
+            "phase": 3,
+        }
+        live_skip = {
+            "pair": "SOL-USD",
+            "skip": True,
+            "reasons": ["graduated_hold"],
+            "live_apply": True,
+            "apply_skip": True,
+            "would_skip_if_live": True,
+        }
+        with mock.patch(
+            "phase6.core.post_proof_dwell.should_skip_scale_window_eject",
+            return_value=live_skip,
+        ):
+            with mock.patch.object(
+                tw, "_phase_structure", return_value={"phase": 3, "structure_ok": True, "detail": {}}
+            ):
+                with mock.patch.object(tw, "_sentiment_for", return_value=0.02):
+                    with mock.patch.object(tw, "_held_usd_map", return_value={"SOL-USD": 25.0}):
+                        row = tw.evaluate_pair("SOL-USD", lot=lot, held_usd=25.0, cfg=tw.DEFAULTS)
+        self.assertFalse(row["would_eject"], row)
+        self.assertEqual(row["status"], "dwell_hold")
+        self.assertEqual(row["scale_path"], "graduated_hold")
+        # restore default iso mock for any later tests in same instance
+        self._ppd_patch = mock.patch(
+            "phase6.core.post_proof_dwell.should_skip_scale_window_eject",
+            return_value={
+                "pair": "",
+                "skip": False,
+                "reasons": ["iso_no_dwell"],
+                "live_apply": False,
+                "apply_skip": False,
+                "would_skip_if_live": False,
+            },
+        )
+        self._ppd_patch.start()
 
     def test_fresh_shell_not_ejected(self) -> None:
         tw = self.tw

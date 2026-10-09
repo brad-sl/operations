@@ -11,8 +11,9 @@ Checks (per new BUY since cursor / lookback):
   4. No LIVE-TP trail fire within minutes of BUY while mark_r < arm (stale-peak pattern)
   5. Cash hold: page only on NEW/increased arm (sticky same-$ is silent note)
   6. Live dual-peak/extension failures: page once per fingerprint (6h dedupe)
-  7. Sticky SL_MISSING / SL_NO_PRICE / BUY_NO_SL: page once per pair fingerprint
-     (default 6h). Same naked bag must not TG every */10 tick.
+  7. Sticky SL_MISSING / SL_NO_PRICE / BUY_NO_SL / STALE_PEAK_SMELL /
+     PEAK_LOT_UNBOUND: page once per pair fingerprint (default 6h). Same
+     smell must not TG every */10 tick (mark_r/gap jitter is not a new alert).
   8. **P0 naked-bag escalation (Brad 2026-09-28):** true `alert_missing` on an
      actively held non-dust crypto bag → **auto-reattach SL ASAP** inside this
      monitor. TG only if repair **fails** (`SL_NAKED_REPAIR_FAILED`). Success is
@@ -228,15 +229,20 @@ def _should_page_fingerprint(key: str, seen: Dict[str, Any], hours: float) -> bo
 
 
 def sticky_sl_alert_fingerprint(alert: str) -> Optional[str]:
-    """Stable TG fingerprint for sticky SL alerts (pair only — not held_usd).
+    """Stable TG fingerprint for sticky SL / peak alerts (pair only).
 
     Returns None when the alert is not sticky (always eligible to page).
+
+    Important: STALE_PEAK_SMELL / PEAK_LOT_UNBOUND must NOT include mark_r/gap
+    in the key — those jitter every */10 tick and would defeat dedupe.
     """
     a = str(alert or "").strip()
     if not a:
         return None
     # "SL_MISSING_EXCHANGE LINK-USD held_usd=42.94"
     # "BUY_NO_SL LINK-USD age_min=20.1 ts=... order=..."
+    # "STALE_PEAK_SMELL ETH-USD peak_r=0.0365 mark_r=-0.0529 gap=0.0894"
+    # "PEAK_LOT_UNBOUND ETH-USD peak_r=0.03 (no peak_lot meta)"
     prefixes = (
         "SL_MISSING_EXCHANGE ",
         "SL_NO_PRICE ",
@@ -245,6 +251,8 @@ def sticky_sl_alert_fingerprint(alert: str) -> Optional[str]:
         "BUY_NO_SL ",
         "SL_NAKED_REPAIR_FAILED ",
         "SL_NAKED_REPAIR_DISABLED ",
+        "STALE_PEAK_SMELL ",
+        "PEAK_LOT_UNBOUND ",
     )
     for pref in prefixes:
         if a.startswith(pref):

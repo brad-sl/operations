@@ -123,6 +123,31 @@ def test_sticky_sl_dedupe_silences_repeat() -> None:
     assert any("deduped" in n for n in notes2)
 
 
+def test_stale_peak_smell_fingerprint_pair_stable() -> None:
+    """mark_r/gap jitter must not defeat TG dedupe (Brad 2026-10-08)."""
+    from scripts.phase6.monitor_reentry_sl_tp import (
+        filter_sticky_alerts_for_page,
+        sticky_sl_alert_fingerprint,
+    )
+
+    a1 = "STALE_PEAK_SMELL ETH-USD peak_r=0.0365 mark_r=-0.0529 gap=0.0894"
+    a2 = "STALE_PEAK_SMELL ETH-USD peak_r=0.0365 mark_r=-0.0583 gap=0.0948"
+    assert sticky_sl_alert_fingerprint(a1) == "stale_peak_smell:ETH-USD"
+    assert sticky_sl_alert_fingerprint(a1) == sticky_sl_alert_fingerprint(a2)
+
+    unbound = "PEAK_LOT_UNBOUND ETH-USD peak_r=0.03 (no peak_lot meta)"
+    assert sticky_sl_alert_fingerprint(unbound) == "peak_lot_unbound:ETH-USD"
+
+    seen: dict = {}
+    notes: list = []
+    page1 = filter_sticky_alerts_for_page([a1], notes, seen, hours=6.0)
+    assert page1 == [a1]
+    notes2: list = []
+    page2 = filter_sticky_alerts_for_page([a2], notes2, seen, hours=6.0)
+    assert page2 == []
+    assert any("deduped" in n for n in notes2)
+
+
 def test_naked_repair_dry_run_and_kill() -> None:
     from scripts.phase6 import monitor_reentry_sl_tp as mon
 
@@ -185,6 +210,8 @@ def main() -> int:
     print("PASS sticky_fp")
     test_sticky_sl_dedupe_silences_repeat()
     print("PASS sticky_dedupe")
+    test_stale_peak_smell_fingerprint_pair_stable()
+    print("PASS stale_peak_dedupe")
     test_naked_repair_dry_run_and_kill()
     print("PASS naked_repair_dry")
     test_repair_fail_pages()

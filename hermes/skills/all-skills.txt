@@ -6,7 +6,6 @@ analyst-test-execute
 analyst-test-pickup
 analyst-test-strategy
 analyst-trial-report
-apify-reddit-sentiment
 apple
 autonomous-ai-agents
 creative

@@ -7,7 +7,7 @@
       "SOL-USD",
       "XRP-USD",
       "DOGE-USD",
-      "HYPE-USD",
+      "PYTH-USD",
       "SUI-USD",
       "LINK-USD",
       "TIA-USD",
@@ -181,7 +181,8 @@
       "WLD-USD",
       "HYPE-USD",
       "TIA-USD",
-      "SUI-USD"
+      "SUI-USD",
+      "PYTH-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

@@ -15,7 +15,10 @@ Behavior (P2-04 reliability + 2026-09-23 double-fire fix):
   - Still touch the flag when the slot was missed / deferred / stale finalize
     (cron remains the reliability backstop).
   - ``--force-nudge`` always touches (ops / capital deploy).
-- Otherwise, spawns a one-shot --rebalance-only runner (for cron-only deployments).
+- If no runner detected (startup race, crash, or cron-only deploy):
+  - Touch force_rebalance.flag as backstop so that when runner starts (or next
+    cycle) it will pick up the due slot. Cron itself always exits 0.
+  - Never spawn long-running process from cron (avoids hang).
 
 Intended for scheduled rebalances (morning/evening/midday per CRON_SCHEDULE.md).
 The continuous runner (if used) handles its own loops but respects the flag.
@@ -23,7 +26,6 @@ The continuous runner (if used) handles its own loops but respects the flag.
 
 import argparse
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -108,33 +110,25 @@ def main():
         sys.exit(0)
 
     if args.dry_run:
-        print("[CRON] dry-run — runner not up; would spawn one-shot rebalance-only.")
+        print("[CRON] dry-run — runner not up; would touch force flag as backstop.")
         sys.exit(0)
 
-    cmd = [
-        sys.executable,
-        "-m",
-        "phase6.core.phase6_runner",
-        "--config",
-        args.config,
-        "--rebalance-only",
-    ]
+    # No runner detected: touch flag as backstop (harmless if runner down;
+    # runner will consume on start or next _should_rebalance check).
+    # This replaces the old one-shot --rebalance-only spawn (removed because
+    # runner is now continuous loop; spawning would hang the cron job).
+    from phase6.core.paths import FORCE_REBALANCE_FLAG
 
+    FORCE_REBALANCE_FLAG.parent.mkdir(parents=True, exist_ok=True)
+    FORCE_REBALANCE_FLAG.touch()
+    print(
+        "[CRON] Runner not detected — touched force_rebalance.flag as backstop "
+        "(will trigger rebalance on runner start or next cycle)."
+    )
     if args.live:
-        cmd.extend(["--mode", "live", "--confirm-live"])
-        print("[CRON] Running in LIVE mode (real orders may be placed)")
-    else:
-        cmd.extend(["--mode", "shadow"])
-        print("[CRON] Running in SHADOW mode (no real orders)")
-
-    print(f"[CRON] Executing: {' '.join(cmd)}")
-    try:
-        result = subprocess.run(cmd, check=True, capture_output=False)
-        print("[CRON] Rebalance run completed successfully.")
-        sys.exit(result.returncode)
-    except subprocess.CalledProcessError as e:
-        print(f"[CRON] Rebalance run failed with exit code {e.returncode}")
-        sys.exit(e.returncode)
+        print("[CRON] (live mode requested; flag is mode-agnostic)")
+    print("[CRON] Cron check completed (no process spawned).")
+    sys.exit(0)
 
 
 if __name__ == "__main__":

@@ -60,10 +60,15 @@ _PRODUCT = re.compile(
 )
 
 
+# Default judge width once draft persists selection_pool (~32 hard-filtered cards).
+# Old drafts without selection_pool fall back to items (often n=8) — still safe.
+DEFAULT_MAX_JUDGE = 32
+
+
 @dataclass
 class DoseAbConfig:
     top_n: int = 5
-    max_judge: int = 16
+    max_judge: int = DEFAULT_MAX_JUDGE
     dry_run: bool = False
     model: str = "~typesafe/jev-latest"
     write_history: bool = True
@@ -96,15 +101,29 @@ def load_freeze_pool(
     draft_path: Path,
     arm_a: Sequence[Dict[str, Any]],
     *,
-    max_n: int = 24,
+    max_n: int = 32,
 ) -> List[Dict[str, Any]]:
     """Same candidate freeze that fed the live dose.
 
-    Prefer full draft (`daily_dose_latest` top-8+). Guarantee every Arm A id
-    is present so B re-ranks a superset of what published — never a foreign pool.
+    Prefer ``selection_pool`` on the draft (hard-filtered unique cards *before*
+    publish diversity cut) so B can disagree on **set membership**, not only
+    order of the published top-N. Fall back to ``items`` for older drafts.
+
+    Guarantee every Arm A id is present so B re-ranks a superset of what
+    published — never a foreign pool.
     """
     draft = _load_json(draft_path)
-    raw = [dict(x) for x in (draft.get("items") or []) if isinstance(x, dict) and x.get("id")]
+    pool_raw = draft.get("selection_pool") or []
+    items_raw = draft.get("items") or []
+    # Prefer fat selection_pool when present and non-empty; else items.
+    if isinstance(pool_raw, list) and any(
+        isinstance(x, dict) and x.get("id") for x in pool_raw
+    ):
+        raw = [dict(x) for x in pool_raw if isinstance(x, dict) and x.get("id")]
+        freeze_kind = "selection_pool"
+    else:
+        raw = [dict(x) for x in items_raw if isinstance(x, dict) and x.get("id")]
+        freeze_kind = "items"
     by_id: Dict[str, Dict[str, Any]] = {}
     for c in raw:
         by_id[str(c["id"])] = c
@@ -125,7 +144,10 @@ def load_freeze_pool(
         if iid and iid not in seen:
             ordered.append(by_id[iid])
             seen.add(iid)
-    return ordered[: max(1, int(max_n))]
+    out = ordered[: max(1, int(max_n))]
+    # Stash kind on first card meta is awkward; callers read freeze_source separately.
+    _ = freeze_kind  # documented via freeze_source in run_locked_ab
+    return out
 
 
 def _tickers(card: Dict[str, Any]) -> List[str]:
@@ -414,8 +436,19 @@ def run_locked_ab(
         freeze = [dict(x) for x in fixture_freeze]
         freeze_source = "fixture"
     else:
-        freeze = load_freeze_pool(cfg.draft_path, arm_a, max_n=max(cfg.max_judge, cfg.top_n * 2))
-        freeze_source = f"{cfg.draft_path.name}+arm_a_ids"
+        draft_peek = _load_json(cfg.draft_path)
+        has_sel = bool(
+            isinstance(draft_peek.get("selection_pool"), list)
+            and any(
+                isinstance(x, dict) and x.get("id")
+                for x in (draft_peek.get("selection_pool") or [])
+            )
+        )
+        freeze = load_freeze_pool(
+            cfg.draft_path, arm_a, max_n=max(cfg.max_judge, cfg.top_n * 2)
+        )
+        kind = "selection_pool" if has_sel else "items"
+        freeze_source = f"{cfg.draft_path.name}:{kind}+arm_a_ids"
 
     if not freeze:
         payload = {
@@ -510,8 +543,11 @@ def run_locked_ab(
         "id_titles": id_titles,
         "note": (
             "Locked-pool A/B. A is live published top-N. B is Jev on the same "
-            "draft freeze (superset including A). Live TG body unchanged."
+            "draft freeze — prefer selection_pool (hard-filtered unique, pre "
+            "diversity) so set membership can diverge; fallback = draft items. "
+            "Live TG body unchanged."
         ),
+        "goal": "significant_relevance_set_diff_not_order_only",
     }
     card_md = render_ab_card(payload)
     tg = format_tg_card(payload)

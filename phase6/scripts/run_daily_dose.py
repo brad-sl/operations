@@ -378,6 +378,14 @@ def build_payload(
     positions_boost: bool,
 ) -> Dict[str, Any]:
     feeds_ok = sum(1 for f in feed_stats if f.get("ok") or f.get("n", 0) > 0)
+    edit = rank_meta.get("editorial") or {}
+    # Persist hard-filtered unique pool for locked A/B (selection, not publish).
+    # Strip nested copy from meta.editorial to avoid double-storing the list.
+    selection_pool = list(edit.get("selection_pool") or [])
+    edit_meta = {k: v for k, v in edit.items() if k != "selection_pool"}
+    if selection_pool:
+        edit_meta["selection_pool_n"] = len(selection_pool)
+        edit_meta["selection_pool_cap"] = edit.get("selection_pool_cap")
     return {
         "schema_version": SCHEMA_VERSION,
         "generated_at": now.isoformat(),
@@ -388,6 +396,10 @@ def build_payload(
         "feeds_total": len(feed_stats),
         "candidates": rank_meta.get("candidates_in_window", 0),
         "items": items,
+        # Locked freeze for Dose A/B: hard-filtered unique cards before diversity cut.
+        # Publish/TG still uses `items` only (top_n). Not a trade signal.
+        "selection_pool": selection_pool,
+        "selection_pool_n": len(selection_pool),
         "meta": {
             "method": METHOD,
             "basket": list(basket),
@@ -403,11 +415,15 @@ def build_payload(
             "composite_floor": COMPOSITE_FLOOR,
             "clusters": rank_meta.get("clusters"),
             "above_floor": rank_meta.get("above_floor"),
-            "editorial": rank_meta.get("editorial"),
+            "editorial": edit_meta,
             "feed_stats": feed_stats,
             "publication": {
                 "phase_a": "disk only after editorial pass (latest json + history + tg preview)",
                 "editorial": "reject roundups/vague explainers; one card per event; active-voice titles",
+                "selection_pool": (
+                    "hard-filtered unique pool for locked A/B freeze; "
+                    "publish diversity-cuts items to top_n only"
+                ),
                 "telegram_send": "OFF — enable only with Brad OK (Phase B)",
                 "dashboard": "OFF until Phase B /api/daily_dose",
                 "trading": "never wired in Phase A",
@@ -456,16 +472,22 @@ def run(
         raw, stats = fetch_all_feeds(DEFAULT_FEEDS)
 
     # Wider rank pool so editorial can drop roundups/dupes and still fill top_n
+    # + a fat selection_pool for locked A/B (set differences, not order-only).
     ranked, rank_meta = rank_items(
         raw,
         basket=basket,
         kws=kws,
         now=now,
         window_h=window_h,
-        top_n=max(top_n * 4, 24),
+        top_n=max(top_n * 6, 48),
         open_positions=positions if use_positions else None,
     )
-    items, edit_meta = editorial_pass(ranked, top_n=top_n, fill_soft=False)
+    items, edit_meta = editorial_pass(
+        ranked,
+        top_n=top_n,
+        fill_soft=False,
+        selection_pool_n=max(top_n * 4, 32),
+    )
     rank_meta = {**rank_meta, "editorial": edit_meta}
     payload = build_payload(
         items,
@@ -480,7 +502,8 @@ def run(
     preview = format_telegram(items, payload["generated_at"], payload["thin_day"])
     write_outputs(payload, preview)
     print(
-        f"Daily dose OK items={len(items)} candidates={payload['candidates']} "
+        f"Daily dose OK items={len(items)} selection_pool={payload.get('selection_pool_n', 0)} "
+        f"candidates={payload['candidates']} "
         f"feeds_ok={payload['feeds_ok']}/{payload['feeds_total']} "
         f"thin={payload['thin_day']} → {DAILY_DOSE_LATEST}"
     )

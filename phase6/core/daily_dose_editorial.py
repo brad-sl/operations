@@ -501,17 +501,28 @@ def ensure_platform_why(
     return ensure_story_lane(card)
 
 
+# Default width of the hard-filtered unique pool persisted for A/B selection.
+# Publish still diversity-cuts to top_n; freeze for Jev uses selection_pool.
+DEFAULT_SELECTION_POOL_N = 32
+
+
 def editorial_pass(
     ranked: List[Dict[str, Any]],
     top_n: int = 8,
     fill_soft: bool = True,
     lane_caps: Optional[Dict[str, int]] = None,
+    selection_pool_n: Optional[int] = None,
 ) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
     """
     Filter + rewrite ranked cards for publication.
-    Keeps order preference from ranker; enforces one-per-event-key,
-    lane diversity (max 2 btc_tape), and basket-pair diversity
-    (max 2 BTC-only; spread primary pairs). No per-bullet platform-why.
+
+    Returns (selected_for_publish, meta). meta always includes
+    ``selection_pool``: hard-filtered unique cards (event-deduped, active voice)
+    *before* diversity cut — the locked freeze for Dose A/B so B can disagree
+    on **set membership**, not only order of the published top-N.
+
+    Publish path still enforces one-per-event-key, lane diversity (max 2
+    btc_tape), and basket-pair diversity. No per-bullet platform-why.
     """
     dropped: List[Dict[str, str]] = []
     hard_ok: List[Dict[str, Any]] = []
@@ -575,12 +586,24 @@ def editorial_pass(
                 used_keys.add(k)
         return out
 
-    # Pull a wider unique pool, then diversity-cut to top_n
-    pool_n = max(top_n * 4, 16)
+    # Wider unique pool for A/B selection; diversity-cut only the publish top_n.
+    pool_n = int(selection_pool_n) if selection_pool_n is not None else max(
+        top_n * 4, DEFAULT_SELECTION_POOL_N
+    )
+    pool_n = max(pool_n, top_n)
     used: set = set()
     unique = take_unique(hard_ok, pool_n, used)
     if fill_soft and len(unique) < pool_n:
         unique.extend(take_unique(soft_pool, pool_n - len(unique), used))
+
+    # Annotate selection pool (pre-diversity) so freeze consumers get lanes/pairs.
+    selection_pool: List[Dict[str, Any]] = []
+    for c in unique:
+        c2 = ensure_story_lane(dict(c))
+        pp = primary_basket_pair(c2)
+        c2["primary_pair"] = pp
+        c2["btc_only"] = bool(is_btc_only_card(c2))
+        selection_pool.append(c2)
 
     selected = apply_shortlist_diversity(
         unique,
@@ -612,6 +635,9 @@ def editorial_pass(
         "hard_ok_n": len(hard_ok),
         "soft_pool_n": len(soft_pool),
         "published_n": len(selected),
+        "selection_pool_n": len(selection_pool),
+        "selection_pool_cap": pool_n,
+        "selection_pool": selection_pool,
         "lane_caps": dict(lane_caps or DEFAULT_LANE_CAPS),
         "lane_counts": lane_counts,
         "primary_pair_counts": primary_counts,

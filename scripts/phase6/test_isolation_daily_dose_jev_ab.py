@@ -33,6 +33,34 @@ def _card(iid: str, title: str, tickers: list[str], comp: float = 0.5) -> dict:
 
 
 class TestDailyDoseJevAb(unittest.TestCase):
+    def test_freeze_prefers_selection_pool(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            tdir = Path(td)
+            draft = tdir / "draft.json"
+            a = [_card("a1", "ETH ETF inflows rise", ["ETH"], 0.9)]
+            # Fat selection_pool + thin items — freeze must use pool, not just items.
+            pool = [
+                _card("p1", "SOL validator halt", ["SOL"], 0.5),
+                _card("p2", "XRP bank rails upgrade", ["XRP"], 0.45),
+                _card("a1", "ETH ETF inflows rise", ["ETH"], 0.9),
+            ] + [_card(f"p{i}", f"Extra story {i}", ["BTC"], 0.3) for i in range(3, 20)]
+            draft.write_text(
+                json.dumps(
+                    {
+                        "items": [_card("a1", "ETH ETF inflows rise", ["ETH"], 0.9)],
+                        "selection_pool": pool,
+                        "selection_pool_n": len(pool),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            loaded = load_freeze_pool(draft, a, max_n=32)
+            ids = [str(c["id"]) for c in loaded]
+            self.assertIn("a1", ids)
+            self.assertIn("p1", ids)
+            self.assertIn("p2", ids)
+            self.assertGreaterEqual(len(loaded), 10)
+
     def test_freeze_includes_arm_a(self) -> None:
         with tempfile.TemporaryDirectory() as td:
             tdir = Path(td)

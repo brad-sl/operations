@@ -21,7 +21,8 @@ if [[ ! -f data/state/daily_dose_edited.json ]]; then
 fi
 
 set +e
-"$PY" scripts/phase6/run_daily_dose_jev_ab.py --top 5 --max-judge 16 >"${LOG}.out" 2>"${LOG}.err"
+# max-judge 32: matches selection_pool width so B can diverge on set, not order-only
+"$PY" scripts/phase6/run_daily_dose_jev_ab.py --top 5 --max-judge 32 >"${LOG}.out" 2>"${LOG}.err"
 rc=$?
 set -e
 cat "${LOG}.out" "${LOG}.err" >>"$LOG" || true

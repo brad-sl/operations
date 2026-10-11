@@ -13337,3 +13337,32 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+- t_ac1ab01b / #39 P6-OPS-20261010-001 DONE: Hermes cron recent error: Phase6 Daily Rebalance - Evening — root cause: cron_rebalance.py fallback still emitted --rebalance-only (removed when Phase6Runner switched to continuous loop). Reproduced exactly via the cmd in 2026-10-09 21:08 failure. Fixed by deleting spawn path (would hang anyway) + always-clean backstop that touches force flag if !runner (consumed on start). Docstring + isolation test (phase6/tests/test_isolation_cron_rebalance_pid.py) adjusted. Verified: script --live exits 0 cleanly on real state; test OK; old arg parse error gone. GH#39 closed via ops_triage_tasks.py; registry done. (no live book impact)
+- t_cac894f8 / #40 P6-OPS-20261010-002 DONE: Hermes cron recent error: Phase6 Daily Rebalance - Evening — (re-ingest due to stale jobs.json last_status=error after prior fix; same root cause). Reproduced: confirmed last_error in ~/.hermes/cron/jobs.json id=79def136a313 still had "unrecognized arguments: --rebalance-only" + spawn cmd from 2026-10-09T21:08. Root cause: pre-update cron_rebalance.py (live wrapper path) emitted obsolete --rebalance-only to continuous runner. Fix: phase6/scripts/cron_rebalance.py now always nudges via force_rebalance.flag (no spawn, no arg). Verified live: .venv/bin/python3 phase6/scripts/cron_rebalance.py --live exits 0 (nudge decision + "Cron check completed successfully"); pgrep runner live + pidfiles; phase6/tests/test_isolation_cron_rebalance_pid.py -> OK; runner --help has no --rebalance-only arg. Closed GH#40 + registry via ops_triage_tasks.py close; jobs state will go ok on next 21:05 run. (no live book impact, flag only). See kanban t_cac894f8.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261011** (opened 2026-10-11T00:01:19.597687)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261011`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+**CASH-20261011-001** — Cash policy suggestion: detector grid (score 5.211)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-10-11T11:03:10.102148+00:00 | score=5.211
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+

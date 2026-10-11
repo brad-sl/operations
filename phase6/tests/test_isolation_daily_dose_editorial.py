@@ -147,6 +147,12 @@ def main() -> int:
     assert meta["dropped_n"] >= 1 and meta.get("soft_pool_n", 0) >= 1
     assert meta.get("editorial_method", "").startswith("v4_")
     assert meta.get("why_it_matters") == "retired"
+    # selection_pool is the pre-diversity freeze for A/B (set diffs, not order-only)
+    sel = meta.get("selection_pool") or []
+    assert isinstance(sel, list) and len(sel) >= len(out), (
+        f"selection_pool_n={len(sel)} published_n={len(out)}"
+    )
+    assert meta.get("selection_pool_n") == len(sel)
     for c in out:
         assert "why_it_matters_platform" not in c or not c.get("why_it_matters_platform"), c
         assert c.get("story_lane"), c

@@ -19,7 +19,10 @@ def test_cron_detects_pgrep_runner():
             assert cr._is_runner_running() is True
 
 
-def test_runner_main_accepts_rebalance_only_flag():
+def test_runner_main_no_longer_has_rebalance_only():
+    """--rebalance-only was removed when runner became continuous loop;
+    cron_rebalance.py no longer passes it (prevents arg parse errors).
+    """
     import subprocess
 
     r = subprocess.run(
@@ -29,10 +32,11 @@ def test_runner_main_accepts_rebalance_only_flag():
         cwd=ROOT,
     )
     assert r.returncode == 0
-    assert "--rebalance-only" in r.stdout
+    assert "--rebalance-only" not in r.stdout
+    assert "--mode" in r.stdout
 
 
 if __name__ == "__main__":
     test_cron_detects_pgrep_runner()
-    test_runner_main_accepts_rebalance_only_flag()
+    test_runner_main_no_longer_has_rebalance_only()
     print("OK")

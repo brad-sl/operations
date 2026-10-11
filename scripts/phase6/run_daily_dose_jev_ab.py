@@ -27,7 +27,12 @@ from phase6.core.paths import (  # noqa: E402
 def main() -> int:
     ap = argparse.ArgumentParser(description="Daily Dose locked A/B (shadow)")
     ap.add_argument("--top", type=int, default=5)
-    ap.add_argument("--max-judge", type=int, default=16)
+    ap.add_argument(
+        "--max-judge",
+        type=int,
+        default=32,
+        help="Max cards Jev judges from locked freeze (selection_pool preferred)",
+    )
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--print-card", action="store_true")
     ap.add_argument("--print-tg", action="store_true", help="Short operator card (stdout)")

@@ -16,6 +16,7 @@ from phase6.core.jev_select_few_cf import (  # noqa: E402
     STATE_PATH,
     WEEKLY_REPORT_PATH,
     SelectFewConfig,
+    backfill_paper_seats_from_crumbs,
     build_weekly_rollup,
     run_select_few_cf,
     telegram_card,
@@ -27,10 +28,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Jev select-few CF (no orders)")
     ap.add_argument("--dry-run", action="store_true", help="Mock Jev, no HTTP")
     ap.add_argument("--pairs", default="", help="Override pairs comma-list")
-    ap.add_argument("--max-pairs", type=int, default=3)
+    ap.add_argument("--max-pairs", type=int, default=5)
     ap.add_argument("--notional", type=float, default=25.0)
-    ap.add_argument("--max-open", type=int, default=4)
-    ap.add_argument("--max-calls-per-day", type=int, default=12)
+    ap.add_argument("--max-open", type=int, default=6)
+    ap.add_argument("--max-calls-per-day", type=int, default=24)
     ap.add_argument("--model", default="~typesafe/jev-latest")
     ap.add_argument("--no-refresh-ohlcv", action="store_true")
     ap.add_argument("--no-write", action="store_true")
@@ -42,6 +43,11 @@ def main() -> int:
         help="Sunday rollup from paper book (no Jev calls)",
     )
     ap.add_argument("--lookback-days", type=int, default=7)
+    ap.add_argument(
+        "--backfill-crumbs",
+        action="store_true",
+        help="Replay crumbs under collection_v1 gate → paper seats (no Jev HTTP)",
+    )
     args = ap.parse_args()
 
     if args.weekly:
@@ -55,6 +61,32 @@ def main() -> int:
             print(payload.get("plain") or weekly_telegram_card(payload))
             if not args.no_write:
                 print(f"[meta] weekly_report={WEEKLY_REPORT_PATH}")
+        return 0
+
+    if args.backfill_crumbs:
+        cfg = SelectFewConfig(
+            max_pairs=int(args.max_pairs),
+            max_open_seats=int(args.max_open),
+            notional_usd=float(args.notional),
+            write=not bool(args.no_write),
+        )
+        payload = backfill_paper_seats_from_crumbs(
+            cfg=cfg,
+            write=not bool(args.no_write),
+            mark_close=True,
+        )
+        if args.json:
+            print(json.dumps(payload, indent=2, default=str))
+        else:
+            print(
+                "🧪 Jev CF crumb backfill (measure-only)\n"
+                f"scanned={payload.get('scanned')} gate_pass={payload.get('n_gate_pass')} "
+                f"opened_now={payload.get('n_opened_now')}\n"
+                f"book open={payload.get('n_open')} closed={payload.get('n_closed')} "
+                f"banks={payload.get('book_banks')}\n"
+                f"mark={payload.get('mark')}\n"
+                "No orders · no knobs"
+            )
         return 0
 
     override = [x.strip() for x in str(args.pairs).split(",") if x.strip()]

@@ -151,8 +151,10 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 ## phase6-jev-select-few-cf (Brad GO select-few paper book 2026-09-23)
 - Schedule: `15 8,14,20 * * *` America/Los_Angeles (job_id `e8c0876dab79`)
 - Script: `~/.hermes/scripts/run_jev_select_few_cf.sh` → `phase6/scripts/run_jev_select_few_cf_cron.sh`
-- Behavior: OHLCV+aged eng sent → Jev judgment on **prod tryout-eligible ∩ held**, max 3 doors → **paper $25** seats only when `paper_would_buy_tag`; mark 1h/4h/24h fwd; close CF at ~24h
-- Cap: separate budget `data/state/jev_select_few_cf_budget.json` max 12 calls/day
+- Behavior: OHLCV+aged eng → Jev on **eligible doors first** (held context), max **5** doors → **paper $25** seats when CF collection gate tags buy; mark 1h/4h/24h; close CF at ~24h
+- Cap: separate budget `data/state/jev_select_few_cf_budget.json` max 24 calls/day (collection_v1)
+- Collection gate (measure-only): soft buy open when action=buy + st≥~0.28 (Jev buy mass); lab floors st≥0.65/conf_act≥0.85 stay on live lab path only — CF re-scores paper tags
+- Universe: eligible doors first (held is context, not first slots)
 - Artifacts: `jev_select_few_cf_{latest,book,crumbs,budget}.*` + `reports/JEV_SELECT_FEW_CF_LATEST.md`
 - Delivery: **local** (quiet); set `JEV_CF_TG=1` only if Brad wants a card
 - Guardrails: measure-only · `would_order` always false · no knobs · no promote · `N_INSUFFICIENT` until n_closed≥20

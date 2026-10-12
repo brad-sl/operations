@@ -1,0 +1,78 @@
+{
+  "schema": "sl_width_arming_policy_v1",
+  "status": "MEASURE_ONLY",
+  "live_apply": false,
+  "as_of": "2026-10-11",
+  "basis_report": "reports/SL_WIDTH_3V8_CF_LATEST.md",
+  "basis_cf": "data/state/sl_width_3v8_cf_latest.json",
+  "live_default": {
+    "note": "NEEDLE-04 remains live SSOT until Brad GO on any width change",
+    "stop_loss_pct": 0.08,
+    "sl_base_pct": 0.08,
+    "sl_min_pct": 0.06,
+    "sl_max_pct": 0.12,
+    "adaptive_sl": true
+  },
+  "question": "When to arm 3% vs 8% stop width",
+  "cf_headline": {
+    "n_sl_legs_since_2026_08_06": 13,
+    "sum_delta_usd_if_3pct_vs_actual": 10.14,
+    "median_delta_usd": 0.67,
+    "post_needle_n": 2,
+    "post_needle_actual_pnl_usd": -22.26,
+    "post_needle_if_3pct_delta_usd": 12.75,
+    "interpretation": "Tighter 3% would have cut this week's ETH/LINK dollar loss (~+$13 vs actual) but ETH had already printed ~+4% MFE — classic green-then-die. Whole-sample 3% edge is small (~+$10 / 13 legs) and not a blanket re-tighten case."
+  },
+  "arming_rules_shadow": [
+    {
+      "id": "W1_default_wide",
+      "arm": "8pct_band",
+      "sl_base_pct": 0.08,
+      "sl_min_pct": 0.06,
+      "when": [
+        "graduated_post_proof_dwell",
+        "core_sleeve_btc_eth",
+        "position_usd >= 75",
+        "path_mfe_while_held >= 0.02",
+        "default_if_unmatched"
+      ],
+      "why": "Wide stop is the fee-farm fix (NEEDLE-04). Cutting green paths early turns winners into tryout churn."
+    },
+    {
+      "id": "W2_tight_unproven_shell",
+      "arm": "3pct_fixed",
+      "sl_base_pct": 0.03,
+      "sl_min_pct": 0.03,
+      "sl_max_pct": 0.05,
+      "when_all": [
+        "tryout_shell_or_notional_lte_30_usd",
+        "not_graduated_dwell",
+        "not_core_btc_eth",
+        "path_mfe_while_held < 0.02",
+        "hours_held >= 4"
+      ],
+      "why": "Dead-path shells: 3% saves bleed without sacrificing a printed green path. CF tag 3pct_helped_dead_path (LINK this week ~+$1.6).",
+      "live_apply": false
+    },
+    {
+      "id": "W3_never_tighten_after_green",
+      "arm": "keep_8pct",
+      "when_any": [
+        "path_mfe_while_held >= 0.02",
+        "had_trail_tp_or_proof_event",
+        "dwell_graduated"
+      ],
+      "why": "ETH this week: +3.9% MFE then −8% SL. 3% would save ~$11 on that leg but the correct product response is trail/bank or hold under wide SL — not re-introduce fee-farm 3% on names that already worked."
+    }
+  ],
+  "do_not": [
+    "Global revert stop_loss_pct 0.08 → 0.03 without Brad GO",
+    "Tune width off one week or one UNI outlier",
+    "Treat SL width CF as promote ticket for hard-exit RSI auto"
+  ],
+  "next_engineering_if_go": [
+    "Wire path_mfe_while_held from runner peak memory into attach decision",
+    "Sleeve flag tryout_shell on stop attach (abs notional ≤ tryout cap)",
+    "Shadow-log would_arm_3pct vs would_arm_8pct for 14d before live_apply"
+  ]
+}

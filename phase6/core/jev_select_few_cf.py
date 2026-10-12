@@ -29,13 +29,25 @@ from phase6.core.jev_lab_calibration import (
 from phase6.core.jev_lab_shadow import LabConfig, run_lab
 from phase6.core.paths import PROJECT_ROOT, STATE_DIR
 from phase6.core.rsi_event_x_tryout_shadow import production_tryout_eligible_sources
+from phase6.domain.services.decision_packet import confidence_gate_paper
 
 SCHEMA = "jev_select_few_cf_v1"
 DEFAULT_NOTIONAL = 25.0
-DEFAULT_MAX_PAIRS = 3
-DEFAULT_MAX_OPEN = 4
-DEFAULT_MAX_CALLS = 12  # separate from main lab 24/day — share budget file optional
+DEFAULT_MAX_PAIRS = 5  # was 3 — held names were eating all judgment slots
+DEFAULT_MAX_OPEN = 6
+DEFAULT_MAX_CALLS = 24  # was 12 — more doors/day for collection
 MIN_N_CLAIM = 20
+# Collection-mode paper gate (still would_order=false). Live lab defaults stay stricter.
+# Crumbs: 14× action=buy but paper_would_buy_tag 0× under lab floors (st≥0.65 conf_act≥0.85).
+# Jev buy labels cluster should_trade ~0.34–0.45 — collection must sit under that mass.
+CF_SHOULD_TRADE_MIN = 0.30
+CF_FAKEOUT_MAX = 0.65
+CF_ACTION_CONF_MIN = 0.35
+CF_CONF_ACT = 0.50  # route "act" once conf ≥ this (was 0.85)
+CF_CONF_ESCALATE = 0.30
+# Soft open: action=buy is enough if st/fk not toxic (measure collection, not live floors)
+CF_SOFT_SHOULD_TRADE_MIN = 0.28
+CF_SOFT_ACTION_CONF_MIN = 0.30
 
 STATE_PATH = STATE_DIR / "jev_select_few_cf_latest.json"
 BOOK_PATH = STATE_DIR / "jev_select_few_cf_book.json"
@@ -89,10 +101,21 @@ class SelectFewConfig:
     dry_run: bool = False
     refresh_ohlcv: bool = True
     pairs_override: List[str] = field(default_factory=list)
-    # Always consider held tryout names even if not in eligible (already risk-on)
+    # Prefer eligible doors for *new* CF seats; held is context only (not first slots)
     include_held: bool = True
+    prefer_eligible_over_held: bool = True
     close_horizon_h: int = 24
     write: bool = True
+    # Collection paper gate (measure-only). Not live buy floors.
+    should_trade_min: float = CF_SHOULD_TRADE_MIN
+    fakeout_max: float = CF_FAKEOUT_MAX
+    action_conf_min: float = CF_ACTION_CONF_MIN
+    conf_act: float = CF_CONF_ACT
+    conf_escalate: float = CF_CONF_ESCALATE
+    soft_should_trade_min: float = CF_SOFT_SHOULD_TRADE_MIN
+    soft_action_conf_min: float = CF_SOFT_ACTION_CONF_MIN
+    # Also open paper seat on action=buy + soft floors (even if conf_route != act)
+    allow_soft_buy_open: bool = True
 
 
 def _held_pairs() -> List[str]:
@@ -139,16 +162,28 @@ def resolve_select_universe(cfg: SelectFewConfig) -> Tuple[List[str], Dict[str, 
     meta = production_tryout_eligible_sources()
     universe = list(meta.get("universe") or [])
     held = _held_pairs() if cfg.include_held else []
-    # Prefer held first (already in risk), then eligible doors
+    # Collection fix: eligible doors first so we actually judge *new* seat candidates.
+    # Old order put held first → max_pairs=3 was often TIA/SOL/BTC forever, no new CF opens.
     ordered: List[str] = []
-    for p in held + universe:
-        if p not in ordered:
-            ordered.append(p)
+    if cfg.prefer_eligible_over_held:
+        primary, secondary = universe, held
+    else:
+        primary, secondary = held, universe
+    for p in primary + secondary:
+        pu = str(p).upper().replace("_", "-")
+        if pu and pu not in ordered:
+            ordered.append(pu)
     capped = ordered[: max(1, int(cfg.max_pairs))]
     meta_out = dict(meta)
     meta_out["held_included"] = held
     meta_out["selected"] = capped
     meta_out["max_pairs"] = cfg.max_pairs
+    meta_out["prefer_eligible_over_held"] = bool(cfg.prefer_eligible_over_held)
+    meta_out["selection_note"] = (
+        "eligible_first_collection_v1"
+        if cfg.prefer_eligible_over_held
+        else "held_first_legacy"
+    )
     return capped, meta_out
 
 
@@ -168,7 +203,9 @@ def _empty_book() -> Dict[str, Any]:
     }
 
 
-def load_book(path: Path = BOOK_PATH) -> Dict[str, Any]:
+def load_book(path: Optional[Path] = None) -> Dict[str, Any]:
+    # Resolve BOOK_PATH at call time so tests can patch the module attribute.
+    path = path if path is not None else BOOK_PATH
     if not path.exists():
         return _empty_book()
     try:
@@ -185,7 +222,8 @@ def load_book(path: Path = BOOK_PATH) -> Dict[str, Any]:
         return _empty_book()
 
 
-def save_book(book: Dict[str, Any], path: Path = BOOK_PATH) -> None:
+def save_book(book: Dict[str, Any], path: Optional[Path] = None) -> None:
+    path = path if path is not None else BOOK_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(book, indent=2, default=str) + "\n", encoding="utf-8")
 
@@ -219,11 +257,13 @@ def _mark_open_seats(
         seat["marked_at"] = datetime.fromtimestamp(now_ts, tz=timezone.utc).isoformat()
 
         r_close = marks.get(f"r_{close_horizon_h}h")
-        # Close when full horizon return exists (calibration-ready)
+        # Close when full horizon return exists (calibration-ready).
+        # exit_ts = entry + horizon (not "now") so weekly windows count historical closes honestly.
         age_h = (now_ts - entry_ts) / 3600.0
         if r_close is not None and age_h >= close_horizon_h * 0.9:
             pnl = _f(marks.get(f"pnl_{close_horizon_h}h_usd"))
-            seat["exit_ts"] = seat["marked_at"]
+            exit_ts_f = entry_ts + float(close_horizon_h) * 3600.0
+            seat["exit_ts"] = datetime.fromtimestamp(exit_ts_f, tz=timezone.utc).isoformat()
             seat["exit_horizon_h"] = close_horizon_h
             seat["realized_pnl_usd"] = pnl
             seat["realized_r"] = r_close
@@ -241,6 +281,73 @@ def _mark_open_seats(
         closed = list(book.get("closed") or []) + closed_now
         book["closed"] = closed[-200:]
     return {"n_closed_now": len(closed_now), "n_still_open": len(still_open)}
+
+
+def _apply_cf_paper_gate(
+    judgment_row: Dict[str, Any],
+    cfg: SelectFewConfig,
+) -> Dict[str, Any]:
+    """Re-score paper tag with collection-mode floors (lab default gate is too strict to ever open)."""
+    answers = judgment_row.get("answers") or {}
+    lab_paper = judgment_row.get("paper")
+    paper = confidence_gate_paper(
+        answers,
+        should_trade_min=float(cfg.should_trade_min),
+        fakeout_max=float(cfg.fakeout_max),
+        action_conf_min=float(cfg.action_conf_min),
+        conf_act=float(cfg.conf_act),
+        conf_escalate=float(cfg.conf_escalate),
+    )
+    # Soft path: action=buy + soft st floor + not high fakeout.
+    # Collection goal = open paper seats when model says buy so CF can mark/close.
+    if cfg.allow_soft_buy_open and not paper.get("paper_would_buy_tag"):
+        act = (answers.get("action") or {}).get("choice")
+        st = None
+        try:
+            raw_st = (answers.get("should_trade_name_now") or {}).get("noul")
+            if raw_st is not None:
+                st = float(raw_st)
+        except Exception:
+            st = None
+        fk_f = None
+        try:
+            fk = (answers.get("is_fakeout_or_stop_run") or {}).get("noul")
+            if fk is not None:
+                fk_f = float(fk)
+        except Exception:
+            fk_f = None
+        ac_f = None
+        try:
+            ac = (answers.get("action") or {}).get("confidence")
+            if ac is not None:
+                ac_f = float(ac)
+        except Exception:
+            ac_f = None
+        soft_st = float(cfg.soft_should_trade_min)
+        soft_ac = float(cfg.soft_action_conf_min)
+        if (
+            act == "buy"
+            and st is not None
+            and st >= soft_st
+            and (fk_f is None or fk_f < float(cfg.fakeout_max))
+            and (ac_f is None or ac_f >= soft_ac)
+        ):
+            paper = dict(paper)
+            paper["paper_would_buy_tag"] = True
+            paper["confidence_route"] = str(paper.get("confidence_route") or "soft_cf")
+            paper["reasons"] = list(paper.get("reasons") or []) + [
+                "soft_cf_buy_collection_v1"
+            ]
+            paper["would_order"] = False
+            paper["soft_thresholds"] = {
+                "soft_should_trade_min": soft_st,
+                "soft_action_conf_min": soft_ac,
+                "fakeout_max": float(cfg.fakeout_max),
+            }
+    out = dict(judgment_row)
+    out["paper_lab_default"] = lab_paper
+    out["paper"] = paper
+    return out
 
 
 def _open_paper_seat(
@@ -286,6 +393,81 @@ def _open_paper_seat(
     return seat
 
 
+def backfill_paper_seats_from_crumbs(
+    *,
+    book: Optional[Dict[str, Any]] = None,
+    crumbs_path: Optional[Path] = None,
+    book_path: Optional[Path] = None,
+    cfg: Optional[SelectFewConfig] = None,
+    write: bool = True,
+    mark_close: bool = True,
+) -> Dict[str, Any]:
+    """Replay historical crumbs under collection gate → paper seats (measure-only).
+
+    Does not place orders. Skips crumb rows that are tick summaries (no answers).
+    One open seat per pair (first qualifying crumb wins).
+    """
+    cfg = cfg or SelectFewConfig()
+    crumbs_path = crumbs_path if crumbs_path is not None else CRUMBS_PATH
+    book_path = book_path if book_path is not None else BOOK_PATH
+    book = book if book is not None else load_book(book_path)
+    opened: List[Dict[str, Any]] = []
+    scanned = 0
+    buyish = 0
+    if not crumbs_path.is_file():
+        return {"scanned": 0, "opened": [], "book": book}
+    lines = crumbs_path.read_text(encoding="utf-8").splitlines()
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(row, dict) or not row.get("answers"):
+            continue
+        if not row.get("ok", True):
+            continue
+        scanned += 1
+        pair = str(row.get("pair") or "")
+        if not pair:
+            continue
+        gated = _apply_cf_paper_gate(row, cfg)
+        if not (gated.get("paper") or {}).get("paper_would_buy_tag"):
+            continue
+        buyish += 1
+        seat = _open_paper_seat(
+            book,
+            pair=pair,
+            entry_ts=str(row.get("ts") or _utc_now().isoformat()),
+            notional=float(cfg.notional_usd),
+            judgment_row=gated,
+            max_open=int(cfg.max_open_seats),
+        )
+        if seat:
+            opened.append({"pair": pair, "entry_ts": seat.get("entry_ts")})
+    mark_info: Dict[str, Any] = {}
+    if mark_close:
+        mark_info = _mark_open_seats(
+            book,
+            now_ts=_utc_now().timestamp(),
+            close_horizon_h=int(cfg.close_horizon_h),
+        )
+    if write:
+        save_book(book, book_path)
+    return {
+        "scanned": scanned,
+        "n_gate_pass": buyish,
+        "opened_now": opened,
+        "n_opened_now": len(opened),
+        "mark": mark_info,
+        "book_banks": book.get("banks"),
+        "n_open": len(book.get("open") or []),
+        "n_closed": len(book.get("closed") or []),
+    }
+
+
 def run_select_few_cf(
     *,
     cfg: Optional[SelectFewConfig] = None,
@@ -321,20 +503,35 @@ def run_select_few_cf(
     lab = run_lab(cfg=lab_cfg, pairs=pairs if pairs else [])
 
     opened: List[Dict[str, Any]] = []
+    skip_reasons: Dict[str, int] = {}
+    n_gate_pass = 0
     for row in lab.get("results") or []:
         if not row.get("ok"):
+            skip_reasons["lab_not_ok"] = skip_reasons.get("lab_not_ok", 0) + 1
             continue
         pair = str(row.get("pair") or "")
+        gated = _apply_cf_paper_gate(row, cfg)
+        paper = gated.get("paper") or {}
+        if paper.get("paper_would_buy_tag"):
+            n_gate_pass += 1
+        else:
+            for rsn in paper.get("reasons") or ["no_paper_tag"]:
+                key = str(rsn).split(":")[0][:48]
+                skip_reasons[key] = skip_reasons.get(key, 0) + 1
         seat = _open_paper_seat(
             book,
             pair=pair,
             entry_ts=str(row.get("ts") or now.isoformat()),
             notional=float(cfg.notional_usd),
-            judgment_row=row,
+            judgment_row=gated,
             max_open=int(cfg.max_open_seats),
         )
         if seat:
             opened.append({"pair": pair, "notional_usd": cfg.notional_usd})
+        elif paper.get("paper_would_buy_tag"):
+            skip_reasons["open_blocked_already_open_or_cap"] = (
+                skip_reasons.get("open_blocked_already_open_or_cap", 0) + 1
+            )
 
     # Re-mark after opens (entry marks may be null until tape moves)
     _mark_open_seats(book, now_ts=now_ts, close_horizon_h=int(cfg.close_horizon_h))
@@ -377,6 +574,20 @@ def run_select_few_cf(
         "ohlcv_refresh": ohlcv_report,
         "mark": mark_info,
         "opened_this_tick": opened,
+        "funnel": {
+            "n_judged_ok": lab.get("n_ok"),
+            "n_cf_gate_pass": n_gate_pass,
+            "n_opened": len(opened),
+            "skip_reasons": skip_reasons,
+            "gate": {
+                "should_trade_min": cfg.should_trade_min,
+                "fakeout_max": cfg.fakeout_max,
+                "action_conf_min": cfg.action_conf_min,
+                "conf_act": cfg.conf_act,
+                "soft_buy_open": cfg.allow_soft_buy_open,
+                "mode": "collection_v1",
+            },
+        },
         "book": {
             "n_open": len(book.get("open") or []),
             "n_closed_total": n_closed,
@@ -393,10 +604,18 @@ def run_select_few_cf(
             {
                 "pair": r.get("pair"),
                 "ok": r.get("ok"),
-                "paper_buy": (r.get("paper") or {}).get("paper_would_buy_tag"),
+                "paper_buy": (_apply_cf_paper_gate(r, cfg).get("paper") or {}).get(
+                    "paper_would_buy_tag"
+                )
+                if r.get("ok")
+                else False,
                 "action": ((r.get("answers") or {}).get("action") or {}).get("choice"),
-                "should_trade": ((r.get("answers") or {}).get("should_trade_name_now") or {}).get("noul"),
-                "fakeout": ((r.get("answers") or {}).get("is_fakeout_or_stop_run") or {}).get("noul"),
+                "should_trade": ((r.get("answers") or {}).get("should_trade_name_now") or {}).get(
+                    "noul"
+                ),
+                "fakeout": ((r.get("answers") or {}).get("is_fakeout_or_stop_run") or {}).get(
+                    "noul"
+                ),
                 "lat_ms": r.get("latency_ms"),
             }
             for r in (lab.get("results") or [])
@@ -474,11 +693,13 @@ def render_markdown(payload: Dict[str, Any], book: Optional[Dict[str, Any]] = No
 def telegram_card(payload: Dict[str, Any]) -> str:
     b = payload.get("book") or {}
     lab = payload.get("lab") or {}
+    funnel = payload.get("funnel") or {}
     lines = [
         "🧪 Jev select-few CF (measure-only)",
         f"Claim: {payload.get('claim_class')}",
         f"Doors: {', '.join(payload.get('pairs_judged') or []) or '—'}",
-        f"Lab: ok={lab.get('n_ok')}/{lab.get('n_pairs')} paper_buy={lab.get('paper_buy_tags')}",
+        f"Lab: ok={lab.get('n_ok')}/{lab.get('n_pairs')} · "
+        f"cf_gate_pass={funnel.get('n_cf_gate_pass')} · opened={funnel.get('n_opened')}",
         f"Paper book: open={b.get('n_open')} {b.get('open_pairs')} · "
         f"${b.get('notional_per_seat')}/seat",
         f"Realized CF: ${b.get('realized_pnl_usd')} (n_closed={b.get('n_closed_total')}) · "
@@ -487,6 +708,10 @@ def telegram_card(payload: Dict[str, Any]) -> str:
     opened = payload.get("opened_this_tick") or []
     if opened:
         lines.append(f"Opened this tick: {opened}")
+    skips = funnel.get("skip_reasons") or {}
+    if skips and not opened:
+        top = sorted(skips.items(), key=lambda kv: -kv[1])[:3]
+        lines.append("Skip top: " + ", ".join(f"{k}×{v}" for k, v in top))
     lines.append("No orders · no knobs · full: reports/JEV_SELECT_FEW_CF_LATEST.md")
     return "\n".join(lines)
 
@@ -566,8 +791,11 @@ def build_weekly_rollup(
                 unreal += _f(m[k])
                 break
 
-    # Crumb activity this window
+    # Crumb activity this window + judgment funnel (not only empty book)
     n_ticks = 0
+    n_action_buy = 0
+    n_action_hold = 0
+    n_ok_crumbs = 0
     if CRUMBS_PATH.is_file():
         try:
             for line in CRUMBS_PATH.read_text(encoding="utf-8").splitlines():
@@ -579,10 +807,36 @@ def build_weekly_rollup(
                 except json.JSONDecodeError:
                     continue
                 ts = _parse_ts(row.get("ts"))
-                if ts is not None and ts >= window_ts:
-                    n_ticks += 1
+                if ts is None or ts < window_ts:
+                    continue
+                n_ticks += 1
+                if not row.get("answers"):
+                    continue
+                if row.get("ok"):
+                    n_ok_crumbs += 1
+                act = ((row.get("answers") or {}).get("action") or {}).get("choice")
+                if act == "buy":
+                    n_action_buy += 1
+                elif act == "hold":
+                    n_action_hold += 1
         except OSError:
             pass
+
+    # Why empty book? Diagnose for TG
+    empty_reason = None
+    if n_closed_all == 0 and int(banks.get("n_opened") or 0) == 0:
+        if n_action_buy == 0 and n_ok_crumbs > 0:
+            empty_reason = "model_mostly_hold_no_buy_labels"
+        elif n_action_buy > 0:
+            empty_reason = (
+                "buys_existed_but_paper_gate_blocked_pre_collection_fix"
+                if n_closed_w == 0
+                else None
+            )
+        elif n_ticks > 0:
+            empty_reason = "ticks_but_no_judgment_answers_in_window"
+        else:
+            empty_reason = "no_ticks_in_window"
 
     budget = {}
     if BUDGET_PATH.is_file():
@@ -610,6 +864,9 @@ def build_weekly_rollup(
             "losses": losses,
             "by_pair": by_pair,
             "n_ticks": n_ticks,
+            "n_ok_judgment_crumbs": n_ok_crumbs,
+            "n_action_buy": n_action_buy,
+            "n_action_hold": n_action_hold,
         },
         "lifetime": {
             "n_closed": n_closed_all,
@@ -621,6 +878,12 @@ def build_weekly_rollup(
             "n": len(open_pairs),
             "pairs": open_pairs,
             "unrealized_pnl_usd_approx": round(unreal, 4),
+        },
+        "funnel_diagnosis": empty_reason,
+        "collection_gate": {
+            "should_trade_min": CF_SHOULD_TRADE_MIN,
+            "conf_act": CF_CONF_ACT,
+            "mode": "collection_v1",
         },
         "budget_today": budget,
         "notional_per_seat": DEFAULT_NOTIONAL,
@@ -649,11 +912,21 @@ def weekly_telegram_card(payload: Dict[str, Any]) -> str:
         f"Week closed: {w.get('n_closed')} · opened {w.get('n_opened')} · "
         f"W/L {w.get('wins')}/{w.get('losses')}",
         f"Week CF $: {w.get('realized_pnl_usd')} · by pair: {pair_bits}",
+        f"Judgments: buy×{w.get('n_action_buy')} hold×{w.get('n_action_hold')} · "
+        f"ok_crumbs={w.get('n_ok_judgment_crumbs')} ticks={w.get('n_ticks')}",
         f"Open now: {op.get('n')} {op.get('pairs')} · unreal≈${op.get('unrealized_pnl_usd_approx')}",
-        f"Lifetime: closed={life.get('n_closed')} · CF ${life.get('realized_pnl_usd')} · "
-        f"need ≥{payload.get('min_n_claim')} closed before sample bar",
-        "Paper only · no orders · no knobs · reports/JEV_SELECT_FEW_CF_WEEKLY_LATEST.md",
+        f"Lifetime: closed={life.get('n_closed')} opened={life.get('n_opened')} · "
+        f"CF ${life.get('realized_pnl_usd')} · need ≥{payload.get('min_n_claim')} closed",
     ]
+    diag = payload.get("funnel_diagnosis")
+    if diag:
+        lines.append(f"Empty-book why: {diag}")
+    gate = payload.get("collection_gate") or {}
+    if gate:
+        lines.append(
+            f"Gate: collection_v1 st≥{gate.get('should_trade_min')} conf_act≥{gate.get('conf_act')}"
+        )
+    lines.append("Paper only · no orders · no knobs · reports/JEV_SELECT_FEW_CF_WEEKLY_LATEST.md")
     return "\n".join(lines)
 
 
@@ -676,12 +949,16 @@ def weekly_markdown(payload: Dict[str, Any]) -> str:
             f"- Closed: **{w.get('n_closed')}** · opened: **{w.get('n_opened')}** · W/L **{w.get('wins')}/{w.get('losses')}**",
             f"- Realized CF $: **{w.get('realized_pnl_usd')}**",
             f"- By pair: `{w.get('by_pair')}`",
-            f"- Ticks (crumbs): {w.get('n_ticks')}",
+            f"- Ticks (crumbs): {w.get('n_ticks')} · ok judgments: {w.get('n_ok_judgment_crumbs')}",
+            f"- Action labels: buy×{w.get('n_action_buy')} · hold×{w.get('n_action_hold')}",
+            f"- Funnel diagnosis: `{payload.get('funnel_diagnosis')}`",
+            f"- Collection gate: `{payload.get('collection_gate')}`",
             "",
             "## Open / lifetime",
             "",
             f"- Open: {op.get('n')} `{op.get('pairs')}` · unreal≈${op.get('unrealized_pnl_usd_approx')}",
-            f"- Lifetime closed={life.get('n_closed')} · CF ${life.get('realized_pnl_usd')} · tags={life.get('n_paper_buy_tags')}",
+            f"- Lifetime closed={life.get('n_closed')} · opened={life.get('n_opened')} · "
+            f"CF ${life.get('realized_pnl_usd')} · tags={life.get('n_paper_buy_tags')}",
             "",
             "```json",
             json.dumps(payload, indent=2, default=str)[:4000],

@@ -67,7 +67,7 @@
     "shadow_min_calendar_days": 60,
     "note_calendar": "Brad expectation: 1–2 months to cycle bull/bear/flat with enough points. Default gate 60d; 45d early review only if N gates met.",
     "early_review_calendar_days": 45,
-    "min_closed_legs_per_regime": 15,
+    "min_closed_legs_per_regime": 5,
     "min_would_fire_episodes_per_regime": 5,
     "regimes_required_for_global_flip": ["bull", "bear", "flat"],
     "min_regimes_ready": 3,

@@ -1,12 +1,12 @@
 Linux brad-HP-Compaq-8000-Elite-SFF-PC 6.17.0-29-generic #29~24.04.1-Ubuntu SMP PREEMPT_DYNAMIC Mon May 11 10:30:58 UTC 2 x86_64 x86_64 x86_64 GNU/Linux
 Filesystem      Size  Used Avail Use% Mounted on
-tmpfs           982M  3.2M  979M   1% /run
-/dev/sda2       146G  103G   36G  75% /
+tmpfs           982M  2.3M  980M   1% /run
+/dev/sda2       146G  104G   36G  75% /
 tmpfs           4.8G   37M  4.8G   1% /dev/shm
 tmpfs           5.0M  8.0K  5.0M   1% /run/lock
-tmpfs           982M  208K  982M   1% /run/user/1000
+tmpfs           982M  216K  982M   1% /run/user/1000
 tmpfs           982M  144K  982M   1% /run/user/124
                total        used        free      shared  buff/cache   available
-Mem:           9.6Gi       3.8Gi       1.6Gi        24Mi       4.5Gi       5.8Gi
+Mem:           9.6Gi       4.0Gi       1.8Gi        24Mi       4.2Gi       5.6Gi
 Swap:          3.7Gi       1.8Gi       2.0Gi
- 04:31:43 up 131 days, 11:40,  7 users,  load average: 5.47, 2.70, 2.25
+ 04:31:36 up 132 days, 11:40,  7 users,  load average: 4.41, 2.46, 2.16

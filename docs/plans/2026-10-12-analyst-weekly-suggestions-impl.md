@@ -42,8 +42,19 @@
 | D6 | Kindling live | **Do not** force kindling live_apply as fix for 0/12 | paper_not_live×8 is mostly “bar never cleared live,” not missing GO spam |
 | D7 | Claim bar | No edge / promote language until closed sample honest | Same rule as Jev CF / SL exit CF |
 
-### Open (need Brad pick before money tasks)
-See **Grill round** at bottom — answer those before any `live_apply` / config money write.
+### Brad lock (2026-10-12)
+| Q | Answer | Locked |
+|---|--------|--------|
+| Q1 ETH after career | **Clarify only** — default **(a) no SL knob** after career unless packet shows mis-role size/naked stop. **Not** auto-arm 3% on this ETH leg (see Q1 note below). | measure career; no global/ballast SL% change |
+| Q2 Intake | **(a) eng/discipline floor** | §B2 implement |
+| Q3 Ballast floor | **Shadow through next Sunday** | §C1 `live_apply: false` only |
+| Q4 Flat priority | **Yes** prefer BTC/ETH rebuild under flat | §D1 shadow; live later GO |
+| Q5 Scope | **Full A–F** | this sprint |
+
+**Q1 ≠ yesterday’s 3% small-bag fuse (same family, different switch):**
+- **Yesterday / `config/sl_width_arming_policy.json`:** measure-only **stop width at arm** — 3% fuse only for **unproven tryout shells** (≤~$30, not graduated/core, weak MFE); **8% default** for core/graduated/sized/green path. Does **not** change live `stop_loss_pct` until separate GO.
+- **Grill Q1:** what to do **after** this week’s **ETH −$18.90 SL career** — (a) report only, (b) lean on that 3% tryout fuse, (c) ballast **re-entry size** cap, etc.
+- **This ETH leg:** exchange stop on a **ballast-sized** bag (~$19 loss on ~8% path), **not** a $25 shell. Under the arming sketch, it would stay **8%**, so “do the 3% fuse” would **not** have saved this stop. 3% fuse remains the **tryout corpse** tool; ETH career may still recommend **banking/trail / rebuild priority / size-on-reentry**, not “arm 3% on ETH.”
 
 ### Proof of done (whole epic)
 - [ ] `reports/E_ETH_BALLAST_SL_CAREER_2026-10-12.md` exists with entry→SL chain  

@@ -712,7 +712,15 @@ def evaluate_scale_up(
             reasons.append("phase_dwell_unknown")
     if bool(c.get("require_structure_ok", True)):
         if struct_ok is None:
-            reasons.append("structure_unknown")
+            err = ps.get("error")
+            if err:
+                errl = str(err).lower()
+                if "thin_candles" in errl or "thin" in errl:
+                    reasons.append("thin_candles")
+                else:
+                    reasons.append(f"structure_unknown:{err}")
+            else:
+                reasons.append("structure_unknown")
         elif not struct_ok:
             reasons.append("structure_not_ok")
 

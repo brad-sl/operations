@@ -1,0 +1,13 @@
+{
+  "schema": "flat_deploy_priority_v1",
+  "live_apply": false,
+  "as_of": "2026-10-12",
+  "brad_go": "2026-10-12_shadow_only_until_sunday",
+  "note": "§D1 Flat deploy priority: in flat/transition, if core ballast (BTC/ETH) under 35% target, reserve deploy_cap before new tryout shell. Shadow only. No live_apply. No runner change.",
+  "flat_regimes": ["flat", "transition"],
+  "deploy_cap_usd": 75,
+  "min_held_pct": 0.35,
+  "reserve_before_shell": true,
+  "shadow_only": true,
+  "late_run_block_allows_shell": true
+}

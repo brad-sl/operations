@@ -1,0 +1,18 @@
+{
+  "schema": "ballast_under_target_floor_v1",
+  "live_apply": false,
+  "as_of": "2026-10-12",
+  "brad_go": "2026-10-12_shadow_only_until_sunday",
+  "note": "§C1 Ballast under-target floor. Exception floor ONLY when max_add collapsed (max_add==0). Shadow measure-only. No live_apply. Pairs limited to BTC/ETH ballast_core.",
+  "pairs_allow": ["BTC-USD", "ETH-USD"],
+  "roles_allow": ["ballast_core"],
+  "max_step_usd": 75,
+  "respect_flat_rebalance_cap": true,
+  "min_held_pct_of_target_to_skip": 0.35,
+  "require_stop_attached": true,
+  "require_not_over_target": true,
+  "forbid_if_open_upnl_pct_lt": -0.06,
+  "default_flat_cap_usd": 75,
+  "shadow_only": true,
+  "next": "Wire would_under_target_floor helper into membership_sizing_matrix ONLY if pure/no-money-change; else shadow CLI only"
+}

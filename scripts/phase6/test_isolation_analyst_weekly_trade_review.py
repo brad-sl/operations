@@ -95,6 +95,17 @@ class TestAnalystWeeklyTradeReview(unittest.TestCase):
         self.assertAlmostEqual(summary["realized_pnl_usd"], 2.0 - 0.5 - 1.25, places=4)
         self.assertLess(summary["process_tax_usd"], 0)
         self.assertIn("same_day_buy_sell_pair_days", summary)
+        self.assertIn("exit_wr_by_bucket", summary)
+        b = summary.get("exit_wr_by_bucket") or {}
+        self.assertIn("scale_window_eject", b)
+        self.assertIn("tp_profit", b)
+        self.assertIn("sl_exchange", b)
+        self.assertEqual(b.get("tp_profit", {}).get("n"), 1)
+        self.assertEqual(b.get("tp_profit", {}).get("n_green"), 1)
+        self.assertEqual(b.get("scale_window_eject", {}).get("n"), 1)
+        self.assertEqual(b.get("scale_window_eject", {}).get("n_red"), 1)
+        self.assertIn("exit_wr_plain", summary)
+        self.assertIsInstance(summary.get("exit_wr_plain"), str)
 
     def test_same_day_loop_detected(self) -> None:
         day_h = 6.0

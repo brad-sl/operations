@@ -287,6 +287,7 @@ def _kindling_block_reason(
     hold_h: Optional[float],
     shadow_row: Optional[Mapping[str, Any]],
     live_scale_info: Mapping[str, Any],
+    struct_error: Optional[str] = None,
 ) -> str:
     if live_scaled or live_scale_info.get("cleared_live_kindling"):
         return "cleared_live_kindling"
@@ -308,10 +309,19 @@ def _kindling_block_reason(
         ph = None
     if ph is not None and ph >= 3:
         reasons.append(f"phase_{ph}_late_for_live_signal")
+    elif ph is not None and ph not in (1, 2):
+        reasons.append(f"phase_{ph}")
     if structure_ok is False:
-        reasons.append("structure_break")
-    if structure_ok is None:
-        reasons.append("structure_unknown")
+        reasons.append("structure_not_ok")
+    elif structure_ok is None:
+        if struct_error:
+            errl = str(struct_error).lower()
+            if "thin_candles" in errl or "thin" in errl:
+                reasons.append("thin_candles")
+            else:
+                reasons.append(f"structure_unknown:{struct_error}"[:80])
+        else:
+            reasons.append("structure_unknown")
     if hold_h is not None and hold_h < 2.0:
         reasons.append(f"hold_{hold_h:.1f}h_under_min")
     if not reasons:
@@ -423,6 +433,23 @@ def build_cohort_card(
         if shadow and shadow.get("kind") == "would_scale":
             paper_scaled = True
 
+        # §E structure_unknown fix: backfill/relabel when structure_ok is None (common when shadow_joined=false)
+        # re-resolve via tryout_scale_up_shadow._phase_and_structure (now live-working)
+        # set structure_ok + phase; kindling_block uses explicit thin_candles/structure_not_ok/phase_X
+        # Do NOT set require_structure_ok false anywhere.
+        # current candles as proxy for past state (historical would need archived daily tapes)
+        struct_error = None
+        if structure_ok is None:
+            try:
+                from phase6.core.tryout_scale_up_shadow import _phase_and_structure as _pas
+                ps = _pas(pair)
+                if phase is None:
+                    phase = ps.get("phase")
+                structure_ok = ps.get("structure_ok")
+                struct_error = ps.get("error")
+            except Exception as e:
+                struct_error = f"resolve:{e}"
+
         live_info = _had_live_scale_before_eject(
             ledger, pair=pair, entry_ts=entry_ts, exit_ts=exit_ts
         )
@@ -437,6 +464,7 @@ def build_cohort_card(
             hold_h=hold_h,
             shadow_row=shadow,
             live_scale_info=live_info,
+            struct_error=struct_error,
         )
 
         oid = str(sell.get("order_id") or "")

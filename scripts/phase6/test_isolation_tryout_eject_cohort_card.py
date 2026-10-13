@@ -203,6 +203,84 @@ class TestEjectCohortCard(unittest.TestCase):
         self.assertTrue(row["cleared_live_kindling"])
         self.assertEqual(row["kindling_block"], "cleared_live_kindling")
 
+    def test_backfill_relabel_path_uses_phase_and_structure(self) -> None:
+        """Isolation test for §E backfill/relabel: structure_ok=None -> re-resolve, explicit labels not generic unknown."""
+        from phase6.core import tryout_eject_cohort_card as m
+
+        rows = [
+            {
+                "pair": "ZZZ-USD",
+                "side": "BUY",
+                "timestamp": "2026-10-01T10:00:00Z",
+                "order_id": "b1",
+                "reason": "limit_first_buy",
+            },
+            {
+                "pair": "ZZZ-USD",
+                "side": "SELL",
+                "timestamp": "2026-10-01T20:00:00Z",
+                "order_id": "s1",
+                "entry_order_id": "b1",
+                "reason": "tryout_scale_window_eject",
+                "pnl": -0.1,
+                "pnl_gross": -0.05,
+                "rt_fee_usd": 0.3,
+            },
+        ]
+        self._write_jsonl(self.ledger, rows)
+        with mock.patch.object(m, "GHOSTS_PATH", self.state / "no_ghosts.jsonl"), mock.patch.object(
+            m, "SHADOW_CRUMBS_PATH", self.state / "no_shadow.jsonl"
+        ), mock.patch.object(m, "OPEN_LOTS_PATH", self.state / "no_lots.json"), mock.patch.object(
+            m, "LEDGER_PATH", self.ledger
+        ), mock.patch.object(
+            m, "LATEST_JSON", self.state / "tryout_eject_cohort_weekly.json"
+        ), mock.patch.object(
+            m, "LATEST_MD", self.reports / "TRYOUT_EJECT_COHORT_CARD_LATEST.md"
+        ), mock.patch.object(m, "REPORT_DIR", self.reports), mock.patch.object(
+            m, "STATE_DIR", self.state
+        ), mock.patch.object(m, "PROJECT_ROOT", self.root):
+            with mock.patch(
+                "phase6.core.tryout_scale_up_shadow._phase_and_structure"
+            ) as mock_pas:
+                mock_pas.return_value = {
+                    "phase": 0,
+                    "structure_ok": False,
+                    "error": None,
+                    "phase_name": "base",
+                }
+                payload = m.build_cohort_card(
+                    lookback_days=30,
+                    ledger_path=self.ledger,
+                    fee_payload={"cohort": []},
+                )
+        self.assertEqual(payload["n_ejects"], 1)
+        row = payload["rows"][0]
+        self.assertEqual(row["pair"], "ZZZ-USD")
+        self.assertEqual(row["phase"], 0)
+        self.assertIs(row["structure_ok"], False)
+        self.assertIn("phase_0", str(row["kindling_block"]))
+        self.assertIn("structure_not_ok", str(row["kindling_block"]))
+        self.assertNotIn("structure_unknown", str(row["kindling_block"]))
+        self.assertEqual(payload["scoreboard"]["n_structure_unknown"], 0)
+        self.assertEqual(payload["scoreboard"]["n_structure_false"], 1)
+        # also test thin_candles path
+        with mock.patch.object(m, "GHOSTS_PATH", self.state / "no_ghosts.jsonl"), mock.patch.object(
+            m, "SHADOW_CRUMBS_PATH", self.state / "no_shadow.jsonl"
+        ), mock.patch.object(m, "OPEN_LOTS_PATH", self.state / "no_lots.json"):
+            with mock.patch(
+                "phase6.core.tryout_scale_up_shadow._phase_and_structure"
+            ) as mock_pas:
+                mock_pas.return_value = {"phase": None, "structure_ok": None, "error": "thin_candles"}
+                payload2 = m.build_cohort_card(
+                    lookback_days=30,
+                    ledger_path=self.ledger,
+                    fee_payload={"cohort": []},
+                )
+        row2 = payload2["rows"][0]
+        self.assertIn("thin_candles", str(row2["kindling_block"]))
+        self.assertNotIn("structure_unknown", str(row2.get("kindling_block", "")))
+        self.assertIs(row2["structure_ok"], None)
+
 
 if __name__ == "__main__":
     unittest.main()

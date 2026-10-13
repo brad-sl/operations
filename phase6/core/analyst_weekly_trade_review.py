@@ -149,6 +149,35 @@ def _is_process_tax(bucket: str, reason: str) -> bool:
     return False
 
 
+def _exit_wr_plain(by_b: Dict[str, Any]) -> str:
+    """Plain string for headline: meat TP vs SL/eject reds etc. Headline WR != edge."""
+    if not by_b:
+        return "No primary exits w/ PnL."
+    tp = by_b.get("tp_profit") or {}
+    sl = by_b.get("sl_exchange") or {}
+    ej = by_b.get("scale_window_eject") or {}
+    ds = by_b.get("dust_sweep") or {}
+    rot = by_b.get("rotation") or {}
+    tp_n = int(tp.get("n", 0) or 0)
+    tp_g = int(tp.get("n_green", 0) or 0)
+    sl_n = int(sl.get("n", 0) or 0)
+    ej_n = int(ej.get("n", 0) or 0)
+    ds_n = int(ds.get("n", 0) or 0)
+    rot_n = int(rot.get("n", 0) or 0)
+    parts = []
+    if tp_n > 0:
+        parts.append(f"Meat TP {tp_g}/{tp_n}")
+    tax_reds = sl_n + ej_n + ds_n
+    if tax_reds > 0:
+        parts.append(f"SL+eject+dust reds n={tax_reds}")
+    if rot_n > 0:
+        parts.append(f"rotation {rot_n}")
+    if not parts:
+        return "Mixed/zero-PnL buckets; headline WR not strategy edge."
+    note = " — headline WR is not strategy edge." if (tax_reds > tp_n or tp_n == 0) else ""
+    return " · ".join(parts) + note
+
+
 def summarize_legs(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     buys = [r for r in rows if _side(r) == "BUY"]
     sells = [r for r in rows if _side(r) == "SELL"]
@@ -166,6 +195,9 @@ def summarize_legs(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
     by_pair_pnl: Dict[str, float] = defaultdict(float)
     by_pair_n: Counter = Counter()
     sell_rows_out: List[Dict[str, Any]] = []
+    bucket_wr: Dict[str, Dict[str, Any]] = defaultdict(
+        lambda: {"n": 0, "n_green": 0, "n_red": 0, "pnl_sum": 0.0}
+    )
 
     for s in primary_sells:
         pair = _norm_pair(str(s.get("_pair") or s.get("pair") or "?"))
@@ -191,6 +223,13 @@ def summarize_legs(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
             else:
                 non_tax_n += 1
                 non_tax_sum += p
+            bs = bucket_wr[bucket]
+            bs["n"] += 1
+            if p > 0:
+                bs["n_green"] += 1
+            elif p < 0:
+                bs["n_red"] += 1
+            bs["pnl_sum"] += p
         ts_raw = s.get("_ts")
         if isinstance(ts_raw, datetime):
             ts_s = ts_raw.isoformat()
@@ -235,6 +274,28 @@ def summarize_legs(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
         key=lambda x: x["pnl_usd"],
     )
 
+    # §F: per-bucket WR from primary sells (n, green/red, wr, pnl_sum)
+    exit_wr_by_bucket: Dict[str, Any] = {}
+    for bkt, stats in list(bucket_wr.items()):
+        n = int(stats.get("n", 0))
+        if n > 0:
+            g = int(stats.get("n_green", 0))
+            r = int(stats.get("n_red", 0))
+            wr_b = (g / n) if n > 0 else None
+            exit_wr_by_bucket[bkt] = {
+                "n": n,
+                "n_green": g,
+                "n_red": r,
+                "wr": round(wr_b, 4) if wr_b is not None else None,
+                "pnl_sum": round(float(stats.get("pnl_sum", 0.0)), 4),
+            }
+    # ensure canonical buckets present even if zero
+    for b in ("tp_profit", "sl_exchange", "scale_window_eject", "dust_sweep", "rotation", "other"):
+        if b not in exit_wr_by_bucket:
+            exit_wr_by_bucket[b] = {"n": 0, "n_green": 0, "n_red": 0, "wr": None, "pnl_sum": 0.0}
+
+    exit_wr_plain = _exit_wr_plain(exit_wr_by_bucket)
+
     return {
         "n_legs": len(rows),
         "n_buys": len(buys),
@@ -247,6 +308,8 @@ def summarize_legs(rows: Sequence[Mapping[str, Any]]) -> Dict[str, Any]:
         "n_red_exits": red,
         "n_flat_exits": flat,
         "exit_wr": round(wr, 4) if wr is not None else None,
+        "exit_wr_by_bucket": exit_wr_by_bucket,
+        "exit_wr_plain": exit_wr_plain,
         "process_tax_n": tax_n,
         "process_tax_usd": round(tax_sum, 4),
         "non_tax_n": non_tax_n,
@@ -766,7 +829,9 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         "",
         "## Exit buckets",
         "",
-        f"```{json.dumps(s.get('exit_buckets') or {}, indent=2)}```",
+        f"Count: ```{json.dumps(s.get('exit_buckets') or {}, indent=2)}```",
+        f"WR by bucket: ```{json.dumps(s.get('exit_wr_by_bucket') or {}, indent=2)}```",
+        f"Plain: {s.get('exit_wr_plain') or '—'}",
         "",
         "## Exit reasons (top)",
         "",
@@ -945,6 +1010,7 @@ def format_tg_card(payload: Mapping[str, Any], *, suggestions: Optional[Sequence
         [
             "Shorthand card follows for scanners; full plain decode is the Sunday agent report.",
             f"PnL ${pnl} · WR {wr_s} · tax ${tax} · util {util}%",
+            f"Exit buckets: {s.get('exit_wr_plain') or '—'}",
             f"Primary B/S {s.get('n_primary_buys')}/{s.get('n_primary_sells')} · same-day loops {s.get('same_day_buy_sell_pair_days')}",
             f"Path {path} · goal {goal} · regime {regime}",
             (

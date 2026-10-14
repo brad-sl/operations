@@ -511,6 +511,72 @@ def build_matrix(
         f"pyramid={'on' if live_ar.get('allow_pyramid') else 'off'}"
     )
 
+    # §1 Practical Sequence dig-out shadows (measure-only; never money)
+    dig_out_shadow: Dict[str, Any] = {"live_apply": False, "shadow_only": True}
+    try:
+        from phase6.core.ballast_under_target_floor import would_allow_under_target_step
+        from phase6.core.flat_deploy_priority import would_prefer_ballast_before_shell
+
+        eq = _f(add_room.get("equity_usd"), 0.0) or 1.0
+        reg = str(
+            (regime_sheet or {}).get("live_regime")
+            or add_room.get("regime")
+            or "unknown"
+        )
+        deploy_cap = 75.0
+        try:
+            rc = _load_json(STATE_DIR / "regime_cash_status.json", {})
+            if isinstance(rc, dict) and rc.get("rebalance_cap_usd") is not None:
+                deploy_cap = _f(rc.get("rebalance_cap_usd"), 75.0)
+        except Exception:
+            pass
+        btc = next((r for r in rows if r.get("pair") == "BTC-USD"), {}) or {}
+        eth = next((r for r in rows if r.get("pair") == "ETH-USD"), {}) or {}
+        floor_rows = []
+        for pair, row in (("BTC-USD", btc), ("ETH-USD", eth)):
+            held = _f(row.get("held_usd"))
+            tw = _f(row.get("target_pair_weight"), 0.15)
+            max_add = row.get("max_add_usd")
+            max_add_f = _f(max_add, 0.0) if max_add is not None else 0.0
+            if max_add is None and held < 1.0:
+                max_add_f = 0.0
+            upnl = row.get("open_upnl_usd")
+            upnl_pct = (_f(upnl) / held) if held > 0 and upnl is not None else 0.0
+            # Conservative: assume stop attached for shadow (do not invent naked rejects)
+            res = would_allow_under_target_step(
+                pair=pair,
+                role=str(row.get("role") or "ballast_core"),
+                held_usd=held,
+                equity_usd=eq,
+                target_w=tw,
+                max_add_usd=max_add_f,
+                open_upnl_pct=upnl_pct,
+                stop_attached=True,
+                flat_cap_usd=deploy_cap,
+            )
+            floor_rows.append(res)
+        dig_out_shadow["c1_under_target_floor"] = {
+            "n_allow": sum(1 for r in floor_rows if r.get("allow")),
+            "rows": floor_rows,
+        }
+        dig_out_shadow["d1_flat_priority"] = would_prefer_ballast_before_shell(
+            regime=reg,
+            deploy_cap_usd=deploy_cap,
+            btc_held=_f(btc.get("held_usd")),
+            eth_held=_f(eth.get("held_usd")),
+            equity=eq,
+            target_w_btc=_f(btc.get("target_pair_weight"), 0.15),
+            target_w_eth=_f(eth.get("target_pair_weight"), 0.15),
+            btc_late_run_blocked=False,
+            eth_late_run_blocked=False,
+        )
+        dig_out_shadow["note"] = (
+            "would_* only; live_apply false until Sunday weekly + Brad GO (C2/D2)"
+        )
+    except Exception as e:
+        dig_out_shadow["error"] = str(e)
+        logger.debug("[MSM] dig_out_shadow attach failed: %s", e)
+
     out: Dict[str, Any] = {
         "schema": SCHEMA,
         "as_of": _utc_iso(),
@@ -541,6 +607,7 @@ def build_matrix(
         "counts": counts,
         "inconsistencies": inconsistencies_all,
         "rows": rows,
+        "dig_out_shadow": dig_out_shadow,
         "filters_help": {
             "class": "sticky_core|liquid_core|graduated|novelty_restricted|novelty_blocked",
             "role": "ballast_core|preserve_ballast|tryout_shell|liquid_held|cash_like",
@@ -555,6 +622,7 @@ def build_matrix(
             "block_reason": "Binding budget or sizer reason when max_add=0",
             "membership_remove": "never|dust_only|m_gate — who can leave the roster",
             "pyramid_allowed": "Regime allows adds into existing stacks",
+            "dig_out_shadow": "C1/D1 would_* measure-only; not live money",
         },
     }
 

@@ -9,5 +9,7 @@
   "min_held_pct": 0.35,
   "reserve_before_shell": true,
   "shadow_only": true,
-  "late_run_block_allows_shell": true
+  "late_run_block_allows_shell": true,
+  "next": "D2 live_apply only after Sunday weekly + Brad GO. Shadow board + matrix dig_out_shadow. Kill: data/state/flat_deploy_priority_KILL",
+  "production_go_doc": "docs/plans/2026-10-13-dig-out-practical-sequence-go.md"
 }

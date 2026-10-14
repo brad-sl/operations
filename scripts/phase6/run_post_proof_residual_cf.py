@@ -107,18 +107,47 @@ def run_simulation(tp_sell_frac=None, simulate_kindling=False):
 
     graduated_pairs = get_graduated_pairs()
     
+    def _is_tp_trail_sell(trade: dict) -> bool:
+        if str(trade.get('side') or '').upper() != 'SELL':
+            return False
+        exit_class = str(trade.get('exit_class') or '')
+        exit_reason = str(trade.get('exit_reason') or trade.get('reason') or '')
+        tp_kind = str(trade.get('tp_kind') or '')
+        if exit_class in ('CLOSED_TP_TRAIL', 'CLOSED_TP', 'TP_TRAIL'):
+            return True
+        if exit_reason in ('take_profit_trail', 'tp_trail', 'trail_tp', 'fixed_tp', 'take_profit'):
+            return True
+        if 'trail' in tp_kind.lower() or 'take_profit' in exit_reason.lower():
+            return True
+        return False
+
+    def _pnl_usd(trade: dict) -> float:
+        for k in ('pnl_usd', 'pnl', 'realized_pnl_usd'):
+            v = trade.get(k)
+            if isinstance(v, (int, float)):
+                return float(v)
+        return 0.0
+
     for i, trade in enumerate(trades):
-        if trade.get('side') == 'SELL' and trade.get('exit_class') == 'CLOSED_TP_TRAIL':
-            pair = trade['pair']
-            entry_price = trade['entry_price']
-            exit_price = trade['exit_price']
-            qty = trade['qty']
-            pnl_usd_baseline = trade['pnl_usd']
-            pnl_pct_baseline = trade['pnl_pct']
+        if _is_tp_trail_sell(trade):
+            pair = trade.get('pair') or 'UNKNOWN'
+            try:
+                entry_price = float(trade.get('entry_price') or 0)
+                exit_price = float(trade.get('exit_price') or trade.get('average_filled_price') or 0)
+                qty = float(trade.get('qty') or 0)
+            except (TypeError, ValueError):
+                continue
+            if entry_price <= 0 or qty <= 0:
+                continue
+            pnl_usd_baseline = _pnl_usd(trade)
+            try:
+                pnl_pct_baseline = float(trade.get('pnl_pct') or 0)
+            except (TypeError, ValueError):
+                pnl_pct_baseline = 0.0
             
             # --- Baseline (Current Full Shell Exit) ---
             results[pair]['baseline'].append({
-                'trade_id': trade['order_id'],
+                'trade_id': trade.get('order_id'),
                 'type': 'full_exit_tp',
                 'pnl_usd': pnl_usd_baseline,
                 'pnl_pct': pnl_pct_baseline,
@@ -181,27 +210,31 @@ def run_simulation(tp_sell_frac=None, simulate_kindling=False):
                     if is_kindling_eligible(buy_trade, mock_current_mark_price, TSU_LIVE_SIGNAL_PROFILE):
                         kindling_add_usd = 25 # Assuming a fixed $25 step
                         kindling_add_price = mock_current_mark_price # Price at kindling time
-                        kindling_qty_added = kindling_add_usd / kindling_add_price
+                        kindling_qty_added = kindling_add_usd / kindling_add_price if kindling_add_price else 0
                         
                     total_qty_kindled = qty + kindling_qty_added
                     
                     # PnL with kindling: initial qty PnL + kindling qty PnL
                     # Assuming all sells at exit_price
-                    pnl_usd_kindling = (exit_price - entry_price) * qty + \
-                                       (exit_price - kindling_add_price) * kindling_qty_added
+                    pnl_usd_kindling = (exit_price - entry_price) * qty
+                    if kindling_qty_added and kindling_add_price:
+                        pnl_usd_kindling += (exit_price - kindling_add_price) * kindling_qty_added
                     
                     results[pair]['kindling_first'].append({
-                        'trade_id': trade['order_id'],
+                        'trade_id': trade.get('order_id'),
                         'type': 'kindling_first_tp',
                         'kindling_add_usd': kindling_add_usd,
                         'total_qty': total_qty_kindled,
-                        'final_pnl_usd': pnl_usd_kindling,
+                        'final_pnl_usd': float(pnl_usd_kindling),
                         'note': 'Simulated kindling step before TP (mocked eligibility)'
                     })
                 else:
                     results[pair]['kindling_first'].append({
-                        'trade_id': trade['order_id'],
+                        'trade_id': trade.get('order_id'),
                         'type': 'kindling_first_tp',
+                        'kindling_add_usd': 0,
+                        'total_qty': qty,
+                        'final_pnl_usd': float(pnl_usd_baseline),
                         'note': 'No corresponding BUY trade or not eligible for kindling simulation'
                     })
 
@@ -228,25 +261,34 @@ def format_report(results, tp_sell_frac, simulate_kindling):
     for pair, data in results.items():
         report_content.append(f"### {pair}")
         
+        def _sum_final(rows, key='final_pnl_usd'):
+            s = 0.0
+            n = 0
+            for r in rows or []:
+                if not isinstance(r, dict):
+                    continue
+                v = r.get(key, r.get('pnl_usd'))
+                if isinstance(v, (int, float)):
+                    s += float(v)
+                    n += 1
+            return s, n
+
         # Baseline
-        pnl_sum_b = sum(r['pnl_usd'] for r in data['baseline'] if isinstance(r['pnl_usd'], (int, float)))
-        num_b = len(data['baseline'])
+        pnl_sum_b, num_b = _sum_final(data['baseline'], key='pnl_usd')
         avg_pnl_b = pnl_sum_b / num_b if num_b > 0 else 0
         report_content.append(f"- **Baseline (Full Exit TP):** {num_b} trades, Total PnL: ${pnl_sum_b:.2f}, Avg PnL: ${avg_pnl_b:.2f}")
         total_pnl_baseline += pnl_sum_b
 
         # Partial Trail
         if tp_sell_frac:
-            pnl_sum_pt = sum(r['final_pnl_usd'] for r in data['partial_trail'] if isinstance(r['final_pnl_usd'], (int, float)))
-            num_pt = len(data['partial_trail'])
+            pnl_sum_pt, num_pt = _sum_final(data['partial_trail'], key='final_pnl_usd')
             avg_pnl_pt = pnl_sum_pt / num_pt if num_pt > 0 else 0
             report_content.append(f"- **Partial Trail TP (Mocked Add-Risk):** {num_pt} trades, Total PnL: ${pnl_sum_pt:.2f}, Avg PnL: ${avg_pnl_pt:.2f}")
             total_pnl_partial_trail += pnl_sum_pt
 
         # Kindling First
         if simulate_kindling:
-            pnl_sum_kf = sum(r['final_pnl_usd'] for r in data['kindling_first'] if isinstance(r['final_pnl_usd'], (int, float)))
-            num_kf = len(data['kindling_first'])
+            pnl_sum_kf, num_kf = _sum_final(data['kindling_first'], key='final_pnl_usd')
             avg_pnl_kf = pnl_sum_kf / num_kf if num_kf > 0 else 0
             report_content.append(f"- **Kindling First (Mocked Eligibility):** {num_kf} trades, Total PnL: ${pnl_sum_kf:.2f}, Avg PnL: ${avg_pnl_kf:.2f}")
             total_pnl_kindling_first += pnl_sum_kf

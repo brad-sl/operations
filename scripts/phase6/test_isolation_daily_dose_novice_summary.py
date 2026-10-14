@@ -39,7 +39,9 @@ class TestPlainSummary(unittest.TestCase):
         self.assertNotIn("active novice", p["user"].lower())
         self.assertIn("Fidelity", p["user"])
         self.assertIn("No buy/sell", p["user"])
-        self.assertIn("exactly 2 fact", p["user"].lower())
+        self.assertIn("new details only", p["user"].lower())
+        self.assertIn("do not restate", p["user"].lower())
+        self.assertIn("never restate or paraphrase", p["system"].lower())
         self.assertIn("never end with commentary", p["user"].lower())
 
     def test_mock_one_paragraph_no_per_card_disclaimer(self) -> None:
@@ -58,6 +60,57 @@ class TestPlainSummary(unittest.TestCase):
         self.assertNotIn("not investment advice", s.lower())
         self.assertNotIn("keep an eye", s.lower())
         self.assertNotIn("valuable insight", s.lower())
+        # Body must not paste the headline
+        self.assertNotIn("ledger exploit details emerge", s.lower())
+
+    def test_strip_headline_restatement(self) -> None:
+        from phase6.core.daily_dose_novice_summary import _clean_summary_text
+
+        card = {
+            "id": "g",
+            "title": "Grayscale Buys $20 Million of Solana",
+            "summary": (
+                "The purchase was allocated to Grayscale's Solana trust product. "
+                "Filing notes the add landed in the latest weekly flow report."
+            ),
+            "tickers": ["SOL-USD"],
+        }
+        redundant = (
+            "Grayscale has purchased $20 million worth of Solana for its ETF. "
+            "The fund has recently added this amount to its holdings."
+        )
+        out = _clean_summary_text(redundant, card=card)
+        self.assertNotIn("purchased $20 million worth of solana", out.lower())
+        # Should keep or fall through to blurb extras, not empty
+        self.assertTrue(len(out) > 20)
+        self.assertTrue(out.endswith("."))
+        # Trailing "$20M of SOL" restatement after a good detail sentence must die
+        mixed = (
+            "Grayscale's Solana ETF has recently launched and is already adding to its holdings. "
+            "The fund now includes a total of approximately $20 million worth of Solana (SOL)."
+        )
+        out_m = _clean_summary_text(mixed, card=card)
+        self.assertIn("etf", out_m.lower())
+        self.assertNotRegex(out_m.lower(), r"\$?20\s*million worth of solana")
+        # Same $ figure buried mid-sentence after a real product detail
+        buried = (
+            "Grayscale's Solana ETF has recently launched and is already seeing significant "
+            "investment, with the firm adding approximately $20 million worth of Solana to "
+            "its holdings. The ETF is part of Grayscale's broader strategy to expand its "
+            "cryptocurrency offerings."
+        )
+        out_b = _clean_summary_text(buried, card=card)
+        self.assertIn("etf", out_b.lower())
+        self.assertNotRegex(out_b.lower(), r"\$?20\s*million")
+        self.assertNotIn("broader strategy", out_b.lower())
+        # Detail-first body that adds product/timing should survive
+        detail = (
+            "The add was booked into Grayscale's Solana trust product. "
+            "Weekly flow filings list the purchase in the latest report."
+        )
+        out2 = _clean_summary_text(detail, card=card)
+        self.assertIn("trust", out2.lower())
+        self.assertNotIn("grayscale buys $20 million of solana", out2.lower())
 
     def test_repair_truncated_lead(self) -> None:
         from phase6.core.daily_dose_novice_summary import _clean_summary_text

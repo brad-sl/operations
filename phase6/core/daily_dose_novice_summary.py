@@ -25,8 +25,8 @@ from typing import Any, Dict, List, Optional, Sequence
 from phase6.adapters.judgment_jev import resolve_api_key
 from phase6.core.paths import PROJECT_ROOT, load_trading_basket
 
-METHOD = "daily_dose_plain_summary_v3_shadow"
-SCHEMA_VERSION = 3
+METHOD = "daily_dose_plain_summary_v4_shadow"
+SCHEMA_VERSION = 4
 
 # Post-level only (never append per card).
 POST_DISCLAIMER = (
@@ -52,10 +52,14 @@ _SYSTEM = (
     "Never call the reader a novice, beginner, or amateur. "
     "Plain English. If you must use ETF, listing, exploit, outflow, SPAC, or "
     "liquidation, add a brief parenthetical definition once. "
-    "2 complete sentences max. Sentence 1 = what happened (who/what/how much). "
-    "Sentence 2 = one concrete newsworthy detail already in the source "
-    "(amount split, venue, related coins, flow number). "
-    "HARD STOP after sentence 2. Forbidden phrases and patterns: "
+    "The headline is already shown above the body — NEVER restate or paraphrase it. "
+    "Do not repeat the headline's actor+action or its primary dollar figure. "
+    "1–2 complete sentences of NEW facts only (details not already in the headline). "
+    "Prefer: venue, product type, timing, mechanism, secondary amounts, related coins, "
+    "or what happens next if stated in the source. "
+    "If the blurb adds almost nothing beyond the headline, write ONE short new-detail "
+    "sentence — do not pad by rephrasing the title. "
+    "HARD STOP after the last fact sentence. Forbidden phrases and patterns: "
     "keep an eye, stay informed, valuable insights, consider positions, "
     "reminder, navigating, broader trends, investor confidence, market dynamics, "
     "highlighting … commitment/interest/vulnerabilities, noteworthy as it reflects, "
@@ -65,25 +69,27 @@ _SYSTEM = (
     "no title rewrite, no disclaimer, no moral, no lesson."
 )
 
-_USER_TMPL = """Headline: {title}
+_USER_TMPL = """Headline (already shown to reader — do NOT restate): {title}
 Source blurb: {summary}
 Related coins: {tickers}
 Watchlist context: {basket}
 Currently held (if any): {held}
 
-Rewrite as EXACTLY 2 fact sentences. No third sentence.
-S1: what happened (actor + action + size/venue if given).
-S2: one concrete detail from the blurb (numbers, venue, coins, flows).
+Write 1–2 fact sentences of NEW details only. No third sentence.
+Body must NOT open with or paraphrase the headline (who/what/how much already there).
+Pull extras from the blurb: venue, product (e.g. ETF), timing, mechanism, secondary
+numbers, related coins, testing/rollout, custody path, conditions.
+If blurb ≈ headline, one short new-detail sentence is enough — never rephrase the title.
 Rules:
 - Friendly plain English; no hype; not a tutorial
 - Do not label the reader novice/beginner
 - Jargon only if needed, with a short parenthetical once
-- Facts only from headline/blurb — invent nothing
+- Facts only from blurb/headline extras — invent nothing
 - No buy/sell/hold, targets, forecasts
 - Never end with commentary (ban: noteworthy / highlights / reflects / concerns /
   attention / opportunities / acceptance / confidence / dynamics / keep an eye)
 - No emojis, bullets, or disclaimer
-- End sentence 2 with a period and STOP
+- End the last sentence with a period and STOP
 """
 
 # Tutorial / soft-advice codas the model loves — strip if they sneak in.
@@ -223,21 +229,21 @@ def build_prompt(card: Dict[str, Any], *, basket: Sequence[str], held: Sequence[
 
 
 def mock_summary(card: Dict[str, Any], *, basket: Sequence[str], held: Sequence[str]) -> str:
-    """Deterministic stand-in when dry_run / no LLM — facts only, no tutorial coda."""
-    title = _clip(str(card.get("title") or card.get("title_display") or ""), MAX_TITLE_CHARS)
+    """Deterministic stand-in when dry_run / no LLM — new details only, no title echo."""
     blurb = _clip(str(card.get("summary") or ""), 200)
     ticks = card.get("tickers") or []
     if isinstance(ticks, str):
         ticks = [ticks]
     tick_s = _pretty_ticks(ticks) or "major coins"
     if blurb:
-        return (
-            f"{blurb} The story centers on {tick_s}, a concrete market event "
-            f"rather than a generic price roundup."
+        # Prefer blurb as body; never paste the headline again.
+        return _clean_summary_text(
+            f"{blurb} Related coins named include {tick_s}.",
+            card=card,
         )
-    return (
-        f"{title} The update is a concrete development around {tick_s}, "
-        f"not a generic price roundup."
+    return _clean_summary_text(
+        f"Related coins named in the report include {tick_s}.",
+        card=card,
     )
 
 
@@ -321,6 +327,9 @@ def _strip_wrapup_sentences(text: str) -> str:
                 "reflects a larger trend of institutional",
                 "need for enhanced security measures",
                 "drawn attention to the need",
+                "continues to expand its portfolio",
+                "which also includes other",
+                "among other cryptocurrencies",
                 "marks an important step",
                 "marking an important step",
                 "is an important step",
@@ -350,14 +359,12 @@ def _repair_truncated_lead(text: str, card: Dict[str, Any]) -> str:
     )
     if broken:
         blurb = _clip(str(card.get("summary") or ""), 220)
-        title = _clip(str(card.get("title") or card.get("title_display") or ""), MAX_TITLE_CHARS)
         ticks = card.get("tickers") or []
         if isinstance(ticks, str):
             ticks = [ticks]
         tick_s = _pretty_ticks(ticks) or "major coins"
-        # Prefer a clean factual rewrite from blurb/title — avoid mid-dollar fragments.
+        # Prefer blurb extras — never fall back to pasting the headline into the body.
         if blurb:
-            # Drop "Here's everything you need to know about" fluff if present
             blurb2 = re.sub(
                 r"(?i)^here'?s everything you need to know about\s+",
                 "",
@@ -365,8 +372,213 @@ def _repair_truncated_lead(text: str, card: Dict[str, Any]) -> str:
             ).strip()
             blurb2 = blurb2[:1].upper() + blurb2[1:] if blurb2 else blurb2
             return f"{blurb2} Related coins named in the report include {tick_s}."
-        return f"{title} Related coins named in the report include {tick_s}."
+        return f"Related coins named in the report include {tick_s}."
     return t
+
+
+def _norm_words(s: str) -> List[str]:
+    return re.findall(r"[a-z0-9$%]+", (s or "").lower())
+
+
+def _token_jaccard(a: Sequence[str], b: Sequence[str]) -> float:
+    sa, sb = set(a), set(b)
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / float(len(sa | sb))
+
+
+def _strip_title_amount_clauses(sentence: str, title: str) -> str:
+    """Remove inline clauses that only restate the headline's primary $ figure."""
+    s = (sentence or "").strip()
+    if not s or not title:
+        return s
+    amounts = set(re.findall(r"\d+(?:\.\d+)?", title))
+    if not amounts:
+        return s
+    # Coin-ish tokens from title (skip pure numbers / million)
+    stop = {
+        "a", "an", "the", "of", "to", "for", "and", "or", "in", "on", "as", "is",
+        "buys", "buy", "bought", "purchase", "purchases", "million", "billion",
+        "thousand", "after", "over", "into", "with", "from", "by", "set", "launch",
+        "launches", "another", "spot", "etf", "seeks", "seeks", "brings",
+    }
+    coins = [
+        w for w in _norm_words(title)
+        if w not in stop and not re.fullmatch(r"\d+(?:\.\d+)?", w) and len(w) > 2
+    ]
+    coin_alt = "|".join(re.escape(c) for c in coins[:6]) if coins else r"[a-z]{3,12}"
+    amt_alt = "|".join(re.escape(a) for a in sorted(amounts, key=len, reverse=True))
+    # ", with the firm adding approximately $20 million worth of Solana…"
+    # "…adding approximately $20 million worth of Solana to its holdings"
+    patterns = [
+        rf"(?i)(?:,|\s+with\s+(?:the\s+)?(?:firm|fund|company|manager)\s+)?\s*"
+        rf"(?:adding|added|add|purchased|purchase|bought|buying|includes?|including)\s+"
+        rf"(?:a\s+total\s+of\s+|approximately\s+|about\s+|roughly\s+|nearly\s+)?"
+        rf"\$?(?:{amt_alt})(?:\s*million|\s*billion)?\s*"
+        rf"(?:worth\s+of\s+)?(?:{coin_alt})(?:\s*\([a-z]{{2,6}}\))?"
+        rf"(?:\s+to\s+its\s+holdings)?",
+        rf"(?i),\s*with\s+(?:the\s+)?(?:firm|fund|company)\s+"
+        rf"(?:adding|already\s+adding)[^.]{{0,80}}"
+        rf"\$?(?:{amt_alt})[^.]{{0,40}}(?:{coin_alt})",
+        rf"(?i)\s+with\s+(?:the\s+)?firm\s+adding\s+approximately\s+"
+        rf"\$?(?:{amt_alt})\s*million\s+worth\s+of\s+(?:{coin_alt})"
+        rf"(?:\s+to\s+its\s+holdings)?",
+    ]
+    out = s
+    for pat in patterns:
+        out2 = re.sub(pat, "", out).strip(" ,;")
+        out2 = re.sub(r"\s{2,}", " ", out2)
+        out2 = re.sub(r"\s+,", ",", out2)
+        out2 = re.sub(r",\s*\.", ".", out2)
+        out2 = re.sub(r"\.\s*\.", ".", out2)
+        out = out2
+    # Soft strategy pad tacked on
+    out = re.sub(
+        r"(?i)\s*The ETF is part of .{0,80}expand its cryptocurrency offerings\.?\s*$",
+        "",
+        out,
+    ).strip()
+    out = re.sub(
+        r"(?i)\s*This launch adds to the growing interest in .{0,60}\.?\s*$",
+        "",
+        out,
+    ).strip()
+    if out and out[-1] not in ".!?":
+        # If we stripped mid-sentence trailing junk, close cleanly
+        if len(out) > 12:
+            out = out.rstrip(",;:") + "."
+    return out
+
+
+def _strip_headline_restatement(text: str, card: Dict[str, Any]) -> str:
+    """Drop body sentences that mostly rephrase the already-shown headline.
+
+    Title is rendered above the body in format_post — repeating who/what/how much
+    is pure redundancy. Keep sentences that add venue, timing, mechanism, etc.
+    """
+    t = re.sub(r"\s+", " ", (text or "").strip())
+    if not t:
+        return t
+    title = str(card.get("title") or card.get("title_display") or "").strip()
+    if not title:
+        return t
+    title_words = _norm_words(title)
+    # Drop ultra-common glue so "buys / of / the" don't inflate overlap alone.
+    stop = {
+        "a", "an", "the", "of", "to", "for", "and", "or", "in", "on", "as", "is",
+        "has", "have", "had", "its", "it", "this", "that", "with", "from", "by",
+        "at", "be", "been", "are", "was", "were", "will", "would", "can", "could",
+        "after", "over", "into", "than", "then", "also", "just", "about", "into",
+        "which", "also", "other", "like", "within", "already", "recently",
+    }
+    title_core = [w for w in title_words if w not in stop and len(w) > 1]
+    if not title_core:
+        title_core = title_words
+    # Money figures in the title (e.g. $20 / 20 / 765) — repeating them is title echo.
+    title_amounts = set(re.findall(r"\d+(?:\.\d+)?", title))
+    title_amounts |= {a.replace(",", "") for a in re.findall(r"\d[\d,]*(?:\.\d+)?", title)}
+    # Soft pad that adds no fact
+    soft_pad = re.compile(
+        r"(?i)\b("
+        r"continues to expand(?: its)?(?: portfolio)?"
+        r"|expand(?:s|ing)? its portfolio"
+        r"|which also includes other"
+        r"|among other (?:cryptocurrencies|assets|coins)"
+        r"|broader strategy to expand"
+        r"|growing interest in"
+        r"|significant investment"
+        r")\b"
+    )
+    parts = _split_sentences(t)
+    if not parts:
+        return t
+    kept: List[str] = []
+    for i, p in enumerate(parts):
+        p = _strip_title_amount_clauses(p, title)
+        if not p or len(_norm_words(p)) < 4:
+            continue
+        if soft_pad.search(p) and len(_norm_words(p)) <= 18:
+            if re.match(
+                r"(?i)^(the fund |it |the product |the etf )?(continues to expand|expand|is part of)",
+                p.strip(),
+            ) or "which also includes other" in p.lower() or "broader strategy" in p.lower():
+                continue
+        pw = _norm_words(p)
+        p_core = [w for w in pw if w not in stop and len(w) > 1] or pw
+        jac = _token_jaccard(title_core, p_core)
+        p_amounts = set(re.findall(r"\d+(?:\.\d+)?", p))
+        shared_amt = bool(title_amounts and (title_amounts & p_amounts))
+        # Leading sentence that is mostly the title → drop.
+        if shared_amt and jac >= 0.35 and i == 0:
+            continue
+        if i == 0 and jac >= 0.50:
+            continue
+        if jac >= 0.78:
+            continue
+        # Later sentence whose only hard fact is the title's $ figure → drop.
+        if shared_amt:
+            non_title = [w for w in p_core if w not in set(title_core)]
+            extra_signal = any(
+                w in non_title
+                for w in (
+                    "etf", "trust", "filing", "filings", "weekly", "custody", "difc",
+                    "lmax", "december", "testing", "app", "dao", "pause", "paused",
+                    "renew", "migrate", "hong", "kong", "pando", "branch", "collateral",
+                    "launch", "launched", "second", "first",
+                )
+            )
+            # Pure amount restatement (even mid-body)
+            if re.search(
+                r"(?i)(?:total of |approximately |about |roughly )?\$?\d[\d,]*(?:\.\d+)?\s*"
+                r"(?:million|billion)?\s*(?:worth of )?(?:solana|bitcoin|ethereum|xrp|ada|link)",
+                p,
+            ) and not extra_signal:
+                continue
+            if not extra_signal and len(non_title) <= 6 and i > 0:
+                continue
+        # Short near-paraphrases with heavy title-core overlap
+        if i == 0 and len(p_core) <= max(10, len(title_core) + 4):
+            overlap = set(title_core) & set(p_core)
+            if len(overlap) >= max(3, int(0.65 * len(title_core))):
+                continue
+        # Soft trend/region coda with no hard fact
+        if re.search(
+            r"(?i)following the recent trend|in the region\b|broader (?:market|crypto) (?:trend|move)|"
+            r"growing interest in|broader strategy to expand",
+            p,
+        ):
+            continue
+        kept.append(p)
+    if not kept:
+        # Fall back to blurb-only extras when the model only restated the title.
+        blurb = _clip(str(card.get("summary") or ""), 220)
+        ticks = card.get("tickers") or []
+        if isinstance(ticks, str):
+            ticks = [ticks]
+        tick_s = _pretty_ticks(ticks)
+        if blurb:
+            blurb2 = re.sub(
+                r"(?i)^here'?s everything you need to know about\s+",
+                "",
+                blurb,
+            ).strip()
+            blurb2 = _strip_title_amount_clauses(blurb2, title)
+            b_core = [w for w in _norm_words(blurb2) if w not in stop and len(w) > 1]
+            b_amounts = set(re.findall(r"\d+(?:\.\d+)?", blurb2))
+            if (not blurb2) or _token_jaccard(title_core, b_core) >= 0.50 or (
+                title_amounts and title_amounts <= b_amounts and len(b_core) <= len(title_core) + 6
+            ):
+                if tick_s:
+                    return f"Related coins named in the report include {tick_s}."
+                return blurb2 or (parts[-1] if parts else "")
+            return blurb2 if blurb2.endswith((".", "!", "?")) else (blurb2 + ".")
+        if tick_s:
+            return f"Related coins named in the report include {tick_s}."
+        return parts[-1]
+    out = " ".join(kept[:2]).strip()
+    if out and out[-1] not in ".!?":
+        out += "."
+    return out
 
 
 def _clean_summary_text(text: str, card: Optional[Dict[str, Any]] = None) -> str:
@@ -374,6 +586,8 @@ def _clean_summary_text(text: str, card: Optional[Dict[str, Any]] = None) -> str
     t = _strip_wrapup_sentences(t)
     if card is not None:
         t = _repair_truncated_lead(t, card)
+        t = _strip_wrapup_sentences(t)
+        t = _strip_headline_restatement(t, card)
         t = _strip_wrapup_sentences(t)
     return _clip_paragraph(t, MAX_OUT_CHARS)
 

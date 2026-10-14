@@ -8,11 +8,8 @@
       "NEAR-USD",
       "DOGE-USD",
       "PYTH-USD",
-      "SUI-USD",
       "LINK-USD",
-      "TIA-USD",
       "ADA-USD",
-      "ARB-USD",
       "ZEC-USD"
     ],
     "cycle_interval_seconds": 1800,

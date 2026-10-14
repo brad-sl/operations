@@ -183,6 +183,185 @@ def test_no_write_side_effects():
     )
     assert payload["actions_taken"] == []
     assert payload["measure_only"] is True
+    assert payload.get("hygiene", {}).get("live_apply") is False
+
+
+def test_stale_no_fill_hygiene():
+    """A: never-filled episodes past max age close on chart only."""
+    now = datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)
+    eps = [
+        {
+            "pick_id": "old_sig",
+            "add_pair": "PENGU-USD",
+            "promoted_at": "2026-08-20T00:00:00+00:00",
+            "stage": "signaled",
+            "filled": False,
+            "status": "open",
+            "episode_open": True,
+            "paper_ret_7d_pct": 2.0,
+        },
+        {
+            "pick_id": "young_sig",
+            "add_pair": "NEAR-USD",
+            "promoted_at": "2026-10-01T00:00:00+00:00",
+            "stage": "signaled",
+            "filled": False,
+            "status": "open",
+            "episode_open": True,
+        },
+        {
+            "pick_id": "open_fill",
+            "add_pair": "ADA-USD",
+            "promoted_at": "2026-08-01T00:00:00+00:00",
+            "stage": "filled_open",
+            "filled": True,
+            "status": "open",
+            "episode_open": True,
+            "realized_pnl_sum": 0.5,
+        },
+    ]
+    out = m.apply_stale_episode_hygiene(eps, now=now, hygiene=m.DEFAULT_HYGIENE)
+    by = {e["add_pair"]: e for e in out}
+    assert by["PENGU-USD"]["stage"] == "stale_no_fill"
+    assert by["PENGU-USD"]["stale_flushed"] is True
+    assert by["PENGU-USD"]["status"] == "closed"
+    assert by["PENGU-USD"]["episode_open"] is False
+    assert by["NEAR-USD"]["stage"] == "signaled"
+    assert by["NEAR-USD"].get("stale_flushed") is False
+    # filled_open is never stale by age alone
+    assert by["ADA-USD"]["stage"] == "filled_open"
+    assert by["ADA-USD"].get("stale_flushed") is False
+
+
+def test_eject_autopsy_and_flush_candidates():
+    """B: eject-only closed fills tagged; flush list measure-only."""
+    now = datetime(2026, 10, 14, 12, 0, tzinfo=timezone.utc)
+    eps = [
+        {
+            "pick_id": "hype",
+            "add_pair": "HYPE-USD",
+            "promoted_at": "2026-09-01T00:00:00+00:00",
+            "stage": "filled_loss",
+            "filled": True,
+            "realized_pnl_sum": -8.5,
+            "hours_to_first_fill": 40.0,
+        },
+        {
+            "pick_id": "zec",
+            "add_pair": "ZEC-USD",
+            "promoted_at": "2026-09-03T00:00:00+00:00",
+            "stage": "filled_win",
+            "filled": True,
+            "realized_pnl_sum": 2.1,
+            "hours_to_first_fill": 12.0,
+        },
+        {
+            "pick_id": "pengu",
+            "add_pair": "PENGU-USD",
+            "promoted_at": "2026-08-20T00:00:00+00:00",
+            "stage": "signaled",
+            "filled": False,
+            "status": "open",
+            "episode_open": True,
+        },
+    ]
+    eps = m.apply_stale_episode_hygiene(eps, now=now, hygiene=m.DEFAULT_HYGIENE)
+    trades = [
+        {
+            "pair": "HYPE-USD",
+            "side": "BUY",
+            "ts": "2026-09-02T00:00:00+00:00",
+            "pnl_usd": None,
+        },
+        {
+            "pair": "HYPE-USD",
+            "side": "SELL",
+            "ts": "2026-09-05T00:00:00+00:00",
+            "pnl_usd": -8.5,
+            "reason": "tryout_scale_window_eject",
+        },
+        {
+            "pair": "ZEC-USD",
+            "side": "BUY",
+            "ts": "2026-09-04T00:00:00+00:00",
+        },
+        {
+            "pair": "ZEC-USD",
+            "side": "SELL",
+            "ts": "2026-09-10T00:00:00+00:00",
+            "pnl_usd": 2.1,
+            "reason": "take_profit_hit",
+        },
+    ]
+    autopsy = m.run_eject_autopsy(eps, trades=trades, hygiene=m.DEFAULT_HYGIENE)
+    assert autopsy["enabled"] is True
+    assert autopsy["n_eject_only_or_dominant"] >= 1
+    eject_pairs = {r["add_pair"] for r in autopsy["eject_rows"]}
+    assert "HYPE-USD" in eject_pairs
+    assert "ZEC-USD" not in eject_pairs
+
+    flush = m.build_flush_candidates(
+        eps,
+        autopsy,
+        holdings={"HYPE-USD": 0.0, "PENGU-USD": 0.0, "BTC-USD": 100.0},
+        hygiene=m.DEFAULT_HYGIENE,
+        active_basket=["HYPE-USD", "PENGU-USD", "BTC-USD", "ZEC-USD"],
+    )
+    assert flush["live_apply"] is False
+    pairs = {c["pair"]: c for c in flush["candidates"]}
+    assert "HYPE-USD" in pairs
+    assert "eject_only_loss" in pairs["HYPE-USD"]["reasons"]
+    assert "PENGU-USD" in pairs
+    assert "stale_no_fill" in pairs["PENGU-USD"]["reasons"]
+    # sticky protect never listed
+    assert "BTC-USD" not in pairs
+
+
+def test_build_writes_hygiene_artifacts(tmp_path: Path):
+    (tmp_path / "data" / "state").mkdir(parents=True)
+    (tmp_path / "reports").mkdir(parents=True)
+    (tmp_path / "config").mkdir(parents=True)
+    (tmp_path / "trades").mkdir(parents=True)
+    (tmp_path / "config" / "promote_graduation_hygiene.json").write_text(
+        json.dumps(m.DEFAULT_HYGIENE) + "\n"
+    )
+    (tmp_path / "trades" / "phase6_trades.jsonl").write_text(
+        json.dumps(
+            {
+                "pair": "RAVE-USD",
+                "side": "SELL",
+                "ts": "2026-08-20T00:00:00+00:00",
+                "pnl_usd": -15.0,
+                "reason": "tryout_eject",
+            }
+        )
+        + "\n"
+    )
+    # age ledger so stale can fire on NEAR/WLD relative to NOW=2026-09-14
+    ledger = _ledger()
+    ledger[1]["promoted_at"] = "2026-07-01T12:00:00+00:00"  # NEAR old signaled
+    ledger[2]["promoted_at"] = "2026-07-10T12:00:00+00:00"  # WLD old signaled
+    payload = m.build_chart(
+        ledger=ledger,
+        summary=_summary(),
+        grad={"funnel": {}, "picks": []},
+        idle={"mode": "observe_only", "hard_eject": False, "n_idle_flagged": 0, "idle_flagged_pairs": []},
+        now=NOW,
+        write=True,
+        append_history=False,
+        root=tmp_path,
+    )
+    assert payload["hygiene"]["live_apply"] is False
+    assert payload["hygiene"]["n_stale_flushed"] >= 1
+    assert "eject_autopsy" in payload
+    assert "flush_candidates" in payload
+    assert (tmp_path / "data" / "state" / "promote_eject_autopsy_latest.json").exists()
+    assert (tmp_path / "data" / "state" / "promote_flush_candidates_latest.json").exists()
+    assert (tmp_path / "reports" / "PROMOTE_EJECT_AUTOPSY_LATEST.md").exists()
+    assert payload["flush_candidates"]["live_apply"] is False
+    board = m.short_board(payload)
+    assert "stale_flush=" in board
+    assert "eject_tax=" in board
 
 
 if __name__ == "__main__":
@@ -190,6 +369,10 @@ if __name__ == "__main__":
     test_claim_bar_blocks_thin_n()
     test_svg_render_nonempty()
     test_no_write_side_effects()
+    test_stale_no_fill_hygiene()
+    test_eject_autopsy_and_flush_candidates()
     with tempfile.TemporaryDirectory() as d:
         test_build_write_and_crumb(Path(d))
+    with tempfile.TemporaryDirectory() as d:
+        test_build_writes_hygiene_artifacts(Path(d))
     print("PASS: promote_graduation_chart isolation")

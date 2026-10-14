@@ -1,0 +1,34 @@
+{
+  "schema": "promote_graduation_hygiene_v1",
+  "status": "MEASURE_ONLY",
+  "live_apply": false,
+  "note": "Chart + candidate hygiene only. Never auto-removes basket seats or places orders. Brad GO required for any membership flush.",
+  "stale_episode": {
+    "enabled": true,
+    "max_age_days_no_fill": 30,
+    "stages": ["signaled", "blocked_no_fill", "seated"],
+    "close_stage": "stale_no_fill",
+    "note": "Never-filled promote episodes older than max_age_days are closed on the chart so open_eps is honest. Does not touch config.pairs."
+  },
+  "eject_autopsy": {
+    "enabled": true,
+    "eject_reason_substrings": [
+      "tryout_scale_window_eject",
+      "scale_window_eject",
+      "tryout_eject",
+      "quality_tryout_eject",
+      "eject"
+    ],
+    "note": "Classify closed filled_loss episodes whose exit path was eject-tax vs SL/other."
+  },
+  "flush_candidates": {
+    "enabled": true,
+    "include_stale_no_fill": true,
+    "include_eject_only_loss": true,
+    "include_closed_loss_not_held": true,
+    "min_loss_usd": 0.01,
+    "protect_pairs": ["BTC-USD", "ETH-USD", "PAXG-USD"],
+    "require_not_in_active_held_usd_above": 5.0,
+    "note": "Operator list only. REMOVE from basket still needs dual_agree/Brad GO + promote script. Residual open bags are not liquidated by this path."
+  }
+}

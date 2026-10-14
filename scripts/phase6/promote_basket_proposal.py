@@ -57,9 +57,12 @@ def main() -> int:
     )
     ap.add_argument(
         "--manual-remove",
-        type=str,
-        default="",
-        help="Manual promote: remove this pair",
+        action="append",
+        default=[],
+        help=(
+            "Manual promote: remove this pair. Repeat flag or comma-separate for multi-remove. "
+            "With no --manual-add = remove-only hygiene flush (no ADD seat)."
+        ),
     )
     ap.add_argument(
         "--allow-residual-hold",
@@ -85,7 +88,32 @@ def main() -> int:
     )
     args = ap.parse_args()
 
-    if not args.from_proposed and not args.refresh and not (args.manual_add and args.manual_remove):
+    def _norm_pair(raw: str) -> str:
+        s = str(raw or "").strip().upper()
+        if not s:
+            return ""
+        if s.endswith("-USD"):
+            return s
+        if "-" in s:
+            return s
+        return f"{s}-USD"
+
+    def _parse_removes(raw_list: List[str]) -> List[str]:
+        out: List[str] = []
+        seen: set = set()
+        for chunk in raw_list or []:
+            for part in str(chunk).split(","):
+                p = _norm_pair(part)
+                if not p or p in seen:
+                    continue
+                seen.add(p)
+                out.append(p)
+        return out
+
+    removes = _parse_removes(list(args.manual_remove or []))
+    add_one = _norm_pair(args.manual_add) if args.manual_add else ""
+
+    if not args.from_proposed and not args.refresh and not removes and not add_one:
         args.refresh = True  # default: honest holdings-aware refresh
 
     holdings = load_holdings_usd()
@@ -96,29 +124,16 @@ def main() -> int:
     before: List[str] = []
     source = "pool_cycling"
     methodology: Dict[str, Any] = {}
+    remove_only = False
 
-    if args.manual_add and args.manual_remove:
+    if removes and add_one:
         tcfg0 = _load_json(TRADING_CONFIG_PHASE6)
         before = list((tcfg0.get("global_settings") or {}).get("pairs") or [])
-        rem = args.manual_remove.strip().upper()
-        if not rem.endswith("-USD"):
-            rem = rem + "-USD" if "-" not in rem else rem
-        add = args.manual_add.strip().upper()
-        if not add.endswith("-USD"):
-            add = add + "-USD" if "-" not in add else add
-        # normalize common form
-        if not rem.endswith("-USD"):
-            rem = f"{rem}-USD"
-        if not add.endswith("-USD"):
-            add = f"{add}-USD"
-        # softer normalize: keep as given if already *-USD
-        rem = args.manual_remove if "-USD" in args.manual_remove.upper() else rem
-        add = args.manual_add if "-USD" in args.manual_add.upper() else add
-        rem = rem.upper() if rem.endswith("-USD") else args.manual_remove
-        add = add.upper() if add.endswith("-USD") else args.manual_add
-        # Final clean
-        rem = str(args.manual_remove).strip()
-        add = str(args.manual_add).strip()
+        if len(removes) != 1:
+            print("REFUSE: swap mode needs exactly one --manual-remove with --manual-add")
+            return 6
+        rem = removes[0]
+        add = add_one
         if rem not in before:
             print(f"REFUSE: {rem} not in live basket {before}")
             return 6
@@ -143,7 +158,6 @@ def main() -> int:
             "manual": True,
             "rationale": "operator promote; discovery/cycle may have blocked held ejects",
         }
-        # Enrich scores from latest cycler/discovery if present
         try:
             if PROPOSED_PAIRS_JSON.exists():
                 methodology["last_proposed"] = _load_json(PROPOSED_PAIRS_JSON)
@@ -156,6 +170,40 @@ def main() -> int:
         except Exception:
             pass
         print("Manual swap prepared:", swaps)
+    elif removes and not add_one:
+        # Hygiene flush: drop dead seats, no ADD (Brad GO remove-only)
+        tcfg0 = _load_json(TRADING_CONFIG_PHASE6)
+        before = list((tcfg0.get("global_settings") or {}).get("pairs") or [])
+        remove_only = True
+        source = "manual_hygiene_remove"
+        methodology = {
+            "manual": True,
+            "remove_only": True,
+            "rationale": (
+                "operator hygiene flush — free seat narrative / eligibility; "
+                "no ADD; no orders; open inventory not liquidated"
+            ),
+        }
+        missing = [r for r in removes if r not in before]
+        if missing:
+            print(f"REFUSE: not in live basket: {missing} (live={before})")
+            return 6
+        for rem in removes:
+            held = float(holdings.get(rem, 0.0) or 0.0)
+            swaps.append(
+                {
+                    "remove": rem,
+                    "add": None,
+                    "remove_score": None,
+                    "add_score": None,
+                    "delta": None,
+                    "reason": f"hygiene remove-only {rem} (operator Brad GO)",
+                    "remove_held_usd": held,
+                    "remove_only": True,
+                }
+            )
+        proposed_active = [p for p in before if p not in set(removes)]
+        print("Manual remove-only prepared:", swaps)
     elif args.refresh:
         report = run_pool_cycling(
             cfg=PoolCyclingConfig(),
@@ -194,10 +242,11 @@ def main() -> int:
         return 1
 
     # Safety gates on each swap
-    sticky = {"BTC-USD", "ETH-USD"}
+    sticky = {"BTC-USD", "ETH-USD", "PAXG-USD"}
     for sw in swaps:
         rem = sw.get("remove")
         add = sw.get("add")
+        is_remove_only = bool(sw.get("remove_only") or remove_only or not add)
         if rem in sticky:
             print(f"REFUSE: cannot remove sticky {rem}")
             return 3
@@ -211,6 +260,11 @@ def main() -> int:
                 f"or wait for flat/exit. (Proposal claimed held=${sw.get('remove_held_usd')})"
             )
             return 4
+        if is_remove_only:
+            sw["remove_only"] = True
+            sw["add"] = None
+            # no ADD gates
+            continue
         if not add:
             print("REFUSE: missing add pair")
             return 5
@@ -281,11 +335,15 @@ def main() -> int:
     # Apply swaps onto live before list
     after = list(before)
     for sw in swaps:
-        rem, add = sw["remove"], sw["add"]
+        rem, add = sw.get("remove"), sw.get("add")
+        is_remove_only = bool(sw.get("remove_only") or not add)
+        if is_remove_only:
+            after = [p for p in after if p != rem]
+            continue
         if rem in after:
             after = [add if p == rem else p for p in after]
-        elif add not in after:
-            after.append(add)
+        elif add and add not in after:
+            after.append(str(add))
     # dedupe
     seen = set()
     after_u: List[str] = []
@@ -298,10 +356,16 @@ def main() -> int:
     print("BEFORE:", before)
     print("AFTER: ", after)
     for sw in swaps:
-        print(
-            f"  {sw.get('remove')} -> {sw.get('add')} "
-            f"Δ={sw.get('delta')} held_live=${sw.get('remove_held_usd_live', 0):.2f}"
-        )
+        if sw.get("remove_only") or not sw.get("add"):
+            print(
+                f"  REMOVE {sw.get('remove')} (no ADD) "
+                f"held_live=${sw.get('remove_held_usd_live', 0):.2f}"
+            )
+        else:
+            print(
+                f"  {sw.get('remove')} -> {sw.get('add')} "
+                f"Δ={sw.get('delta')} held_live=${sw.get('remove_held_usd_live', 0):.2f}"
+            )
 
     if args.dry_run:
         print("DRY RUN — config not written, metrics not recorded.")
@@ -328,9 +392,28 @@ def main() -> int:
     TRADING_CONFIG_PHASE6.write_text(json.dumps(new_cfg, indent=2) + "\n")
     print(f"Wrote {TRADING_CONFIG_PHASE6} backup={bak.name}")
 
-    # Metrics — one record per swap
+    # Metrics — one record per swap (skip promote-seat mint on remove-only)
+    hygiene_receipts: List[Dict[str, Any]] = []
     for sw in swaps:
         held = float(sw.get("remove_held_usd_live") or sw.get("remove_held_usd") or 0.0)
+        if sw.get("remove_only") or not sw.get("add"):
+            hygiene_receipts.append(
+                {
+                    "ts": datetime.now(timezone.utc).isoformat(),
+                    "action": "remove_only",
+                    "remove_pair": sw.get("remove"),
+                    "held_usd": held,
+                    "reason": sw.get("reason"),
+                    "source": source,
+                    "basket_before": before,
+                    "basket_after": after,
+                    "config_backup": bak.name,
+                    "no_orders": True,
+                    "note": "hygiene flush — not a promote seat; not written to basket_pick_metrics",
+                }
+            )
+            print(f"Hygiene receipt REMOVE {sw.get('remove')} held=${held:.2f} (no pick ledger mint)")
+            continue
         rec = record_promotion(
             add_pair=str(sw["add"]),
             remove_pair=str(sw.get("remove")) if sw.get("remove") else None,
@@ -347,12 +430,20 @@ def main() -> int:
             notes=[
                 f"config_backup={bak.name}",
                 f"promoted_at={datetime.now(timezone.utc).isoformat()}",
+                "remove_only=false",
             ],
         )
         print(
             f"Metrics pick_id={rec.pick_id} add={rec.add_pair} "
             f"base_px={rec.baseline_add.get('price')} ok={rec.baseline_add.get('ok')}"
         )
+
+    if hygiene_receipts:
+        hpath = PROJECT_ROOT / "data" / "state" / "basket_hygiene_remove_receipts.jsonl"
+        with hpath.open("a") as fh:
+            for row in hygiene_receipts:
+                fh.write(json.dumps(row, default=str) + "\n")
+        print(f"Appended {len(hygiene_receipts)} hygiene receipts → {hpath.name}")
 
     # Sidecar promote receipt
     receipt = {
@@ -362,6 +453,11 @@ def main() -> int:
         "swaps": swaps,
         "backup": str(bak),
         "holdings_at_promote": holdings,
+        "remove_only": bool(remove_only),
+        "no_orders": True,
+        "brad_go": True,
+        "source": source,
+        "hygiene_receipts": hygiene_receipts,
     }
     (PROJECT_ROOT / "data" / "state" / "basket_promote_latest.json").write_text(
         json.dumps(receipt, indent=2, default=str) + "\n"

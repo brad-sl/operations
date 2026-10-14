@@ -35,18 +35,54 @@ PICK_LEDGER = STATE / "basket_pick_metrics.jsonl"
 PICK_SUMMARY = STATE / "basket_pick_metrics_summary.json"
 GRAD_LATEST = STATE / "basket_seat_graduation_latest.json"
 IDLE_LATEST = STATE / "basket_seat_idle_latest.json"
+HYGIENE_CFG = ROOT / "config" / "promote_graduation_hygiene.json"
+TRADES_JSONL = ROOT / "trades" / "phase6_trades.jsonl"
+HOLDINGS_STATE = STATE / "phase6_live_state.json"
 
 LATEST_JSON = STATE / "promote_graduation_chart_latest.json"
 CRUMBS = STATE / "promote_graduation_crumbs.jsonl"
 REPORT_MD = REPORTS / "PROMOTE_GRADUATION_CHART_LATEST.md"
+EJECT_AUTOPSY_MD = REPORTS / "PROMOTE_EJECT_AUTOPSY_LATEST.md"
+EJECT_AUTOPSY_JSON = STATE / "promote_eject_autopsy_latest.json"
+FLUSH_CANDIDATES_JSON = STATE / "promote_flush_candidates_latest.json"
 FUNNEL_SVG = CHARTS / "promote_graduation_funnel_latest.svg"
 OUTCOMES_SVG = CHARTS / "promote_graduation_outcomes_latest.svg"
 PAPER_SVG = CHARTS / "promote_graduation_paper_latest.svg"
 
-SCHEMA = "promote_graduation_chart_v1"
+SCHEMA = "promote_graduation_chart_v2"
 CLAIM_MIN_N = 20
 CLAIM_MIN_HIT7 = 0.40
 CLAIM_MIN_FILLS = 10
+
+DEFAULT_HYGIENE: Dict[str, Any] = {
+    "schema": "promote_graduation_hygiene_v1",
+    "live_apply": False,
+    "stale_episode": {
+        "enabled": True,
+        "max_age_days_no_fill": 30,
+        "stages": ["signaled", "blocked_no_fill", "seated"],
+        "close_stage": "stale_no_fill",
+    },
+    "eject_autopsy": {
+        "enabled": True,
+        "eject_reason_substrings": [
+            "tryout_scale_window_eject",
+            "scale_window_eject",
+            "tryout_eject",
+            "quality_tryout_eject",
+            "eject",
+        ],
+    },
+    "flush_candidates": {
+        "enabled": True,
+        "include_stale_no_fill": True,
+        "include_eject_only_loss": True,
+        "include_closed_loss_not_held": True,
+        "min_loss_usd": 0.01,
+        "protect_pairs": ["BTC-USD", "ETH-USD", "PAXG-USD"],
+        "require_not_in_active_held_usd_above": 5.0,
+    },
+}
 
 
 def _utc_now() -> datetime:
@@ -148,9 +184,490 @@ def _outcome_class(stage: str, paper_7d: Optional[float]) -> str:
         return "signaled_idle"
     if stage == "seated":
         return "seated_no_signal"
-    if stage == "stale_no_signal":
+    if stage in ("stale_no_signal", "stale_no_fill"):
         return "stale"
     return "other"
+
+
+def load_hygiene_config(path: Optional[Path] = None) -> Dict[str, Any]:
+    """Merge on-disk hygiene cfg with defaults (measure-only)."""
+    cfg = dict(DEFAULT_HYGIENE)
+    p = path if path is not None else HYGIENE_CFG
+    disk = _load_json(p) if p else {}
+    if not disk:
+        return cfg
+    cfg.update({k: v for k, v in disk.items() if k not in ("stale_episode", "eject_autopsy", "flush_candidates")})
+    for section in ("stale_episode", "eject_autopsy", "flush_candidates"):
+        base = dict(cfg.get(section) or {})
+        base.update(dict(disk.get(section) or {}))
+        cfg[section] = base
+    cfg["live_apply"] = False  # hard fence: never auto-flush membership from this module
+    return cfg
+
+
+def _age_days(promoted_at: Any, now: datetime) -> Optional[float]:
+    dt = _parse_ts(promoted_at)
+    if dt is None:
+        return None
+    return round((now - dt).total_seconds() / 86400.0, 2)
+
+
+def apply_stale_episode_hygiene(
+    episodes: Sequence[Mapping[str, Any]],
+    *,
+    now: Optional[datetime] = None,
+    hygiene: Optional[Mapping[str, Any]] = None,
+) -> List[Dict[str, Any]]:
+    """Close never-filled promote episodes past max age on the chart only.
+
+    Does not edit basket membership or place orders.
+    """
+    now = now or _utc_now()
+    hy = dict(hygiene or load_hygiene_config())
+    st = dict(hy.get("stale_episode") or {})
+    if not st.get("enabled", True):
+        return [dict(e) for e in episodes]
+
+    max_age = float(st.get("max_age_days_no_fill") or 30)
+    eligible_stages = {str(s).lower() for s in (st.get("stages") or ["signaled", "blocked_no_fill", "seated"])}
+    close_stage = str(st.get("close_stage") or "stale_no_fill")
+
+    out: List[Dict[str, Any]] = []
+    for raw in episodes:
+        e = dict(raw)
+        stage = str(e.get("stage") or "").lower()
+        filled = bool(e.get("filled") or stage.startswith("filled"))
+        age = _f(e.get("age_days"))
+        if age is None:
+            age = _age_days(e.get("promoted_at"), now)
+            if age is not None:
+                e["age_days"] = age
+
+        if (
+            not filled
+            and stage in eligible_stages
+            and age is not None
+            and age >= max_age
+        ):
+            e["stage_before_stale"] = stage
+            e["stage"] = close_stage
+            e["stale_flushed"] = True
+            e["stale_reason"] = f"no_fill_age_{age}d>=_{max_age}d"
+            e["status"] = "closed"
+            e["episode_open"] = False
+            e["outcome_class"] = "stale"
+        else:
+            e.setdefault("stale_flushed", False)
+        out.append(e)
+    return out
+
+
+def _reason_blob(row: Mapping[str, Any]) -> str:
+    parts = [
+        row.get("reason"),
+        row.get("exit_reason"),
+        row.get("event"),
+        row.get("note"),
+        row.get("source"),
+        row.get("tag"),
+    ]
+    return " ".join(str(p) for p in parts if p).lower()
+
+
+def _is_eject_reason(blob: str, substrings: Sequence[str]) -> bool:
+    b = (blob or "").lower()
+    for s in substrings:
+        s = str(s).lower().strip()
+        if not s:
+            continue
+        if s == "eject":
+            # require word-ish eject, not random substring noise
+            if "eject" in b:
+                return True
+        elif s in b:
+            return True
+    return False
+
+
+def load_holdings_usd(path: Optional[Path] = None) -> Dict[str, float]:
+    """Best-effort pair→held USD from live_state (list or dict shapes)."""
+    p = path if path is not None else HOLDINGS_STATE
+    d = _load_json(p)
+    out: Dict[str, float] = {}
+    if not d:
+        return out
+    positions = d.get("positions")
+    if isinstance(positions, list):
+        for row in positions:
+            if not isinstance(row, dict):
+                continue
+            pair = str(row.get("pair") or row.get("product_id") or "")
+            if not pair:
+                continue
+            usd = _f(row.get("value_usd") or row.get("notional_usd") or row.get("usd_value") or row.get("held_usd"))
+            if usd is None:
+                continue
+            out[pair] = float(usd)
+    elif isinstance(positions, dict):
+        for pair, row in positions.items():
+            if isinstance(row, dict):
+                usd = _f(row.get("value_usd") or row.get("notional_usd") or row.get("usd_value") or row.get("held_usd"))
+            else:
+                usd = _f(row)
+            if usd is None:
+                continue
+            out[str(pair)] = float(usd)
+    return out
+
+
+def classify_exit_path(
+    pair: str,
+    *,
+    promoted_at: Any,
+    trades: Sequence[Mapping[str, Any]],
+    eject_substrings: Sequence[str],
+) -> Dict[str, Any]:
+    """Attribute post-promote SELLs for a pair (first-fill career)."""
+    start = _parse_ts(promoted_at)
+    sells: List[Dict[str, Any]] = []
+    buys: List[Dict[str, Any]] = []
+    for row in trades:
+        p = str(row.get("pair") or row.get("product_id") or row.get("symbol") or "")
+        if p != pair:
+            continue
+        ts = _parse_ts(row.get("ts") or row.get("timestamp") or row.get("time") or row.get("filled_at"))
+        if start is not None and ts is not None and ts < start:
+            continue
+        side = str(row.get("side") or row.get("action") or "").upper()
+        blob = _reason_blob(row)
+        pnl = _f(row.get("pnl_usd") or row.get("realized_pnl") or row.get("pnl"))
+        entry = {
+            "ts": ts.isoformat() if ts else None,
+            "side": side,
+            "pnl_usd": pnl,
+            "reason_blob": blob[:120],
+            "is_eject": _is_eject_reason(blob, eject_substrings),
+        }
+        if side == "SELL":
+            sells.append(entry)
+        elif side == "BUY":
+            buys.append(entry)
+
+    n_eject = sum(1 for s in sells if s.get("is_eject"))
+    n_sl = sum(1 for s in sells if "stop_loss" in str(s.get("reason_blob") or ""))
+    n_tp = sum(
+        1
+        for s in sells
+        if "take_profit" in str(s.get("reason_blob") or "") or "trail" in str(s.get("reason_blob") or "")
+    )
+    sell_pnl = sum(float(s["pnl_usd"]) for s in sells if s.get("pnl_usd") is not None)
+    path = "unknown"
+    if not sells:
+        path = "no_sell_after_promote"
+    elif n_eject and n_eject == len(sells):
+        path = "eject_only"
+    elif n_eject and not n_tp:
+        path = "eject_dominant"
+    elif n_tp and sell_pnl > 0:
+        path = "tp_meat"
+    elif n_sl and not n_eject:
+        path = "sl_exit"
+    elif n_tp and n_sl:
+        path = "tp_then_sl"
+    elif n_eject:
+        path = "mixed_with_eject"
+    else:
+        path = "other_sell"
+
+    return {
+        "pair": pair,
+        "n_buys_after_promote": len(buys),
+        "n_sells_after_promote": len(sells),
+        "n_eject_sells": n_eject,
+        "n_sl_sells": n_sl,
+        "n_tp_sells": n_tp,
+        "sell_pnl_sum": round(sell_pnl, 4) if sells else None,
+        "exit_path": path,
+        "sells": sells[-8:],
+    }
+
+
+def run_eject_autopsy(
+    episodes: Sequence[Mapping[str, Any]],
+    *,
+    trades: Optional[Sequence[Mapping[str, Any]]] = None,
+    hygiene: Optional[Mapping[str, Any]] = None,
+    trades_path: Optional[Path] = None,
+) -> Dict[str, Any]:
+    """One-pager data: closed promote fills that died as eject tax."""
+    hy = dict(hygiene or load_hygiene_config())
+    ea = dict(hy.get("eject_autopsy") or {})
+    if not ea.get("enabled", True):
+        return {"enabled": False, "n_closed_fills": 0, "rows": []}
+
+    subs = list(ea.get("eject_reason_substrings") or DEFAULT_HYGIENE["eject_autopsy"]["eject_reason_substrings"])
+    if trades is None:
+        trades = _load_jsonl(trades_path if trades_path is not None else TRADES_JSONL)
+
+    rows: List[Dict[str, Any]] = []
+    for e in episodes:
+        stage = str(e.get("stage") or "")
+        if stage not in ("filled_loss", "filled_win", "filled_open") and not e.get("filled"):
+            continue
+        if not e.get("filled") and not stage.startswith("filled"):
+            continue
+        pair = str(e.get("add_pair") or "")
+        if not pair:
+            continue
+        cls = classify_exit_path(
+            pair,
+            promoted_at=e.get("promoted_at"),
+            trades=trades,
+            eject_substrings=subs,
+        )
+        rows.append(
+            {
+                "pick_id": e.get("pick_id"),
+                "add_pair": pair,
+                "promoted_at": e.get("promoted_at"),
+                "stage": stage,
+                "realized_pnl_sum": e.get("realized_pnl_sum"),
+                "hours_to_first_fill": e.get("hours_to_first_fill"),
+                **cls,
+            }
+        )
+
+    closed_loss = [r for r in rows if r.get("stage") == "filled_loss"]
+    eject_only = [r for r in closed_loss if r.get("exit_path") in ("eject_only", "eject_dominant")]
+    eject_pnl = sum(float(r.get("realized_pnl_sum") or 0) for r in eject_only)
+    other_loss = [r for r in closed_loss if r not in eject_only]
+
+    return {
+        "enabled": True,
+        "measure_only": True,
+        "n_filled_episodes": len(rows),
+        "n_closed_loss": len(closed_loss),
+        "n_eject_only_or_dominant": len(eject_only),
+        "eject_only_pnl_sum": round(eject_pnl, 4),
+        "n_other_loss": len(other_loss),
+        "plain_english": (
+            f"closed_loss={len(closed_loss)} eject_tax={len(eject_only)} "
+            f"(pnl_sum={eject_pnl:.2f}) other_loss={len(other_loss)}. "
+            "Eject-tax fills cannot raise wins — hygiene, not more scouts."
+        ),
+        "eject_rows": eject_only,
+        "other_loss_rows": other_loss,
+        "all_filled_rows": rows,
+    }
+
+
+def build_flush_candidates(
+    episodes: Sequence[Mapping[str, Any]],
+    autopsy: Mapping[str, Any],
+    *,
+    holdings: Optional[Mapping[str, float]] = None,
+    hygiene: Optional[Mapping[str, Any]] = None,
+    active_basket: Optional[Sequence[str]] = None,
+) -> Dict[str, Any]:
+    """Operator-facing flush list. Never applies membership changes."""
+    hy = dict(hygiene or load_hygiene_config())
+    fc = dict(hy.get("flush_candidates") or {})
+    if not fc.get("enabled", True):
+        return {"enabled": False, "candidates": []}
+
+    protect = {str(p) for p in (fc.get("protect_pairs") or [])}
+    min_loss = float(fc.get("min_loss_usd") or 0.01)
+    held_cap = float(fc.get("require_not_in_active_held_usd_above") or 5.0)
+    holdings = dict(holdings or {})
+    active = set(str(p) for p in (active_basket or []))
+
+    by_pair_reasons: Dict[str, List[str]] = {}
+    by_pair_meta: Dict[str, Dict[str, Any]] = {}
+
+    def _add(pair: str, reason: str, **meta: Any) -> None:
+        if not pair or pair in protect:
+            return
+        by_pair_reasons.setdefault(pair, [])
+        if reason not in by_pair_reasons[pair]:
+            by_pair_reasons[pair].append(reason)
+        m = by_pair_meta.setdefault(pair, {"pair": pair})
+        m.update({k: v for k, v in meta.items() if v is not None})
+
+    if fc.get("include_stale_no_fill", True):
+        for e in episodes:
+            if e.get("stale_flushed") or str(e.get("stage") or "") in ("stale_no_fill", "stale_no_signal"):
+                _add(
+                    str(e.get("add_pair") or ""),
+                    "stale_no_fill",
+                    age_days=e.get("age_days"),
+                    pick_id=e.get("pick_id"),
+                    promoted_at=e.get("promoted_at"),
+                )
+
+    eject_pairs = {
+        str(r.get("add_pair") or r.get("pair") or "")
+        for r in (autopsy.get("eject_rows") or [])
+    }
+    if fc.get("include_eject_only_loss", True):
+        for r in autopsy.get("eject_rows") or []:
+            pair = str(r.get("add_pair") or r.get("pair") or "")
+            pnl = _f(r.get("realized_pnl_sum"))
+            if pnl is not None and pnl > -min_loss and pnl >= 0:
+                continue
+            _add(
+                pair,
+                "eject_only_loss",
+                realized_pnl_sum=pnl,
+                exit_path=r.get("exit_path"),
+                pick_id=r.get("pick_id"),
+            )
+
+    if fc.get("include_closed_loss_not_held", True):
+        for e in episodes:
+            if str(e.get("stage") or "") != "filled_loss":
+                continue
+            pair = str(e.get("add_pair") or "")
+            pnl = _f(e.get("realized_pnl_sum"))
+            if pnl is None or pnl > -min_loss:
+                continue
+            held = float(holdings.get(pair) or 0.0)
+            if held > held_cap:
+                continue
+            reason = "closed_loss_flat"
+            if pair in eject_pairs:
+                reason = "eject_only_loss"
+            _add(
+                pair,
+                reason,
+                realized_pnl_sum=pnl,
+                held_usd=held,
+                pick_id=e.get("pick_id"),
+            )
+
+    candidates: List[Dict[str, Any]] = []
+    for pair, reasons in sorted(by_pair_reasons.items()):
+        held = float(holdings.get(pair) or 0.0)
+        in_basket = pair in active if active else None
+        # Still list even if held — flag residual so Brad doesn't assume liquidation
+        candidates.append(
+            {
+                "pair": pair,
+                "reasons": reasons,
+                "held_usd": round(held, 4),
+                "in_active_basket": in_basket,
+                "residual_hold_if_removed": held > held_cap,
+                "protect": pair in protect,
+                **{k: v for k, v in (by_pair_meta.get(pair) or {}).items() if k != "pair"},
+                "action": (
+                    "none_protected"
+                    if pair in protect
+                    else (
+                        "consider_remove_seat_residual_hold"
+                        if held > held_cap
+                        else "consider_remove_seat"
+                    )
+                ),
+                "note": (
+                    "Chart/ops candidate only. Membership REMOVE needs Brad GO + promote script. "
+                    "Open inventory is not sold by this hygiene path."
+                ),
+            }
+        )
+
+    return {
+        "enabled": True,
+        "measure_only": True,
+        "live_apply": False,
+        "n_candidates": len(candidates),
+        "candidates": candidates,
+        "plain_english": (
+            f"flush_candidates={len(candidates)} (stale/eject/loss hygiene). "
+            "No auto basket edit. Brad GO still required to free a seat."
+        ),
+    }
+
+
+def render_eject_autopsy_markdown(
+    autopsy: Mapping[str, Any],
+    flush: Mapping[str, Any],
+    *,
+    as_of: str,
+) -> str:
+    lines = [
+        "# Promote eject autopsy + flush candidates",
+        "",
+        f"**as_of:** `{as_of}`  ",
+        "**measure_only:** `True` · **live_apply:** `False` · **no auto basket REMOVE**",
+        "",
+        "## Plain English",
+        "",
+        str(autopsy.get("plain_english") or ""),
+        "",
+        str(flush.get("plain_english") or ""),
+        "",
+        "## Eject-tax closed losses (cannot raise wins)",
+        "",
+        "| pair | path | pnl | h→fill | n_eject |",
+        "|------|------|-----|--------|---------|",
+    ]
+    for r in autopsy.get("eject_rows") or []:
+        lines.append(
+            "| {p} | `{path}` | {pnl} | {hf} | {ne} |".format(
+                p=r.get("add_pair") or r.get("pair"),
+                path=r.get("exit_path"),
+                pnl=r.get("realized_pnl_sum"),
+                hf=r.get("hours_to_first_fill"),
+                ne=r.get("n_eject_sells"),
+            )
+        )
+    if not (autopsy.get("eject_rows") or []):
+        lines.append("| — | — | — | — | — |")
+
+    lines += [
+        "",
+        "## Other closed losses (not eject-only)",
+        "",
+        "| pair | path | pnl |",
+        "|------|------|-----|",
+    ]
+    for r in autopsy.get("other_loss_rows") or []:
+        lines.append(
+            f"| {r.get('add_pair') or r.get('pair')} | `{r.get('exit_path')}` | {r.get('realized_pnl_sum')} |"
+        )
+    if not (autopsy.get("other_loss_rows") or []):
+        lines.append("| — | — | — |")
+
+    lines += [
+        "",
+        "## Flush candidates (operator list — not applied)",
+        "",
+        "| pair | reasons | held$ | in_basket | action |",
+        "|------|---------|-------|-----------|--------|",
+    ]
+    for c in flush.get("candidates") or []:
+        lines.append(
+            "| {p} | {r} | {h} | {ib} | `{a}` |".format(
+                p=c.get("pair"),
+                r=",".join(c.get("reasons") or []),
+                h=c.get("held_usd"),
+                ib=c.get("in_active_basket"),
+                a=c.get("action"),
+            )
+        )
+    if not (flush.get("candidates") or []):
+        lines.append("| — | — | — | — | — |")
+
+    lines += [
+        "",
+        "## Rules",
+        "",
+        "- Stale never-filled episodes close on the **chart** after max age (default 30d).",
+        "- Eject-only promote fills are tagged so we stop treating them as 'almost wins'.",
+        "- Flush candidates free **attention / seat narrative** only after Brad GO membership edit.",
+        "- Sticky protect: BTC / ETH / PAXG never appear as remove targets here.",
+        "",
+    ]
+    return "\n".join(lines)
 
 
 def build_episodes(
@@ -166,6 +683,18 @@ def build_episodes(
 
     episodes: List[Dict[str, Any]] = []
     for row in ledger:
+        # Skip voided / remove-only hygiene artifacts (must not mint promote seats)
+        st = str(row.get("status") or "").strip().lower()
+        if st in ("voided", "void", "cancelled", "canceled"):
+            continue
+        if row.get("episode_exclude"):
+            continue
+        add_pair = str(row.get("add_pair") or "")
+        if add_pair.startswith("__REMOVE_ONLY__") or add_pair.startswith("__"):
+            continue
+        if str(row.get("source") or "") == "manual_hygiene_remove":
+            continue
+
         pid = str(row.get("pick_id") or "")
         g = dict(row.get("graduation") or {})
         if pid and pid in by_id:
@@ -201,7 +730,7 @@ def build_episodes(
         # Episode hygiene (Brad 2026-10-03): closed terminal stages are NOT a live queue.
         # hours_to_first_fill is historical latency, not "still waiting".
         raw_status = str(row.get("status") or g.get("status") or "").strip().lower()
-        terminal = stage in ("filled_win", "filled_loss", "stale_no_signal")
+        terminal = stage in ("filled_win", "filled_loss", "stale_no_signal", "stale_no_fill")
         if raw_status in ("closed", "done", "complete", "resolved"):
             status = "closed"
         elif terminal:
@@ -267,7 +796,12 @@ def funnel_from_episodes(episodes: Sequence[Mapping[str, Any]]) -> Dict[str, Any
     n_loss = sum(1 for e in episodes if e.get("stage") == "filled_loss")
     n_open = sum(1 for e in episodes if e.get("stage") == "filled_open")
     n_blocked = sum(1 for e in episodes if e.get("stage") == "blocked_no_fill")
-    n_stale = sum(1 for e in episodes if e.get("stage") in ("stale_no_signal", "seated"))
+    n_stale = sum(
+        1 for e in episodes if e.get("stage") in ("stale_no_signal", "stale_no_fill", "seated")
+    )
+    n_stale_no_fill = sum(
+        1 for e in episodes if e.get("stage") == "stale_no_fill" or e.get("stale_flushed")
+    )
 
     closed = n_win + n_loss
     return {
@@ -279,6 +813,7 @@ def funnel_from_episodes(episodes: Sequence[Mapping[str, Any]]) -> Dict[str, Any
         "n_filled_open": n_open,
         "n_blocked_no_fill": n_blocked,
         "n_stale_no_signal": n_stale,
+        "n_stale_no_fill": n_stale_no_fill,
         "rate_signal_given_seat": round(n_signaled / n_seated, 4) if n_seated else None,
         "rate_fill_given_signal": round(n_filled / n_signaled, 4) if n_signaled else None,
         "rate_win_given_fill_closed": round(n_win / closed, 4) if closed else None,
@@ -291,6 +826,7 @@ def funnel_from_episodes(episodes: Sequence[Mapping[str, Any]]) -> Dict[str, Any
             "filled_win": n_win,
             "filled_loss": n_loss,
             "stale_no_signal": sum(1 for e in episodes if e.get("stage") == "stale_no_signal"),
+            "stale_no_fill": sum(1 for e in episodes if e.get("stage") == "stale_no_fill"),
         },
     }
 
@@ -687,23 +1223,46 @@ def build_chart(
         idle = _load_json(state / "basket_seat_idle_latest.json" if root != ROOT else IDLE_LATEST)
 
     grad_picks = list(grad.get("picks") or [])
+    hygiene = load_hygiene_config(root / "config" / "promote_graduation_hygiene.json" if root != ROOT else None)
     episodes = build_episodes(ledger, grad_picks)
-    # Prefer live graduation funnel when present & consistent; else from episodes
-    funnel_src = grad.get("funnel") if isinstance(grad.get("funnel"), dict) else None
+    episodes = apply_stale_episode_hygiene(episodes, now=now, hygiene=hygiene)
+    n_stale_flushed = sum(1 for e in episodes if e.get("stale_flushed"))
+
+    # Always recompute funnel from hygiene-adjusted episodes (source of truth for open/stale).
     funnel_ep = funnel_from_episodes(episodes)
+    funnel_src = grad.get("funnel") if isinstance(grad.get("funnel"), dict) else None
+    funnel = funnel_ep
     if funnel_src and _i(funnel_src.get("n_seated")) == len(episodes):
-        funnel = dict(funnel_src)
-        # keep rates
+        funnel["grad_funnel_note"] = "grad.funnel ignored for rates after stale hygiene; counts from episodes"
+    elif funnel_src and _i(funnel_src.get("n_seated")) > 0:
+        funnel["source_note"] = "episodes_recomputed_after_hygiene; grad.funnel n mismatch"
     else:
-        funnel = funnel_ep
-        if funnel_src and _i(funnel_src.get("n_seated")) > 0:
-            funnel["source_note"] = "episodes_recomputed; grad.funnel n mismatch"
-        else:
-            funnel["source_note"] = "episodes"
+        funnel["source_note"] = "episodes_after_hygiene"
 
     paper = paper_scoreboard(summary or {}, episodes)
     timing = timing_stats(episodes)
     choke = choke_point(funnel)
+
+    # Eject autopsy + flush candidates (measure-only)
+    trades = _load_jsonl(root / "trades" / "phase6_trades.jsonl" if root != ROOT else TRADES_JSONL)
+    autopsy = run_eject_autopsy(episodes, trades=trades, hygiene=hygiene)
+    holdings = load_holdings_usd(root / "data" / "state" / "phase6_live_state.json" if root != ROOT else None)
+    active_basket: List[str] = []
+    try:
+        from phase6.core.paths import load_trading_basket
+
+        active_basket = list(load_trading_basket() or [])
+    except Exception:
+        idle_b = idle.get("active_basket") if idle else None
+        if isinstance(idle_b, list):
+            active_basket = [str(x) for x in idle_b]
+    flush = build_flush_candidates(
+        episodes,
+        autopsy,
+        holdings=holdings,
+        hygiene=hygiene,
+        active_basket=active_basket,
+    )
 
     n_open_eps = sum(1 for e in episodes if e.get("episode_open"))
     n_closed_eps = len(episodes) - n_open_eps
@@ -721,12 +1280,16 @@ def build_chart(
         "plain_english": (
             f"promotes={funnel.get('n_seated')} open_eps={n_open_eps} closed_eps={n_closed_eps} "
             f"sig={funnel.get('n_signaled')} fill={funnel.get('n_filled')} "
-            f"win={funnel.get('n_filled_win')} choke={choke.get('id')} "
+            f"win={funnel.get('n_filled_win')} stale_flush={n_stale_flushed} "
+            f"eject_tax={autopsy.get('n_eject_only_or_dominant')} "
+            f"flush_cand={flush.get('n_candidates')} choke={choke.get('id')} "
             f"paper_hit7={paper.get('hit_rate_positive_7d')} claim={paper.get('claim_allowed')}. "
-            f"h→fill is historical latency on closed fills — not queue age."
+            f"h→fill is historical latency on closed fills — not queue age. "
+            f"Hygiene is measure-only — no auto basket REMOVE."
         ),
         "n_episodes_open": n_open_eps,
         "n_episodes_closed": n_closed_eps,
+        "n_stale_flushed": n_stale_flushed,
     }
 
     # idle DQ candidates (observe only)
@@ -746,6 +1309,11 @@ def build_chart(
         "as_of": now.isoformat(),
         "measure_only": True,
         "no_live_writes": True,
+        "hygiene": {
+            "config": hygiene,
+            "n_stale_flushed": n_stale_flushed,
+            "live_apply": False,
+        },
         "funnel": funnel,
         "paper": paper,
         "timing": timing,
@@ -755,6 +1323,12 @@ def build_chart(
         "n_episodes": len(episodes),
         "n_episodes_open": n_open_eps,
         "n_episodes_closed": n_closed_eps,
+        "eject_autopsy": {
+            k: v
+            for k, v in autopsy.items()
+            if k != "all_filled_rows"  # keep latest JSON lean; full rows in dedicated file
+        },
+        "flush_candidates": flush,
         "membership_manager": mm_dash,
         "dq_observe": {
             "mode": idle.get("mode") if idle else "observe_only",
@@ -780,6 +1354,18 @@ def build_chart(
                     "label": "Win|seat",
                     "value": funnel.get("rate_win_given_seat"),
                     "tone": "bad" if (funnel.get("rate_win_given_seat") or 0) == 0 else "ok",
+                },
+                {
+                    "id": "stale_flush",
+                    "label": "Stale flush",
+                    "value": n_stale_flushed,
+                    "tone": "muted",
+                },
+                {
+                    "id": "eject_tax",
+                    "label": "Eject-tax losses",
+                    "value": autopsy.get("n_eject_only_or_dominant"),
+                    "tone": "warn" if _i(autopsy.get("n_eject_only_or_dominant")) else "ok",
                 },
                 {
                     "id": "hit7",
@@ -811,6 +1397,8 @@ def build_chart(
             "pick_ledger": str(PICK_LEDGER.relative_to(ROOT)),
             "graduation": str(GRAD_LATEST.relative_to(ROOT)),
             "summary": str(PICK_SUMMARY.relative_to(ROOT)),
+            "hygiene_cfg": "config/promote_graduation_hygiene.json",
+            "eject_autopsy": "reports/PROMOTE_EJECT_AUTOPSY_LATEST.md",
             "spine": "data/state/platform_metrics_spine_latest.json",
         },
         "actions_taken": [],
@@ -853,10 +1441,28 @@ def build_chart(
         latest.write_text(json.dumps(payload, indent=2, default=str) + "\n")
         md_path = reports / "PROMOTE_GRADUATION_CHART_LATEST.md"
         md_path.write_text(render_markdown(payload))
+
+        # Hygiene side artifacts (still measure-only)
+        autopsy_full = dict(autopsy)
+        autopsy_path = state / "promote_eject_autopsy_latest.json"
+        autopsy_path.write_text(json.dumps(autopsy_full, indent=2, default=str) + "\n")
+        flush_path = state / "promote_flush_candidates_latest.json"
+        flush_path.write_text(json.dumps(flush, indent=2, default=str) + "\n")
+        autopsy_md = reports / "PROMOTE_EJECT_AUTOPSY_LATEST.md"
+        autopsy_md.write_text(
+            render_eject_autopsy_markdown(autopsy, flush, as_of=str(payload.get("as_of")))
+        )
+        payload["actions_taken"] = list(payload.get("actions_taken") or []) + [
+            "wrote_eject_autopsy",
+            "wrote_flush_candidates",
+        ]
         payload["wrote"] = {
             "json": str(latest.relative_to(root)),
             "md": str(md_path.relative_to(root)),
             "charts": payload.get("charts"),
+            "eject_autopsy_json": str(autopsy_path.relative_to(root)),
+            "eject_autopsy_md": str(autopsy_md.relative_to(root)),
+            "flush_candidates_json": str(flush_path.relative_to(root)),
         }
     else:
         payload["charts"] = {
@@ -947,6 +1553,15 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         )
     lines += [
         "",
+        "## Hygiene (measure-only)",
+        "",
+        f"- stale_flushed=`{(payload.get('hygiene') or {}).get('n_stale_flushed')}` "
+        f"(never-fill age ≥ config max; chart close only)",
+        f"- eject_tax closed losses=`{(payload.get('eject_autopsy') or {}).get('n_eject_only_or_dominant')}` "
+        f"pnl_sum=`{(payload.get('eject_autopsy') or {}).get('eject_only_pnl_sum')}`",
+        f"- flush_candidates=`{(payload.get('flush_candidates') or {}).get('n_candidates')}` "
+        f"— see `reports/PROMOTE_EJECT_AUTOPSY_LATEST.md` (no auto REMOVE)",
+        "",
         "## DQ observe (not auto-eject)",
         "",
         f"- mode=`{dq.get('mode')}` hard_eject=`{dq.get('hard_eject')}`",
@@ -957,7 +1572,7 @@ def render_markdown(payload: Mapping[str, Any]) -> str:
         f"- ready_for_pane=`{(payload.get('dashboard') or {}).get('ready_for_pane')}`",
         f"- suggested API: `{(payload.get('dashboard') or {}).get('api_path_suggestion')}`",
         "",
-        "_Spine never auto-promotes or hard-ejects. P2 is justify/optimize only._",
+        "_Spine never auto-promotes or hard-ejects. Hygiene flushes chart dead weight only; membership REMOVE still needs Brad GO._",
         "",
     ]
     return "\n".join(lines)
@@ -968,11 +1583,21 @@ def short_board(payload: Mapping[str, Any]) -> str:
     funnel = payload.get("funnel") or {}
     paper = payload.get("paper") or {}
     choke = payload.get("choke_point") or {}
+    hy = payload.get("hygiene") or {}
+    ea = payload.get("eject_autopsy") or {}
+    fl = payload.get("flush_candidates") or {}
     return "\n".join(
         [
             "promote-graduation-chart",
             f"talk={go.get('promote_talk_ok')} claim={go.get('claim_allowed')} path={go.get('money_path_hint')}",
-            f"seat={funnel.get('n_seated')}→sig={funnel.get('n_signaled')}→fill={funnel.get('n_filled')}→win={funnel.get('n_filled_win')} choke={choke.get('id')}",
+            (
+                f"seat={funnel.get('n_seated')}→sig={funnel.get('n_signaled')}→fill={funnel.get('n_filled')}"
+                f"→win={funnel.get('n_filled_win')} choke={choke.get('id')}"
+            ),
+            (
+                f"stale_flush={hy.get('n_stale_flushed')} eject_tax={ea.get('n_eject_only_or_dominant')} "
+                f"flush_cand={fl.get('n_candidates')} open_eps={go.get('n_episodes_open')}"
+            ),
             f"paper_hit7={paper.get('hit_rate_positive_7d')} avg7={paper.get('avg_ret_7d_pct')}",
             go.get("plain_english") or "",
         ]

@@ -151,7 +151,16 @@ class TestActionDryAndLive(unittest.TestCase):
         self.tdir = Path(self.tmp.name)
         self.live = self.tdir / "live.json"
         self.live.write_text(
-            json.dumps({"positions": [{"pair": "ETH-USD", "qty": 1.0, "usd_value": 2000}]}),
+            json.dumps(
+                {
+                    "positions": [{"pair": "ETH-USD", "qty": 1.0, "usd_value": 2000}],
+                    # Seed cash so fund-before-buy holds (no live exchange on FakeExecutor)
+                    "balances": [
+                        {"currency": "USD", "available": 200.0},
+                        {"currency": "USDC", "available": 500.0},
+                    ],
+                }
+            ),
             encoding="utf-8",
         )
         self.receipts = self.tdir / "receipts"

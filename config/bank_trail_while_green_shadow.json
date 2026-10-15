@@ -1,0 +1,67 @@
+{
+  "schema": "bank_trail_while_green_shadow_v1",
+  "status": "MEASURE_ONLY",
+  "live_apply": false,
+  "as_of": "2026-10-14",
+  "question": "On ballast/core bags, does earlier partial (A), soft trail (C), or A then C beat ride-to-8%-SL after a real green path?",
+  "scope": {
+    "min_notional_usd": 75.0,
+    "core_pairs": ["BTC-USD", "ETH-USD"],
+    "exclude_pairs": ["PAXG-USD", "PAXG-USDC"],
+    "include_core_even_if_below_min_notional": true,
+    "note": "Tryout shells stay on trail-TP + W2 fuse sketch — not this CF."
+  },
+  "arms": {
+    "control": {
+      "id": "control_ride_8pct",
+      "label": "Actual / ride to 8% SL (or actual fill)",
+      "description": "What happened (or first touch of 8% if no fill path)."
+    },
+    "A": {
+      "id": "A_partial_only",
+      "label": "Earlier partial bank",
+      "arm_mfe_pct": 0.03,
+      "partial_frac": 0.33,
+      "max_partials": 1,
+      "residual_sl_pct": 0.08,
+      "fee_frac_per_leg": 0.003,
+      "description": "First time path MFE >= 3%: bank 33% at arm mark; residual keeps 8% disaster stop from entry."
+    },
+    "C": {
+      "id": "C_soft_trail_only",
+      "label": "Soft trail / ratchet after green",
+      "arm_mfe_pct": 0.03,
+      "lock_frac_of_mfe": 0.35,
+      "be_buffer_pct": 0.005,
+      "trail_mode": "lock_frac_peak",
+      "fee_frac_per_leg": 0.003,
+      "description": "First MFE >= 3%: arm stop at max(entry*(1+be_buffer), peak*(1 - lock_frac*peak_r)). Stop only ratchets up with new peaks. Full exit on touch."
+    },
+    "AC": {
+      "id": "AC_partial_then_trail",
+      "label": "A then C on residual",
+      "arm_mfe_pct": 0.03,
+      "partial_frac": 0.33,
+      "max_partials": 1,
+      "lock_frac_of_mfe": 0.35,
+      "be_buffer_pct": 0.005,
+      "fee_frac_per_leg": 0.003,
+      "description": "Partial at +3%, then soft-trail the residual. 8% still disaster floor on residual until trail is tighter."
+    }
+  },
+  "scoring": {
+    "primary": "sum_pnl_usd_arm_minus_actual",
+    "also": ["median_delta_usd", "n_legs", "n_would_arm", "n_false_friend_if_only_headline"],
+    "promote_bar_note": "No live GO until n>=5 ballast legs with would-arm and net delta clear of fee; never promote on single ETH ghost."
+  },
+  "do_not": [
+    "live_apply without Brad letter GO",
+    "Global stop_loss_pct 0.08 -> 0.03",
+    "Apply A/C knobs to <=$30 tryout shells in this shadow",
+    "Merge A+C into one unlabeled live knob before attribution"
+  ],
+  "outputs": {
+    "json": "data/state/bank_trail_while_green_cf_latest.json",
+    "md": "reports/BANK_TRAIL_WHILE_GREEN_CF_LATEST.md"
+  }
+}

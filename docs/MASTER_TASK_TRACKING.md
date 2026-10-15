@@ -1,6 +1,18 @@
 
 
 
+## APLUS-MONEY-PATH-20261015
+- **Mandate:** Make FUND / SL / GROW grades A+ (tryout money path closure, not more incremental shells).
+- **Shipped:**
+  - `phase6/core/tryout_fund_from_usdc.py` — pure plan + `ensure_usd_for_shell` (capped shortfall USDC→USD)
+  - `tryout_seat_buy` fund-before-buy live+dry; block buy on fund blocked; naked SL flag
+  - `scripts/phase6/run_tryout_money_path_proof.py` — live grader
+  - `scripts/phase6/run_post_proof_residual_cf.py` — honest residual CF v2 (same-mark Δ=0; multi-tranche NO-GO)
+  - Isolation: `test_isolation_tryout_fund_and_money_path.py` + seat_buy PASS
+- **Proof:** verdict=`A+_CLOSED` FUND=A+ SL=A+ GROW=A+ (2026-10-15) → `data/state/tryout_money_path_proof_latest.json`
+- **Honesty:** 7d tape still SL/eject-heavy (entry quality, not missing exit stack). Residual multi-tranche stays measure-only until OHLCV path CF.
+- **Kanban:** create blocked from gateway session; tracking here + proof JSON is SSOT.
+
 ## MARKETDATA-POLICY-REACTIVATION-20260922 (P1–P3 SHIPPED 2026-09-22 — P3+ open)
 
 - **P3 SHIPPED 2026-09-22:** `regime_climate_weather` → `marketdata.db` (false-bear board cleared; L2 refreshed; measure-only).
@@ -13422,6 +13434,69 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Suggested Next**:
 - Restart affected service + clear __pycache__ if code change deployed.
 - Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261014`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+---
+
+## KANBAN-UNSTICK-20261014 — NEEDLE blocked batch (Scotty)
+
+**Trigger:** Brad — 7 blocked Kanban cards; impact on current trades + unstick.
+
+**Ground truth:** Board had **9 blocked NEEDLE cards** (UI may show 7). All blocked since **2026-09-29** on the same worker crash: `ModuleNotFoundError: No module named 'hermes_cli'` when dispatcher spawned bare tools-python `-m hermes_cli.main` without package path. **Not work quality.**
+
+### Trade impact (held book at unstick)
+
+Live: USD ~$200 + USDC ~$1,770 + bags ADA/SOL/BTC/PAXG. Rebalances running empty (executed=0) since Oct 12 AM.
+
+| Card | Live trade impact if undelivered | Disposition |
+|---|---|---|
+| NEEDLE-01 USDC cycle | **High latent** — spendable USD thin while USDC parks; util was lying at ~91%. Code already fixed util (~8.7% crypto) + capped unwind hook. | **complete** (shipped session-direct) |
+| NEEDLE-02 RSI→pair X | **High on entries** — stale full-bag X kills tryout floor. Probe+latch path already in tree. | **complete** |
+| NEEDLE-03 beta core | **Med** — beta month miss if core never sizes; Stage3 clip path exists, not 40% overnight. | **complete** |
+| NEEDLE-04 SL×fee + same-session | **Critical if missing** — was 3% vs 0.9% taker. **Already live 8%/sl_min6%** + 60m limit_first SL defer. | **complete** |
+| NEEDLE-06 post-TP rebuy | **Med on re-entry** — EXIT-H4 structure-aware **live** (24h / 4h early). | **complete** |
+| NEEDLE-07 dust full bag | **High if missing** — process_bug flattened bags. Guard `needle07_full_bag` in tree; recent dust = residual/after_SL. | **complete** |
+| NEEDLE-08 ignition rank | **Low/shadow** — ranking spread only; ignition still propose. | **complete** |
+| NEEDLE-09 fee research | **None on fills** — research only. | **complete** |
+| NEEDLE-10 db dual-write | **Med measurement** — trades dual-write already; positions table was Jun demo. | **complete** + positions dual-write + one-shot backfill |
+| NEEDLE-05 size split | Parent of 03/04; shadow flag OFF already. | **complete** |
+| NEEDLE-REV | Gated on 01/02/06/10 | **running** (auto-promoted after parents done) |
+
+### Actions this unstick
+
+1. Classified all as **B/G** (timeout crash; work already on disk) — not blind unblock.
+2. Re-ran isolation: needle_04_guard/apply, stage3, stage02, remainder, rsi_x, cr03, needle10 positions — **PASS**.
+3. Closed NEEDLE-01..10 + 05 with artifact paths.
+4. NEEDLE-10 gap closed: `Phase6Runner._dual_write_current_positions`; backup `data/phase6.db.bak_needle10_pos_20261015_012621`; live_state rows ADA/BTC/SOL/PAXG.
+5. Blocked column: **0**.
+
+### Still open (not blocked)
+
+- `t_c4fc7acb` NEEDLE-REV running @code-reviewer
+- LUCK-R4/R5/R6 remain **scheduled** intentional parks — left alone
+
+### Not changed
+
+- No live orders, no basket edits, no SL% rewrite, no USDC dump.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261015** (opened 2026-10-15T01:00:36.218744)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261015`
 - Escalate to Orchestrator if not resolved in 1 cycle.
 **Status**: OPEN (auto-created by ops-engineer)
 

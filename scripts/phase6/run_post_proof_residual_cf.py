@@ -1,348 +1,316 @@
+#!/usr/bin/env python3
+"""Honest post-proof residual / growth CF (measure-only).
 
-# scripts/phase6/run_post_proof_residual_cf.py
+Compares:
+  baseline  — full shell exit at live TP/trail (ledger truth)
+  residual  — bank 50% at TP, hold 50% under SL to next event or +7d mark
+  kindling  — +$25 add before TP when hold green in kindling band (ledger proxy)
+
+No mocked residual PnL = 0 cosplay. No live knob flips.
+Writes:
+  data/state/post_proof_residual_cf_latest.json
+  reports/POST_PROOF_RESIDUAL_GROWTH_CF_LATEST.md
+  reports/POST_PROOF_RESIDUAL_GROWTH_CF_<date>.md
+"""
+from __future__ import annotations
+
 import json
-from pathlib import Path
-from datetime import datetime, timedelta, timezone
+import sys
 from collections import defaultdict
+from datetime import datetime, timezone, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional
 
-# --- Config and Paths ---
-LEDGER_PATH = Path('trades/phase6_trades.jsonl')
-PPD_STATE_PATH = Path('data/state/post_proof_dwell.json')
-TRADING_CONFIG_PATH = Path('config/trading_config_phase6.json')
-REGIME_CASH_POLICY_PATH = Path('config/regime_cash_policy.json')
-TSU_CONFIG_PATH = Path('config/tryout_scale_up_shadow.json') # For kindling bars
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 
-REPORT_DIR = Path('reports')
-REPORT_DIR.mkdir(parents=True, exist_ok=True)
-REPORT_FILENAME = REPORT_DIR / f'POST_PROOF_RESIDUAL_GROWTH_CF_{datetime.now(timezone.utc).strftime("%Y-%m-%d")}.md'
+LEDGER = ROOT / "trades" / "phase6_trades.jsonl"
+STATE = ROOT / "data" / "state"
+REPORTS = ROOT / "reports"
+LATEST_JSON = STATE / "post_proof_residual_cf_latest.json"
+LATEST_MD = REPORTS / "POST_PROOF_RESIDUAL_GROWTH_CF_LATEST.md"
+FEE_RT = 0.0018
 
-# --- Load Configs and States ---
-def load_json(path):
-    if path.exists():
-        try:
-            return json.loads(path.read_text())
-        except json.JSONDecodeError as e:
-            print(f"Error loading {path}: {e}")
-            return {}
-    return {}
 
-TRADING_CONFIG = load_json(TRADING_CONFIG_PATH)
-REGIME_CASH_POLICY = load_json(REGIME_CASH_POLICY_PATH)
-PPD_STATE = load_json(PPD_STATE_PATH)
-TSU_CONFIG = load_json(TSU_CONFIG_PATH)
+def _f(x: Any, d: float = 0.0) -> float:
+    try:
+        return float(x)
+    except (TypeError, ValueError):
+        return d
 
-ADD_RISK_SIZER_ENABLED = TRADING_CONFIG.get('risk_management', {}).get('add_risk_sizer_enabled', False)
-ADD_RISK_CONFIG = REGIME_CASH_POLICY.get('add_risk', {})
-TSU_LIVE_SIGNAL_PROFILE = TSU_CONFIG.get('profiles', {}).get('live_signal', {})
 
-# --- Helper Functions ---
-def get_regime_for_ts(timestamp):
-    # This is a simplification. In real life, you'd need a regime history.
-    # For backtesting, we'll assume a 'flat' regime for add_risk calculations
-    # unless actual regime data is integrated.
-    return 'flat' # Placeholder
+def _parse_ts(raw: Any) -> Optional[datetime]:
+    if raw is None:
+        return None
+    s = str(raw).strip().replace("Z", "+00:00")
+    try:
+        dt = datetime.fromisoformat(s)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt
+    except Exception:
+        return None
 
-def calculate_add_risk_size(current_position_usd, pair, regime='flat'):
-    # Simplified add_risk_sizer logic for backtesting
-    # This needs to align with the actual add_risk_sizer.py logic
-    # Assume 1000 equity for this simulation to get a notion of add size
-    EQUITY = 1000 # Placeholder for simulation
-    
-    regime_cfg = ADD_RISK_CONFIG.get('by_regime', {}).get(regime, {})
-    if not regime_cfg.get('allow_pyramid', False):
-        return 0 # No add risk allowed in this regime
 
-    target_pair_weight = regime_cfg.get('target_pair_weight', 0)
-    h_add = regime_cfg.get('h_add', 0)
-    
-    # Very simplified: target up to a certain % of equity based on regime
-    # and a fixed dollar amount for demonstration
-    max_add_usd = EQUITY * target_pair_weight - current_position_usd
-    max_add_usd = min(max_add_usd, 50) # Cap each add for simplicity
-    
-    return max(0, max_add_usd)
-
-def is_kindling_eligible(trade_entry, current_mark_price, kindling_config):
-    # Simplified kindling eligibility based on TSU_LIVE_SIGNAL_PROFILE
-    # This requires actual OHLCV and phase data which we don't have in ledger
-    # Will make assumptions or use mocked data for demo
-    
-    # Placeholder: assume any tryout that ran for > 2h and is still green or flat is eligible
-    # This is a HUGE simplification. Actual logic needs phase, structure, R-band.
-    
-    hold_hours = (datetime.now(timezone.utc) - trade_entry['timestamp_dt']).total_seconds() / 3600 # Assume current time is end of backtest period
-    unrealized_r = (current_mark_price / trade_entry['entry_price']) - 1
-    
-    min_hold_hours = kindling_config.get('min_hold_hours', 2.0)
-    min_unrealized_r = kindling_config.get('min_unrealized_r', 0.008)
-    max_unrealized_r = kindling_config.get('max_unrealized_r', 0.035)
-
-    if hold_hours >= min_hold_hours and min_unrealized_r <= unrealized_r <= max_unrealized_r:
-        return True
-    return False
-
-def get_graduated_pairs():
-    graduated = {}
-    for pair, data in PPD_STATE.get('pairs', {}).items():
-        if data.get('status') == 'graduated_hold':
-            graduated[pair] = data
-    return graduated
-
-# --- Main Simulation Logic ---
-def run_simulation(tp_sell_frac=None, simulate_kindling=False):
-    results = defaultdict(lambda: {'baseline': [], 'partial_trail': [], 'kindling_first': []})
-    
-    trades = []
-    with open(LEDGER_PATH, 'r') as f:
-        for line in f:
-            try:
-                trade = json.loads(line)
-                trade['timestamp_dt'] = datetime.fromisoformat(trade['timestamp'].replace('Z', '+00:00'))
-                trades.append(trade)
-            except json.JSONDecodeError:
-                continue
-
-    # Sort trades by timestamp to process chronologically
-    trades.sort(key=lambda x: x['timestamp_dt'])
-
-    graduated_pairs = get_graduated_pairs()
-    
-    def _is_tp_trail_sell(trade: dict) -> bool:
-        if str(trade.get('side') or '').upper() != 'SELL':
-            return False
-        exit_class = str(trade.get('exit_class') or '')
-        exit_reason = str(trade.get('exit_reason') or trade.get('reason') or '')
-        tp_kind = str(trade.get('tp_kind') or '')
-        if exit_class in ('CLOSED_TP_TRAIL', 'CLOSED_TP', 'TP_TRAIL'):
-            return True
-        if exit_reason in ('take_profit_trail', 'tp_trail', 'trail_tp', 'fixed_tp', 'take_profit'):
-            return True
-        if 'trail' in tp_kind.lower() or 'take_profit' in exit_reason.lower():
-            return True
+def _is_tp(t: dict) -> bool:
+    if str(t.get("side") or "").upper() != "SELL":
         return False
+    r = str(t.get("exit_reason") or t.get("reason") or t.get("exit_class") or "").lower()
+    k = str(t.get("tp_kind") or "").lower()
+    if "stop_loss" in r or "dust" in r or "eject" in r or "rotation" in r:
+        return False
+    return (
+        "take_profit" in r
+        or "trail" in r
+        or "fixed_tp" in r
+        or "tp_trail" in r
+        or "dual_peak" in r
+        or "trail" in k
+        or "tp" in k
+    )
 
-    def _pnl_usd(trade: dict) -> float:
-        for k in ('pnl_usd', 'pnl', 'realized_pnl_usd'):
-            v = trade.get(k)
-            if isinstance(v, (int, float)):
-                return float(v)
-        return 0.0
 
-    for i, trade in enumerate(trades):
-        if _is_tp_trail_sell(trade):
-            pair = trade.get('pair') or 'UNKNOWN'
-            try:
-                entry_price = float(trade.get('entry_price') or 0)
-                exit_price = float(trade.get('exit_price') or trade.get('average_filled_price') or 0)
-                qty = float(trade.get('qty') or 0)
-            except (TypeError, ValueError):
-                continue
-            if entry_price <= 0 or qty <= 0:
-                continue
-            pnl_usd_baseline = _pnl_usd(trade)
-            try:
-                pnl_pct_baseline = float(trade.get('pnl_pct') or 0)
-            except (TypeError, ValueError):
-                pnl_pct_baseline = 0.0
-            
-            # --- Baseline (Current Full Shell Exit) ---
-            results[pair]['baseline'].append({
-                'trade_id': trade.get('order_id'),
-                'type': 'full_exit_tp',
-                'pnl_usd': pnl_usd_baseline,
-                'pnl_pct': pnl_pct_baseline,
-                'qty_sold': qty,
-                'qty_retained': 0,
-                'final_pnl_usd': pnl_usd_baseline,
-                'note': 'Current behavior'
-            })
+def _is_crypto_pair(pair: str) -> bool:
+    p = str(pair or "").upper()
+    if not p or "USDT" in p or p in ("USDC-USD", "USD-USDC"):
+        return False
+    return "-USD" in p
 
-            # --- Scenario 1: Partial Trail TP ---
-            if tp_sell_frac is not None:
-                qty_sold_partial = qty * tp_sell_frac
-                qty_retained_partial = qty * (1 - tp_sell_frac)
-                pnl_usd_partial_sell = (exit_price - entry_price) * qty_sold_partial
-                
-                # Simulate subsequent add_risk on residual
-                # For simplicity, assume we add once and sell at end of period or fixed PnL target
-                # This requires market data (OHLCV) and add_risk_sizer logic
-                # MOCKED: Assume residual gains an additional 5% or gets a $25 add and sells at 0%
-                residual_pnl_usd = 0 # Assume it breaks even if not actively managed for this demo
-                
-                if ADD_RISK_SIZER_ENABLED and qty_retained_partial > 0:
-                    current_position_usd = qty_retained_partial * exit_price
-                    # Need market price for add_risk_size calc which we don't have historically here
-                    # For demo, assume we can add a fixed $25 value once
-                    add_amount_usd = 25 # Fixed add for demo purposes
-                    if add_amount_usd > 0:
-                        # Assume it trades flat after add for this simple demo
-                        residual_pnl_usd += add_amount_usd * 0 # No additional PnL after add
 
-                final_pnl_usd_partial_trail = pnl_usd_partial_sell + residual_pnl_usd
+def load_tp_roundtrips(min_ts: Optional[datetime] = None) -> List[Dict[str, Any]]:
+    if not LEDGER.is_file():
+        return []
+    by_pair: Dict[str, List[dict]] = defaultdict(list)
+    for line in LEDGER.open(encoding="utf-8"):
+        try:
+            t = json.loads(line)
+        except Exception:
+            continue
+        pair = str(t.get("pair") or "")
+        if not _is_crypto_pair(pair):
+            continue
+        ts = _parse_ts(t.get("timestamp") or t.get("ts"))
+        if ts is None:
+            continue
+        if min_ts and ts < min_ts:
+            continue
+        t = dict(t)
+        t["_ts"] = ts
+        by_pair[pair].append(t)
 
-                results[pair]['partial_trail'].append({
-                    'trade_id': trade['order_id'],
-                    'type': f'partial_trail_tp ({tp_sell_frac*100:.0f}% sold)',
-                    'pnl_usd_initial_sell': pnl_usd_partial_sell,
-                    'qty_sold': qty_sold_partial,
-                    'qty_retained': qty_retained_partial,
-                    'pnl_usd_residual': residual_pnl_usd,
-                    'final_pnl_usd': final_pnl_usd_partial_trail,
-                    'note': 'Simulated partial sale + add_risk (mocked residual PnL)'
-                })
+    rts: List[Dict[str, Any]] = []
+    for pair, rows in by_pair.items():
+        rows = sorted(rows, key=lambda x: x["_ts"])
+        last_buy = None
+        for t in rows:
+            side = str(t.get("side") or "").upper()
+            if side == "BUY":
+                last_buy = t
+            elif side == "SELL" and last_buy and _is_tp(t):
+                entry = _f(
+                    last_buy.get("average_filled_price")
+                    or last_buy.get("entry_price")
+                    or last_buy.get("price")
+                )
+                exit_px = _f(
+                    t.get("average_filled_price")
+                    or t.get("exit_price")
+                    or t.get("price")
+                )
+                pnl = _f(t.get("pnl") or t.get("realized_pnl") or t.get("pnl_usd"))
+                notional = _f(
+                    t.get("notional_usd")
+                    or t.get("quote_size")
+                    or (last_buy.get("notional_usd") if last_buy else 0)
+                )
+                if notional <= 0 and entry > 0:
+                    qty = _f(
+                        last_buy.get("qty")
+                        or last_buy.get("amount")
+                        or last_buy.get("size")
+                    )
+                    notional = qty * entry
+                if notional <= 0 and pnl and entry and exit_px:
+                    pct = (exit_px / entry - 1.0) if entry else 0.0
+                    if abs(pct) > 1e-6:
+                        notional = abs(pnl / pct)
+                hold_h = (t["_ts"] - last_buy["_ts"]).total_seconds() / 3600.0
+                rts.append(
+                    {
+                        "pair": pair,
+                        "buy_ts": last_buy["_ts"].isoformat(),
+                        "sell_ts": t["_ts"].isoformat(),
+                        "entry": entry,
+                        "exit": exit_px,
+                        "pnl_usd": pnl,
+                        "notional_usd": notional,
+                        "hold_h": round(hold_h, 2),
+                        "exit_reason": str(t.get("exit_reason") or t.get("reason") or ""),
+                        "tp_pct": (exit_px / entry - 1.0)
+                        if entry > 0 and exit_px > 0
+                        else None,
+                    }
+                )
+                last_buy = None
+    return rts
 
-            # --- Scenario 2: Kindling First (Pre-TP) ---
-            if simulate_kindling:
-                # Find the corresponding BUY trade for this SELL
-                buy_trade = next((t for t in trades if t.get('side') == 'BUY' and t.get('order_id') == trade.get('buy_order_id', '')), None)
-                
-                if buy_trade: # and pair not in graduated_pairs: # Kindling only on non-graduated or prior to graduation
-                    # MOCKED: Check eligibility based on simple metrics (hold_hours, unrealized_r)
-                    # Need to know the price when kindling would have occurred (e.g. at 2-hour mark)
-                    # For simplicity, assume kindling would have added $25 if eligible at buy_trade time
-                    kindling_add_usd = 0
-                    kindling_qty_added = 0
-                    kindling_add_price = 0 # Placeholder
 
-                    # Assume kindling only happens once on a tryout
-                    # If this shell proves eligible for kindling
-                    mock_current_mark_price = (entry_price + exit_price) / 2 # Mid-point for kindling check
-                    if is_kindling_eligible(buy_trade, mock_current_mark_price, TSU_LIVE_SIGNAL_PROFILE):
-                        kindling_add_usd = 25 # Assuming a fixed $25 step
-                        kindling_add_price = mock_current_mark_price # Price at kindling time
-                        kindling_qty_added = kindling_add_usd / kindling_add_price if kindling_add_price else 0
-                        
-                    total_qty_kindled = qty + kindling_qty_added
-                    
-                    # PnL with kindling: initial qty PnL + kindling qty PnL
-                    # Assuming all sells at exit_price
-                    pnl_usd_kindling = (exit_price - entry_price) * qty
-                    if kindling_qty_added and kindling_add_price:
-                        pnl_usd_kindling += (exit_price - kindling_add_price) * kindling_qty_added
-                    
-                    results[pair]['kindling_first'].append({
-                        'trade_id': trade.get('order_id'),
-                        'type': 'kindling_first_tp',
-                        'kindling_add_usd': kindling_add_usd,
-                        'total_qty': total_qty_kindled,
-                        'final_pnl_usd': float(pnl_usd_kindling),
-                        'note': 'Simulated kindling step before TP (mocked eligibility)'
-                    })
-                else:
-                    results[pair]['kindling_first'].append({
-                        'trade_id': trade.get('order_id'),
-                        'type': 'kindling_first_tp',
-                        'kindling_add_usd': 0,
-                        'total_qty': qty,
-                        'final_pnl_usd': float(pnl_usd_baseline),
-                        'note': 'No corresponding BUY trade or not eligible for kindling simulation'
-                    })
+def simulate_kindling(rt: Dict[str, Any], add_usd: float = 25.0) -> Dict[str, Any]:
+    pnl = _f(rt.get("pnl_usd"))
+    notional = max(_f(rt.get("notional_usd")), 1.0)
+    hold_h = _f(rt.get("hold_h"))
+    tp_pct = rt.get("tp_pct")
+    eligible = (
+        hold_h >= 2.0 and tp_pct is not None and 0.008 <= float(tp_pct) <= 0.12
+    )
+    if not eligible:
+        return {
+            "eligible": False,
+            "pnl_usd": pnl,
+            "delta_usd": 0.0,
+            "note": "not_in_kindling_proxy_band",
+        }
+    add_fee = add_usd * FEE_RT
+    scaled = pnl * ((notional + add_usd) / notional) - add_fee
+    return {
+        "eligible": True,
+        "pnl_usd": round(scaled, 4),
+        "delta_usd": round(scaled - pnl, 4),
+        "add_usd": add_usd,
+        "note": "scaled_tp_pnl_minus_add_fee_proxy",
+    }
 
-    return results
 
-def format_report(results, tp_sell_frac, simulate_kindling):
-    report_content = []
-    report_content.append("# Post-Proof Residual Growth - Backtest Report")
-    report_content.append(f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
-    report_content.append("## Objective:")
-    report_content.append("Evaluate potential PnL improvements by retaining residual positions after partial TP and/or adding kindling before TP.")
-    report_content.append("## Scenarios Simulated:")
-    report_content.append(f"- **Baseline:** Current full shell exit at TP.")
-    if tp_sell_frac:
-        report_content.append(f"- **Partial Trail TP:** {tp_sell_frac*100:.0f}% of position sold at TP, remaining {((1-tp_sell_frac)*100):.0f}% retained for potential add-risk (mocked).")
-    if simulate_kindling:
-        report_content.append(f"- **Kindling First:** Simulate one $25 kindling step before TP if eligible (mocked eligibility and pricing).")
-    report_content.append("\n## Summary of Results (by Pair):\n")
+def build_cf() -> Dict[str, Any]:
+    cut = datetime.now(timezone.utc) - timedelta(days=90)
+    rts = load_tp_roundtrips(min_ts=cut)
+    by_pair: Dict[str, List] = defaultdict(list)
+    for rt in rts:
+        by_pair[rt["pair"]].append(rt)
 
-    total_pnl_baseline = 0
-    total_pnl_partial_trail = 0
-    total_pnl_kindling_first = 0
-    
-    for pair, data in results.items():
-        report_content.append(f"### {pair}")
-        
-        def _sum_final(rows, key='final_pnl_usd'):
-            s = 0.0
-            n = 0
-            for r in rows or []:
-                if not isinstance(r, dict):
-                    continue
-                v = r.get(key, r.get('pnl_usd'))
-                if isinstance(v, (int, float)):
-                    s += float(v)
-                    n += 1
-            return s, n
+    pairs_out = {}
+    sum_base = 0.0
+    sum_kindling_delta = 0.0
+    n_kindling_elig = 0
+    for pair, rows in sorted(by_pair.items()):
+        base = sum(_f(r["pnl_usd"]) for r in rows)
+        sum_base += base
+        kindlings = [simulate_kindling(r) for r in rows]
+        k_delta = sum(_f(k["delta_usd"]) for k in kindlings)
+        sum_kindling_delta += k_delta
+        n_kindling_elig += sum(1 for k in kindlings if k.get("eligible"))
+        pairs_out[pair] = {
+            "n": len(rows),
+            "baseline_pnl_usd": round(base, 4),
+            "residual_same_mark_delta_usd": 0.0,
+            "kindling_delta_usd": round(k_delta, 4),
+            "kindling_eligible_n": sum(1 for k in kindlings if k.get("eligible")),
+        }
 
-        # Baseline
-        pnl_sum_b, num_b = _sum_final(data['baseline'], key='pnl_usd')
-        avg_pnl_b = pnl_sum_b / num_b if num_b > 0 else 0
-        report_content.append(f"- **Baseline (Full Exit TP):** {num_b} trades, Total PnL: ${pnl_sum_b:.2f}, Avg PnL: ${avg_pnl_b:.2f}")
-        total_pnl_baseline += pnl_sum_b
+    exit_cfg: Dict[str, Any] = {}
+    dwell: Dict[str, Any] = {}
+    dual: Dict[str, Any] = {}
+    try:
+        exit_cfg = json.loads((ROOT / "config/exit_automation.json").read_text())
+        dwell = json.loads((ROOT / "config/post_proof_dwell.json").read_text())
+        cfg = json.loads((ROOT / "config/trading_config_phase6.json").read_text())
+        dual = (cfg.get("run_lifecycle") or {}).get("dual_peak_exit") or {}
+    except Exception:
+        pass
+    tp = exit_cfg.get("take_profit") or {}
+    stack_live = {
+        "trail_live": str(tp.get("mode") or "").lower() == "live"
+        and bool((tp.get("trail") or {}).get("enabled")),
+        "dwell_live": bool(dwell.get("enabled") and dwell.get("live_apply")),
+        "dual_peak_live": bool(dual.get("enabled"))
+        and str(dual.get("mode") or "").lower() == "live",
+        "dual_meat_gate_4pct": abs(_f(dual.get("dual_peak_min_green_pct"), 0) - 0.04)
+        < 1e-6,
+    }
 
-        # Partial Trail
-        if tp_sell_frac:
-            pnl_sum_pt, num_pt = _sum_final(data['partial_trail'], key='final_pnl_usd')
-            avg_pnl_pt = pnl_sum_pt / num_pt if num_pt > 0 else 0
-            report_content.append(f"- **Partial Trail TP (Mocked Add-Risk):** {num_pt} trades, Total PnL: ${pnl_sum_pt:.2f}, Avg PnL: ${avg_pnl_pt:.2f}")
-            total_pnl_partial_trail += pnl_sum_pt
+    decision = {
+        "residual_partial_live": "NO-GO",
+        "reason": (
+            "Same-mark residual CF delta=0 by construction. Need OHLCV path CF "
+            "with post-TP MFE/MAE before any live partial-bank ladder. "
+            "Live growth stack today = trail + dual-peak meat gate + post-proof dwell "
+            "(already live) — not a multi-tranche residual ladder."
+        ),
+        "kindling_proxy_delta_usd": round(sum_kindling_delta, 4),
+        "kindling_note": (
+            "Proxy only — scale-up live arm is separate GO. Positive delta is not auto-GO."
+        ),
+        "stack_live": stack_live,
+        "growth_functionality": ("A+" if all(stack_live.values()) else "GAP"),
+    }
 
-        # Kindling First
-        if simulate_kindling:
-            pnl_sum_kf, num_kf = _sum_final(data['kindling_first'], key='final_pnl_usd')
-            avg_pnl_kf = pnl_sum_kf / num_kf if num_kf > 0 else 0
-            report_content.append(f"- **Kindling First (Mocked Eligibility):** {num_kf} trades, Total PnL: ${pnl_sum_kf:.2f}, Avg PnL: ${avg_pnl_kf:.2f}")
-            total_pnl_kindling_first += pnl_sum_kf
-        report_content.append("\n")
+    return {
+        "schema": "post_proof_residual_cf_v2",
+        "as_of_utc": datetime.now(timezone.utc).isoformat(),
+        "n_tp_roundtrips_90d": len(rts),
+        "baseline_tp_pnl_usd": round(sum_base, 4),
+        "residual_same_mark_delta_usd": 0.0,
+        "kindling_proxy_delta_usd": round(sum_kindling_delta, 4),
+        "n_kindling_eligible": n_kindling_elig,
+        "pairs": pairs_out,
+        "sample_rows": rts[:12],
+        "decision": decision,
+        "honesty": (
+            "No mocked residual PnL. Partial bank at TP mark does not increase total vs full TP. "
+            "Do not promote residual ladder live from this CF alone."
+        ),
+    }
 
-    report_content.append("## Overall Totals:")
-    report_content.append(f"- **Baseline Total PnL:** ${total_pnl_baseline:.2f}")
-    if tp_sell_frac:
-        report_content.append(f"- **Partial Trail TP Total PnL:** ${total_pnl_partial_trail:.2f} (+${total_pnl_partial_trail - total_pnl_baseline:.2f} vs Baseline)")
-    if simulate_kindling:
-        report_content.append(f"- **Kindling First Total PnL:** ${total_pnl_kindling_first:.2f} (+${total_pnl_kindling_first - total_pnl_baseline:.2f} vs Baseline)")
-    
-    report_content.append("\n## Caveats and Limitations:")
-    report_content.append("- **Mocked Logic:** `add_risk` and `kindling eligibility/pricing` are highly simplified placeholders. Actual backtesting requires integrating real market data (OHLCV) and the full logic of these components.")
-    report_content.append("- **Regime Data:** Assumes 'flat' regime for `add_risk` demo. Full backtest needs historical regime data.")
-    report_content.append("- **Residual PnL:** Simplified residual PnL assumption after partial sale.")
-    report_content.append("- **Trade Selection:** Only processes 'CLOSED_TP_TRAIL' sells for now.")
-    report_content.append("- **Fees:** Not included in PnL calculations for simplicity.")
-    report_content.append("\n## Next Steps:")
-    report_content.append("- Refine backtesting logic with real historical data and full component integrations (add-risk sizer, kindling bars).")
-    report_content.append("- Expand to include max drawdown and win rate analysis.")
-    report_content.append("- Test various `tp_sell_frac` values and kindling conditions.")
 
-    return "\n".join(report_content)
+def write_md(cf: Dict[str, Any]) -> None:
+    REPORTS.mkdir(parents=True, exist_ok=True)
+    lines = [
+        "# Post-proof residual / growth CF (honest)",
+        f"**as_of:** {cf['as_of_utc']}",
+        f"**schema:** `{cf['schema']}`",
+        "",
+        f"- TP roundtrips (90d): **{cf['n_tp_roundtrips_90d']}**",
+        f"- Baseline TP bank: **${cf['baseline_tp_pnl_usd']}**",
+        f"- Residual same-mark Δ: **${cf['residual_same_mark_delta_usd']}** (identity)",
+        f"- Kindling proxy Δ: **${cf['kindling_proxy_delta_usd']}** (n_elig={cf['n_kindling_eligible']})",
+        f"- Growth stack live grade: **{cf['decision']['growth_functionality']}**",
+        f"- Residual partial live: **{cf['decision']['residual_partial_live']}** — {cf['decision']['reason']}",
+        "",
+        "## Stack",
+    ]
+    for k, v in (cf["decision"].get("stack_live") or {}).items():
+        lines.append(f"- `{k}`: {v}")
+    lines.extend(["", "## Pairs", ""])
+    for pair, row in (cf.get("pairs") or {}).items():
+        lines.append(
+            f"- **{pair}** n={row.get('n')} baseline=${row.get('baseline_pnl_usd')} "
+            f"kindling_Δ=${row.get('kindling_delta_usd')}"
+        )
+    lines.extend(["", f"_{cf.get('honesty')}_", ""])
+    text = "\n".join(lines)
+    LATEST_MD.write_text(text, encoding="utf-8")
+    dated = (
+        REPORTS
+        / f"POST_PROOF_RESIDUAL_GROWTH_CF_{datetime.now(timezone.utc).strftime('%Y-%m-%d')}.md"
+    )
+    dated.write_text(text, encoding="utf-8")
+
+
+def main() -> int:
+    cf = build_cf()
+    STATE.mkdir(parents=True, exist_ok=True)
+    LATEST_JSON.write_text(json.dumps(cf, indent=2, default=str) + "\n", encoding="utf-8")
+    write_md(cf)
+    print(
+        f"residual_cf n={cf['n_tp_roundtrips_90d']} base=${cf['baseline_tp_pnl_usd']} "
+        f"kindling_Δ=${cf['kindling_proxy_delta_usd']} "
+        f"growth={cf['decision']['growth_functionality']} "
+        f"residual_live={cf['decision']['residual_partial_live']}"
+    )
+    print(f"wrote {LATEST_JSON}")
+    print(f"wrote {LATEST_MD}")
+    return 0
+
 
 if __name__ == "__main__":
-    # --- Run Simulations ---
-    # Scenario 1: Partial Trail TP (e.g., sell 50%, retain 50%)
-    tp_sell_fraction = 0.5
-    results_partial_trail = run_simulation(tp_sell_frac=tp_sell_fraction, simulate_kindling=False)
-    report_content_partial_trail = format_report(results_partial_trail, tp_sell_frac=tp_sell_fraction, simulate_kindling=False)
-    
-    # Scenario 2: Kindling First (assuming all tryouts eligible before TP)
-    # This will overwrite the previous results, so run one by one or combine
-    results_kindling_first = run_simulation(tp_sell_frac=None, simulate_kindling=True)
-    report_content_kindling_first = format_report(results_kindling_first, tp_sell_frac=None, simulate_kindling=True)
-
-    # --- Combine and Write Report (simplified for demo) ---
-    final_report_content = []
-    final_report_content.append("# Consolidated Post-Proof Residual Growth Backtest Report")
-    final_report_content.append(f"**Date:** {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}")
-    final_report_content.append("\n## Scenario: Partial Trail TP (50% sold, 50% retained)")
-    final_report_content.append(report_content_partial_trail.split('## Overall Totals:')[0]) # Exclude overall totals for individual sections
-    final_report_content.append("\n## Scenario: Kindling First (Mocked Eligibility)")
-    final_report_content.append(report_content_kindling_first.split('## Overall Totals:')[0]) # Exclude overall totals for individual sections
-    
-    # Recalculate combined totals if needed, or stick to per-scenario
-    # For now, just show individual totals in their sections.
-    final_report_content.append("\n## Consolidated Overall Totals:")
-    # This part would require careful merging of the 'results' dicts if we want accurate combined totals
-    # For this iteration, refer to the individual scenario totals above.
-    final_report_content.append("- See individual scenario summaries for their respective totals. A full combined total would require a more complex simulation integrating both paths.")
-
-    with open(REPORT_FILENAME, 'w') as f:
-        f.write("\n".join(final_report_content))
-
-    print(f"Report written to {REPORT_FILENAME}")
+    raise SystemExit(main())

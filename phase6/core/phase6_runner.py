@@ -403,9 +403,186 @@ class Phase6Runner:
             if isinstance(price, (int, float)) and str(pair).endswith("-USD"):
                 conn.execute("INSERT OR REPLACE INTO prices (ts, pair, price, source) VALUES (?, ?, ?, 'price_snapshot')", (ts, pair, price))
 
+        # NEEDLE-10: current_positions dual-write from live book (not demo snapshot).
+        # Prefer enriched live_state positions; fall back to holdings + price_snapshot.
+        try:
+            self._dual_write_current_positions(
+                conn,
+                ts=ts,
+                holdings=holdings or {},
+                price_snapshot=price_snapshot or {},
+            )
+        except Exception as e:
+            try:
+                self.logger.warning("[DB] current_positions dual-write skipped: %s", e)
+            except Exception:
+                pass
+
         conn.commit()
         conn.close()
         self.logger.info(f"[DB] Facts persisted to {db_path} at {ts}")
+
+    def _dual_write_current_positions(
+        self,
+        conn,
+        *,
+        ts: str,
+        holdings: dict,
+        price_snapshot: dict,
+    ) -> None:
+        """Replace current_positions with the live book (NEEDLE-10).
+
+        Deletes prior rows then inserts one row per open pair so dashboard
+        views stop serving Jun-era demo bags. Source of truth remains
+        phase6_live_state.json; this is the DB mirror only.
+        """
+        rows = []
+        live_path = Path("data/state/phase6_live_state.json")
+        live_pos = []
+        try:
+            if live_path.exists():
+                live = json.loads(live_path.read_text())
+                raw = live.get("positions") or []
+                if isinstance(raw, list):
+                    live_pos = raw
+                elif isinstance(raw, dict):
+                    live_pos = [
+                        ({"pair": k, **v} if isinstance(v, dict) else {"pair": k, "amount": v})
+                        for k, v in raw.items()
+                    ]
+        except Exception:
+            live_pos = []
+
+        if live_pos:
+            for p in live_pos:
+                if not isinstance(p, dict):
+                    continue
+                pair = str(p.get("pair") or p.get("product_id") or "").upper()
+                if not pair or pair in ("USD", "USDC", "USDT"):
+                    continue
+                if "-" not in pair:
+                    pair = f"{pair}-USD"
+                base = pair.split("-")[0]
+                if base in ("USD", "USDC", "USDT"):
+                    continue
+                try:
+                    amt = float(
+                        p.get("amount")
+                        or p.get("qty")
+                        or p.get("quantity")
+                        or 0
+                    )
+                except (TypeError, ValueError):
+                    amt = 0.0
+                if amt <= 0:
+                    continue
+                try:
+                    entry = p.get("entry_price")
+                    entry_f = float(entry) if entry not in (None, "") else None
+                except (TypeError, ValueError):
+                    entry_f = None
+                try:
+                    px = p.get("current_price") or p.get("price")
+                    if px in (None, "") and price_snapshot:
+                        px = price_snapshot.get(pair)
+                    px_f = float(px) if px not in (None, "") else None
+                except (TypeError, ValueError):
+                    px_f = None
+                try:
+                    val = p.get("value_usd")
+                    if val in (None, "") and px_f is not None:
+                        val = amt * px_f
+                    val_f = float(val) if val not in (None, "") else None
+                except (TypeError, ValueError):
+                    val_f = None
+                try:
+                    upnl = p.get("unrealized_pnl_pct")
+                    if upnl in (None, "") and entry_f and px_f and entry_f > 0:
+                        upnl = (px_f - entry_f) / entry_f
+                    upnl_f = float(upnl) if upnl not in (None, "") else None
+                except (TypeError, ValueError):
+                    upnl_f = None
+                rows.append(
+                    (
+                        ts,
+                        pair,
+                        amt,
+                        entry_f,
+                        px_f,
+                        val_f,
+                        upnl_f,
+                        str(p.get("side") or "long"),
+                        "live_state",
+                    )
+                )
+        else:
+            # Fallback: holdings map + price snapshot
+            for currency, amount in (holdings or {}).items():
+                if str(currency).upper() in (
+                    "USD",
+                    "USDC",
+                    "USDT",
+                    "POSITIONS",
+                    "VERIFIED",
+                    "ERROR",
+                    "VALUE_USD",
+                ):
+                    continue
+                if isinstance(amount, dict):
+                    pair = str(amount.get("pair") or currency).upper()
+                    try:
+                        amt = float(amount.get("amount", 0) or 0)
+                    except (TypeError, ValueError):
+                        amt = 0.0
+                    entry_f = None
+                    try:
+                        if amount.get("entry_price") not in (None, ""):
+                            entry_f = float(amount.get("entry_price"))
+                    except (TypeError, ValueError):
+                        entry_f = None
+                else:
+                    pair = str(currency).upper()
+                    try:
+                        amt = float(amount or 0)
+                    except (TypeError, ValueError):
+                        amt = 0.0
+                    entry_f = None
+                if not pair or amt <= 0:
+                    continue
+                if "-" not in pair:
+                    pair = f"{pair}-USD"
+                base = pair.split("-")[0]
+                if base in ("USD", "USDC", "USDT"):
+                    continue
+                px = price_snapshot.get(pair) if price_snapshot else None
+                try:
+                    px_f = float(px) if px not in (None, "") else None
+                except (TypeError, ValueError):
+                    px_f = None
+                val_f = (amt * px_f) if px_f is not None else None
+                rows.append(
+                    (
+                        ts,
+                        pair,
+                        amt,
+                        entry_f,
+                        px_f,
+                        val_f,
+                        None,
+                        "long",
+                        "holdings_fallback",
+                    )
+                )
+
+        conn.execute("DELETE FROM current_positions")
+        for row in rows:
+            conn.execute(
+                """INSERT INTO current_positions
+                   (ts, pair, amount, entry_price, current_price, value_usd,
+                    unrealized_pnl_pct, side, source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                row,
+            )
 
     # ------------------------------------------------------------------
     # Persistence helpers (restart-safe scheduler)

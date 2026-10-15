@@ -47,7 +47,19 @@ daily-dose 08:00 ·
 |-----|---------------|---------|-------|
 | `trial-closeout-watch` | `20 9,18 * * *` | telegram (conditional) | Scans trials past `final_at` still open + `REPORT_READY`/`REVIEW_PENDING` overdue. Writes `docs/testing/inbox/OVERDUE_*.md` or `REVIEW_*.md`. **TG only when n_actions≥1** (fingerprint moved or high severity). Never auto-decides. Disk: `data/state/trial_closeout_watch_latest.{json,md,txt}`. Wrapper: `~/.hermes/scripts/run_trial_closeout_watch.sh`. |
 
-**analyst-daily-review 10:15 TG short-delta only (silent if signal unchanged)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30 · **analyst weekly 7d trade review Sun 17:00 TG** (`6752ed0b0dec`)
+**analyst-daily-review 10:15 TG short-delta only (silent if signal unchanged)** · analyst-daily-scoreboard 08:30 local · intel **local** 09:00/21:00 (facts still run; TG demoted 2026-09-02 — no HOLD filler) · deep maint 03:00 local · OPT weekly Sun 04:00 · SL exit CF weekly Sun 08:30 · dig-out Sunday 08:00 · **bank/trail-while-green Sunday 16:30 TG** · **analyst weekly 7d trade review Sun 17:00 TG** (`6752ed0b0dec`)
+
+## phase6-bank-trail-while-green-sunday (Brad 2026-10-14)
+- Schedule: `30 16 * * 0` America/Los_Angeles (Sundays **16:30 PT**) — job_id `719129a41e69` — after dig-out 08:00 / SL-exit CF 08:30, before analyst weekly 17:00
+- Script (pre-agent fact pack): `~/.hermes/scripts/run_bank_trail_while_green_sunday.sh` → `phase6/scripts/run_bank_trail_while_green_sunday_cron.sh`
+- Behavior: rebuild triple CF (A / C / A→C) + **decision gates** → agent short TG card
+- Gates SSOT: `config/bank_trail_while_green_decision.json` (min would-arm n=5, sum/median Δ$, single-leg share, winner gap; `live_apply: false`)
+- Verdicts: `N_INSUFFICIENT` · `SIGNAL_THIN` · `READY_FOR_LETTER_GO` · `BLOCKED_LIVE_FLAG`
+- Guardrails: **measure only** · no knobs · no orders · no live_apply · no global 8→3 · letter GO from Brad required before live gap-fill design
+- CLI: `scripts/phase6/run_bank_trail_while_green_sunday_review.py`
+- Isolation: `scripts/phase6/test_isolation_bank_trail_while_green_sunday_decision.py`
+- State: `data/state/bank_trail_while_green_sunday_review_latest.json` · CF `..._cf_latest.json`
+- Reports: `reports/BANK_TRAIL_WHILE_GREEN_SUNDAY_REVIEW_LATEST.md` · CF `BANK_TRAIL_WHILE_GREEN_CF_LATEST.md` · agent `BANK_TRAIL_WHILE_GREEN_SUNDAY_AGENT_LATEST.md`
 
 ## phase6-analyst-weekly-trade-review (Brad GO 2026-10-04)
 - Schedule: `0 17 * * 0` America/Los_Angeles (Sundays **17:00 PT**) — job_id `6752ed0b0dec`

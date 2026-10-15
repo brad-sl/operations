@@ -438,6 +438,23 @@ class TryoutSeatBuyAction:
             plan.reasons = list(plan.reasons) + ["dry_run_no_order"]
             mode = "dry_run_go" if go else "dry_run"
             effects.append(f"would_buy:{plan.pair}:${plan.shell_usd:.2f}")
+            try:
+                from phase6.core.tryout_fund_from_usdc import ensure_usd_for_shell
+
+                fund = ensure_usd_for_shell(
+                    shell_usd=float(plan.shell_usd or 0),
+                    live=live if isinstance(live, dict) else None,
+                    dry_run=True,
+                    snap=params.get("snap"),
+                )
+                plan.detail["fund"] = {
+                    k: fund.get(k)
+                    for k in ("ok", "funded", "plan", "would_unwind_usd", "error")
+                }
+                if fund.get("would_unwind_usd"):
+                    effects.append(f"would_fund_unwind:${fund.get('would_unwind_usd')}")
+            except Exception as fe:
+                effects.append(f"fund_dry_warn:{type(fe).__name__}")
         elif plan.status == "planned" and money:
             mode = "live"
             try:
@@ -451,7 +468,51 @@ class TryoutSeatBuyAction:
                     plan.reasons = list(plan.reasons) + ["executor_shadow_mode_refused_for_live"]
                     effects.append("executor_shadow_refused")
                 else:
-                    buy = ex.execute_buy(plan.pair, plan.shell_usd)
+                    buy: Any = None
+                    # A+ FUND: USDC→USD clip before buy when spendable USD short of shell.
+                    try:
+                        from phase6.core.tryout_fund_from_usdc import ensure_usd_for_shell
+
+                        fund = ensure_usd_for_shell(
+                            shell_usd=float(plan.shell_usd or 0),
+                            live=live if isinstance(live, dict) else None,
+                            executor=ex,
+                            dry_run=False,
+                            snap=params.get("snap"),
+                        )
+                        plan.detail["fund"] = {
+                            k: fund.get(k)
+                            for k in (
+                                "ok",
+                                "funded",
+                                "converted",
+                                "error",
+                                "plan",
+                                "would_unwind_usd",
+                            )
+                        }
+                        if fund.get("converted"):
+                            effects.append(
+                                f"funded_usdc_unwind:${(fund.get('plan') or {}).get('unwind_usd', 0)}"
+                            )
+                        if (
+                            not bool(fund.get("funded"))
+                            and str((fund.get("plan") or {}).get("action")) == "blocked"
+                        ):
+                            plan.status = "error"
+                            plan.reasons = list(plan.reasons) + [
+                                f"fund_blocked:{(fund.get('error') or (fund.get('plan') or {}).get('reason'))}"
+                            ]
+                            effects.append("fund_blocked_no_buy")
+                            buy = {"success": False, "error": "fund_blocked"}
+                    except Exception as fe:
+                        effects.append(f"fund_hook_warn:{type(fe).__name__}")
+                        logger.warning("tryout fund-before-buy hook failed: %s", fe)
+
+                    if plan.status != "error":
+                        buy = ex.execute_buy(plan.pair, plan.shell_usd)
+                    if buy is None:
+                        buy = {"success": False, "error": "no_buy_attempted"}
                     ok_buy = bool(buy.get("success")) if isinstance(buy, dict) else False
                     order_id = (buy or {}).get("order_id") if isinstance(buy, dict) else None
                     plan.order_id = order_id
@@ -472,6 +533,14 @@ class TryoutSeatBuyAction:
                         if isinstance(buy, dict)
                         else {}
                     )
+                    # A+ SL: filled tryout without stop is not success — flag naked for ops
+                    if ok_buy and isinstance(buy, dict) and buy.get("sl_attached") is False:
+                        effects.append("sl_attach_failed_naked_risk")
+                        plan.detail["naked_sl_risk"] = True
+                        logger.error(
+                            "tryout_seat_buy %s FILLED but sl_attached=False — naked bag",
+                            plan.pair,
+                        )
                     if ok_buy:
                         applied = True
                         plan.status = "filled"

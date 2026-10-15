@@ -1,0 +1,36 @@
+{
+  "schema": "bank_trail_while_green_decision_v1",
+  "status": "MEASURE_ONLY",
+  "live_apply": false,
+  "as_of": "2026-10-14",
+  "question": "On Sunday review: is n enough and net clear enough to recommend a Brad letter GO on one arm (A / C / AC), or keep shadow?",
+  "primary_board": "would_arm_only",
+  "gates": {
+    "min_would_arm_legs": 5,
+    "min_sum_delta_usd": 15.0,
+    "min_median_delta_usd": 0.5,
+    "max_single_leg_share_of_abs_sum_delta": 0.55,
+    "require_winner_beats_second_by_usd": 5.0,
+    "require_live_apply_still_false": true,
+    "forbid_global_sl_3pct": true
+  },
+  "verdicts": {
+    "N_INSUFFICIENT": "Keep shadow. Collect more ballast/core would-arm legs. No letter GO.",
+    "SIGNAL_THIN": "n ok-ish but net/median/dominance fail — keep shadow; do not promote on one ETH ghost.",
+    "READY_FOR_LETTER_GO": "Gates pass on primary board. Recommend letter GO on winner arm only — still no auto flip.",
+    "BLOCKED_LIVE_FLAG": "Policy or config live_apply true unexpectedly — stop and audit before any GO."
+  },
+  "do_not": [
+    "Flip live_apply without explicit Brad letter GO naming the arm",
+    "Global stop_loss_pct 0.08 -> 0.03",
+    "Promote on all-legs board when would-arm n is thin",
+    "Apply A/C to tryout shells via this path"
+  ],
+  "outputs": {
+    "json": "data/state/bank_trail_while_green_sunday_review_latest.json",
+    "md": "reports/BANK_TRAIL_WHILE_GREEN_SUNDAY_REVIEW_LATEST.md",
+    "cf_json": "data/state/bank_trail_while_green_cf_latest.json",
+    "cf_md": "reports/BANK_TRAIL_WHILE_GREEN_CF_LATEST.md"
+  },
+  "sunday_schedule_note": "Hermes job Sundays 16:30 America/Los_Angeles — after dig-out 08:00 / SL-exit CF 08:30, before analyst weekly 17:00."
+}

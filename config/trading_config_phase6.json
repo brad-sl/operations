@@ -10,7 +10,8 @@
       "PYTH-USD",
       "LINK-USD",
       "ADA-USD",
-      "ZEC-USD"
+      "ZEC-USD",
+      "XRP-USD"
     ],
     "cycle_interval_seconds": 1800,
     "rebalance_cap_usd": 75.0,

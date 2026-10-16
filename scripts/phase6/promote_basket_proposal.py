@@ -53,7 +53,10 @@ def main() -> int:
         "--manual-add",
         type=str,
         default="",
-        help="Manual promote: add this pair (use with --manual-remove)",
+        help=(
+            "Manual promote: add this pair. With --manual-remove = 1:1 swap. "
+            "With no --manual-remove = add-only seat (basket grows by 1; no eject)."
+        ),
     )
     ap.add_argument(
         "--manual-remove",
@@ -170,6 +173,37 @@ def main() -> int:
         except Exception:
             pass
         print("Manual swap prepared:", swaps)
+    elif add_one and not removes:
+        # Add-only seat: grow basket by 1 (Brad GO P1 XRP-class). No eject.
+        tcfg0 = _load_json(TRADING_CONFIG_PHASE6)
+        before = list((tcfg0.get("global_settings") or {}).get("pairs") or [])
+        add = add_one
+        if add in before:
+            print(f"ALREADY: {add} seated in basket ({len(before)} pairs)")
+            return 0
+        swaps = [
+            {
+                "remove": None,
+                "add": add,
+                "remove_score": None,
+                "add_score": None,
+                "delta": None,
+                "reason": f"manual add-only seat {add} (operator Brad GO)",
+                "remove_held_usd": 0.0,
+                "add_only": True,
+            }
+        ]
+        proposed_active = list(before) + [add]
+        source = "manual_operator_add_only"
+        methodology = {
+            "manual": True,
+            "add_only": True,
+            "rationale": (
+                "operator add-only seat — eligibility for future buys/signals; "
+                "no REMOVE; no orders"
+            ),
+        }
+        print("Manual add-only prepared:", swaps)
     elif removes and not add_one:
         # Hygiene flush: drop dead seats, no ADD (Brad GO remove-only)
         tcfg0 = _load_json(TRADING_CONFIG_PHASE6)
@@ -246,14 +280,20 @@ def main() -> int:
     for sw in swaps:
         rem = sw.get("remove")
         add = sw.get("add")
-        is_remove_only = bool(sw.get("remove_only") or remove_only or not add)
-        if rem in sticky:
+        is_add_only = bool(sw.get("add_only") or (add and not rem))
+        is_remove_only = bool(
+            sw.get("remove_only") or remove_only or (rem and not add)
+        )
+        if is_add_only and is_remove_only:
+            print("REFUSE: swap cannot be both add-only and remove-only")
+            return 5
+        if rem and rem in sticky:
             print(f"REFUSE: cannot remove sticky {rem}")
             return 3
-        held = float(holdings.get(rem, 0.0) or 0.0)
+        held = float(holdings.get(rem, 0.0) or 0.0) if rem else 0.0
         # prefer live holdings over stale proposal field
         sw["remove_held_usd_live"] = held
-        if held >= args.protect_usd and not args.allow_residual_hold:
+        if rem and held >= args.protect_usd and not args.allow_residual_hold:
             print(
                 f"REFUSE: {rem} still held ${held:.2f} (>= ${args.protect_usd:.0f}). "
                 f"Use --allow-residual-hold to eject membership while position remains, "
@@ -265,6 +305,9 @@ def main() -> int:
             sw["add"] = None
             # no ADD gates
             continue
+        if is_add_only:
+            sw["add_only"] = True
+            sw["remove"] = None
         if not add:
             print("REFUSE: missing add pair")
             return 5
@@ -336,9 +379,14 @@ def main() -> int:
     after = list(before)
     for sw in swaps:
         rem, add = sw.get("remove"), sw.get("add")
-        is_remove_only = bool(sw.get("remove_only") or not add)
+        is_add_only = bool(sw.get("add_only") or (add and not rem))
+        is_remove_only = bool(sw.get("remove_only") or (rem and not add))
         if is_remove_only:
             after = [p for p in after if p != rem]
+            continue
+        if is_add_only:
+            if add and add not in after:
+                after.append(str(add))
             continue
         if rem in after:
             after = [add if p == rem else p for p in after]
@@ -356,10 +404,15 @@ def main() -> int:
     print("BEFORE:", before)
     print("AFTER: ", after)
     for sw in swaps:
-        if sw.get("remove_only") or not sw.get("add"):
+        if sw.get("remove_only") or (sw.get("remove") and not sw.get("add")):
             print(
                 f"  REMOVE {sw.get('remove')} (no ADD) "
                 f"held_live=${sw.get('remove_held_usd_live', 0):.2f}"
+            )
+        elif sw.get("add_only") or (sw.get("add") and not sw.get("remove")):
+            print(
+                f"  ADD-ONLY {sw.get('add')} "
+                f"(no REMOVE) held_live=${sw.get('remove_held_usd_live', 0):.2f}"
             )
         else:
             print(

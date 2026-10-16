@@ -659,6 +659,52 @@ def record_brad_mark(
     except Exception:
         pass
 
+    # Durable mark series (operator SSOT companion to history)
+    marks_path = Path(str(latest_path)).with_name("daily_dose_jev_ab_brad_marks.jsonl")
+    marks_appended = False
+    try:
+        cmp_ = payload.get("compare") or {}
+        mark_row = {
+            "ts": now,
+            "dose_day": dose_day,
+            "date": dose_day,
+            "brad_mark": m,
+            "mark": m,
+            "source": source,
+            "auto_mark": rel.get("auto_mark"),
+            "jaccard": cmp_.get("jaccard"),
+            "generated_at": payload.get("generated_at"),
+            "not_a_trade_signal": True,
+        }
+        # one mark per dose_day: rewrite that day if present, else append
+        existing: List[Dict[str, Any]] = []
+        if marks_path.is_file():
+            for line in marks_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    existing.append(json.loads(line))
+                except json.JSONDecodeError:
+                    continue
+        replaced = False
+        for i in range(len(existing) - 1, -1, -1):
+            day = str(existing[i].get("dose_day") or existing[i].get("date") or "")
+            if day == dose_day:
+                existing[i] = mark_row
+                replaced = True
+                break
+        if not replaced:
+            existing.append(mark_row)
+        marks_path.parent.mkdir(parents=True, exist_ok=True)
+        marks_path.write_text(
+            "".join(json.dumps(r, ensure_ascii=False) + "\n" for r in existing),
+            encoding="utf-8",
+        )
+        marks_appended = True
+    except Exception:
+        pass
+
     return {
         "ok": True,
         "dose_day": dose_day,
@@ -666,6 +712,7 @@ def record_brad_mark(
         "previous_brad_mark": prev,
         "auto_mark": rel.get("auto_mark"),
         "hist_updated": hist_updated,
+        "marks_appended": marks_appended,
         "latest_path": str(latest_path),
         "not_a_trade_signal": True,
     }

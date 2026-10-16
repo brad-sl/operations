@@ -29,7 +29,6 @@ mcp
 media
 mlops
 note-taking
-numpy-compatibility-workarounds
 openclaw-imports
 ops-engineer
 productivity

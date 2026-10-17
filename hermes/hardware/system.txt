@@ -4,9 +4,9 @@ tmpfs           982M  2.7M  979M   1% /run
 /dev/sda2       146G  101G   38G  73% /
 tmpfs           4.8G     0  4.8G   0% /dev/shm
 tmpfs           5.0M  8.0K  5.0M   1% /run/lock
-tmpfs           982M  152K  982M   1% /run/user/1000
+tmpfs           982M  156K  982M   1% /run/user/1000
 tmpfs           982M  144K  982M   1% /run/user/124
                total        used        free      shared  buff/cache   available
-Mem:           9.6Gi       2.4Gi       513Mi        22Mi       7.0Gi       7.2Gi
-Swap:          3.7Gi       520Ki       3.7Gi
- 04:30:47 up 1 day,  6:05,  1 user,  load average: 2.10, 0.79, 0.56
+Mem:           9.6Gi       2.5Gi       483Mi        22Mi       6.9Gi       7.1Gi
+Swap:          3.7Gi       904Ki       3.7Gi
+ 04:30:48 up 2 days,  6:05,  1 user,  load average: 2.95, 1.08, 0.78

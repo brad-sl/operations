@@ -1,28 +1,30 @@
 #!/usr/bin/env python3
 """
-§C1 Ballast under-target floor (shadow only).
+§C1/C2 Ballast under-target floor.
 
 Pure helper: would_allow_under_target_step(...)
 - Floor step ONLY when max_add_usd == 0 (collapsed)
 - Skip if held >= 0.35 * target_w * equity
 - Guard: pair/role, stop_attached, not_over, upnl >= -0.06
 - step_usd = min(max_step, flat_cap, max(0, target_val - held))
-- live_apply: false always for this module (shadow)
 
-No money movement. Measure only.
+live_apply: when True + no kill file, matrix may inject step into max_add.
+Money still only moves via rebalance/add-risk consumers of max_add.
 """
 
 from __future__ import annotations
 
 import json
 import logging
+from pathlib import Path
 from typing import Any, Dict, Optional
 
-from phase6.core.paths import CONFIG_DIR
+from phase6.core.paths import CONFIG_DIR, STATE_DIR
 
 logger = logging.getLogger(__name__)
 
 CONFIG_PATH = CONFIG_DIR / "ballast_under_target_floor.json"
+KILL_PATH = STATE_DIR / "ballast_under_target_floor_KILL"
 SCHEMA = "ballast_under_target_floor_v1"
 
 DEFAULT_CFG: Dict[str, Any] = {
@@ -59,6 +61,14 @@ def _norm_pair(pair: str) -> str:
     return p
 
 
+def kill_file_on(path: Optional[Path] = None) -> bool:
+    p = path or KILL_PATH
+    try:
+        return p.is_file()
+    except Exception:
+        return False
+
+
 def load_config() -> Dict[str, Any]:
     try:
         if CONFIG_PATH.is_file():
@@ -70,6 +80,25 @@ def load_config() -> Dict[str, Any]:
     except Exception as e:
         logger.warning("ballast_under_target_floor config load failed: %s", e)
     return DEFAULT_CFG.copy()
+
+
+def is_live_apply(cfg: Optional[Dict[str, Any]] = None) -> bool:
+    """True only when config live_apply AND no kill file."""
+    c = cfg or load_config()
+    if kill_file_on():
+        return False
+    return bool(c.get("live_apply")) and not bool(c.get("shadow_only", False) and not c.get("live_apply"))
+
+
+def effective_live_apply(cfg: Optional[Dict[str, Any]] = None) -> bool:
+    """Strict: live_apply true, shadow_only false, no kill."""
+    c = cfg or load_config()
+    if kill_file_on():
+        return False
+    if not bool(c.get("live_apply")):
+        return False
+    # If live_apply true, ignore stale shadow_only pin
+    return True
 
 
 def would_allow_under_target_step(
@@ -85,8 +114,9 @@ def would_allow_under_target_step(
     flat_cap_usd: Optional[float] = None,
     cfg: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Return {allow: bool, step_usd: float, reasons: list, shadow: true}."""
+    """Return {allow: bool, step_usd: float, reasons: list, shadow/live flags}."""
     c = cfg or load_config()
+    live = effective_live_apply(c)
     pn = _norm_pair(pair)
     out: Dict[str, Any] = {
         "pair": pn,
@@ -94,8 +124,9 @@ def would_allow_under_target_step(
         "allow": False,
         "step_usd": 0.0,
         "reasons": [],
-        "shadow": True,
-        "live_apply": False,  # enforced
+        "shadow": not live,
+        "live_apply": live,
+        "kill_file": kill_file_on(),
     }
 
     pairs = c.get("pairs_allow", DEFAULT_CFG["pairs_allow"])
@@ -123,7 +154,6 @@ def would_allow_under_target_step(
     target_val = tw * eq
     gap = max(0.0, target_val - held)
 
-    # Guards before "enough held" skip so over-target / stop / upnl stay explicit
     if require_not_over and held > target_val + 1e-9:
         out["reasons"].append("over_target")
         return out
@@ -137,12 +167,10 @@ def would_allow_under_target_step(
         out["reasons"].append("upnl_below_forbid")
         return out
 
-    # Already near band (held ≥ min_held_pct of target) — floor not needed
     if target_val > 0 and (held / target_val) >= min_held_pct:
         out["reasons"].append("min_held_pct_skip")
         return out
 
-    # flat cap
     fcap = (
         _f(flat_cap_usd)
         if flat_cap_usd is not None
@@ -159,7 +187,60 @@ def would_allow_under_target_step(
     return out
 
 
-# Optional pure helper for future matrix wire (no side effects)
+def apply_floor_to_max_add(
+    *,
+    pair: str,
+    role: str,
+    held_usd: float,
+    equity_usd: float,
+    target_w: float,
+    max_add_usd: Optional[float],
+    open_upnl_pct: float = 0.0,
+    stop_attached: bool = True,
+    flat_cap_usd: Optional[float] = None,
+    cfg: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    If live_apply and floor allows, return max(max_add, step).
+    Always returns diagnostic; only mutates when live.
+    """
+    c = cfg or load_config()
+    live = effective_live_apply(c)
+    raw = max_add_usd
+    max_f = _f(max_add_usd, 0.0) if max_add_usd is not None else 0.0
+    # empty bag / flat_no_stack → treat collapsed
+    if max_add_usd is None and _f(held_usd) < 1.0:
+        max_f = 0.0
+
+    would = would_allow_under_target_step(
+        pair=pair,
+        role=role,
+        held_usd=held_usd,
+        equity_usd=equity_usd,
+        target_w=target_w,
+        max_add_usd=max_f,
+        open_upnl_pct=open_upnl_pct,
+        stop_attached=stop_attached,
+        flat_cap_usd=flat_cap_usd,
+        cfg=c,
+    )
+    out: Dict[str, Any] = {
+        "pair": would.get("pair"),
+        "live_apply": live,
+        "would": would,
+        "max_add_before": raw,
+        "max_add_after": raw,
+        "injected": False,
+        "step_usd": would.get("step_usd") or 0.0,
+    }
+    if live and would.get("allow") and _f(would.get("step_usd")) > 0:
+        step = _f(would.get("step_usd"))
+        after = max(max_f, step)
+        out["max_add_after"] = round(after, 4)
+        out["injected"] = True
+    return out
+
+
 def would_under_target_floor_for_membership(
     pair: str,
     role: str,
@@ -171,7 +252,7 @@ def would_under_target_floor_for_membership(
     stop_attached: bool = True,
     flat_cap_usd: Optional[float] = None,
 ) -> Dict[str, Any]:
-    """Pure call site helper. Returns the would_ dict. No money change."""
+    """Pure call site helper. Returns the would_ dict."""
     return would_allow_under_target_step(
         pair=pair,
         role=role,
@@ -186,7 +267,6 @@ def would_under_target_floor_for_membership(
 
 
 if __name__ == "__main__":
-    # quick smoke
     print(load_config())
     print(
         would_allow_under_target_step(

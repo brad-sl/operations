@@ -511,11 +511,18 @@ def build_matrix(
         f"pyramid={'on' if live_ar.get('allow_pyramid') else 'off'}"
     )
 
-    # §1 Practical Sequence dig-out shadows (measure-only; never money)
+    # §1 Practical Sequence dig-out (C1/D1 shadow; C2/D2 inject when live_apply)
     dig_out_shadow: Dict[str, Any] = {"live_apply": False, "shadow_only": True}
     try:
-        from phase6.core.ballast_under_target_floor import would_allow_under_target_step
-        from phase6.core.flat_deploy_priority import would_prefer_ballast_before_shell
+        from phase6.core.ballast_under_target_floor import (
+            apply_floor_to_max_add,
+            effective_live_apply as c2_live,
+            would_allow_under_target_step,
+        )
+        from phase6.core.flat_deploy_priority import (
+            effective_live_apply as d2_live,
+            would_prefer_ballast_before_shell,
+        )
 
         eq = _f(add_room.get("equity_usd"), 0.0) or 1.0
         reg = str(
@@ -532,7 +539,10 @@ def build_matrix(
             pass
         btc = next((r for r in rows if r.get("pair") == "BTC-USD"), {}) or {}
         eth = next((r for r in rows if r.get("pair") == "ETH-USD"), {}) or {}
+        c2_on = bool(c2_live())
+        d2_on = bool(d2_live())
         floor_rows = []
+        inject_receipts = []
         for pair, row in (("BTC-USD", btc), ("ETH-USD", eth)):
             held = _f(row.get("held_usd"))
             tw = _f(row.get("target_pair_weight"), 0.15)
@@ -555,9 +565,40 @@ def build_matrix(
                 flat_cap_usd=deploy_cap,
             )
             floor_rows.append(res)
+            # C2: inject floor step into this row's max_add when live
+            inj = apply_floor_to_max_add(
+                pair=pair,
+                role=str(row.get("role") or "ballast_core"),
+                held_usd=held,
+                equity_usd=eq,
+                target_w=tw,
+                max_add_usd=max_add,
+                open_upnl_pct=upnl_pct,
+                stop_attached=True,
+                flat_cap_usd=deploy_cap,
+            )
+            inject_receipts.append(inj)
+            if inj.get("injected") and inj.get("max_add_after") is not None:
+                for r in rows:
+                    if r.get("pair") == pair:
+                        before = r.get("max_add_usd")
+                        r["max_add_usd"] = inj["max_add_after"]
+                        r["block_max"] = False
+                        r["block_reason"] = "c2_ballast_under_target_floor"
+                        r["c2_floor_injected"] = {
+                            "before": before,
+                            "after": inj["max_add_after"],
+                            "step_usd": inj.get("step_usd"),
+                        }
+                        break
         dig_out_shadow["c1_under_target_floor"] = {
             "n_allow": sum(1 for r in floor_rows if r.get("allow")),
             "rows": floor_rows,
+        }
+        dig_out_shadow["c2_inject"] = {
+            "live_apply": c2_on,
+            "n_injected": sum(1 for x in inject_receipts if x.get("injected")),
+            "receipts": inject_receipts,
         }
         dig_out_shadow["d1_flat_priority"] = would_prefer_ballast_before_shell(
             regime=reg,
@@ -570,8 +611,15 @@ def build_matrix(
             btc_late_run_blocked=False,
             eth_late_run_blocked=False,
         )
+        dig_out_shadow["live_apply"] = bool(c2_on or d2_on)
+        dig_out_shadow["shadow_only"] = not dig_out_shadow["live_apply"]
+        dig_out_shadow["c2_live"] = c2_on
+        dig_out_shadow["d2_live"] = d2_on
         dig_out_shadow["note"] = (
-            "would_* only; live_apply false until Sunday weekly + Brad GO (C2/D2)"
+            "C2 injects max_add on BTC/ETH when live_apply; "
+            "D2 blocks new shells when live_apply + ballast gap"
+            if (c2_on or d2_on)
+            else "would_* only; live_apply false until Brad GO (C2/D2)"
         )
     except Exception as e:
         dig_out_shadow["error"] = str(e)

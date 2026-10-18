@@ -23,6 +23,19 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 
+SHADOW_CFG = {
+    "live_apply": False,
+    "shadow_only": True,
+    "pairs_allow": ["BTC-USD", "ETH-USD"],
+    "roles_allow": ["ballast_core"],
+    "max_step_usd": 75,
+    "min_held_pct_of_target_to_skip": 0.35,
+    "require_stop_attached": True,
+    "require_not_over_target": True,
+    "forbid_if_open_upnl_pct_lt": -0.06,
+    "default_flat_cap_usd": 75,
+}
+
 class TestBallastUnderTargetFloor(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = None  # no temp needed for pure fn
@@ -39,7 +52,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.02,
             stop_attached=True,
             flat_cap_usd=75.0,
-            cfg=None,
+            cfg=SHADOW_CFG,
         )
         self.assertTrue(res.get("allow"))
         self.assertGreater(res.get("step_usd", 0), 0)
@@ -61,6 +74,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.02,
             stop_attached=True,
             flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("pair_not_allowed" in r or "role_not_ballast" in r for r in res.get("reasons", [])))
@@ -77,6 +91,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.08,
             stop_attached=True,
             flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("upnl_below_forbid" in r for r in res.get("reasons", [])))
@@ -93,6 +108,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.02,
             stop_attached=False,
             flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("stop_required" in r for r in res.get("reasons", [])))
@@ -109,6 +125,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.02,
             stop_attached=True,
             flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("over_target" in r for r in res.get("reasons", [])))
@@ -125,6 +142,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.02,
             stop_attached=True,
             flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("already_has_max_add" in r for r in res.get("reasons", [])))
@@ -142,6 +160,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             open_upnl_pct=-0.02,
             stop_attached=True,
             flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("min_held_pct_skip" in r or "already_sufficient" in r for r in res.get("reasons", [])))
@@ -157,7 +176,8 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             max_add_usd=0.0,
             open_upnl_pct=-0.01,
             stop_attached=True,
-            flat_cap_usd=40.0,  # flat cap smaller
+            flat_cap_usd=40.0,  # flat cap smaller,
+            cfg=SHADOW_CFG,
         )
         self.assertTrue(res.get("allow"))
         target_val = 0.15 * 3000
@@ -167,12 +187,72 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
     def test_config_defaults_loaded(self) -> None:
         from phase6.core import ballast_under_target_floor as buf
         cfg = buf.load_config()
-        self.assertFalse(cfg.get("live_apply", True))
+        # live_apply may be True after Brad GO reverse-stack; assert shape not OFF pin
+        self.assertIn("live_apply", cfg)
         self.assertIn("BTC-USD", cfg.get("pairs_allow", []))
         self.assertEqual(cfg.get("max_step_usd"), 75)
         self.assertEqual(cfg.get("min_held_pct_of_target_to_skip"), 0.35)
         self.assertTrue(cfg.get("require_stop_attached"))
         self.assertEqual(cfg.get("forbid_if_open_upnl_pct_lt"), -0.06)
+
+    def test_apply_floor_respects_cfg_live_flag(self) -> None:
+        from phase6.core import ballast_under_target_floor as buf
+        cfg = {
+            "live_apply": True,
+            "shadow_only": False,
+            "pairs_allow": ["BTC-USD", "ETH-USD"],
+            "roles_allow": ["ballast_core"],
+            "max_step_usd": 75,
+            "min_held_pct_of_target_to_skip": 0.35,
+            "require_stop_attached": True,
+            "require_not_over_target": True,
+            "forbid_if_open_upnl_pct_lt": -0.06,
+            "default_flat_cap_usd": 75,
+        }
+        with mock.patch.object(buf, "kill_file_on", return_value=False):
+            inj = buf.apply_floor_to_max_add(
+                pair="BTC-USD",
+                role="ballast_core",
+                held_usd=55.0,
+                equity_usd=2260.0,
+                target_w=0.18,
+                max_add_usd=0.0,
+                open_upnl_pct=-0.02,
+                stop_attached=True,
+                flat_cap_usd=75.0,
+                cfg=cfg,
+            )
+        self.assertTrue(inj.get("injected"))
+        self.assertAlmostEqual(float(inj.get("max_add_after") or 0), 75.0, places=1)
+
+    def test_apply_floor_shadow_no_inject(self) -> None:
+        from phase6.core import ballast_under_target_floor as buf
+        cfg = {
+            "live_apply": False,
+            "shadow_only": True,
+            "pairs_allow": ["BTC-USD", "ETH-USD"],
+            "roles_allow": ["ballast_core"],
+            "max_step_usd": 75,
+            "min_held_pct_of_target_to_skip": 0.35,
+            "require_stop_attached": True,
+            "require_not_over_target": True,
+            "forbid_if_open_upnl_pct_lt": -0.06,
+            "default_flat_cap_usd": 75,
+        }
+        inj = buf.apply_floor_to_max_add(
+            pair="BTC-USD",
+            role="ballast_core",
+            held_usd=55.0,
+            equity_usd=2260.0,
+            target_w=0.18,
+            max_add_usd=0.0,
+            open_upnl_pct=-0.02,
+            stop_attached=True,
+            flat_cap_usd=75.0,
+            cfg=cfg,
+        )
+        self.assertFalse(inj.get("injected"))
+        self.assertTrue(inj.get("would", {}).get("allow"))
 
 
 if __name__ == "__main__":

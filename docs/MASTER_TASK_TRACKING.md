@@ -13541,3 +13541,42 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+
+## SOFT-DOWN-REVERSE-STACK-20261017
+
+Brad GO implement diagnostic 1-4 (not global 8 to 3).
+
+- **1 C2/D2 LIVE:** ballast_under_target_floor + flat_deploy_priority live_apply=true. Matrix injects max_add; add_risk_sizer.decide_add_size honors C2; composer D2 blocks new shells on ballast gap. Proof: BTC/ETH max_add $75.
+- **2 Bank/TP meat PARTIAL:** dwell+trail+dual-peak already live; bank_trail_while_green MEASURE_ONLY_GO_INTENT (Sunday N_INSUFFICIENT).
+- **3 Intake LIVE:** discipline thresholds raised eng>=0.40 setup>=1.7 conf>=0.60.
+- **4 W2 WIRED OFF:** resolve_live_sl_pct + StopLossManager.get_sl_pct hook; live_apply false until >=14d shadow. Forced-live proof: shell 3% / core 8%.
+- Artifacts: data/state/soft_down_reverse_stack_go_latest.json, reports/SOFT_DOWN_REVERSE_STACK_GO_LATEST.md
+- Tests: ballast 11 PASS, flat 8 PASS, w2 resolve PASS, add_risk PASS, MSM PASS
+- Kills: ballast_under_target_floor_KILL, flat_deploy_priority_KILL, sl_width_arming_KILL
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261018** (opened 2026-10-18T00:00:35.026603)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261018`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+**CASH-20261018-001** — Cash policy suggestion: detector grid (score 5.2877)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-10-18T11:01:03.569431+00:00 | score=5.2877
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+

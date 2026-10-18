@@ -78,7 +78,53 @@ class StopLossManager:
         regime_bias: float = 0.5,
         risk_data: Optional[Dict[str, Any]] = None,
     ) -> float:
-        """Return effective SL % for pair (#3). Uses adaptive via sl_risk_scorer + regime if enabled."""
+        """Return effective SL % for pair (#3). Uses adaptive via sl_risk_scorer + regime if enabled.
+
+        W2 shell fuse (optional): when sl_width_arming_policy live_apply, dead unproven
+        tryout shells may get 3% at attach. Core/green/graduated stay on NEEDLE-04 band.
+        Never a global 8→3 rewrite.
+        """
+        # W2 live fuse override (shell-only) — fail open to normal path
+        try:
+            from phase6.core.sl_width_would_arm_shadow import resolve_live_sl_pct
+
+            held = 0.0
+            role = ""
+            has_lot = False
+            mfe = 0.0
+            hours = 0.0
+            if isinstance(risk_data, dict):
+                held = float(risk_data.get("held_usd") or risk_data.get("position_usd") or 0.0)
+                role = str(risk_data.get("role") or "")
+                has_lot = bool(risk_data.get("has_tryout_lot") or risk_data.get("tryout_shell"))
+                mfe = float(risk_data.get("mfe_pct") or risk_data.get("path_mfe_pct") or 0.0)
+                hours = float(risk_data.get("hours_held") or risk_data.get("hold_hours") or 0.0)
+            # Fresh tryout attach: shellish lot ok, but hours stay real (0) so W2
+            # does NOT fire on brand-new buys — only after ≥4h dead path.
+            if not has_lot and held <= 30.0:
+                has_lot = True
+                if held <= 0:
+                    held = 25.0
+            w2 = resolve_live_sl_pct(
+                pair=pair,
+                held_usd=held,
+                role=role or "tryout_shell",
+                has_tryout_lot=has_lot,
+                mfe_pct=mfe,
+                hours_held=hours,
+                default_pct=float(getattr(self, "sl_base_pct", self.default_sl_pct) or 0.08),
+            )
+            if w2.get("live_override") and w2.get("sl_pct") is not None:
+                logger.info(
+                    "[SL] W2 live fuse %s sl_pct=%.4f rule=%s",
+                    pair,
+                    float(w2["sl_pct"]),
+                    w2.get("rule_id"),
+                )
+                return float(w2["sl_pct"])
+        except Exception as w2e:
+            logger.debug("W2 sl width resolve skipped for %s: %s", pair, w2e)
+
         if not getattr(self, "adaptive_sl_enabled", True):
             return self.default_sl_pct
         try:

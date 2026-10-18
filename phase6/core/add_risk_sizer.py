@@ -447,6 +447,40 @@ def decide_add_size(
         other_book_heat_usd=other_book_heat_usd,
     )
 
+    # C2 ballast under-target floor: when max_add collapsed on BTC/ETH ballast,
+    # inject a capped floor step if live_apply (never global; kill-file gated).
+    try:
+        from phase6.core.ballast_under_target_floor import apply_floor_to_max_add
+
+        max_for_floor = 0.0 if max_add == float("inf") else float(max_add)
+        # open upnl pct approx from detail
+        upnl = _f(detail.get("open_upnl_usd"), 0.0)
+        upnl_pct = (upnl / pos) if pos > 0 else 0.0
+        flat_cap = factors.rebalance_cap_usd if factors.rebalance_cap_usd is not None else 75.0
+        inj = apply_floor_to_max_add(
+            pair=pair,
+            role="ballast_core",
+            held_usd=pos,
+            equity_usd=equity_usd,
+            target_w=float(getattr(factors, "target_pair_weight", 0.18) or 0.18),
+            max_add_usd=max_for_floor,
+            open_upnl_pct=upnl_pct,
+            stop_attached=True if stop_price is None else bool(_f(stop_price) > 0),
+            flat_cap_usd=_f(flat_cap, 75.0),
+        )
+        detail["c2_floor"] = {
+            "injected": inj.get("injected"),
+            "step_usd": inj.get("step_usd"),
+            "live_apply": inj.get("live_apply"),
+            "would": inj.get("would"),
+        }
+        if inj.get("injected") and inj.get("max_add_after") is not None:
+            max_add = float(inj["max_add_after"])
+            detail["reason"] = "c2_ballast_under_target_floor"
+            detail["max_add_usd"] = round(max_add, 4)
+    except Exception as c2e:
+        logger.debug("[ADD-RISK] C2 floor skip for %s: %s", pair, c2e)
+
     if max_add == float("inf"):
         return AddSizeDecision(
             pair=pair,

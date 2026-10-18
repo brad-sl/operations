@@ -502,6 +502,70 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
         logger.warning("post_proof_dwell composer hook failed: %s", pe)
         dwell_block = {"ran": False, "error": str(pe), "skip_seat": False}
 
+    # D2 flat deploy priority: reserve powder for ballast before new tryout shell.
+    d2_block: Optional[Dict[str, Any]] = None
+    try:
+        from phase6.core.flat_deploy_priority import live_shell_gate
+        from phase6.core.paths import STATE_DIR as _SD
+        import json as _json
+
+        live_snap: Dict[str, Any] = {}
+        try:
+            _lp = _SD / "phase6_live_state.json"
+            if _lp.is_file():
+                live_snap = _json.loads(_lp.read_text(encoding="utf-8")) or {}
+        except Exception:
+            live_snap = {}
+        mx: Dict[str, Any] = {}
+        try:
+            _mp = _SD / "membership_sizing_matrix_latest.json"
+            if _mp.is_file():
+                mx = _json.loads(_mp.read_text(encoding="utf-8")) or {}
+        except Exception:
+            mx = {}
+        rows_mx = mx.get("rows") if isinstance(mx.get("rows"), list) else []
+        btc_h = eth_h = 0.0
+        tw_b = tw_e = 0.18
+        for _r in rows_mx or []:
+            if not isinstance(_r, dict):
+                continue
+            if _r.get("pair") == "BTC-USD":
+                btc_h = float(_r.get("held_usd") or 0)
+                tw_b = float(_r.get("target_pair_weight") or 0.18)
+            if _r.get("pair") == "ETH-USD":
+                eth_h = float(_r.get("held_usd") or 0)
+                tw_e = float(_r.get("target_pair_weight") or 0.18)
+        eq = 0.0
+        try:
+            eq = float((mx.get("add_room_meta") or {}).get("equity_usd") or 0)
+        except (TypeError, ValueError):
+            eq = 0.0
+        if eq <= 0:
+            try:
+                eq = float((live_snap.get("totals") or {}).get("total_usd") or live_snap.get("equity_usd") or 0)
+            except (TypeError, ValueError):
+                eq = 0.0
+        reg_name = str(
+            (regime or {}).get("live_regime")
+            or (regime or {}).get("regime")
+            or (mx.get("regime_sheet") or {}).get("live_regime")
+            or "flat"
+        )
+        d2_block = live_shell_gate(
+            regime=reg_name,
+            deploy_cap_usd=75.0,
+            btc_held=btc_h,
+            eth_held=eth_h,
+            equity=eq or 1.0,
+            target_w_btc=tw_b,
+            target_w_eth=tw_e,
+        )
+        d2_block["ran"] = True
+        d2_block["skip_seat"] = bool(d2_block.get("block_shell"))
+    except Exception as d2e:
+        logger.warning("flat_deploy_priority D2 gate failed: %s", d2e)
+        d2_block = {"ran": False, "error": str(d2e), "skip_seat": False}
+
     seat_receipt = None
     seat_skipped_reason = None
     if cand is None:
@@ -517,6 +581,10 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
     elif isinstance(dwell_block, dict) and dwell_block.get("skip_seat"):
         seat_skipped_reason = "post_proof_dwell:" + str(
             ",".join(dwell_block.get("reasons") or []) or "graduated_hold"
+        )
+    elif isinstance(d2_block, dict) and d2_block.get("skip_seat"):
+        seat_skipped_reason = "d2_ballast_before_shell:" + str(
+            d2_block.get("reason") or "reserve"
         )
     else:
         money = bool(cfg.go_buy) and (not cfg.dry_run_buy)
@@ -604,6 +672,13 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
             f"skip={dwell_block.get('skip_seat')} "
             f"live={dwell_block.get('live_apply')} "
             f"reasons={dwell_block.get('reasons')}"
+        )
+    if isinstance(d2_block, dict) and d2_block.get("ran"):
+        plain_bits.append(
+            f"d2_ballast live={d2_block.get('live_apply')} "
+            f"block_shell={d2_block.get('block_shell')} "
+            f"would={d2_block.get('would_block_if_live')} "
+            f"reason={d2_block.get('reason')}"
         )
     if seat_receipt:
         plain_bits.append(
@@ -741,6 +816,18 @@ def run_composer(cfg: Optional[ComposerConfig] = None, **kwargs: Any) -> Dict[st
             "error": (dwell_block or {}).get("error"),
         }
         if isinstance(dwell_block, dict)
+        else None,
+        "d2_flat_deploy": {
+            "ran": (d2_block or {}).get("ran"),
+            "live_apply": (d2_block or {}).get("live_apply"),
+            "block_shell": (d2_block or {}).get("block_shell"),
+            "would_block_if_live": (d2_block or {}).get("would_block_if_live"),
+            "shells_ok": (d2_block or {}).get("shells_ok"),
+            "reason": (d2_block or {}).get("reason"),
+            "prefer": (d2_block or {}).get("prefer"),
+            "error": (d2_block or {}).get("error"),
+        }
+        if isinstance(d2_block, dict)
         else None,
         "seat_skipped_reason": seat_skipped_reason,
         "seat_receipt": seat_receipt,

@@ -1,15 +1,21 @@
 {
   "schema": "bank_trail_while_green_shadow_v1",
-  "status": "MEASURE_ONLY",
+  "status": "MEASURE_ONLY_GO_INTENT",
   "live_apply": false,
   "as_of": "2026-10-14",
   "question": "On ballast/core bags, does earlier partial (A), soft trail (C), or A then C beat ride-to-8%-SL after a real green path?",
   "scope": {
     "min_notional_usd": 75.0,
-    "core_pairs": ["BTC-USD", "ETH-USD"],
-    "exclude_pairs": ["PAXG-USD", "PAXG-USDC"],
+    "core_pairs": [
+      "BTC-USD",
+      "ETH-USD"
+    ],
+    "exclude_pairs": [
+      "PAXG-USD",
+      "PAXG-USDC"
+    ],
     "include_core_even_if_below_min_notional": true,
-    "note": "Tryout shells stay on trail-TP + W2 fuse sketch — not this CF."
+    "note": "Tryout shells stay on trail-TP + W2 fuse sketch \u2014 not this CF."
   },
   "arms": {
     "control": {
@@ -51,7 +57,12 @@
   },
   "scoring": {
     "primary": "sum_pnl_usd_arm_minus_actual",
-    "also": ["median_delta_usd", "n_legs", "n_would_arm", "n_false_friend_if_only_headline"],
+    "also": [
+      "median_delta_usd",
+      "n_legs",
+      "n_would_arm",
+      "n_false_friend_if_only_headline"
+    ],
     "promote_bar_note": "No live GO until n>=5 ballast legs with would-arm and net delta clear of fee; never promote on single ETH ghost."
   },
   "do_not": [
@@ -63,5 +74,7 @@
   "outputs": {
     "json": "data/state/bank_trail_while_green_cf_latest.json",
     "md": "reports/BANK_TRAIL_WHILE_GREEN_CF_LATEST.md"
-  }
+  },
+  "brad_go_intent_at": "2026-10-17T23:38:50.432171+00:00",
+  "brad_go_intent": "Brad GO reverse-stack #2 2026-10-17: implement/arm bank-trail path. Sunday gates still N_INSUFFICIENT (would-arm 3/5). live_apply stays false until letter GO on winner arm."
 }

@@ -1,6 +1,6 @@
 {
   "schema": "tryout_decision_discipline_v1",
-  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. Brad GO 2026-10-01 live_apply ON — composer can skip/reduce seats. Brad GO 2026-10-04 P2: signal-first money bar (eng≥0.35) — core vs tryout by RSI+sent+TP path, not ballast-before-shell.",
+  "note": "Jev-style process discipline adapted to Phase 6 tryout funnel. Deterministic state + atomic judgments + code policy + hard veto. No external decision model required. Brad GO 2026-10-01 live_apply ON \u2014 composer can skip/reduce seats. Brad GO 2026-10-04 P2: signal-first money bar (eng\u22650.35) \u2014 core vs tryout by RSI+sent+TP path, not ballast-before-shell.",
   "live_apply": true,
   "brad_go_live_apply_at": "2026-10-01T15:25:00Z",
   "brad_go_p2_signal_first_at": "2026-10-04T21:15:00Z",
@@ -21,30 +21,69 @@
   },
   "thresholds": {
     "note": "Live only when live_apply=true. Shadow always records would_*. P2: min_eng_absolute matches TP-winner band (~0.35+); weak-sent opens are STAND_DOWN.",
-    "min_setup_score": 1.5,
-    "min_setup_confidence": 0.55,
-    "min_sent_clear_noul": 0.55,
-    "min_eng_absolute": 0.35,
-    "max_toxic_source_noul": 0.50,
-    "min_latch_fresh_noul": 0.40,
-    "behavior_skip_labels": ["fast_tryout_exit", "sl_heavy"],
+    "min_setup_score": 1.7,
+    "min_setup_confidence": 0.6,
+    "min_sent_clear_noul": 0.6,
+    "min_eng_absolute": 0.4,
+    "max_toxic_source_noul": 0.5,
+    "min_latch_fresh_noul": 0.4,
+    "behavior_skip_labels": [
+      "fast_tryout_exit",
+      "sl_heavy"
+    ],
     "behavior_min_closed_rts": 5,
-    "behavior_skip_confidence": 0.60,
+    "behavior_skip_confidence": 0.6,
     "reduced_shell_setup_score": 1.0,
     "reduced_shell_fraction": 0.5
   },
   "fallback_ladder": {
     "note": "Order matters. First match wins. Hard risk never delegates.",
     "rungs": [
-      {"id": "kill_switch", "action": "STAND_DOWN", "size": 0.0},
-      {"id": "regime_block", "action": "STAND_DOWN", "size": 0.0},
-      {"id": "hard_entry_veto", "action": "STAND_DOWN", "size": 0.0},
-      {"id": "toxic_source", "action": "STAND_DOWN", "size": 0.0},
-      {"id": "stale_latch", "action": "OBSERVE", "size": 0.0},
-      {"id": "behavior_skip", "action": "SKIP_PAIR", "size": 0.0},
-      {"id": "low_confidence", "action": "OBSERVE", "size": 0.0},
-      {"id": "reduced_shell", "action": "BUY_REDUCED", "size": 0.5},
-      {"id": "full_shell", "action": "BUY_FULL", "size": 1.0}
+      {
+        "id": "kill_switch",
+        "action": "STAND_DOWN",
+        "size": 0.0
+      },
+      {
+        "id": "regime_block",
+        "action": "STAND_DOWN",
+        "size": 0.0
+      },
+      {
+        "id": "hard_entry_veto",
+        "action": "STAND_DOWN",
+        "size": 0.0
+      },
+      {
+        "id": "toxic_source",
+        "action": "STAND_DOWN",
+        "size": 0.0
+      },
+      {
+        "id": "stale_latch",
+        "action": "OBSERVE",
+        "size": 0.0
+      },
+      {
+        "id": "behavior_skip",
+        "action": "SKIP_PAIR",
+        "size": 0.0
+      },
+      {
+        "id": "low_confidence",
+        "action": "OBSERVE",
+        "size": 0.0
+      },
+      {
+        "id": "reduced_shell",
+        "action": "BUY_REDUCED",
+        "size": 0.5
+      },
+      {
+        "id": "full_shell",
+        "action": "BUY_FULL",
+        "size": 1.0
+      }
     ]
   },
   "calibration": {
@@ -55,7 +94,7 @@
     "note": "Log snapshot+judgments+decision; attach outcome on exit. Reliability before live_apply."
   },
   "state_fields": {
-    "note": "Deterministic snapshot only — never spend judgment on arithmetic we already compute.",
+    "note": "Deterministic snapshot only \u2014 never spend judgment on arithmetic we already compute.",
     "required": [
       "pair",
       "rsi",
@@ -79,5 +118,7 @@
       "shell_usd",
       "kill"
     ]
-  }
+  },
+  "brad_go_intake_hygiene_at": "2026-10-17T23:38:50.432171+00:00",
+  "intake_hygiene_note": "Brad GO reverse-stack #3 2026-10-17: raise eng/setup bars to cut pile-on weak seats. before={'min_eng_absolute': 0.35, 'min_setup_score': 1.5, 'min_setup_confidence': 0.55, 'min_sent_clear_noul': 0.55}"
 }

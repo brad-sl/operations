@@ -7,7 +7,10 @@ Implements policy sketch from config/sl_width_arming_policy.json:
 - W2 3% only on dead unproven shells (≤~$30, not core, weak MFE, held≥4h)
 - W3 never tighten after green (MFE≥2% / trail proof / dwell graduated)
 
-No live_apply. No orders. Logs would_arm_3pct vs would_arm_8pct.
+Logs would_arm_3pct vs would_arm_8pct.
+When policy.live_apply + W2 rule match, resolve_live_sl_pct may return 3% for
+dead unproven shells only. Core/green/graduated always stay on NEEDLE-04 8% band.
+No global stop_loss_pct rewrite.
 """
 from __future__ import annotations
 
@@ -77,7 +80,93 @@ def load_policy() -> Dict[str, Any]:
         "arming_rules_shadow": raw.get("arming_rules_shadow") or [],
         "do_not": raw.get("do_not") or [],
     }
+    # W2 rule knobs (from shadow rule or defaults)
+    w2 = None
+    for rule in out["arming_rules_shadow"] or []:
+        if isinstance(rule, dict) and str(rule.get("id") or "").startswith("W2"):
+            w2 = rule
+            break
+    if isinstance(w2, dict):
+        out["w2_sl_pct"] = _f(w2.get("sl_base_pct"), 0.03)
+        out["w2_sl_min"] = _f(w2.get("sl_min_pct"), 0.03)
+        out["w2_sl_max"] = _f(w2.get("sl_max_pct"), 0.05)
+        # honor per-rule live_apply if present
+        if "live_apply" in w2:
+            out["w2_live_apply"] = bool(w2.get("live_apply"))
+        else:
+            out["w2_live_apply"] = bool(out["live_apply"])
+    else:
+        out["w2_sl_pct"] = 0.03
+        out["w2_sl_min"] = 0.03
+        out["w2_sl_max"] = 0.05
+        out["w2_live_apply"] = bool(out["live_apply"])
     out.update(DEFAULTS)
+    return out
+
+
+def effective_w2_live(policy: Optional[Dict[str, Any]] = None) -> bool:
+    """W2 shell fuse live only when policy + W2 rule arm and no kill."""
+    if KILL.is_file():
+        return False
+    p = policy or load_policy()
+    if not bool(p.get("live_apply")):
+        return False
+    return bool(p.get("w2_live_apply", True))
+
+
+def resolve_live_sl_pct(
+    *,
+    pair: str,
+    held_usd: float = 0.0,
+    role: str = "",
+    has_tryout_lot: bool = False,
+    mfe_pct: float = 0.0,
+    hours_held: float = 0.0,
+    graduated: Optional[bool] = None,
+    default_pct: float = 0.08,
+    policy: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Attach-time width resolver.
+    Returns {sl_pct, rule_id, live_override, would_arm_3pct, reasons}.
+    Only overrides default when W2 live + dead unproven shell.
+    Never global 8→3. Never tightens after green (W3).
+    """
+    p = policy or load_policy()
+    live = effective_w2_live(p)
+    if graduated is None:
+        ppd = _load(PPD)
+        graduated = _graduated(pair, ppd if isinstance(ppd, dict) else {})
+    cls = classify_would_arm(
+        pair=pair,
+        held_usd=held_usd,
+        role=role,
+        has_tryout_lot=has_tryout_lot,
+        mfe_pct=mfe_pct,
+        hours_held=hours_held,
+        graduated=bool(graduated),
+        policy=p,
+    )
+    base = _f((p.get("live_default") or {}).get("stop_loss_pct"), default_pct) or _f(
+        default_pct, 0.08
+    )
+    out: Dict[str, Any] = {
+        "pair": _norm(pair),
+        "sl_pct": base,
+        "rule_id": cls.get("rule_id"),
+        "live_override": False,
+        "would_arm_3pct": bool(cls.get("would_arm_3pct")),
+        "live_apply": live,
+        "reasons": list(cls.get("reasons") or []),
+        "arm": cls.get("arm"),
+    }
+    if live and cls.get("would_arm_3pct") and cls.get("rule_id") == "W2_tight_unproven_shell":
+        pct = _f(p.get("w2_sl_pct"), 0.03)
+        # clamp to W2 band
+        pct = max(_f(p.get("w2_sl_min"), 0.03), min(_f(p.get("w2_sl_max"), 0.05), pct))
+        out["sl_pct"] = pct
+        out["live_override"] = True
+        out["reasons"].append("w2_live_fuse_applied")
     return out
 
 
@@ -257,18 +346,23 @@ def evaluate_open_shells_would_arm(
 
     n3 = sum(1 for e in evals if e.get("would_arm_3pct"))
     n8 = sum(1 for e in evals if e.get("would_arm_8pct"))
+    w2_live = effective_w2_live(policy)
     out = {
         "schema": SCHEMA,
         "as_of": _utc(),
-        "status": policy.get("status"),
-        "live_apply": False,
+        "status": "W2_LIVE_SHELL_ONLY" if w2_live else (policy.get("status") or "MEASURE_ONLY"),
+        "live_apply": w2_live,
         "kill_file": KILL.is_file(),
         "n_eval": len(evals),
         "n_would_3pct": n3,
         "n_would_8pct": n8,
         "rows": evals,
         "policy_path": str(CONFIG_PATH.relative_to(PROJECT_ROOT)),
-        "note": "MEASURE_ONLY — no money path; 14d shadow before any live fuse GO",
+        "note": (
+            "W2 live: 3% fuse only on dead unproven shells at attach; core/green stay 8%"
+            if w2_live
+            else "MEASURE_ONLY — no money path; 14d shadow before any live fuse GO"
+        ),
     }
     return out
 

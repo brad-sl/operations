@@ -1,8 +1,8 @@
 {
   "schema": "sl_width_arming_policy_v1",
-  "status": "MEASURE_ONLY",
+  "status": "WIRED_SHADOW_PENDING_14D",
   "live_apply": false,
-  "as_of": "2026-10-11",
+  "as_of": "2026-10-17",
   "basis_report": "reports/SL_WIDTH_3V8_CF_LATEST.md",
   "basis_cf": "data/state/sl_width_3v8_cf_latest.json",
   "live_default": {
@@ -21,7 +21,7 @@
     "post_needle_n": 2,
     "post_needle_actual_pnl_usd": -22.26,
     "post_needle_if_3pct_delta_usd": 12.75,
-    "interpretation": "Tighter 3% would have cut this week's ETH/LINK dollar loss (~+$13 vs actual) but ETH had already printed ~+4% MFE — classic green-then-die. Whole-sample 3% edge is small (~+$10 / 13 legs) and not a blanket re-tighten case."
+    "interpretation": "Tighter 3% would have cut this week's ETH/LINK dollar loss (~+$13 vs actual) but ETH had already printed ~+4% MFE \u2014 classic green-then-die. Whole-sample 3% edge is small (~+$10 / 13 legs) and not a blanket re-tighten case."
   },
   "arming_rules_shadow": [
     {
@@ -52,7 +52,8 @@
         "hours_held >= 4"
       ],
       "why": "Dead-path shells: 3% saves bleed without sacrificing a printed green path. CF tag 3pct_helped_dead_path (LINK this week ~+$1.6).",
-      "live_apply": false
+      "live_apply": false,
+      "wire": "resolve_live_sl_pct ready; flip with policy.live_apply after 14d"
     },
     {
       "id": "W3_never_tighten_after_green",
@@ -62,17 +63,19 @@
         "had_trail_tp_or_proof_event",
         "dwell_graduated"
       ],
-      "why": "ETH this week: +3.9% MFE then −8% SL. 3% would save ~$11 on that leg but the correct product response is trail/bank or hold under wide SL — not re-introduce fee-farm 3% on names that already worked."
+      "why": "ETH this week: +3.9% MFE then \u22128% SL. 3% would save ~$11 on that leg but the correct product response is trail/bank or hold under wide SL \u2014 not re-introduce fee-farm 3% on names that already worked."
     }
   ],
   "do_not": [
-    "Global revert stop_loss_pct 0.08 → 0.03 without Brad GO",
+    "Global revert stop_loss_pct 0.08 \u2192 0.03 without Brad GO",
     "Tune width off one week or one UNI outlier",
     "Treat SL width CF as promote ticket for hard-exit RSI auto"
   ],
   "next_engineering_if_go": [
-    "Wire path_mfe_while_held from runner peak memory into attach decision",
-    "Sleeve flag tryout_shell on stop attach (abs notional ≤ tryout cap)",
-    "Shadow-log would_arm_3pct vs would_arm_8pct for 14d before live_apply"
-  ]
+    "\u226514d would_arm history with sensible shell hits (not thrash on core/green)",
+    "Then set live_apply true + W2 rule live_apply true \u2014 shell-only 3%",
+    "Kill file ready; core/green stay 8%"
+  ],
+  "wire_shipped_at": "2026-10-17T23:38:50.432171+00:00",
+  "wire_note": "Brad GO reverse-stack #4 2026-10-17: resolve_live_sl_pct + stop_loss_manager hook shipped. live_apply remains false until 14d gate (history started 2026-10-13). NEVER global 8\u21923."
 }

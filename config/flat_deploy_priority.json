@@ -1,14 +1,17 @@
 {
   "schema": "flat_deploy_priority_v1",
-  "live_apply": false,
-  "as_of": "2026-10-12",
-  "brad_go": "2026-10-12_shadow_only_until_sunday",
-  "note": "§D1 Flat deploy priority: in flat/transition, if core ballast (BTC/ETH) under 35% target, reserve deploy_cap before new tryout shell. Shadow only. No live_apply. No runner change.",
-  "flat_regimes": ["flat", "transition"],
+  "live_apply": true,
+  "as_of": "2026-10-17",
+  "brad_go": "2026-10-17_brad_go_d2_reverse_stack",
+  "note": "D2 LIVE Brad GO 2026-10-17. Flat/transition: reserve deploy_cap before new tryout shell when BTC/ETH under 35% target. Kill: data/state/flat_deploy_priority_KILL",
+  "flat_regimes": [
+    "flat",
+    "transition"
+  ],
   "deploy_cap_usd": 75,
   "min_held_pct": 0.35,
   "reserve_before_shell": true,
-  "shadow_only": true,
+  "shadow_only": false,
   "late_run_block_allows_shell": true,
   "next": "D2 live_apply only after Sunday weekly + Brad GO. Shadow board + matrix dig_out_shadow. Kill: data/state/flat_deploy_priority_KILL",
   "production_go_doc": "docs/plans/2026-10-13-dig-out-practical-sequence-go.md"

@@ -13600,3 +13600,161 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+---
+
+## WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19)
+
+Source: reports/ANALYST_WEEKLY_TRADE_REVIEW_AGENT_LATEST.md (week ending 2026-10-18/19).
+
+### Board graph (crypto-bot-project)
+
+| ID | Card | Assignee | Notes |
+|----|------|----------|-------|
+| t_083422c3 | HUB WEEKLY-SUGGESTIONS-20261018 | crypto-orchestrator | routing done |
+| t_fe8ec847 | W-PROCESS-TAX-ALT-SHELL-SL + E-ALT-SHELL-SL-CAREER one-off RCA | crypto-analyst | ready |
+| t_1ac63f9c | VERIFY-CLOSE intake + C2/D2 + ETH career | crypto-engineer | ready |
+| t_d5371a3c | REV sign-off | code-reviewer | todo (parents=RCA+VERIFY) |
+
+### Handoffs
+- docs/handoffs/2026-10-19-WEEKLY-SUGGESTIONS-ORCH-HUB.md
+- docs/handoffs/2026-10-19-W-PROCESS-TAX-ALT-SHELL-SL-RCA.md
+- docs/handoffs/2026-10-19-WEEKLY-SUGGESTIONS-VERIFY-CLOSE.md
+
+### Suggestion disposition
+
+| Analyst ID | P | Disposition |
+|------------|---|-------------|
+| W-PROCESS-TAX-ALT-SHELL-SL | P0 | **CAREER_DONE** (t_7560d64d 2026-10-19; measure-only; no SL knob) |
+| E-ALT-SHELL-SL-CAREER | exp | Shipped reports/E_ALT_SHELL_SL_CAREER_2026-10-19.md + data/state/e_alt_shell_sl_career_latest.json |
+| W-TRYOUT-INTAKE-VS-KINDLING | P0 | **LIVE** (verified t_d73918fd 2026-10-19; intake discipline raised + live_apply) |
+| W-FLAT-BALLAST-BEFORE-SHELL | P1 | **LIVE** (verified t_d73918fd; D2 flat_deploy_priority live_apply=true) |
+| W-BALLAST-PROFIT-GATE | P1 | **LIVE** (verified t_d73918fd; C2 ballast_under_target_floor live_apply=true) |
+| W-PROCESS-TAX-ETH-SL | P1 | **CAREER_DONE** (verified t_d73918fd; shipped 2026-10-12 no new SL knob) |
+| W-KINDLING-STRUCTURE-DATA | P2 | MEASURE watch only - no card |
+| W-WR-BUCKET-SPLIT | P2 | deferred this wave |
+
+### Expected artifacts
+- reports/E_ALT_SHELL_SL_CAREER_2026-10-19.md
+- data/state/e_alt_shell_sl_career_latest.json
+- reports/WEEKLY_SUGGESTIONS_VERIFY_CLOSE_2026-10-19.md
+
+### Board recovery note (same day)
+v1 workers crashed: forced `--skill` names not registered on crypto-analyst/engineer profiles.
+- Archived: t_fe8ec847, t_1ac63f9c, t_d5371a3c
+- Active: **t_7560d64d** (analyst RCA), **t_d73918fd** (eng verify), REV v2 parents those two
+- Hub t_083422c3 completed after reclaim
+
+### Verify-Close Results (t_d73918fd — 2026-10-19)
+**All four weekly carries verified as already-live (or career_done). No re-implementation.**
+
+| Analyst ID | Status after 2026-10-17 GO + verify | Evidence |
+|------------|-------------------------------------|----------|
+| **W-TRYOUT-INTAKE-VS-KINDLING** | **LIVE** | config/tryout_decision_discipline.json (live_apply=true, raised: eng≥0.40 / setup≥1.7 / conf≥0.60); discipline_latest + rsi_composer (STAND_DOWN on weak eng; live_apply=true) |
+| **W-FLAT-BALLAST-BEFORE-SHELL** | **LIVE** | config/flat_deploy_priority.json (live_apply=true, reserve_before_shell=true, $75); rsi_composer d2 (block_shell=true live); soft_down lane1 |
+| **W-BALLAST-PROFIT-GATE** | **LIVE** | config/ballast_under_target_floor.json (live_apply=true, $75 max_step BTC/ETH); matrix dig_out_shadow + c2 intent; composer records floor path |
+| **W-PROCESS-TAX-ETH-SL** | **CAREER_DONE** | reports/E_ETH_BALLAST_SL_CAREER_2026-10-12.md (ballast career, **no SL knob**); sl_width_arming (W2 false, W3 never after green); trading_config 0.08; soft_down no_go 8→3 |
+
+**Receipts written:**
+- reports/WEEKLY_SUGGESTIONS_VERIFY_CLOSE_2026-10-19.md
+- data/state/weekly_suggestions_verify_close_latest.json
+
+**Isolation tests (re-run):** 
+- ballast_under_target_floor.py: 11/11 PASS
+- flat_deploy_priority.py: 8/8 PASS
+
+**Residual gaps (explicit, no silent green):**
+- bank-trail-while-green: MEASURE_ONLY (Sunday gate N_INSUFFICIENT)
+- W2 3% shell fuse: WIRED_SHADOW_PENDING_14D (live_apply=false)
+- Ballast held still micro (BTC $53 vs ~$403 target; ETH $0) — C2 unblocks but no fill yet
+- This-week alt-shell SL tax (ADA/TIA/LINK) on separate RCA card (not this verify)
+- Intake stricter + D2 blocks new shells (per design)
+
+**MASTER note:** Updated under WEEKLY-SUGGESTIONS-20261018. All IDs now have LIVE/CAREER_DONE + paths. Matches success criteria. See task t_d73918fd for full smoke reads. 
+
+**Must-not honored:** no new money knobs, no touch PAXG/scale/dwell/global SL, no re-impl.
+
+### Alt-shell SL career (t_7560d64d — 2026-10-19)
+
+Measure-only RCA. **No knobs / no orders.** Rebuild: `scripts/phase6/run_alt_shell_sl_career.py`.
+
+| Pair | Role | Hold | SL PnL | Reseat after SL | Dwell demote |
+|------|------|------|--------|-----------------|--------------|
+| ADA-USD | liquid flat-cap ~$75 | 48.0h | −$5.89 | 0 | no |
+| TIA-USD | paper-kindled tryout ~$51 | 24.0h | −$4.01 | 0 | yes (72h ban) |
+| LINK-USD | tryout shell ~$25 | 10.5h | −$1.96 | 2 (Oct 16 + Oct 17, ban expired) | yes |
+
+Ledger chain tax −$12.03 = weekly primary. Default **no SL knob**. W2 stays shadow. C2/D2/intake already LIVE (verify-close). Never: global 8→3, PAXG, Kelly, dual_agree, blow $75.
+
+**Artifacts:**
+- reports/E_ALT_SHELL_SL_CAREER_2026-10-19.md
+- data/state/e_alt_shell_sl_career_latest.json
+- scripts/phase6/run_alt_shell_sl_career.py
+
+Notepad (measure): `open_suggestions` W-PROCESS-TAX-ALT-SHELL-SL CAREER_DONE; `go_queue` nothing new from this RCA.
+
+
+---
+
+## WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19)
+
+Source: reports/ANALYST_WEEKLY_TRADE_REVIEW_AGENT_LATEST.md (week ending 2026-10-18/19).
+
+### Board graph (crypto-bot-project)
+
+| ID | Card | Assignee | Notes |
+|----|------|----------|-------|
+| t_083422c3 | HUB WEEKLY-SUGGESTIONS-20261018 | crypto-orchestrator | routing done |
+| t_7560d64d | **W-PROCESS-TAX-ALT-SHELL-SL** + **E-ALT-SHELL-SL-CAREER** one-off RCA | crypto-analyst | done |
+| t_d73918fd | VERIFY-CLOSE intake + C2/D2 + ETH career | crypto-engineer | done |
+| t_16e95a3d | REV sign-off | code-reviewer | done (parents=RCA+VERIFY) |
+| t_cf2f0471 | CODE-REVIEW: WEEKLY-SUGGESTIONS-20261018 changes | code-reviewer | ready |
+
+### Handoffs
+- `docs/handoffs/2026-10-19-WEEKLY-SUGGESTIONS-ORCH-HUB.md`
+- `docs/handoffs/2026-10-19-W-PROCESS-TAX-ALT-SHELL-SL-RCA.md`
+- `docs/handoffs/2026-10-19-WEEKLY-SUGGESTIONS-VERIFY-CLOSE.md`
+
+### Suggestion disposition
+
+| Analyst ID | P | Disposition |
+|------------|---|-------------|
+| W-PROCESS-TAX-ALT-SHELL-SL | P0 | **DONE** → Analyst RCA t_7560d64d (+ E-ALT-SHELL-SL-CAREER) |
+| E-ALT-SHELL-SL-CAREER | exp | Attached to t_7560d64d; measure-only; no knobs |
+| W-TRYOUT-INTAKE-VS-KINDLING | P0 | VERIFIED → t_d73918fd (LIVE intake discipline) |
+| W-FLAT-BALLAST-BEFORE-SHELL | P1 | VERIFIED → t_d73918fd (expect LIVE D2) |
+| W-BALLAST-PROFIT-GATE | P1 | VERIFIED → t_d73918fd (expect LIVE C2) |
+| W-PROCESS-TAX-ETH-SL | P1 | VERIFIED → t_d73918fd (CAREER_DONE 2026-10-12) |
+| W-KINDLING-STRUCTURE-DATA | P2 | MEASURE watch only - no card |
+| W-WR-BUCKET-SPLIT | P2 | deferred this wave |
+
+### Expected artifacts
+- reports/E_ALT_SHELL_SL_CAREER_2026-10-19.md
+- data/state/e_alt_shell_sl_career_latest.json
+- reports/WEEKLY_SUGGESTIONS_VERIFY_CLOSE_2026-10-19.md
+- `data/state/weekly_suggestions_verify_close_latest.json`
+
+As of: 2026-10-19T20:45:00Z
+
+---
+
+## CODE-REVIEW-WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19)
+
+Source: WEEKLY-SUGGESTIONS-20261018 epic
+
+### Board graph (crypto-bot-project)
+
+| ID | Card | Assignee | Notes |
+|----|------|----------|-------|
+| t_cf2f0471 | CODE-REVIEW: WEEKLY-SUGGESTIONS-20261018 changes | code-reviewer | ready |
+
+### Relevant changes for review
+- Handoff documents (`docs/handoffs/2026-10-19-*`)
+- RCA report + data artifact (`reports/E_ALT_SHELL_SL_CAREER_2026-10-19.md`, `data/state/e_alt_shell_sl_career_latest.json`)
+- Verify-close report + data artifact (`reports/WEEKLY_SUGGESTIONS_VERIFY_CLOSE_2026-10-19.md`, `data/state/weekly_suggestions_verify_close_latest.json`)
+- Code changes related to C2/D2/Intake from reverse-stack GO (shipped 2026-10-17, verified by `t_d73918fd`)
+
+### Objective
+Review all code and documentation changes related to the WEEKLY-SUGGESTIONS-20261018 epic for correctness, adherence to "do not touch" rules, and overall quality.
+
+As of: 2026-10-19T20:45:00Z

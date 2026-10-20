@@ -13758,3 +13758,23 @@ Source: WEEKLY-SUGGESTIONS-20261018 epic
 Review all code and documentation changes related to the WEEKLY-SUGGESTIONS-20261018 epic for correctness, adherence to "do not touch" rules, and overall quality.
 
 As of: 2026-10-19T20:45:00Z
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261020** (opened 2026-10-20T00:31:10.126208)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261020`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

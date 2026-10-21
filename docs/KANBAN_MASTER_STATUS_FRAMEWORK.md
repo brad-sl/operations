@@ -77,4 +77,9 @@ hermes kanban --board crypto-bot-project stats
 ## Related
 - Board: `crypto-bot-project`  
 - MASTER: `docs/MASTER_TASK_TRACKING.md`  
-- BoN staff-next: skill `best-of-n-verify` before multi-option staffing  
+- BoN staff-next: skill `best-of-n-verify` before multi-option staffing
+
+## Task tracker DB (2026-10-21)
+
+Live section status SSOT moved to **`data/task_tracker.db`** (`scripts/ops/task_tracker.py`).  
+MASTER markdown remains the historical archive. See `docs/TASK_TRACKER_DB.md`.

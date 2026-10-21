@@ -1,11 +1,12 @@
 # Task tracker open view
 
-Generated: 2026-10-21T19:06:19Z  
+Generated: 2026-10-21T19:07:48Z  
 Source DB: `/home/brad/projects/crypto-trading-bot/data/task_tracker.db`  
 Policy: DB is live SSOT for status; MASTER markdown is archive.
 
 | status | id | title | kanban |
 |--------|----|-------|--------|
+| open | `CODE-REVIEW-WEEKLY-SUGGESTIONS-20261018` | CODE-REVIEW-WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19) | t_cf2f0471, t_d73918fd |
 | blocked | `APLUS-MONEY-PATH-20261015` | APLUS-MONEY-PATH-20261015 |  |
 | unknown | `KANBAN-SWEEP-20260926` | KANBAN-SWEEP-20260926 (Scotty — post seat/scale ship) | t_050ea502, t_1f6450d7, t_529fe799, t_a8aafce3, t_b2c1e8e7, t_bbe2956d |
 | open | `REGIME-CLIMATE-WEATHER-REMAINING-20260921` | REGIME-CLIMATE-WEATHER-REMAINING-20260921 — OPEN (doldrum staffing) | t_6af749f2, t_a8aafce3, t_b2c1e8e7, t_defaaee0 |
@@ -134,9 +135,5 @@ Policy: DB is live SSOT for status; MASTER markdown is archive.
 | unknown | `ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902` | ANALYST-POLYMARKET-INFLUENCE-RERUN-20260902 |  |
 | open | `Platform-completeness-progress` | Platform completeness progress — runner + PC-04/05/06 (2026-09-12) | t_ac1ab01b, t_cac894f8 |
 | blocked | `KANBAN-UNSTICK-20261014` | KANBAN-UNSTICK-20261014 — NEEDLE blocked batch (Scotty) | t_c4fc7acb |
-| open | `SOFT-DOWN-REVERSE-STACK-20261017` | SOFT-DOWN-REVERSE-STACK-20261017 |  |
-| unknown | `WEEKLY-SUGGESTIONS-20261018` | WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19) | t_083422c3, t_1ac63f9c, t_7560d64d, t_d5371a3c, t_d73918fd, t_fe8ec847 |
-| unknown | `WEEKLY-SUGGESTIONS-20261018__113987aa` | WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19) | t_083422c3, t_16e95a3d, t_7560d64d, t_cf2f0471, t_d73918fd |
-| unknown | `CODE-REVIEW-WEEKLY-SUGGESTIONS-20261018` | CODE-REVIEW-WEEKLY-SUGGESTIONS-20261018 (Scotty 2026-10-19) | t_cf2f0471, t_d73918fd |
 
-_132 rows_
+_129 rows_

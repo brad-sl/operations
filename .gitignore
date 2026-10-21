@@ -120,3 +120,7 @@ data/state/tryout_scale_up_live_KILL
 # climate/weather measure
 data/state/regime_climate_weather_latest.json
 data/state/regime_climate_weather_crumbs.jsonl
+
+# Task tracker live SSOT (local)
+data/task_tracker.db
+data/task_tracker.db-*

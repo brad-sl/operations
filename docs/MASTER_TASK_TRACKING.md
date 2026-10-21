@@ -13798,3 +13798,14 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+---
+
+## TASK-TRACKER-DB-20261021 (DONE)
+
+- **Live SSOT:** `data/task_tracker.db` via `python scripts/ops/task_tracker.py`
+- **Docs:** `docs/TASK_TRACKER_DB.md` · open view `docs/TASK_TRACKER_OPEN.md`
+- **Kanban:** t_68534359 complete
+- **Policy:** do not bulk-edit this MASTER file for status; use `set-status` / `add` / `export-md`
+- **Also shipped:** phase6 skill seed into crypto-* profiles — `scripts/ops/seed_phase6_profile_skills.py`
+

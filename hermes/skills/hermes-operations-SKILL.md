@@ -103,6 +103,36 @@ Detail: `references/terminal-backend-local-vs-ssh.md`.
 - If stream dies (`Codex stream produced no SSE…` / empty), **do not leave empty**: produce the adversarial report in-session (note independence limits) and/or reschedule on OpenRouter alternate.
 - Pin `provider`+`model`; toolsets `file,terminal` (+`web`); `workdir` = project root.
 
+## Skills: global vs profile isolation (token/index load)
+
+**Trigger:** Too many skills in the prompt index; want agent-local packs; creative/mlops noise on trading default.
+
+**Policy (2026-10-21):** Default keeps phase6/trading/ops/dev (~90 enabled). Cold on default: creative bulk, mlops, godmode, apify, last30days, heavy SEO reports. Each Kanban profile has its own `skills.disabled` (category cold-packs by role).
+
+**Phase6 seed (2026-10-21):** crypto-analyst / crypto-engineer / crypto-orchestrator / crypto-monitor **symlink** `trading-bot-operations` (+ soft-down, scale-first, crypto-data-acquisition, key software-dev trading skills) from default via project script:
+
+```bash
+python /home/brad/projects/crypto-trading-bot/scripts/ops/seed_phase6_profile_skills.py
+hermes -p crypto-analyst skills list --enabled-only | rg phase6
+```
+
+```bash
+hermes skills list --enabled-only
+hermes -p crypto-analyst skills list --enabled-only
+hermes config set skills.disabled '["godmode","apify",...]'
+hermes -p code-reviewer config set skills.disabled '[...]'
+```
+
+Backup/rollback + full matrix: `references/skills-global-vs-profile-isolation-20261021.md`.
+
+## Task tracker DB (MASTER status SSOT)
+
+**Trigger:** MASTER markdown too large to patch; need status query/update without full-file edits.
+
+**Live SSOT:** `/home/brad/projects/crypto-trading-bot/data/task_tracker.db`  
+**CLI:** `python scripts/ops/task_tracker.py` (`import-master`, `list`, `get`, `set-status`, `add`, `export-md`)  
+**Docs:** `docs/TASK_TRACKER_DB.md` · scan view `docs/TASK_TRACKER_OPEN.md`  
+MASTER file = archive; Kanban = dispatcher.
 ## Profiles for one-shot tasks (alternate model)
 
 Profiles are separate Hermes homes (`~/.hermes/profiles/<name>/`). Each can pin its own `model.provider` + `model.default`.

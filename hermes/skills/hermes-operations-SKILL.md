@@ -580,13 +580,72 @@ Partial defenses (untrusted web framing, private URL block, policy rails). Not a
 
 **Note:** Legacy `hermes gateway run --host ... --port ...` is not the dashboard path — use `hermes dashboard`.
 
-### `hermes update` Node/npm mixed state (web UI fail)
+### `hermes update` (agent-driven, gateway-aware)
 
-**Symptom after update:** mixed-state Node deps + Web UI npm install failed (Python agent may still work).
+**Trigger:** User asks to update Hermes; `hermes update --check` lags; unfinished-update banner; Desktop SSH pause mid-update.
 
-**Cause:** `engine-strict=true` + `engines.npm: "<11.10.0 || >=11.17.0"`. npm **11.10–11.16** banned. Fix PATH npm **and** `~/.hermes/node`.
+**Always-on procedure (order):**
+1. **Preflight** — do not trust memory of current version:
+   ```bash
+   hermes --version
+   git -C ~/.hermes/hermes-agent fetch --tags --prune origin
+   git -C ~/.hermes/hermes-agent tag --sort=-v:refname | head -10
+   hermes update --check   # if git-timeout, fetch first then re-check
+   hermes update --set-channel stable   # pin channel when user wants stable
+   ```
+2. **From inside gateway/Telegram** — never self-kill the session:
+   ```bash
+   hermes update --yes --channel stable \
+     --no-gateway-restart \
+     --no-backup \
+     --keep-stash
+   ```
+   - `--no-gateway-restart`: required when the agent is running under the gateway; Brad restarts gateway in a **local shell** after.
+   - `--no-backup`: skip multi-GB `HERMES_HOME` zip when a fresh `state-snapshots/` already exists (full zip is a common hang/timeout).
+   - `--keep-stash`: big version jumps — do **not** auto-reapply old local edits onto new code.
+   - Prefer explicit `--channel stable` so the plan is not stuck finishing an old tip path.
+3. **Timeouts are normal** (agent tool ~420s). After timeout: check whether code already moved, deps still running, or process died mid-fence — **do not** blindly re-run a full update.
+4. **Classify post-timeout state:**
+   | Observation | Action |
+   |-------------|--------|
+   | `git describe` already at target tag; npm/uv still alive | Wait/poll; do not clear locks yet |
+   | Target tag on HEAD; updater PID **dead**; locks remain | Clear dead fences (below); verify; optional finish pass |
+   | Stuck on Linux `electron-builder` / `apps/desktop` pack | Abort pack; quarantine `release/`; clear completion pending |
+   | `source update is unfinished` / completion pending | Finish pass **or** clear pending after core verified |
+5. **Dead-lock clear (only when owner PID is gone):**
+   ```bash
+   rm -f ~/.hermes/.hermes-update-in-progress \
+         ~/.hermes/.hermes-update-in-progress.lock \
+         ~/.hermes/.hermes-update-paused-gateways.lock \
+         ~/.hermes/hermes-agent/.git/hermes-update.lock \
+         ~/.hermes/hermes-agent/.git/index.lock
+   ```
+6. **Linux desktop pack ≠ Windows Desktop client.** On Win Desktop → SSH Linux: aborting Electron pack to clear the fence is correct when core is already at target. Quarantine incomplete `apps/desktop/release` so the next update skips the grind. Full SSH fence recovery: `references/desktop-ssh-managed-update-pause.md`.
+7. **Verify before claiming done:**
+   ```bash
+   hermes --version
+   git -C ~/.hermes/hermes-agent rev-parse HEAD
+   git -C ~/.hermes/hermes-agent rev-parse vX.Y.Z   # must match HEAD when on a release tag
+   hermes update --check
+   test -f ~/.hermes/hermes-agent/hermes_cli/web_dist/index.html
+   hermes doctor | head -40
+   ```
+8. **Tell Brad the one local-shell step** (agent cannot restart own gateway):
+   ```bash
+   systemctl --user restart hermes-gateway
+   # dashboard is manual-serve on this host — restart separately if mixed-modules warn
+   ```
 
-**Fix (agent runs it):**
+**Pitfalls:**
+- `hermes update --check` git timeout → fetch tags first; not "no update available."
+- Code at new tag + dead updater + uncleared locks → unfinished banner even though version is correct.
+- Re-running update while Node deps still install doubles work and re-arms fences.
+- Full `--backup` of multi-GB `HERMES_HOME` often exceeds agent tool timeout; prefer existing state snapshot + `--no-backup`.
+- Hermes **bundled** Python under `~/.hermes/tools/python-*` is independent of `uv`/system CPython installs — installing 3.15 on the host does **not** move the agent runtime.
+- Doctor "shared TELEGRAM_BOT_TOKEN across profiles" is pre-existing multi-profile noise; only default gateway should own the bot (see Telegram single-owner section).
+
+**npm engine-strict mixed state (web UI fail after update):**
+`engine-strict=true` + `engines.npm: "<11.10.0 || >=11.17.0"`. npm **11.10–11.16** banned. Fix PATH npm **and** `~/.hermes/node`:
 ```bash
 npm install -g npm@11.17.0
 test -x "$HOME/.hermes/node/bin/npm" && \
@@ -596,7 +655,9 @@ npm install --no-fund --no-audit --prefer-offline --progress=false --workspaces=
 npm install --no-fund --no-audit --prefer-offline --progress=false --workspace ui-tui --workspace web
 npm run build --workspace web
 ```
-Verify: `hermes doctor` → ✓ web. Detail: `references/hermes-update-npm-engine-strict-mixed-state.md`.
+Verify: `hermes doctor` → ✓ web.
+
+Detail: `references/hermes-update-procedure.md` · npm-only: `references/hermes-update-npm-engine-strict-mixed-state.md` · Desktop pause: `references/desktop-ssh-managed-update-pause.md`.
 
 ### Desktop SSH (Windows client → Linux host) — failure classes
 
@@ -617,6 +678,7 @@ Verify: `hermes doctor` → ✓ web. Detail: `references/hermes-update-npm-engin
 - Clearing only the remote marker is **insufficient** if Windows still holds recovery for that connection id — rename the recovery JSON, full-quit Desktop, reconnect.
 - Do **not** re-click Desktop Update until both fences are clear (re-journals recovery and re-locks dials).
 - `update-required` (ownership flags) ≠ pause: probe `hermes serve --help` for `--ssh-session-token-file` / `--ssh-owner-nonce`.
+- Agent-driven core update from Telegram: use `--no-gateway-restart --no-backup --keep-stash --channel stable`; after code is current, treat Electron pack hang as optional abort + clear `completion_pending` — full procedure in `references/hermes-update-procedure.md`.
 
 **Timeout-after-version class (post-pause):**
 - Desktop SSH **exec budget ~20s** for remote `hermes serve --isolated`.

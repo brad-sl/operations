@@ -10,7 +10,6 @@ apple
 autonomous-ai-agents
 creative
 crypto_analyst
-crypto-data-acquisition
 data-science
 devops
 diagramming

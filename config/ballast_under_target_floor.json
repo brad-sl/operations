@@ -3,7 +3,7 @@
   "live_apply": true,
   "as_of": "2026-10-17",
   "brad_go": "2026-10-17_brad_go_c2_reverse_stack",
-  "note": "C2 LIVE Brad GO 2026-10-17. Floor step on BTC/ETH when max_add collapsed. max_step $75. Kill: data/state/ballast_under_target_floor_KILL",
+  "note": "C2 LIVE Brad GO 2026-10-17 + residual-floor A 2026-10-23. Floor step on BTC/ETH when max_add collapsed or residual < min_useful. max_step $75. Kill: data/state/ballast_under_target_floor_KILL",
   "pairs_allow": [
     "BTC-USD",
     "ETH-USD"
@@ -20,5 +20,8 @@
   "default_flat_cap_usd": 75,
   "shadow_only": false,
   "next": "C2 live_apply only after Sunday weekly + Brad GO. Shadow board: scripts/phase6/run_dig_out_shadow_board.py. Matrix dig_out_shadow attached. Kill: data/state/ballast_under_target_floor_KILL",
-  "production_go_doc": "docs/plans/2026-10-13-dig-out-practical-sequence-go.md"
+  "production_go_doc": "docs/plans/2026-10-13-dig-out-practical-sequence-go.md",
+  "min_useful_max_add_usd": 25.0,
+  "brad_go_a_residual_floor": "2026-10-23",
+  "a_note": "Brad GO A 2026-10-23: floor injects when ordinary max_add is 0 OR residual < min_useful ($25). Stops risk-math stubs (~$7) from already_has_max_add blocking ballast step. Kill: data/state/ballast_under_target_floor_KILL"
 }

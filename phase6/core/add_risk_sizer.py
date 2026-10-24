@@ -447,8 +447,10 @@ def decide_add_size(
         other_book_heat_usd=other_book_heat_usd,
     )
 
-    # C2 ballast under-target floor: when max_add collapsed on BTC/ETH ballast,
-    # inject a capped floor step if live_apply (never global; kill-file gated).
+    # C2 ballast under-target floor: when max_add collapsed OR residual under
+    # min_move on BTC/ETH ballast, inject capped floor step if live_apply
+    # (never global; kill-file gated). Brad GO A 2026-10-23: residual stubs
+    # (e.g. risk-math ~$7) must not block the floor via already_has_max_add.
     try:
         from phase6.core.ballast_under_target_floor import apply_floor_to_max_add
 
@@ -467,6 +469,7 @@ def decide_add_size(
             open_upnl_pct=upnl_pct,
             stop_attached=True if stop_price is None else bool(_f(stop_price) > 0),
             flat_cap_usd=_f(flat_cap, 75.0),
+            min_useful_max_add_usd=_f(getattr(factors, "min_move_usd", 25.0), 25.0),
         )
         detail["c2_floor"] = {
             "injected": inj.get("injected"),

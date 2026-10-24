@@ -3,10 +3,12 @@
 §C1/C2 Ballast under-target floor.
 
 Pure helper: would_allow_under_target_step(...)
-- Floor step ONLY when max_add_usd == 0 (collapsed)
+- Floor step when ordinary max_add cannot fund a real move:
+  max_add == 0 (collapsed) OR 0 < max_add < min_useful (residual stub, Brad GO A 2026-10-23)
 - Skip if held >= 0.35 * target_w * equity
 - Guard: pair/role, stop_attached, not_over, upnl >= -0.06
 - step_usd = min(max_step, flat_cap, max(0, target_val - held))
+- already_has_max_add only when max_add >= min_useful (default $25 min_move)
 
 live_apply: when True + no kill file, matrix may inject step into max_add.
 Money still only moves via rebalance/add-risk consumers of max_add.
@@ -39,6 +41,7 @@ DEFAULT_CFG: Dict[str, Any] = {
     "require_not_over_target": True,
     "forbid_if_open_upnl_pct_lt": -0.06,
     "default_flat_cap_usd": 75,
+    "min_useful_max_add_usd": 25.0,
     "shadow_only": True,
 }
 
@@ -112,9 +115,16 @@ def would_allow_under_target_step(
     open_upnl_pct: float,
     stop_attached: bool,
     flat_cap_usd: Optional[float] = None,
+    min_useful_max_add_usd: Optional[float] = None,
     cfg: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    """Return {allow: bool, step_usd: float, reasons: list, shadow/live flags}."""
+    """Return {allow: bool, step_usd: float, reasons: list, shadow/live flags}.
+
+    Floor opens when ordinary max_add is collapsed (0) OR a residual stub below
+    min_useful_max_add_usd (same idea as add-risk min_move — default $25). A
+    positive-but-useless max_add must not block the ballast step (Brad GO A
+    2026-10-23). Useful room (max_add >= min_useful) still means already_has_max_add.
+    """
     c = cfg or load_config()
     live = effective_live_apply(c)
     pn = _norm_pair(pair)
@@ -136,10 +146,19 @@ def would_allow_under_target_step(
     forbid_upnl = _f(c.get("forbid_if_open_upnl_pct_lt", -0.06))
     require_stop = bool(c.get("require_stop_attached", True))
     require_not_over = bool(c.get("require_not_over_target", True))
+    if min_useful_max_add_usd is not None:
+        min_useful = _f(min_useful_max_add_usd, 25.0)
+    else:
+        min_useful = _f(c.get("min_useful_max_add_usd", DEFAULT_CFG["min_useful_max_add_usd"]), 25.0)
+    out["min_useful_max_add_usd"] = round(min_useful, 4)
 
-    if max_add_usd > 0:
+    # Useful ordinary room already funds a real move — do not double-inject floor.
+    # Residual stubs (0 < max_add < min_useful) are treated as collapsed for floor.
+    if _f(max_add_usd) + 1e-9 >= min_useful:
         out["reasons"].append("already_has_max_add")
         return out
+    if _f(max_add_usd) > 0:
+        out["residual_max_add_usd"] = round(_f(max_add_usd), 4)
 
     if pn not in pairs:
         out["reasons"].append("pair_not_allowed")
@@ -198,11 +217,13 @@ def apply_floor_to_max_add(
     open_upnl_pct: float = 0.0,
     stop_attached: bool = True,
     flat_cap_usd: Optional[float] = None,
+    min_useful_max_add_usd: Optional[float] = None,
     cfg: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """
     If live_apply and floor allows, return max(max_add, step).
     Always returns diagnostic; only mutates when live.
+    Residual max_add below min_useful is overridden by the floor step (GO A).
     """
     c = cfg or load_config()
     live = effective_live_apply(c)
@@ -222,6 +243,7 @@ def apply_floor_to_max_add(
         open_upnl_pct=open_upnl_pct,
         stop_attached=stop_attached,
         flat_cap_usd=flat_cap_usd,
+        min_useful_max_add_usd=min_useful_max_add_usd,
         cfg=c,
     )
     out: Dict[str, Any] = {

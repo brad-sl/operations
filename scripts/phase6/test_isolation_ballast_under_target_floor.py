@@ -7,7 +7,8 @@ Per §C1 spec:
 - min_held_pct 0.35 skip if already >=
 - require stop, not over target
 - forbid upnl < -0.06
-- when max_add>0: already_has_max_add (no floor)
+- when max_add >= min_useful (default $25): already_has_max_add (no floor)
+- when 0 < max_add < min_useful: residual stub → floor may inject (Brad GO A 2026-10-23)
 - step = min(max_step, flat_cap, max(0, target-held))
 """
 
@@ -34,6 +35,7 @@ SHADOW_CFG = {
     "require_not_over_target": True,
     "forbid_if_open_upnl_pct_lt": -0.06,
     "default_flat_cap_usd": 75,
+    "min_useful_max_add_usd": 25.0,
 }
 
 class TestBallastUnderTargetFloor(unittest.TestCase):
@@ -138,7 +140,7 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
             held_usd=55.0,
             equity_usd=2260.0,
             target_w=0.18,
-            max_add_usd=50.0,  # already has room
+            max_add_usd=50.0,  # useful room (>= min_useful $25)
             open_upnl_pct=-0.02,
             stop_attached=True,
             flat_cap_usd=75.0,
@@ -146,6 +148,57 @@ class TestBallastUnderTargetFloor(unittest.TestCase):
         )
         self.assertFalse(res.get("allow"))
         self.assertTrue(any("already_has_max_add" in r for r in res.get("reasons", [])))
+
+    def test_residual_max_add_under_min_useful_allows_floor(self) -> None:
+        """Brad GO A 2026-10-23: risk-math stub (~$7) must not block C2 floor."""
+        from phase6.core import ballast_under_target_floor as buf
+        res = buf.would_allow_under_target_step(
+            pair="BTC-USD",
+            role="ballast_core",
+            held_usd=55.0,
+            equity_usd=2260.0,
+            target_w=0.18,
+            max_add_usd=7.24,  # residual under min_move
+            open_upnl_pct=-0.02,
+            stop_attached=True,
+            flat_cap_usd=75.0,
+            cfg=SHADOW_CFG,
+        )
+        self.assertTrue(res.get("allow"), res)
+        self.assertAlmostEqual(float(res.get("step_usd") or 0), 75.0, places=1)
+        self.assertAlmostEqual(float(res.get("residual_max_add_usd") or 0), 7.24, places=2)
+
+    def test_apply_floor_injects_over_residual_stub(self) -> None:
+        from phase6.core import ballast_under_target_floor as buf
+        cfg = {
+            "live_apply": True,
+            "shadow_only": False,
+            "pairs_allow": ["BTC-USD", "ETH-USD"],
+            "roles_allow": ["ballast_core"],
+            "max_step_usd": 75,
+            "min_held_pct_of_target_to_skip": 0.35,
+            "require_stop_attached": True,
+            "require_not_over_target": True,
+            "forbid_if_open_upnl_pct_lt": -0.06,
+            "default_flat_cap_usd": 75,
+            "min_useful_max_add_usd": 25.0,
+        }
+        with mock.patch.object(buf, "kill_file_on", return_value=False):
+            inj = buf.apply_floor_to_max_add(
+                pair="BTC-USD",
+                role="ballast_core",
+                held_usd=55.0,
+                equity_usd=2260.0,
+                target_w=0.18,
+                max_add_usd=7.24,
+                open_upnl_pct=-0.02,
+                stop_attached=True,
+                flat_cap_usd=75.0,
+                min_useful_max_add_usd=25.0,
+                cfg=cfg,
+            )
+        self.assertTrue(inj.get("injected"), inj)
+        self.assertAlmostEqual(float(inj.get("max_add_after") or 0), 75.0, places=1)
 
     def test_min_held_pct_skip(self) -> None:
         from phase6.core import ballast_under_target_floor as buf

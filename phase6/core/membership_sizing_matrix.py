@@ -553,6 +553,17 @@ def build_matrix(
             upnl = row.get("open_upnl_usd")
             upnl_pct = (_f(upnl) / held) if held > 0 and upnl is not None else 0.0
             # Conservative: assume stop attached for shadow (do not invent naked rejects)
+            # min_useful aligns with add-risk min_move so residual stubs can floor-inject
+            min_useful = 25.0
+            try:
+                min_useful = _f(
+                    ((add_room.get("factors") or {}) if isinstance(add_room, dict) else {}).get(
+                        "min_move_usd"
+                    ),
+                    25.0,
+                ) or 25.0
+            except Exception:
+                min_useful = 25.0
             res = would_allow_under_target_step(
                 pair=pair,
                 role=str(row.get("role") or "ballast_core"),
@@ -563,6 +574,7 @@ def build_matrix(
                 open_upnl_pct=upnl_pct,
                 stop_attached=True,
                 flat_cap_usd=deploy_cap,
+                min_useful_max_add_usd=min_useful,
             )
             floor_rows.append(res)
             # C2: inject floor step into this row's max_add when live
@@ -576,6 +588,7 @@ def build_matrix(
                 open_upnl_pct=upnl_pct,
                 stop_attached=True,
                 flat_cap_usd=deploy_cap,
+                min_useful_max_add_usd=min_useful,
             )
             inject_receipts.append(inj)
             if inj.get("injected") and inj.get("max_add_after") is not None:

@@ -238,7 +238,7 @@
     "recovery_soft_down_20260828": {
       "enabled": true,
       "reason": "Brad GO P1 2026-10-15: un-starve funnel \u2014 (1) scoreboard rewrite honesty, (2) XRP add-only seat, (3) sensor package LINK path: latch 180m + RSI proof 65 through 2026-10-22T21:00:00-07:00. No thaw reopen. No force list expand. Shell $25\u00d76 / sent\u22650.35 / SL+trail / no auto-promote / no orders / no force_rebalance.",
-      "as_of": "20261015T175916Z",
+      "as_of": "20261024T005157Z",
       "prior_as_of": "20260929T155247Z",
       "block_new_buy_pairs": [
         "UNI-USD",
@@ -254,6 +254,8 @@
       "allowlist_pairs": [
         "BTC-USD",
         "BTC-USDC",
+        "ETH-USD",
+        "ETH-USDC",
         "PAXG-USD",
         "PAXG-USDC",
         "USDC-USD",
@@ -464,7 +466,9 @@
       "do_not_clear_sl_72h": true,
       "rollback": "Rollback shell: quality_tryout abs_cap_usd 25 + max_new_seats_per_day 6 + max_open_tryout_seats 6; first_fill concurrent 6; limit pilot. Door package EXPIRED 2026-09-22 (early) \u2014 thaw/RSI65/latch windows OFF.",
       "brad_go_p1_20261015": "2026-10-15",
-      "p1_note": "Brad GO P1 2026-10-15: un-starve funnel \u2014 (1) scoreboard rewrite honesty, (2) XRP add-only seat, (3) sensor package LINK path: latch 180m + RSI proof 65 through 2026-10-22T21:00:00-07:00. No thaw reopen. No force list expand. Shell $25\u00d76 / sent\u22650.35 / SL+trail / no auto-promote / no orders / no force_rebalance."
+      "p1_note": "Brad GO P1 2026-10-15: un-starve funnel \u2014 (1) scoreboard rewrite honesty, (2) XRP add-only seat, (3) sensor package LINK path: latch 180m + RSI proof 65 through 2026-10-22T21:00:00-07:00. No thaw reopen. No force list expand. Shell $25\u00d76 / sent\u22650.35 / SL+trail / no auto-promote / no orders / no force_rebalance.",
+      "brad_go_c_eth_ballast_allowlist": "2026-10-23",
+      "c_note": "Brad GO C 2026-10-23: ETH-USD/ETH-USDC on recovery allowlist as ballast_core target. Unblocks new ETH seat under quality_tryout_v2 (was ledger_fail). Not a tryout shell expand. Pairs with C2 residual-floor fix (A). Kill/rollback: restore bak_c2_eth_allowlist_*."
     }
   },
   "buy_block_pairs": [

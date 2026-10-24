@@ -13849,3 +13849,47 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+---
+
+## C2→order gap A+C LIVE — 2026-10-23 (Brad GO)
+
+**Status:** LIVE code+config. Force rebalance after ship still **actions=0 / $0 deployed**.
+
+### A — residual floor (DONE LIVE)
+- inject when ordinary max_add < min_useful ($25), not only ==0
+- Offline proof: BTC $75 BUY → pass final=$75 (was skip $7.24)
+- Kill: data/state/ballast_under_target_floor_KILL
+
+### C — ETH allowlist (DONE LIVE)
+- allowlist += ETH-USD, ETH-USDC
+- Backup: config/regime_cash_policy.json.bak_c2_eth_allowlist_*
+
+### B — parked → next if stall continues
+- ARCH-4 ballast seeder (matrix/C2 would_allow → emit BUY ≤step)
+- Evidence: 2026-10-24T00:54Z force rebalance had BTC ROTATE_IN proposals but TradePlan empty
+
+### Receipts
+- data/state/c2_order_gap_ac_go_latest.json
+- reports/C2_ORDER_GAP_AC_GO_LATEST.md
+
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261024** (opened 2026-10-24T00:00:54.577356)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261024`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

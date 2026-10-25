@@ -181,12 +181,52 @@ def build_board() -> Dict[str, Any]:
             logger.warning("triples read: %s", e)
 
     would_arm = evaluate_open_shells_would_arm(matrix_rows=rows, live=live)
+    # Measure health on W2 stream (class: don't burn 14d on stuck meters)
+    try:
+        from phase6.research.measure_collect_health import (
+            W2_CONTRACT,
+            health_from_rows,
+            health_w2_would_arm,
+            telegram_health_line,
+        )
+
+        w2_snap_h = health_from_rows(
+            would_arm.get("rows") or [],
+            name="w2_would_arm_snap",
+            required_row_fields=W2_CONTRACT["required_row_fields"],
+            stuck_defaults=W2_CONTRACT["stuck_defaults"],
+            treatment_field=W2_CONTRACT["treatment_field"],
+            min_rows=0 if not (would_arm.get("rows") or []) else 1,
+        ).to_dict()
+        would_arm = dict(would_arm)
+        would_arm["measure_health"] = w2_snap_h
+        would_arm["collect_clock_ok"] = bool(w2_snap_h.get("collect_clock_ok"))
+        w2_hist_h = health_w2_would_arm()
+    except Exception as e:
+        w2_snap_h = {
+            "ok": False,
+            "code": "sensor_broken",
+            "plain_english": str(e),
+            "collect_clock_ok": False,
+        }
+        w2_hist_h = w2_snap_h
+        telegram_health_line = lambda h: f"w2 health={h.get('code')}"  # noqa: E731
 
     out: Dict[str, Any] = {
         "schema": SCHEMA,
         "as_of": _utc(),
         "live_apply": False,
         "shadow_only": True,
+        "measure_health": {
+            "w2_snap": w2_snap_h,
+            "w2_history": {
+                "code": w2_hist_h.get("code"),
+                "collect_clock_ok": w2_hist_h.get("collect_clock_ok"),
+                "sensor_ok_day_estimate": w2_hist_h.get("sensor_ok_day_estimate"),
+                "plain_english": w2_hist_h.get("plain_english"),
+            },
+            "telegram": telegram_health_line(w2_hist_h if isinstance(w2_hist_h, dict) else w2_snap_h),
+        },
         "kills": {
             "ballast_floor": KILL_C.is_file(),
             "flat_priority": KILL_D.is_file(),
@@ -272,6 +312,7 @@ def write_report(board: Dict[str, Any]) -> str:
         "## §5 3% fuse would_arm (open shells)",
         f"- n_open_eval={w.get('n_eval')} would_arm_3pct={w.get('n_would_3pct')} "
         f"would_arm_8pct={w.get('n_would_8pct')}",
+        f"- measure_health: {(board.get('measure_health') or {}).get('w2_history') or w.get('measure_health')}",
         "",
         "## Do-not (still locked)",
     ]
@@ -306,12 +347,15 @@ def telegram_quiet(board: Dict[str, Any]) -> str:
     c1 = board.get("c1_under_target_floor") or {}
     d1 = board.get("d1_flat_priority") or {}
     w = board.get("w2_sl_width_would_arm") or {}
+    mh = (board.get("measure_health") or {}).get("telegram") or ""
+    clock = "clock_OK" if w.get("collect_clock_ok") else "clock_FROZEN"
     return (
         f"Dig-out shadow · {str(board.get('as_of') or '')[:19]}Z · "
         f"reg={board.get('regime')} · "
         f"C1_allow={c1.get('n_allow')} · "
         f"D1_prefer={d1.get('would_prefer_ballast')} res=${d1.get('reserve_usd')} · "
-        f"W2_3pct={w.get('n_would_3pct')}/{w.get('n_eval')} · live_apply=OFF"
+        f"W2_3pct={w.get('n_would_3pct')}/{w.get('n_eval')} · {clock} · "
+        f"{mh} · live_apply=OFF"
     )
 
 

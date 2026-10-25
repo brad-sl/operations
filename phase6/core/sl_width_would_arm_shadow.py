@@ -179,6 +179,87 @@ def _graduated(pair: str, ppd: Dict[str, Any]) -> bool:
     return str(st.get("status") or "") in ("graduated_hold", "graduated", "dwell_graduated")
 
 
+def _load_open_tryout_lots() -> Dict[str, Dict[str, Any]]:
+    """SSOT: tryout_scale_up_open_lots.json (same as membership matrix), not phase6_live_state."""
+    out: Dict[str, Dict[str, Any]] = {}
+    try:
+        from phase6.core.membership_sizing_matrix import _open_tryout_lots
+
+        raw = _open_tryout_lots()
+        if isinstance(raw, dict):
+            for k, lot in raw.items():
+                if isinstance(lot, dict):
+                    out[_norm(k)] = lot
+    except Exception as e:
+        logger.warning("open tryout lots: %s", e)
+    # also accept live overlay if runner stamped it
+    return out
+
+
+def _last_buy_ts_by_pair() -> Dict[str, str]:
+    """Ledger fallback for hours_held when open-lot registry empty (untagged held shells)."""
+    cache: Dict[str, str] = {}
+    paths = [
+        PROJECT_ROOT / "trades" / "phase6_trades.jsonl",
+        STATE_DIR / "phase6_trades.jsonl",
+    ]
+    for path in paths:
+        if not path.is_file():
+            continue
+        try:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        except OSError:
+            continue
+        # tail scan is enough for open-book hours
+        for line in lines[-8000:]:
+            if not line.strip():
+                continue
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            side = str(r.get("side") or "").lower()
+            if "buy" not in side:
+                continue
+            pair = _norm(str(r.get("pair") or r.get("product_id") or ""))
+            ts = r.get("filled_at") or r.get("timestamp") or r.get("ts")
+            if not pair or not ts:
+                continue
+            prev = cache.get(pair)
+            if prev is None or str(ts) > str(prev):
+                cache[pair] = str(ts)
+    return cache
+
+
+def _hours_from_ts(ts: Any) -> float:
+    if not ts:
+        return 0.0
+    try:
+        t = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        return max(0.0, (datetime.now(timezone.utc) - t).total_seconds() / 3600.0)
+    except Exception:
+        return 0.0
+
+
+def _position_entry_ts(pair: str, live: Dict[str, Any]) -> Optional[str]:
+    pn = _norm(pair)
+    for key in ("positions", "active_positions"):
+        blob = live.get(key)
+        if not isinstance(blob, list):
+            continue
+        for pos in blob:
+            if not isinstance(pos, dict):
+                continue
+            if _norm(str(pos.get("pair") or "")) != pn:
+                continue
+            for k in ("entry_ts", "opened_at", "buy_ts", "timestamp", "filled_at"):
+                if pos.get(k):
+                    return str(pos.get(k))
+    return None
+
+
 def _mfe_pct(pair: str, live: Dict[str, Any], row: Dict[str, Any]) -> float:
     # Prefer explicit path peak if present
     for blob_key in ("path_mfe", "pair_mfe", "mfe_while_held"):
@@ -189,6 +270,20 @@ def _mfe_pct(pair: str, live: Dict[str, Any], row: Dict[str, Any]) -> float:
                 return float(v)
             if isinstance(v, dict) and v.get("mfe_pct") is not None:
                 return _f(v.get("mfe_pct"))
+    # position mark: unrealized_pnl_pct when present
+    pn = _norm(pair)
+    for key in ("positions", "active_positions"):
+        blob = live.get(key)
+        if not isinstance(blob, list):
+            continue
+        for pos in blob:
+            if not isinstance(pos, dict):
+                continue
+            if _norm(str(pos.get("pair") or "")) != pn:
+                continue
+            if pos.get("unrealized_pnl_pct") is not None:
+                # only credit green MFE proxy (path peak ≥ mark when green)
+                return max(0.0, _f(pos.get("unrealized_pnl_pct")))
     # open_upnl as weak proxy when green
     held = _f(row.get("held_usd"))
     upnl = row.get("open_upnl_usd")
@@ -197,22 +292,81 @@ def _mfe_pct(pair: str, live: Dict[str, Any], row: Dict[str, Any]) -> float:
     return 0.0
 
 
-def _hours_held(pair: str, live: Dict[str, Any], row: Dict[str, Any]) -> float:
-    lots = live.get("tryout_open_lots") or live.get("open_lots") or {}
-    if isinstance(lots, dict):
-        lot = lots.get(pair) or lots.get(_norm(pair))
-        if isinstance(lot, dict):
-            for k in ("entry_ts", "opened_at", "buy_ts", "timestamp"):
-                ts = lot.get(k)
-                if not ts:
-                    continue
-                try:
-                    t = datetime.fromisoformat(str(ts).replace("Z", "+00:00"))
-                    return max(0.0, (datetime.now(timezone.utc) - t).total_seconds() / 3600.0)
-                except Exception:
-                    pass
-    # matrix may not have hold hours
-    return _f(row.get("hold_hours"), 0.0)
+def _hours_held(
+    pair: str,
+    live: Dict[str, Any],
+    row: Dict[str, Any],
+    *,
+    open_lots: Optional[Dict[str, Dict[str, Any]]] = None,
+    last_buys: Optional[Dict[str, str]] = None,
+) -> float:
+    pn = _norm(pair)
+    # 1) explicit row
+    for k in ("hold_hours", "hours_held"):
+        if row.get(k) is not None and _f(row.get(k)) > 0:
+            return _f(row.get(k))
+    # 2) tryout open lots SSOT
+    lots = open_lots if open_lots is not None else _load_open_tryout_lots()
+    # merge live overlay keys if present
+    live_lots = live.get("tryout_open_lots") or live.get("open_lots") or {}
+    if isinstance(live_lots, dict) and live_lots:
+        merged = dict(lots)
+        for k, v in live_lots.items():
+            if isinstance(v, dict):
+                merged[_norm(k)] = v
+        lots = merged
+    lot = lots.get(pn) if isinstance(lots, dict) else None
+    if isinstance(lot, dict):
+        for k in ("entry_ts", "opened_at", "buy_ts", "timestamp", "filled_at", "created_at"):
+            hrs = _hours_from_ts(lot.get(k))
+            if hrs > 0:
+                return hrs
+    # 3) live position stamp
+    hrs = _hours_from_ts(_position_entry_ts(pn, live))
+    if hrs > 0:
+        return hrs
+    # 4) ledger last BUY (untagged held shells — common after tryout registry purge)
+    buys = last_buys if last_buys is not None else _last_buy_ts_by_pair()
+    hrs = _hours_from_ts(buys.get(pn))
+    if hrs > 0:
+        return hrs
+    return 0.0
+
+
+def _has_tryout_lot(
+    pair: str,
+    row: Dict[str, Any],
+    *,
+    open_lots: Optional[Dict[str, Dict[str, Any]]] = None,
+    held_usd: float = 0.0,
+    role: str = "",
+) -> bool:
+    """True if registry lot OR untagged alt shell held in tryout ticket band."""
+    if row.get("has_tryout_lot"):
+        return True
+    pn = _norm(pair)
+    lots = open_lots if open_lots is not None else _load_open_tryout_lots()
+    if isinstance(lots, dict) and pn in lots:
+        return True
+    # Untagged held shell: alt/liquid role, tryout-sized notional, not core/ballast
+    role_l = str(role or row.get("role") or "").lower()
+    if role_l in ("ballast_core", "sticky_core"):
+        return False
+    if pn in {"BTC-USD", "ETH-USD", "PAXG-USD", "BTC-USDC", "ETH-USDC", "PAXG-USDC"}:
+        return False
+    # quality_tryout shells are typically ≤~$80 (abs_cap $25–$75 band + drift)
+    if 5.0 <= held_usd <= 80.0 and role_l in (
+        "liquid_held",
+        "tryout",
+        "tryout_shell",
+        "liquid_core",
+        "kindling",
+        "",
+    ):
+        return True
+    if 5.0 <= held_usd <= 80.0 and "tryout" in role_l:
+        return True
+    return False
 
 
 def classify_would_arm(
@@ -312,24 +466,47 @@ def evaluate_open_shells_would_arm(
     if not isinstance(rows, list):
         rows = []
 
-    evals: List[Dict[str, Any]] = []
+    open_lots = _load_open_tryout_lots()
+    last_buys = _last_buy_ts_by_pair()
+
+    # Ensure live held positions appear even if matrix held_usd stale at 0
+    by_pair: Dict[str, Dict[str, Any]] = {}
     for row in rows:
-        if not isinstance(row, dict):
+        if isinstance(row, dict) and row.get("pair"):
+            by_pair[_norm(str(row.get("pair")))] = dict(row)
+    for key in ("positions", "active_positions"):
+        blob = live.get(key)
+        if not isinstance(blob, list):
             continue
-        pair = _norm(str(row.get("pair") or ""))
+        for pos in blob:
+            if not isinstance(pos, dict):
+                continue
+            pn = _norm(str(pos.get("pair") or ""))
+            if not pn:
+                continue
+            held = _f(pos.get("value_usd") or pos.get("held_usd") or pos.get("notional_usd"))
+            if held < 5.0:
+                continue
+            base = by_pair.get(pn) or {"pair": pn, "role": str(pos.get("sleeve") or "")}
+            if _f(base.get("held_usd")) < 5.0:
+                base["held_usd"] = held
+            if base.get("open_upnl_usd") is None and pos.get("unrealized_pnl_usd") is not None:
+                base["open_upnl_usd"] = pos.get("unrealized_pnl_usd")
+            by_pair[pn] = base
+
+    evals: List[Dict[str, Any]] = []
+    for pair, row in by_pair.items():
         held = _f(row.get("held_usd"))
-        if held < 5.0 and not row.get("has_tryout_lot"):
-            continue  # skip dust/empty
-        # Focus tryout-ish + small held + any held with lot
         role = str(row.get("role") or "")
-        has_lot = bool(row.get("has_tryout_lot"))
+        has_lot = _has_tryout_lot(
+            pair, row, open_lots=open_lots, held_usd=held, role=role
+        )
+        if held < 5.0 and not has_lot:
+            continue  # skip dust/empty
         if role in ("ballast_core",) and held > 40:
-            # still log ballast as 8% proof path
-            pass
-        elif held < 5.0 and not has_lot:
-            continue
+            pass  # still log ballast as 8% proof path
         mfe = _mfe_pct(pair, live, row)
-        hrs = _hours_held(pair, live, row)
+        hrs = _hours_held(pair, live, row, open_lots=open_lots, last_buys=last_buys)
         grad = _graduated(pair, ppd)
         evals.append(
             classify_would_arm(
@@ -357,6 +534,12 @@ def evaluate_open_shells_would_arm(
         "n_would_3pct": n3,
         "n_would_8pct": n8,
         "rows": evals,
+        "input_sources": {
+            "open_lots_n": len(open_lots),
+            "last_buy_pairs_n": len(last_buys),
+            "matrix_rows_n": len(rows),
+            "evaluated_pairs_n": len(evals),
+        },
         "policy_path": str(CONFIG_PATH.relative_to(PROJECT_ROOT)),
         "note": (
             "W2 live: 3% fuse only on dead unproven shells at attach; core/green stay 8%"
@@ -369,6 +552,44 @@ def evaluate_open_shells_would_arm(
 
 def run_and_persist() -> Dict[str, Any]:
     out = evaluate_open_shells_would_arm()
+    # Measure-collect health: freeze day-count when meter stuck (hours_held≡0 etc.)
+    try:
+        from phase6.research.measure_collect_health import (
+            W2_CONTRACT,
+            attach_health_to_snap,
+            health_from_rows,
+            health_w2_would_arm,
+        )
+
+        snap_health = health_from_rows(
+            out.get("rows") or [],
+            name="w2_would_arm_snap",
+            required_row_fields=W2_CONTRACT["required_row_fields"],
+            stuck_defaults=W2_CONTRACT["stuck_defaults"],
+            treatment_field=W2_CONTRACT["treatment_field"],
+            min_rows=0 if not (out.get("rows") or []) else 1,
+        )
+        out = attach_health_to_snap(out, snap_health.to_dict())
+        # Full history health for ops (does not rewrite past snaps)
+        hist_h = health_w2_would_arm()
+        out["measure_health_history"] = {
+            "code": hist_h.get("code"),
+            "collect_clock_ok": hist_h.get("collect_clock_ok"),
+            "sensor_ok_day_estimate": hist_h.get("sensor_ok_day_estimate"),
+            "plain_english": hist_h.get("plain_english"),
+        }
+        (STATE_DIR / "measure_collect_health_w2_latest.json").write_text(
+            json.dumps(hist_h, indent=2, default=str) + "\n", encoding="utf-8"
+        )
+    except Exception as e:  # never block collector
+        out["measure_health"] = {
+            "ok": False,
+            "code": "sensor_broken",
+            "plain_english": f"health attach failed: {e}",
+            "collect_clock_ok": False,
+            "go_packet_allowed": False,
+        }
+        out["collect_clock_ok"] = False
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     LATEST.write_text(json.dumps(out, indent=2, default=str) + "\n", encoding="utf-8")
     with HISTORY.open("a", encoding="utf-8") as f:
@@ -378,9 +599,11 @@ def run_and_persist() -> Dict[str, Any]:
 
 if __name__ == "__main__":
     o = run_and_persist()
+    mh = o.get("measure_health") or {}
     print(
         f"SL would-arm shadow · n={o.get('n_eval')} "
         f"3pct={o.get('n_would_3pct')} 8pct={o.get('n_would_8pct')} "
-        f"live_apply=OFF status={o.get('status')}"
+        f"live_apply=OFF status={o.get('status')} "
+        f"health={mh.get('code')} clock={'OK' if o.get('collect_clock_ok') else 'FROZEN'}"
     )
     print(f"state: {LATEST}")

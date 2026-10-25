@@ -13893,3 +13893,85 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**MEASURE HEALTH — REPAIR PACKET MH-W2_WOULD_ARM-SENSOR_DEGENERATE-20261025** (opened 2026-10-25T05:00:58.571656Z)
+**Stream**: `w2_would_arm`
+**Severity**: HIGH
+**Health code**: `sensor_degenerate` · clock=FROZEN
+**Plain**: w2_would_arm_live: fields stuck at defaults {'hours_held': 0.0} across n=2 rows. Meter not reading live inputs — fix wiring; do NOT burn 14d gate or GO from this log.
+**Repair hint**: W2 inputs: open lots SSOT tryout_scale_up_open_lots.json + ledger last BUY hours; untagged alt shells ≤$80 count as tryout_lot. Re-run run_sl_width_would_arm_shadow; stamp w2_meter_post_fix_since.txt; clock = post-fix sensor_ok_days only.
+**Auto-repair attempted**: {'action': 'w2_rerun_collector', 'ok': True, 'exit_code': 0, 'stdout': 'SL would-arm shadow · n=2 3pct=0 8pct=2 live_apply=OFF status=WIRED_SHADOW_PENDING_14D\nstate: data/state/sl_width_would_arm_latest.json\n', 'stderr': '', 'post_fix_since': '2026-10-25T05:00:58.887887Z', 'after_health': {'code': 'sensor_ok', 'collect_clock_ok': True, 'live_meter': {'code': 'sensor_ok', 'ok': True, 'collect_clock_ok': True, 'plain_english': 'w2_would_arm_live: inputs look live (n_rows=2).', 'metrics': {'n_rows': 2, 'name': 'w2_would_arm_live', 'hours_held_stats': {'n': 2, 'unique_3dp': 2, 'min': 504.96, 'max': 2013.65, 'mean': 1259.305, 'stdev': 754.345, 'all_equal': False}, 'has_tryout_lot_true_rate': 0.0, 'n_treatment_true': 0, 'treatment_field': 'would_arm_3pct', 'n_alt_rows': 0, 'pairs': ['BTC-USD', 'PAXG-USD']}}, 'sensor_ok_day_estimate': 1}}
+**Status**: OPEN (measure_collect_health_agent)
+
+Do **not** GO this stream while clock_FROZEN / sensor_degenerate. Fix meter first; then post_fix stamp + new sensor_ok_days.
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-MEASURE_COLLECT-MEASURE_HEALTH_W2_WOULD_ARM_SENSOR_DEGENERATE-20261024** (opened 2026-10-24T22:00:59.687099)
+**Severity**: HIGH
+**Title**: Measure stream frozen: w2_would_arm (sensor_degenerate)
+**Diagnosis (verified via tools)**: w2_would_arm_live: fields stuck at defaults {'hours_held': 0.0} across n=2 rows. Meter not reading live inputs — fix wiring; do NOT burn 14d gate or GO from this log.
+**Common Root Causes**: W2 inputs: open lots SSOT tryout_scale_up_open_lots.json + ledger last BUY hours; untagged alt shells ≤$80 count as tryout_lot. Re-run run_sl_width_would_arm_shadow; stamp w2_meter_post_fix_since.txt; clock = post-fix sensor_ok_days only.
+**Evidence** (recent log snippets + state):
+```
+{"packet_id": "MH-W2_WOULD_ARM-SENSOR_DEGENERATE-20261025", "auto_repair": {"action": "w2_rerun_collector", "ok": true, "exit_code": 0, "stdout": "SL would-arm shadow \u00b7 n=2 3pct=0 8pct=2 live_apply=OFF status=WIRED_SHADOW_PENDING_14D\nstate: data/state/sl_width_would_arm_latest.json\n", "stderr": "", "post_fix_since": "2026-10-25T05:00:58.887887Z", "after_health": {"code": "sensor_ok", "collect_clock_ok": true, "live_meter": {"code": "sensor_ok", "ok": true, "collect_clock_ok": true, "plain_english": "w2_would_arm_live: inputs look live (n_rows=2).", "metrics": {"n_rows": 2, "name": "w2_would_arm_live", "hours_held_stats": {"n": 2, "unique_3dp": 2, "min": 504.96, "max": 2013.65, "mean": 1259.305, "stdev": 754.345, "all_equal": false}, "has_tryout_lot_true_rate": 0.0, "n_treatment_true": 0, "treatment_field": "would_arm_3pct", "n_alt_rows": 0, "pairs": ["BTC-USD", "PAXG-USD"]}}, "sensor_ok_day_estimate": 1}}, "path": "/home/brad/projects/crypto-trading-bot/data/state/measure_health_repairs/MH-W2_WOULD_ARM-SENSOR_DEGENERATE-20261025.json"}
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-MEASURE_COLLECT-MEASURE_HEALTH_W2_WOULD_ARM_SENSOR_DEGENERATE-20261024`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+
+---
+
+**MEASURE HEALTH — SYSTEM AGENT + W2 METER FIX** (done 2026-10-25T05:02:23.127190Z)
+**Status**: DONE (Brad GO items 1+2)
+
+### 1. W2 lot/hours wiring
+- SSOT: tryout_scale_up_open_lots.json + ledger last BUY for hours_held
+- Untagged alt shells <=$80 count as tryout_lot; core-only false = honest empty
+- Live proof post-fix: BTC hrs~505, PAXG hrs~2014; snap sensor_ok clock_OK
+- Post-fix stamp: data/state/w2_meter_post_fix_since.txt — new 14d clock from here (pre-fix Oct 13-25 contaminated)
+
+### 2. Multi-stream health + system agent
+- Registry: w2_would_arm, bank_trail, jev_select_few, decision_discipline
+- Agent: scripts/ops/measure_collect_health_agent.py (wired into ops_engineer.py)
+- Catch freeze -> repair packet + MASTER + TG; W2 auto re-run collector + stamp
+- Never flips live_apply / money path
+- Bank-trail CF + Sunday embed health; letter GO blocked if clock_FROZEN
+- Isolation PASS; live rollup: 4 streams all clock_OK
+
+Doc: docs/testing/MEASURE_COLLECT_HEALTH.md
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261025** (opened 2026-10-25T00:00:55.267743)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261025`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.
+
+**CASH-20261025-001** — Cash policy suggestion: detector grid (score 5.3548)
+Status: Proposed (RC-06 cash policy) — Review & apply candidate_detector to config/regime_cash_policy.json if approved
+Source sweep: 2026-10-25T11:01:14.983072+00:00 | score=5.3548
+Candidate: {'bull_return_pct': 10.0, 'bear_return_pct': -8.0, 'flat_abs_pct': 5.0}
+

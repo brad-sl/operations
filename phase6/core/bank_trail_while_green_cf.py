@@ -812,7 +812,28 @@ def run_cf(
     if write:
         DEFAULT_OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
         DEFAULT_OUT_MD.parent.mkdir(parents=True, exist_ok=True)
-        DEFAULT_OUT_JSON.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+        # Embed measure-collect health so GO packets see meter first
+        try:
+            from phase6.research.measure_collect_health import health_bank_trail
+
+            # write first so health_bank_trail can read latest
+            DEFAULT_OUT_JSON.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            bh = health_bank_trail()
+            payload["measure_health"] = bh
+            payload["collect_clock_ok"] = bool(bh.get("collect_clock_ok"))
+            payload["measure_health_code"] = bh.get("code")
+            DEFAULT_OUT_JSON.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+            (ROOT / "data" / "state" / "measure_collect_health_bank_trail_latest.json").write_text(
+                json.dumps(bh, indent=2, default=str) + "\n", encoding="utf-8"
+            )
+        except Exception as e:
+            payload["measure_health"] = {
+                "ok": False,
+                "code": "sensor_broken",
+                "plain_english": f"bank_trail health attach failed: {e}",
+                "collect_clock_ok": False,
+            }
+            DEFAULT_OUT_JSON.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         DEFAULT_OUT_MD.write_text(format_md(payload), encoding="utf-8")
         payload["wrote_json"] = str(DEFAULT_OUT_JSON)
         payload["wrote_md"] = str(DEFAULT_OUT_MD)

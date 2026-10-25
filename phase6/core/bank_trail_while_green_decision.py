@@ -329,6 +329,31 @@ def write_decision_outputs(
     om = out_md or DEFAULT_OUT_MD
     oj.parent.mkdir(parents=True, exist_ok=True)
     om.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        from phase6.research.measure_collect_health import health_bank_trail
+
+        bh = health_bank_trail()
+        decision = dict(decision)
+        decision["measure_health"] = bh
+        decision["collect_clock_ok"] = bool(bh.get("collect_clock_ok"))
+        decision["measure_health_code"] = bh.get("code")
+        # Gate: health fail → never imply letter GO
+        if not bh.get("collect_clock_ok"):
+            decision["letter_go_blocked_by_measure_health"] = True
+            if decision.get("letter_go_line"):
+                decision["letter_go_line_suppressed"] = decision.get("letter_go_line")
+                decision["letter_go_line"] = (
+                    f"NO_GO_FIX_METER · bank_trail health={bh.get('code')} "
+                    f"(clock_FROZEN). {bh.get('plain_english')}"
+                )
+    except Exception as e:
+        decision = dict(decision)
+        decision["measure_health"] = {
+            "ok": False,
+            "code": "sensor_broken",
+            "plain_english": f"health attach failed: {e}",
+            "collect_clock_ok": False,
+        }
     oj.write_text(json.dumps(decision, indent=2) + "\n", encoding="utf-8")
     om.write_text(format_md(decision, cf_summary), encoding="utf-8")
     return {"json": str(oj), "md": str(om)}

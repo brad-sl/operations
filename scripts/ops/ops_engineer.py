@@ -317,6 +317,49 @@ def main():
     except Exception as e:
         print(f"[OPS] SIGNAL-DQ check failed: {e}")
 
+    # Measure-collect health (frozen meters / stuck defaults) — catch before 14d GO burns
+    try:
+        if str(PROJECT_ROOT) not in sys.path:
+            sys.path.insert(0, str(PROJECT_ROOT))
+        import importlib.util
+
+        _mh_path = PROJECT_ROOT / "scripts" / "ops" / "measure_collect_health_agent.py"
+        _spec = importlib.util.spec_from_file_location(
+            "measure_collect_health_agent", _mh_path
+        )
+        if _spec is None or _spec.loader is None:
+            raise ImportError(f"cannot load {_mh_path}")
+        _mh_mod = importlib.util.module_from_spec(_spec)
+        _spec.loader.exec_module(_mh_mod)
+        mh = _mh_mod.run(do_repair=True, quiet=False, alert=True)
+        print(
+            f"[OPS] MEASURE-HEALTH: {mh.get('rollup', {}).get('plain_english')} "
+            f"new_packets={mh.get('new_packets')}"
+        )
+        # Surface HIGH+ as troubles so ops state dual-tracks (agent already idempotent)
+        for p in mh.get("packets") or []:
+            if p.get("severity") in ("HIGH", "CRITICAL"):
+                all_troubles.append(
+                    {
+                        "id": f"MEASURE_HEALTH_{p.get('stream', '').upper()}_{p.get('code', '').upper()}",
+                        "severity": p.get("severity") or "HIGH",
+                        "title": f"Measure stream frozen: {p.get('stream')} ({p.get('code')})",
+                        "diagnosis": p.get("plain_english") or "",
+                        "common_root": p.get("repair_hint") or "see measure_collect_health",
+                        "evidence": json.dumps(
+                            {
+                                "packet_id": p.get("id"),
+                                "auto_repair": p.get("auto_repair"),
+                                "path": p.get("path"),
+                            },
+                            default=str,
+                        )[:1500],
+                        "target": "measure_collect",
+                    }
+                )
+    except Exception as e:
+        print(f"[OPS] MEASURE-HEALTH check failed: {e}")
+
     if not all_troubles:
         print("[OPS] No active error conditions detected. Systems nominal.")
         ops_state["last_run"] = datetime.now().isoformat()

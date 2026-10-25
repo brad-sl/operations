@@ -82,8 +82,31 @@ See `references/proactive-notification-intervention.md` for the concrete 2026-06
 - DASHBOARD_STALE_WRONG_PORT — exchange balances current, UI frozen; check `serve_dashboard_phase4d` on **8501** vs Phase 6 **8502** — `references/dashboard-stale-port-8501-2026-07-08.md`
 - REBALANCE_TELEGRAM_SPAM — `trading-bot-operations` → `references/rebalance-scheduler-telegram-spam-2026-07-06.md` + `references/phase6-runner-singleton-sl-reattach.md`
 - MULTIPLE_PHASE6_RUNNERS — `.venv` + `/usr/bin/python3`; `scripts/phase6/disable_systemd_runner.sh`; monitor keeps `.venv`
+- MEASURE_HEALTH_FROZEN — collect stream `clock_FROZEN` / `sensor_degenerate` (stuck defaults before 14d GO burns)
 
 Add new patterns only after root-causing a real incident and confirming the regex is stable.
+
+## Measure-collect health agent (2026-10-25)
+**Mandate addition (Brad):** catch measure/shadow meters that never populate and **initiate repair** — not wait until GO week.
+
+| Piece | Path |
+|-------|------|
+| Lib + STREAM_REGISTRY | `phase6/research/measure_collect_health.py` |
+| Agent | `scripts/ops/measure_collect_health_agent.py` |
+| Wired into | `scripts/ops/ops_engineer.py` every tick |
+| Rollup | `data/state/measure_collect_health_rollup_latest.json` |
+| Repair packets | `data/state/measure_health_repairs/` + MASTER append |
+| Doc | `docs/testing/MEASURE_COLLECT_HEALTH.md` |
+
+**Behavior (deterministic, no LLM):**
+1. `evaluate_all_streams()` — w2_would_arm, bank_trail, jev_select_few, decision_discipline
+2. Frozen/bad → one packet per stream/code/day (idempotent via `~/.hermes/ops_engineer_state.json` → `measure_health`)
+3. Safe auto-repair only: W2 re-run `run_sl_width_would_arm_shadow` + stamp `w2_meter_post_fix_since.txt`
+4. **Never** flip `live_apply` / money path
+5. TG alert on new HIGH/CRITICAL; ops surfaces packets as troubles
+
+**Manual:** `python scripts/ops/measure_collect_health_agent.py` (`--no-repair`, `--no-alert`, `--quiet`)
+**Clock rule:** N-day gates use post-fix `sensor_ok_days`, not raw calendar / pre-fix contaminated history.
 
 ## Ticket Template (used by script)
 See the script `scripts/ops/ops_engineer.py` for the exact generator. It always includes:

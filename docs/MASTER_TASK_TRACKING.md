@@ -14035,3 +14035,52 @@ ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' 
 **Status**: OPEN (auto-created by ops-engineer)
 
 See full context in logs/ and phase6/core/ related files.
+
+
+## 2026-10-28 — Runway C last path (~1%/mo) + Fix B seeder LIVE
+
+**Brad GO:** try C after stasis/shutdown talk.
+
+- Bar: Nov closed month_path **dep-adj ≥ +1%** or stop/park (extend Dec only with GO).
+- Shell freeze LIVE: tryout disarm+kill + `rsi_event_tryout_seat_KILL` + ARCH-4 shell freeze filter.
+- Fix B LIVE: `phase6/core/c2_ballast_seeder.py` seeds BTC/ETH BUY when C2 floor would allow; wire in `rebalance_coordinator` post-allocate.
+- Isolation `test_isolation_c2_ballast_seeder.py` PASS.
+- Receipt: `data/state/c_runway_last_path_latest.json` · `reports/C_RUNWAY_LAST_PATH_LATEST.md`
+- Kill seeder: `data/state/c2_ballast_seeder_KILL`
+- Pre-evidence: 2026-10-28T16:01Z deployed $25 LINK while BTC/ETH HOLD@0.5.
+- Runner must load new module on next process cycle (operator).
+
+as_of: 2026-10-28T19:05:15.365185+00:00
+
+
+## 2026-10-28 — Runway C LIVE proof (ETH+BTC fills)
+
+**Brad GO:** try C.
+
+- ETH $75 filled 19:12Z (limit). BTC $75 filled 19:32Z (market after pilot_max_usd; post-only mid reject fixed).
+- Book: BTC ~$127 · ETH ~$75 · PAXG ~$76 · LINK shell ~$25 · cash ~$200.
+- Gate chain: seeder → REGIME-CASH c2 pass → ADD-RISK c2_hard → limit bid-clamp.
+- Shell freeze LIVE. Score Nov ≥ +1% dep-adj or stop.
+- Receipt: `data/state/c_runway_last_path_latest.json` · `reports/C_RUNWAY_LAST_PATH_LATEST.md`
+
+as_of: 2026-10-28T19:35:21.890788+00:00
+
+
+---
+
+**OPS ENGINEER — TROUBLE TICKET OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261029** (opened 2026-10-29T00:00:54.962592)
+**Severity**: CRITICAL
+**Title**: phase6_monitor process not running
+**Diagnosis (verified via tools)**: pgrep found no matching process.
+**Common Root Causes**: systemd restart loop, uncaught exception, OOM, or explicit stop.
+**Evidence** (recent log snippets + state):
+```
+ERROR: Command '['ps', 'aux', '|', 'grep', '-E', 'monitor_phase6_runner\\.py']' returned non-zero exit status 1.
+```
+**Suggested Next**:
+- Restart affected service + clear __pycache__ if code change deployed.
+- Verify with: `python scripts/ops/ops_engineer.py --verify OPS-PHASE6_MONITOR-PHASE6_MONITOR_DOWN-20261029`
+- Escalate to Orchestrator if not resolved in 1 cycle.
+**Status**: OPEN (auto-created by ops-engineer)
+
+See full context in logs/ and phase6/core/ related files.

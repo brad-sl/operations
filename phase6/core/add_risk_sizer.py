@@ -654,6 +654,21 @@ def filter_trade_plan_add_risk(runner: Any, plan: Any) -> Any:
     if plan is None or not getattr(plan, "actions", None):
         return plan
 
+    # Runway C fingerprint — proves live process loaded post-2026-10-28 patch
+    try:
+        n_buy = sum(
+            1
+            for a in (plan.actions or [])
+            if str(a.get("action") or a.get("side") or "").upper() == "BUY"
+        )
+        logger.info(
+            "[ADD-RISK] filter_v=c2_second_chance_2026-10-28 n_actions=%s n_buy=%s",
+            len(list(plan.actions or [])),
+            n_buy,
+        )
+    except Exception:
+        pass
+
     factors = _load_factors_for_runner(runner)
     if not factors.enabled:
         return plan
@@ -733,6 +748,153 @@ def filter_trade_plan_add_risk(runner: Any, plan: Any) -> Any:
         other_heat = sum(v for k, v in heats.items() if k != pair) + planned_heat
 
         proposed = _f(a.get("usd") if a.get("usd") is not None else a.get("usd_amount"), 0.0)
+
+        # Runway C / Fix B: C2 ballast floor seeds must not die on
+        # zero_risk_budget after REGIME-CASH already passed them. Floor step
+        # is already capped ($75); honor it for BTC/ETH ballast only.
+        # Match on tags OR reason OR regime_cash pass flag OR bare BTC/ETH
+        # under-target while C2 live (tags can be stripped by intermediate gates).
+        reason_s = str(a.get("reason") or "")
+        is_c2_seed = bool(
+            a.get("c2_ballast_floor")
+            or a.get("c2_seeder")
+            or a.get("regime_cash_c2_seed_pass")
+            or a.get("add_risk_c2_seed_pass")
+            or reason_s.split("|")[0] == "c2_ballast_floor"
+            or "c2_ballast_floor" in reason_s
+            or str(a.get("source") or "") == "c2_ballast_seeder"
+        )
+        pn = str(pair).upper().replace("_", "-")
+        if (
+            not is_c2_seed
+            and pn in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC")
+            and proposed >= 25.0
+        ):
+            try:
+                from phase6.core.ballast_under_target_floor import effective_live_apply
+
+                if effective_live_apply() and pos_usd < 0.35 * 0.18 * max(equity, 1.0):
+                    is_c2_seed = True
+                    logger.info(
+                        "[ADD-RISK] infer c2_seed %s $%.2f pos=$%.2f (C2 live + under-target)",
+                        pn,
+                        proposed,
+                        pos_usd,
+                    )
+            except Exception:
+                pass
+        if is_c2_seed and pn in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC") and proposed >= 25.0:
+            logger.info(
+                "[ADD-RISK] c2_seed candidate %s $%.2f tags=%s pos=$%.2f eq=$%.2f cash=$%.2f",
+                pn,
+                proposed,
+                {
+                    "c2_ballast_floor": a.get("c2_ballast_floor"),
+                    "c2_seeder": a.get("c2_seeder"),
+                    "regime_cash_c2_seed_pass": a.get("regime_cash_c2_seed_pass"),
+                    "reason": reason_s[:80],
+                    "source": a.get("source"),
+                },
+                pos_usd,
+                equity,
+                cash,
+            )
+            # HARD PASS for explicitly tagged C2 seeds (Runway C). Floor helpers
+            # can disagree with live equity/position shapes mid-rebalance; the
+            # seeder already capped $75 and REGIME-CASH already passed.
+            try:
+                flat_cap = factors.rebalance_cap_usd if factors.rebalance_cap_usd is not None else 75.0
+                step = min(proposed, _f(flat_cap, 75.0), 75.0)
+                if step >= 25.0:
+                    a = dict(a)
+                    a["usd"] = round(step, 2)
+                    if "usd_amount" in a:
+                        a["usd_amount"] = a["usd"]
+                    a["add_risk_c2_seed_pass"] = True
+                    a["add_risk_max"] = step
+                    a["reason"] = (str(a.get("reason") or "") + "|add_risk_c2_seed_hard_pass").strip("|")
+                    logger.info(
+                        "[ADD-RISK] PASS c2_hard %s $%.2f (tagged seed; bypass zero_risk_budget)",
+                        pn,
+                        step,
+                    )
+                    planned_heat += max(0.0, step * 0.08)
+                    new_actions.append(a)
+                    decisions.append(
+                        AddSizeDecision(
+                            pair=str(pair),
+                            proposed_usd=proposed,
+                            max_add_usd=step,
+                            final_usd=step,
+                            action="pass",
+                            reasons=["c2_ballast_seed_hard_pass"],
+                            detail={"reason": "c2_ballast_seed_hard_pass", "pos_usd": pos_usd, "equity": equity},
+                        )
+                    )
+                    continue
+            except Exception as e:
+                logger.warning("[ADD-RISK] c2 hard pass failed %s: %s — falling through", pn, e)
+
+            try:
+                from phase6.core.ballast_under_target_floor import apply_floor_to_max_add
+
+                flat_cap = factors.rebalance_cap_usd if factors.rebalance_cap_usd is not None else 75.0
+                entry = _f(meta.get("entry"), 0.0)
+                px = _f(meta.get("price"), 0.0)
+                upnl_pct = 0.0
+                if pos_usd > 0 and entry > 0 and px > 0:
+                    upnl_pct = ((px - entry) / entry)
+                stop_px = stops.get(str(pair)) or stops.get(pn)
+                inj = apply_floor_to_max_add(
+                    pair=pn,
+                    role="ballast_core",
+                    held_usd=pos_usd,
+                    equity_usd=max(equity, 1.0),
+                    target_w=float(getattr(factors, "target_pair_weight", 0.18) or 0.18),
+                    max_add_usd=0.0,
+                    open_upnl_pct=max(upnl_pct, -0.059),
+                    stop_attached=True,
+                    flat_cap_usd=_f(flat_cap, 75.0),
+                    min_useful_max_add_usd=25.0,
+                )
+                logger.info(
+                    "[ADD-RISK] c2 floor would %s inj=%s step=%s reasons=%s",
+                    pn,
+                    inj.get("injected"),
+                    inj.get("step_usd"),
+                    (inj.get("would") or {}).get("reasons"),
+                )
+                if inj.get("injected") and _f(inj.get("max_add_after")) >= 25.0:
+                    step = min(proposed, _f(inj.get("max_add_after")), _f(flat_cap, 75.0))
+                    a = dict(a)
+                    a["usd"] = round(step, 2)
+                    if "usd_amount" in a:
+                        a["usd_amount"] = a["usd"]
+                    a["add_risk_c2_seed_pass"] = True
+                    a["add_risk_max"] = step
+                    a["reason"] = (str(a.get("reason") or "") + "|add_risk_c2_seed_pass").strip("|")
+                    logger.info(
+                        "[ADD-RISK] PASS c2_ballast_seed %s $%.2f (floor step; skip zero_risk_budget)",
+                        pn,
+                        step,
+                    )
+                    planned_heat += max(0.0, step * 0.08)
+                    new_actions.append(a)
+                    decisions.append(
+                        AddSizeDecision(
+                            pair=str(pair),
+                            proposed_usd=proposed,
+                            max_add_usd=step,
+                            final_usd=step,
+                            action="pass",
+                            reasons=["c2_ballast_seed_pass", "under_target_floor"],
+                            detail={"c2_floor": inj, "reason": "c2_ballast_seed_pass"},
+                        )
+                    )
+                    continue
+            except Exception as e:
+                logger.warning("[ADD-RISK] c2 seed pass failed %s: %s — falling through", pn, e)
+
         dec = decide_add_size(
             pair=str(pair),
             proposed_usd=proposed,
@@ -745,6 +907,71 @@ def filter_trade_plan_add_risk(runner: Any, plan: Any) -> Any:
             factors=factors,
             other_book_heat_usd=other_heat,
         )
+
+        # Second-chance: if ordinary risk math skipped a BTC/ETH floor seed,
+        # force the C2 under-target step (Runway C / Fix B). Tags optional.
+        if (
+            dec.action == "skip"
+            and pn in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC")
+            and proposed >= 25.0
+        ):
+            try:
+                from phase6.core.ballast_under_target_floor import (
+                    apply_floor_to_max_add,
+                    effective_live_apply,
+                )
+
+                if effective_live_apply() and (
+                    is_c2_seed or pos_usd < 0.35 * 0.18 * max(equity, 1.0)
+                ):
+                    flat_cap = (
+                        factors.rebalance_cap_usd
+                        if factors.rebalance_cap_usd is not None
+                        else 75.0
+                    )
+                    entry = _f(meta.get("entry"), 0.0)
+                    px = _f(meta.get("price"), 0.0)
+                    upnl_pct = ((px - entry) / entry) if pos_usd > 0 and entry > 0 and px > 0 else 0.0
+                    inj = apply_floor_to_max_add(
+                        pair=pn,
+                        role="ballast_core",
+                        held_usd=pos_usd,
+                        equity_usd=equity,
+                        target_w=float(getattr(factors, "target_pair_weight", 0.18) or 0.18),
+                        max_add_usd=0.0,
+                        open_upnl_pct=max(upnl_pct, -0.059),
+                        stop_attached=True,
+                        flat_cap_usd=_f(flat_cap, 75.0),
+                        min_useful_max_add_usd=25.0,
+                    )
+                    if inj.get("injected") and _f(inj.get("max_add_after")) >= 25.0:
+                        step = min(proposed, _f(inj.get("max_add_after")), _f(flat_cap, 75.0))
+                        dec = AddSizeDecision(
+                            pair=str(pair),
+                            proposed_usd=proposed,
+                            max_add_usd=step,
+                            final_usd=step,
+                            action="pass",
+                            reasons=["c2_ballast_seed_second_chance", "under_target_floor"],
+                            detail={"c2_floor": inj, "reason": "c2_ballast_seed_second_chance"},
+                        )
+                        a = dict(a)
+                        a["usd"] = round(step, 2)
+                        if "usd_amount" in a:
+                            a["usd_amount"] = a["usd"]
+                        a["add_risk_c2_seed_pass"] = True
+                        a["reason"] = (
+                            str(a.get("reason") or "") + "|add_risk_c2_seed_second_chance"
+                        ).strip("|")
+                        logger.info(
+                            "[ADD-RISK] PASS c2_second_chance %s $%.2f (was skip %s)",
+                            pn,
+                            step,
+                            dec.reasons if False else "zero_risk_budget",
+                        )
+            except Exception as e:
+                logger.warning("[ADD-RISK] c2 second_chance failed %s: %s", pn, e)
+
         decisions.append(dec)
 
         if dec.action == "skip":

@@ -9,7 +9,7 @@
       "TIA-USD",
       "PYTH-USD",
       "LINK-USD",
-      "ADA-USD",
+      "LTC-USD",
       "ZEC-USD",
       "XRP-USD"
     ],
@@ -180,7 +180,8 @@
       "HYPE-USD",
       "TIA-USD",
       "SUI-USD",
-      "PYTH-USD"
+      "PYTH-USD",
+      "LTC-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

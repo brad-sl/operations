@@ -263,6 +263,24 @@ class RebalanceCoordinator:
                             cash_usd=alloc_cash,
                             total_capital=total_cap
                         )
+                        # Fix B / runway C: C2 ballast seeder — BUY BTC/ETH when floor
+                        # would allow but signals only HOLD (empty TradePlan stall).
+                        try:
+                            from phase6.core.c2_ballast_seeder import (
+                                filter_trade_plan_shell_freeze,
+                                seed_trade_plan,
+                            )
+
+                            plan = seed_trade_plan(
+                                plan,
+                                current_allocs=norm_allocs,
+                                cash_usd=float(alloc_cash or 0.0),
+                                runner=runner,
+                            )
+                            plan = filter_trade_plan_shell_freeze(plan)
+                        except Exception as e:
+                            logger.warning("[C2-SEEDER] skipped: %s", e)
+
                         plan = filter_trade_plan_manual_cooldown(runner, plan)
                         # Soft/hard gap gates: no light_tilt/adds into bags sitting on their stop
                         plan = filter_trade_plan_near_open_stop(runner, plan)

@@ -361,6 +361,54 @@ class OrderExecutor:
                 "sl_attached": False,
                 "tp_attached": False,
             }
+
+        # Post-only BUY must rest on/below bid. mid/ask + tick noise →
+        # INVALID_LIMIT_PRICE_POST_ONLY (BTC 2026-10-28 runway C). Clamp once,
+        # and on place reject retry at bid - 1 tick.
+        bid_px = float(refs.get("bid") or 0) or None
+        ask_px = float(refs.get("ask") or 0) or None
+        post_only = bool(getattr(policy, "post_only", True))
+        if post_only and bid_px and bid_px > 0 and limit_px > bid_px:
+            self.logger.info(
+                "[LIMIT BUY] clamp post_only %s $%.4f → bid $%.4f (was above bid)",
+                pair,
+                limit_px,
+                bid_px,
+            )
+            limit_px = bid_px
+        if post_only and ask_px and ask_px > 0 and limit_px >= ask_px:
+            # Still would take — drop one tick under bid if available, else under ask.
+            tick = None
+            if hasattr(self.exchange, "get_price_increment"):
+                try:
+                    tick = float(self.exchange.get_price_increment(pair) or 0) or None
+                except Exception:
+                    tick = None
+            if tick is None and hasattr(self.exchange, "quantize_price"):
+                # infer tick from bid - one quantum step when possible
+                try:
+                    q = float(self.exchange.quantize_price(pair, bid_px or limit_px))
+                    # try one cent-style fallback for BTC
+                    tick = 0.01 if (bid_px or limit_px) > 100 else 0.0001
+                except Exception:
+                    tick = 0.01 if limit_px > 100 else 0.0001
+            safe = (bid_px or (ask_px - (tick or 0.01))) - (tick or 0.01)
+            if safe and safe > 0:
+                self.logger.info(
+                    "[LIMIT BUY] clamp post_only %s $%.4f → safe $%.4f (would cross ask $%.4f)",
+                    pair,
+                    limit_px,
+                    safe,
+                    ask_px,
+                )
+                limit_px = safe
+
+        if hasattr(self.exchange, "quantize_price"):
+            try:
+                limit_px = float(self.exchange.quantize_price(pair, limit_px))
+            except Exception:
+                pass
+
         base = base_size_from_usd(usd_amount, limit_px)
         if not base or base <= 0:
             return {
@@ -377,10 +425,44 @@ class OrderExecutor:
             except Exception:
                 base = round(base, 8)
 
-        post_only = bool(getattr(policy, "post_only", True))
         placed = self.exchange.place_limit_buy(
             pair, base, limit_px, post_only=post_only
         )
+        # One retry: if Coinbase still rejects post-only price, rest at bid - tick.
+        if (
+            not placed.get("success")
+            and post_only
+            and "INVALID_LIMIT_PRICE_POST_ONLY" in str(placed.get("error") or "")
+        ):
+            tick = 0.01 if limit_px > 100 else 0.0001
+            if hasattr(self.exchange, "get_price_increment"):
+                try:
+                    tick = float(self.exchange.get_price_increment(pair) or tick) or tick
+                except Exception:
+                    pass
+            retry_px = (bid_px or limit_px) - tick
+            if hasattr(self.exchange, "quantize_price"):
+                try:
+                    retry_px = float(self.exchange.quantize_price(pair, retry_px))
+                except Exception:
+                    pass
+            if retry_px and retry_px > 0 and retry_px != limit_px:
+                self.logger.warning(
+                    "[LIMIT BUY] post_only reject %s — retry at $%.4f (was $%.4f)",
+                    pair,
+                    retry_px,
+                    limit_px,
+                )
+                limit_px = retry_px
+                base = base_size_from_usd(usd_amount, limit_px) or base
+                if hasattr(self.exchange, "quantize_size"):
+                    try:
+                        base = float(self.exchange.quantize_size(pair, base))
+                    except Exception:
+                        base = round(base, 8)
+                placed = self.exchange.place_limit_buy(
+                    pair, base, limit_px, post_only=True
+                )
         if not placed.get("success"):
             return {
                 "success": False,

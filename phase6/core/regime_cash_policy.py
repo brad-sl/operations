@@ -1307,7 +1307,62 @@ def filter_trade_plan_regime_cash(
         if action != "BUY" or not pair:
             kept.append(a)
             continue
-        is_new = pair not in held_pairs
+        # Fix B / runway C: C2 ballast seeder BUYs are floor adds on BTC/ETH —
+        # do not die on aged sentiment / RSI entry gates while park is open.
+        # Still honor global park (allow_new_buys) and buy_block lists below
+        # only via explicit c2 path (not tryout shells).
+        is_c2_seed = bool(
+            a.get("c2_ballast_floor")
+            or a.get("c2_seeder")
+            or str(a.get("reason") or "") == "c2_ballast_floor"
+            or str(a.get("source") or "") == "c2_ballast_seeder"
+        )
+        pair_n = _normalize_pair_symbol(str(pair))
+        held_norm = {_normalize_pair_symbol(str(x)) for x in (held_pairs or set())}
+        is_new = pair_n not in held_norm and str(pair) not in (held_pairs or set())
+        if is_c2_seed and pair_n in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC"):
+            if not snap.allow_new_buys or snap.strategy_mode == "usdc_park":
+                blocked.append(
+                    {
+                        "pair": pair,
+                        "usd": a.get("usd") or a.get("usd_amount"),
+                        "reasons": [
+                            f"c2_seed_park mode={snap.strategy_mode} allow_new_buys={snap.allow_new_buys}"
+                        ],
+                    }
+                )
+                if not do_enforce:
+                    kept.append(a)
+                logger.info(
+                    "[REGIME-CASH] %s BUY %s reasons=%s enforce=%s",
+                    "BLOCK" if do_enforce else "WOULD_BLOCK",
+                    pair,
+                    ["c2_seed_park"],
+                    do_enforce,
+                )
+                continue
+            blocks = collect_buy_block_pairs(policy if isinstance(policy, dict) else {})
+            if pair_n in blocks:
+                blocked.append(
+                    {
+                        "pair": pair,
+                        "usd": a.get("usd") or a.get("usd_amount"),
+                        "reasons": [f"buy_block_pairs {pair_n}"],
+                    }
+                )
+                if not do_enforce:
+                    kept.append(a)
+                continue
+            a = dict(a)
+            a["regime_cash_c2_seed_pass"] = True
+            kept.append(a)
+            logger.info(
+                "[REGIME-CASH] PASS c2_ballast_seed %s $%s held=%s (skip sent/RSI entry)",
+                pair,
+                a.get("usd") or a.get("usd_amount"),
+                not is_new,
+            )
+            continue
         dec = evaluate_buy_entry(
             pair,
             snap,
@@ -1443,7 +1498,34 @@ def apply_to_runner_plan(
     held: Set[str] = set()
     try:
         pos = getattr(runner, "current_positions", None) or {}
-        held = {k for k, v in pos.items() if float(v if not isinstance(v, dict) else v.get("value_usd") or 0) > 1.0}
+        for k, v in pos.items():
+            try:
+                usd = float(v if not isinstance(v, dict) else (v.get("value_usd") or v.get("usd") or 0))
+            except (TypeError, ValueError):
+                usd = 0.0
+            if usd > 1.0:
+                held.add(str(k))
+                held.add(_normalize_pair_symbol(str(k)))
+    except Exception:
+        pass
+    # Live state fallback — runner positions can lag mid-rebalance
+    try:
+        live_p = PROJECT_ROOT / "data/state/phase6_live_state.json"
+        if live_p.is_file():
+            live = json.loads(live_p.read_text(encoding="utf-8"))
+            for row in live.get("positions") or []:
+                if not isinstance(row, dict):
+                    continue
+                pair = row.get("pair")
+                if not pair:
+                    continue
+                try:
+                    usd = float(row.get("value_usd") or 0.0)
+                except (TypeError, ValueError):
+                    usd = 0.0
+                if usd > 1.0:
+                    held.add(str(pair))
+                    held.add(_normalize_pair_symbol(str(pair)))
     except Exception:
         pass
     rsi = rsi_values if rsi_values is not None else getattr(runner, "rsi_values", {}) or {}

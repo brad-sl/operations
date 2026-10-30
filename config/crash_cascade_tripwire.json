@@ -1,0 +1,21 @@
+{
+  "schema": "crash_cascade_tripwire_v1",
+  "live_apply": true,
+  "as_of": "2026-10-29",
+  "brad_go": "2026-10-29_tripwire_live",
+  "note": "Live crash cascade tripwire (Tier 0/1 fire, Tier 2A alert+freeze, Tier 2C shadow)",
+  "tier0_enable": true,
+  "tier0_threshold_pct": -1.5,
+  "tier1_enable": true,
+  "tier1_dual_1h_pct": -2.0,
+  "tier1_dual_4h_pct": -3.5,
+  "tier2_alert": true,
+  "tier2_freeze_adds": true,
+  "tier2_auto_flatten": false,
+  "flat_pairs": ["BTC-USD", "ETH-USD"],
+  "leave_pairs": ["PAXG-USD", "USDC-USD", "USDT-USD"],
+  "min_book_notional_usd": 100.0,
+  "recovery_window_hours": 24,
+  "recovery_reversal_pct": 1.5,
+  "recovery_new_high_confirm": true
+}

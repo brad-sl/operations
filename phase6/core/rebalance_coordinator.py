@@ -266,6 +266,20 @@ class RebalanceCoordinator:
                         # Fix B / runway C: C2 ballast seeder — BUY BTC/ETH when floor
                         # would allow but signals only HOLD (empty TradePlan stall).
                         try:
+                            # Crash cascade tripwire: detect and freeze on systemic dump
+                            from phase6.core.crash_cascade_tripwire import (
+                                check_recovery_conditions,
+                                evaluate_tripwire,
+                                execute_tripwire,
+                            )
+
+                            trip = evaluate_tripwire()
+                            if trip.get("trip"):
+                                execute_tripwire(trip)
+                            else:
+                                check_recovery_conditions()
+
+                            # Fix B seeder path
                             from phase6.core.c2_ballast_seeder import (
                                 filter_trade_plan_shell_freeze,
                                 seed_trade_plan,
@@ -279,7 +293,7 @@ class RebalanceCoordinator:
                             )
                             plan = filter_trade_plan_shell_freeze(plan)
                         except Exception as e:
-                            logger.warning("[C2-SEEDER] skipped: %s", e)
+                            logger.warning("[C2-SEEDER/TRIPWIRE] skipped: %s", e)
 
                         plan = filter_trade_plan_manual_cooldown(runner, plan)
                         # Soft/hard gap gates: no light_tilt/adds into bags sitting on their stop

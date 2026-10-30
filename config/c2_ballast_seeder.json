@@ -1,11 +1,14 @@
 {
   "schema": "c2_ballast_seeder_v1",
-  "live_apply": true,
-  "shadow_only": false,
+  "live_apply": false,
+  "shadow_only": true,
   "as_of": "2026-10-28",
   "brad_go": "2026-10-28_runway_C_last_path_1pct",
-  "note": "Fix B LIVE under runway C: seed BTC/ETH BUY when C2 floor would allow and signals only HOLD. Shell freeze on. Kill: data/state/c2_ballast_seeder_KILL",
-  "pairs_prefer": ["BTC-USD", "ETH-USD"],
+  "note": "Fix B LIVE under runway C: seed BTC/ETH BUY when C2 floor would allow and signals only HOLD. Shell freeze on. Kill: data/state/c2_ballast_seeder_KILL | HARD RISK CUT 2026-10-29: live_apply false + KILL until re-arm GO",
+  "pairs_prefer": [
+    "BTC-USD",
+    "ETH-USD"
+  ],
   "role": "ballast_core",
   "default_target_w": 0.18,
   "default_flat_cap_usd": 75.0,
@@ -20,5 +23,6 @@
     "USDC-USD",
     "USDT-USD",
     "USDT-USDC"
-  ]
+  ],
+  "hard_risk_cut": "2026-10-29_brad_go_3"
 }

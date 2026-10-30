@@ -1,5 +1,4 @@
 agent-behavior
-agent-delegation
 agentic-architecture
 agent-methodology
 analyst-test-execute

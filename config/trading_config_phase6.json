@@ -8,8 +8,8 @@
       "NEAR-USD",
       "TIA-USD",
       "PYTH-USD",
-      "LINK-USD",
-      "LTC-USD",
+      "AVAX-USD",
+      "ONDO-USD",
       "ZEC-USD",
       "XRP-USD"
     ],
@@ -181,7 +181,8 @@
       "TIA-USD",
       "SUI-USD",
       "PYTH-USD",
-      "LTC-USD"
+      "LTC-USD",
+      "ONDO-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

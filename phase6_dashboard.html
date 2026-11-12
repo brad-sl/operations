@@ -119,6 +119,7 @@
                 <div id="last-source-note" class="text-[10px] text-slate-500 mt-0.5"></div>
             </div>
         </div>
+        <div id="dash-fetch-banner" class="hidden mb-4 text-xs px-3 py-2 rounded-xl bg-amber-950 text-amber-200 border border-amber-800"></div>
 
         <!-- KPI Row: 1D / 7D / 14D / 30D / Exit WR — 14D is a primary trend-repair gate -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
@@ -738,16 +739,22 @@
             brief: null,
         };
 
-        async function fetchData(endpoint, timeoutMs = 8000) {
+        async function fetchData(endpoint, timeoutMs = 20000) {
+            // Mobile/Tailscale first paint can exceed 8–15s on cold /api/performance.
             try {
                 const ctrl = new AbortController();
                 const t = setTimeout(() => ctrl.abort(), timeoutMs);
-                const res = await fetch(endpoint, { signal: ctrl.signal });
+                const res = await fetch(endpoint, { signal: ctrl.signal, cache: 'no-store' });
                 clearTimeout(t);
-                if (!res.ok) throw new Error('Network error');
+                if (!res.ok) throw new Error('Network error ' + res.status);
                 return await res.json();
             } catch (e) {
                 console.error('Fetch error for ' + endpoint, e);
+                const ban = document.getElementById('dash-fetch-banner');
+                if (ban) {
+                    ban.textContent = 'Data fetch slow/failed (' + endpoint + '). Retrying…';
+                    ban.classList.remove('hidden');
+                }
                 return null;
             }
         }
@@ -1107,22 +1114,29 @@
 
         async function updateDashboard() {
             const endpoints = [
-                fetchData('/api/balances'),
-                fetchData('/api/positions'),
-                // Performance DB path can exceed 8s under load; give it room, still hold last-good on fail.
-                fetchData('/api/performance', 15000),
-                fetchData('/api/trades'),
-                fetchData('/api/pair-signals'),
-                fetchData('/api/rebalances'),
-                // Metrics builds why_idle + regime + preserve; 1.5s was aborting under concurrent
-                // poll load and left Ops KPIs stuck on "--" with no last-good seed.
-                fetchData('/api/metrics', 12000),
-                fetchData('/api/brief'),
-                fetchData('/api/promote-graduation', 4000),
-                fetchData('/api/regime-arm-metrics', 4000),
-                fetchData('/api/membership-sizing-matrix?basket=1', 8000),
+                fetchData('/api/balances', 20000),
+                fetchData('/api/positions', 20000),
+                // Cold DB path on phone/Tailscale often >15s; keep last-good on abort.
+                fetchData('/api/performance', 45000),
+                fetchData('/api/trades', 20000),
+                fetchData('/api/pair-signals', 30000),
+                fetchData('/api/rebalances', 15000),
+                // Metrics builds why_idle + regime + preserve; short aborts left Ops KPIs on "--".
+                fetchData('/api/metrics', 30000),
+                fetchData('/api/brief', 15000),
+                fetchData('/api/promote-graduation', 12000),
+                fetchData('/api/regime-arm-metrics', 12000),
+                fetchData('/api/membership-sizing-matrix?basket=1', 20000),
             ];
             const settled = await Promise.allSettled(endpoints);
+            const ban = document.getElementById('dash-fetch-banner');
+            if (ban) {
+                const anyOk = settled.some(s => s && s.status === 'fulfilled' && s.value);
+                if (anyOk) {
+                    ban.textContent = '';
+                    ban.classList.add('hidden');
+                }
+            }
             const balData = pickPayload('balances', settledValue(settled[0]));
             const posData = pickPayload('positions', settledValue(settled[1]), (p) =>
                 !!(p && ((p.trading_positions && p.trading_positions.length) || (p.cash_positions && p.cash_positions.length) || (p.positions && p.positions.length) || p.total_usd != null))
@@ -1893,31 +1907,56 @@
         let dashInFlight = false;
         async function initDashboard() {
             try {
-                const balances = await fetchData('/api/balances');
-                
-                // Update mode badge
+                // Fast first paint: portfolio header before the heavy parallel poll.
+                const balances = await fetchData('/api/balances', 20000);
                 const modeText = document.getElementById('mode-text');
                 const modeBadge = document.getElementById('mode-badge');
-                if (balances && balances.mode === 'live') {
-                    modeText.textContent = 'LIVE';
-                    modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-red-900 text-red-400 font-medium flex items-center gap-1.5';
-                } else {
-                    modeText.textContent = 'PAPER';
-                    modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5';
+                const totalEl = document.getElementById('total-balance');
+                const sourceEl = document.getElementById('balance-source');
+                if (balances) {
+                    lastGood.balances = balances;
+                    if (balances.mode === 'live') {
+                        if (modeText) modeText.textContent = 'LIVE';
+                        if (modeBadge) modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-red-900 text-red-400 font-medium flex items-center gap-1.5';
+                    } else {
+                        if (modeText) modeText.textContent = 'PAPER';
+                        if (modeBadge) modeBadge.className = 'px-3 py-0.5 text-xs rounded-2xl bg-emerald-900 text-emerald-400 font-medium flex items-center gap-1.5';
+                    }
+                    const total = balances.total_usd ?? balances.total_balance;
+                    if (totalEl && total != null) totalEl.textContent = '$' + parseFloat(total).toFixed(2);
+                    if (sourceEl) sourceEl.textContent = balances.source || 'Live';
                 }
-                
-                // Pure consumer bootstrap - server does calcs/labels/filters; JS fetch + render only
+                // Kick performance early so KPI tiles fill while other sections load.
+                fetchData('/api/performance', 45000).then((perf) => {
+                    if (!perf || !perfHasNumbers(perf)) return;
+                    lastGood.performance = perf;
+                    const setPct = (id, v) => {
+                        const el = document.getElementById(id);
+                        if (!el || typeof v !== 'number') return;
+                        el.textContent = ((v >= 0 ? '+' : '') + v.toFixed(2) + '%');
+                        el.classList.toggle('text-emerald-400', v >= 0);
+                        el.classList.toggle('text-red-400', v < 0);
+                    };
+                    setPct('pnl-today', perf.today);
+                    setPct('pnl-7d', perf.d7);
+                    setPct('pnl-14d', perf.d14);
+                    setPct('pnl-30d', perf.d30);
+                    if (typeof perf.win_ratio === 'number') {
+                        const wr = document.getElementById('win-ratio');
+                        if (wr) wr.textContent = (perf.win_ratio * 100).toFixed(0) + '%';
+                    }
+                }).catch(() => {});
             } catch (e) {
                 console.error('Init failed', e);
             }
-            
-            // Poll every 5s but never stack concurrent updateDashboard runs (was amplifying inflight N/A).
+
+            // Poll every 8s; never stack concurrent updateDashboard (was amplifying inflight N/A).
             const tick = async () => {
                 if (dashInFlight) return;
                 dashInFlight = true;
                 try { await updateDashboard(); } finally { dashInFlight = false; }
             };
-            dashPollTimer = setInterval(tick, 5000);
+            dashPollTimer = setInterval(tick, 8000);
             tick();
         }
         

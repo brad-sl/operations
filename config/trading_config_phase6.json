@@ -7,7 +7,7 @@
       "SOL-USD",
       "ICP-USD",
       "TIA-USD",
-      "PYTH-USD",
+      "TON-USD",
       "AVAX-USD",
       "ONDO-USD",
       "ZEC-USD",
@@ -182,7 +182,8 @@
       "SUI-USD",
       "PYTH-USD",
       "LTC-USD",
-      "ONDO-USD"
+      "ONDO-USD",
+      "TON-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

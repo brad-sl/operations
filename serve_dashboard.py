@@ -2347,5 +2347,20 @@ if __name__ == '__main__':
         daemon_threads = True
 
     print(f"Phase 6 Dashboard ({MODE} mode, DB-first) at http://0.0.0.0:{args.port}")
+
+    # Warm /api/performance cache so first mobile/Tailscale paint is not blank "--".
+    def _warm_performance_cache():
+        try:
+            import urllib.request
+            urllib.request.urlopen(
+                f"http://127.0.0.1:{args.port}/api/performance", timeout=90
+            ).read()
+            print("performance cache warm ok", flush=True)
+        except Exception as e:
+            print(f"performance cache warm skipped: {e}", flush=True)
+
+    import threading
+    threading.Timer(1.5, _warm_performance_cache).start()
+
     with ThreadingHTTPServer(('0.0.0.0', args.port), Handler) as httpd:
         httpd.serve_forever()

@@ -32,7 +32,6 @@ ops-engineer
 productivity
 red-teaming
 research
-scale-first-action-architecture
 smart-home
 social-media
 soft-down-recovery-implementer

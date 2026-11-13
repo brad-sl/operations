@@ -40,6 +40,9 @@ SCHEMA = "crash_cascade_tripwire_v1"
 CONFIG_PATH = CONFIG_DIR / "crash_cascade_tripwire.json"
 KILL_PATH = STATE_DIR / "crash_cascade_tripwire_KILLED"
 LATEST_PATH = STATE_DIR / "crash_cascade_tripwire_latest.json"
+# Heartbeat every tick (15m cron). Never overwrite LATEST_PATH on no-trip —
+# recovery baseline lives there after a real fire.
+TICK_LATEST_PATH = STATE_DIR / "crash_cascade_tripwire_tick_latest.json"
 RECOVERY_ARM_PATH = STATE_DIR / "crash_cascade_recovery_armed"
 TRIP_HISTORY_PATH = STATE_DIR / "crash_cascade_trip_history.jsonl"
 
@@ -469,10 +472,134 @@ def check_recovery_conditions(cfg: Optional[Dict[str, Any]] = None) -> Dict[str,
     return result
 
 
-def main():
-    cfg = load_config()
-    print(json.dumps(cfg, indent=2))
+def run_tick(force_reexecute: bool = False) -> Dict[str, Any]:
+    """
+    Continuous-monitor entrypoint (15m Hermes cron + optional rebalance reuse).
+
+    - Always evaluates tape.
+    - On new trip: execute_tripwire (freeze + alert; 2C only if cfg).
+    - If already recovery-armed and still tripping: heartbeat only (no TG spam).
+    - On no trip: check_recovery_conditions when armed.
+    - Always writes TICK_LATEST_PATH. LATEST_PATH remains trip-only.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    out: Dict[str, Any] = {
+        "schema": "crash_cascade_tripwire_tick_v1",
+        "as_of": now,
+        "source": "run_tick",
+        "trip": False,
+        "action": "none",
+    }
+
+    try:
+        trip = evaluate_tripwire()
+    except Exception as e:
+        out["action"] = "evaluate_error"
+        out["error"] = str(e)
+        logger.exception("crash_cascade_tripwire run_tick evaluate failed")
+        _write_tick(out)
+        return out
+
+    out["eval"] = {
+        "trip": bool(trip.get("trip")),
+        "tier": trip.get("tier"),
+        "signal": trip.get("signal"),
+        "reason": trip.get("reason"),
+        "returns_1h": trip.get("returns_1h"),
+        "returns_4h": trip.get("returns_4h"),
+        "held": trip.get("held"),
+        "book_notional_usd": trip.get("book_notional_usd"),
+        "error": trip.get("error"),
+    }
+    out["trip"] = bool(trip.get("trip"))
+    out["recovery_armed_before"] = recovery_armed()
+    out["kill_file"] = kill_file_on()
+
+    if trip.get("reason") == "kill_file_on":
+        out["action"] = "skipped_kill_file"
+        _write_tick(out)
+        return out
+
+    if trip.get("trip"):
+        already = recovery_armed()
+        if already and not force_reexecute:
+            # Seeder should already be frozen; avoid 15m TG spam.
+            out["action"] = "trip_already_armed"
+            out["receipt"] = {"action": "deduped", "tier": trip.get("tier")}
+        else:
+            try:
+                receipt = execute_tripwire(trip)
+                out["action"] = "executed_trip"
+                out["receipt"] = receipt
+            except Exception as e:
+                out["action"] = "execute_error"
+                out["error"] = str(e)
+                logger.exception("crash_cascade_tripwire run_tick execute failed")
+    else:
+        try:
+            recovery = check_recovery_conditions()
+            out["action"] = "checked_recovery" if recovery_armed() or recovery.get("recovered") else "no_trip"
+            out["recovery"] = recovery
+        except Exception as e:
+            out["action"] = "recovery_error"
+            out["error"] = str(e)
+            logger.exception("crash_cascade_tripwire run_tick recovery failed")
+
+    out["recovery_armed_after"] = recovery_armed()
+    _write_tick(out)
+    return out
+
+
+def _write_tick(doc: Dict[str, Any]) -> None:
+    try:
+        TICK_LATEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+        TICK_LATEST_PATH.write_text(json.dumps(doc, indent=2, default=str), encoding="utf-8")
+    except Exception as e:
+        logger.warning("crash_cascade_tripwire tick write failed: %s", e)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    import argparse
+
+    p = argparse.ArgumentParser(description="Crash cascade tripwire")
+    p.add_argument(
+        "--tick",
+        action="store_true",
+        help="Evaluate + act (15m monitor). Quiet stdout unless trip/error.",
+    )
+    p.add_argument(
+        "--force-reexecute",
+        action="store_true",
+        help="With --tick: re-run execute even if recovery already armed.",
+    )
+    p.add_argument(
+        "--print-config",
+        action="store_true",
+        help="Dump config JSON and exit.",
+    )
+    args = p.parse_args(argv)
+
+    if args.print_config:
+        print(json.dumps(load_config(), indent=2))
+        return 0
+
+    if args.tick:
+        out = run_tick(force_reexecute=bool(args.force_reexecute))
+        # Hermes no_agent: empty stdout = silent. Surface trip or hard error only.
+        if out.get("error"):
+            print(f"FAIL tripwire_tick error={out.get('error')} action={out.get('action')}")
+            return 1
+        if out.get("action") == "executed_trip":
+            tier = (out.get("receipt") or {}).get("tier", out.get("eval", {}).get("tier"))
+            sig = (out.get("eval") or {}).get("signal") or ""
+            print(f"TRIP cascade tier={tier} {sig}")
+            return 0
+        # no_trip / deduped / recovery → silent success
+        return 0
+
+    print(json.dumps(load_config(), indent=2))
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

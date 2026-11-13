@@ -58,7 +58,8 @@ Panic dumps often recover in **4–8h**. Time-bound (e.g. 48h cooldown) misses q
 |------|---------|
 | `data/state/crash_cascade_tripwire_KILLED` | Manual kill switch (prevent all tiers) |
 | `data/state/crash_cascade_recovery_armed` | Recovery gate active (re-arm on dual reversal) |
-| `data/state/crash_cascade_tripwire_latest.json` | Last trip snapshot (tier, signal, tape) |
+| `data/state/crash_cascade_tripwire_latest.json` | Last **trip** snapshot only (tier, signal, tape) — recovery baseline |
+| `data/state/crash_cascade_tripwire_tick_latest.json` | 15m heartbeat (always; no-trip included) |
 | `data/state/crash_cascade_trip_history.jsonl` | History of all trips + recoveries |
 | `config/crash_cascade_tripwire.json` | Live config + thresholds |
 
@@ -66,18 +67,26 @@ Panic dumps often recover in **4–8h**. Time-bound (e.g. 48h cooldown) misses q
 
 ## How It Works (Runtime)
 
-1. **Every rebalance cycle** (via `phase6/core/rebalance_coordinator.py`):
+1. **Every 15 minutes** (Hermes cron `phase6-crash-cascade-tripwire-15m`, job `1f4dd499e802`):
+   - `python -m phase6.core.crash_cascade_tripwire --tick` via `phase6/scripts/run_crash_cascade_tripwire_tick.sh`
+   - `run_tick()` → evaluate → execute on **new** trip → recovery check when no trip
+   - Always writes `crash_cascade_tripwire_tick_latest.json`
+   - If already recovery-armed and still tripping: **dedupe** (no 15m TG spam)
+   - Quiet stdout on no-trip (`deliver=local`); TG alert still comes from execute on first fire
+   - Brad GO 2026-11-12: own cron (not piggy on RSI/runner-monitor)
+
+2. **Every rebalance cycle** (via `phase6/core/rebalance_coordinator.py`) — defense-in-depth:
    - Call `evaluate_tripwire()` — check Tier 0/1 conditions on live 1h Coinbase candles
    - If trip: `execute_tripwire()` — freeze seeder, alert ops
    - Else: `check_recovery_conditions()` — test if armed recovery gate has cleared
 
-2. **On trip:**
+3. **On trip:**
    - Seeder KILL stamped (blocks C2 ballast adds)
    - Shell freeze stays active (from Runway C)
    - Telegram alert with context (held pairs, book, signal)
    - Recovery armed
 
-3. **On recovery:**
+4. **On recovery:**
    - Both BTC+ETH 1h ≥ +1.5% detected
    - KILL file deleted, seeder live again
    - Next rebalance resumes normal ballast adds

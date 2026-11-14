@@ -7,6 +7,6 @@ tmpfs           5.0M  8.0K  5.0M   1% /run/lock
 tmpfs           982M  168K  982M   1% /run/user/1000
 tmpfs           982M  144K  982M   1% /run/user/124
                total        used        free      shared  buff/cache   available
-Mem:           9.6Gi       3.2Gi       494Mi        32Mi       6.2Gi       6.4Gi
-Swap:          3.7Gi       155Mi       3.6Gi
- 04:30:39 up 5 days, 14:47,  1 user,  load average: 2.23, 0.73, 0.48
+Mem:           9.6Gi       3.0Gi       545Mi        32Mi       6.4Gi       6.6Gi
+Swap:          3.7Gi       163Mi       3.6Gi
+ 04:30:39 up 6 days, 14:47,  1 user,  load average: 2.31, 0.81, 0.58

@@ -4,7 +4,7 @@
     "pairs": [
       "BTC-USD",
       "ETH-USD",
-      "SOL-USD",
+      "INJ-USD",
       "ICP-USD",
       "TIA-USD",
       "TON-USD",
@@ -183,7 +183,8 @@
       "PYTH-USD",
       "LTC-USD",
       "ONDO-USD",
-      "TON-USD"
+      "TON-USD",
+      "INJ-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

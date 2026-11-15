@@ -71,8 +71,16 @@ def test_evaluate_blocks_rave():
 
 
 def test_btc_not_on_explicit_block_list():
-    """BTC may still pass sentiment/rsi; must not hit buy_block_pairs reason."""
+    """BTC may still pass sentiment/rsi; must not hit buy_block_pairs reason.
+
+    Skip live process-tax (post-SL/TP ledger) via policy flag — that gate is
+    intentional safety and must stay on in prod; this test only asserts BTC is
+    not on the permanent scar list (UNI/RAVE). Without the skip, a real BTC SL
+    makes nightly pre-ship FAIL while the platform is working as designed.
+    """
     pol = load_policy()
+    pol = json.loads(json.dumps(pol))
+    pol["_isolation_skip_process_tax"] = True
     snap = _bull_snap(pol)
     dec = evaluate_buy_entry(
         "BTC-USD",

@@ -64,6 +64,14 @@ def test_get_deployment_cooldown_pairs_default_72() -> None:
 
 
 def test_filter_blocks_buy_inside_window() -> None:
+    """Filter must strip cooldown BUYs only — never read live ledger.
+
+    Live post-SL on BTC/ETH is a real safety gate; isolation must mock
+    load_buy_block_status / manual cooldown so nightly pre-ship does not
+    FAIL when production legitimately blocks ballast names.
+    """
+    from unittest.mock import patch
+
     runner = MagicMock()
     runner.state_file = str(ROOT / "data" / "state" / "phase6_runner_state.json")
     runner.config_dict = {"capital_event_stop_loss_exchange_block_rebuy_hours": 72}
@@ -77,7 +85,10 @@ def test_filter_blocks_buy_inside_window() -> None:
                 {"pair": "ETH-USD", "action": "SELL", "usd": 40.0},
             ]
 
-    plan = rce.filter_trade_plan_manual_cooldown(runner, Plan())
+    with patch.object(rce, "load_buy_block_status", return_value={}), patch.object(
+        rce, "load_manual_sell_cooldown_pairs", return_value=[]
+    ):
+        plan = rce.filter_trade_plan_manual_cooldown(runner, Plan())
     pairs = {(a["pair"], a["action"].upper()) for a in plan.actions}
     assert ("SOL-USD", "BUY") not in pairs
     assert ("BTC-USD", "BUY") in pairs

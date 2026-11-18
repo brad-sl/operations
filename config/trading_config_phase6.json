@@ -8,8 +8,8 @@
       "ICP-USD",
       "TIA-USD",
       "TON-USD",
-      "AVAX-USD",
-      "ONDO-USD",
+      "AAVE-USD",
+      "NEAR-USD",
       "ZEC-USD",
       "XRP-USD"
     ],
@@ -184,7 +184,8 @@
       "LTC-USD",
       "ONDO-USD",
       "TON-USD",
-      "INJ-USD"
+      "INJ-USD",
+      "AAVE-USD"
     ],
     "rsi_event_x_probe": {
       "enabled": true,

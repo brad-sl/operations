@@ -181,29 +181,26 @@ Live UI: user systemd `phase6-dashboard-8502.service` → `:8502` (venv). Not Li
 - Guardrails: measure-only · no orders · no knobs · honest N claim class
 - CLI: `run_jev_select_few_cf.py --weekly`
 
-## phase6-daily-dose-jev-ranker (Brad GO shadow 2026-09-18)
+## phase6-daily-dose-jev-ranker (shadow disk only — TG off 2026-11-18)
 - Schedule: `15 7 * * *` America/Los_Angeles (before `daily-dose-telegram` 08:00)
 - Script: `~/.hermes/scripts/run_daily_dose_jev_ranker.sh` → `phase6/scripts/run_daily_dose_jev_ranker_cron.sh`
 - Behavior: Jev judges RSS shortlist; compare vs baseline top-N; **shadow only**
 - Does **not** overwrite `daily_dose_latest` / publish_ready / live TG body
 - Not a trade signal; no allocator / tryout wiring
-- **Deliver:** `telegram` (Brad GO 2026-09-22) — stdout = `daily_dose_jev_preview.txt` only (shadow brief); logs → `logs/daily_dose_jev/`
-- Artifacts: `data/state/daily_dose_jev_{latest,compare,preview,crumbs,budget}.*`
+- **Deliver:** **`local`** (Brad 2026-11-18 — no TG shadow spam after A/B close). Was telegram 2026-09-22.
+- Artifacts: `data/state/daily_dose_jev_{latest,compare,preview,crumbs,budget}.*` · logs `logs/daily_dose_jev/`
 - Cap: max ~80 Jev calls/day budget file; default max_judge 16/run
 - Isolation: `scripts/phase6/test_isolation_daily_dose_jev_ranker.py`
-- Promote Jev order only after multi-day quality + Brad marks
-- Note: **not a fair A/B** (different freeze time). True twin is `phase6-daily-dose-jev-ab`.
+- Note: **not** a fair A/B. Locked twin experiment **CLOSED** (below).
 
-## phase6-daily-dose-jev-ab (Brad GO locked A/B 2026-09-19)
-- Schedule: `10 8 * * *` America/Los_Angeles (**after** `daily-dose-telegram` 08:00 freeze)
-- Script: `~/.hermes/scripts/run_daily_dose_jev_ab.sh` → `phase6/scripts/run_daily_dose_jev_ab_cron.sh`
-- Behavior: **locked pool** = `daily_dose_latest` draft ∪ published Arm A ids → Jev re-rank → dual top-5 card
-- A = live published TG top-N · B = Jev on **same** freeze · plain move notes + auto heuristic mark
-- Does **not** replace TG dose / publish_ready · **not** a second dose · **not** a trade signal
-- **Deliver:** `telegram` (Brad GO 2026-09-22) — stdout = short A/B card; empty if no freeze yet; continue multi-day marks for A/B value
-- Artifacts: `data/state/daily_dose_jev_ab_{latest,card,history}.*` · logs `logs/daily_dose_jev_ab/`
-- Isolation: `scripts/phase6/test_isolation_daily_dose_jev_ab.py`
-- Brad gut mark (optional): `dose ab b_better | a_better | mixed` — multi-day series before any promote talk
+## phase6-daily-dose-jev-ab — **REMOVED** 2026-11-18 (CLOSED keep A)
+- Was job_id `ea05c1edf8b4` · `10 8 * * *` · locked-pool A vs Jev B mark card
+- **Brad decision:** not enough A/B difference to continue; preference ~tie (7 a / 7 b / 4 mixed over 18d); auto≠human (~18% agree)
+- **Action:** `hermes cron remove ea05c1edf8b4` — no more mark prompts
+- **Publish path:** keep **A only** via `daily-dose-telegram` (`8f339465993e`)
+- **TG product:** + `phase6-daily-dose-plain-summary` (`5ee314156b93`) plain notes after freeze
+- Receipt: `data/state/daily_dose_jev_ab_experiment_closed_latest.json` · `reports/DAILY_DOSE_JEV_AB_EXPERIMENT_CLOSED.md`
+- Marks history retained: `data/state/daily_dose_jev_ab_brad_marks.jsonl` (archive; no new marks expected)
 
 ## phase6-free-rss-jev-materiality (Brad GO shadow 2026-09-18)
 - Schedule: `50 */2 * * *` America/Los_Angeles (after free-sentiment @:40)

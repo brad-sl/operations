@@ -4,7 +4,7 @@
   "shadow_only": false,
   "as_of": "2026-11-08",
   "brad_go": "2026-10-28_runway_C_last_path_1pct",
-  "note": "Fix B LIVE under runway C: seed BTC/ETH BUY when C2 floor would allow and signals only HOLD. Shell freeze on. Kill: data/state/c2_ballast_seeder_KILL | HARD RISK CUT 2026-10-29: live_apply false + KILL until re-arm GO | REARM 2026-11-08_option_B_c2_seeder_rearm: live_apply true shadow_only false; shell freeze STAYS; tripwire stays; clock=C2 score window from rearm; no tryouts/W2/Tier2C",
+  "note": "Fix B LIVE under runway C: seed BTC/ETH BUY when C2 floor would allow and signals only HOLD. Shell freeze on. Kill: data/state/c2_ballast_seeder_KILL | HARD RISK CUT 2026-10-29: live_apply false + KILL until re-arm GO | REARM 2026-11-08_option_B_c2_seeder_rearm: live_apply true shadow_only false; shell freeze STAYS; tripwire stays; clock=C2 score window from rearm; no tryouts/W2/Tier2C | L1b 2026-11-21_l1b_bear_ballast_exception: bear park scoped BTC/ETH clip $35; shell freeze stays",
   "pairs_prefer": [
     "BTC-USD",
     "ETH-USD"
@@ -27,5 +27,7 @@
   "hard_risk_cut": "2026-10-29_brad_go_3",
   "brad_go_rearm": "2026-11-08_option_B_c2_seeder_rearm",
   "rearmed_at": "2026-11-08T07:40:28.952663+00:00",
-  "hard_risk_cut_cleared_for_reentry": "2026-11-08_option_B_c2_seeder_rearm"
+  "hard_risk_cut_cleared_for_reentry": "2026-11-08_option_B_c2_seeder_rearm",
+  "l1b_exception": "2026-11-21_l1b_bear_ballast_exception",
+  "l1b_clip_usd": 35.0
 }

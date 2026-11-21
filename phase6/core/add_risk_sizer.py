@@ -802,9 +802,16 @@ def filter_trade_plan_add_risk(runner: Any, plan: Any) -> Any:
             # HARD PASS for explicitly tagged C2 seeds (Runway C). Floor helpers
             # can disagree with live equity/position shapes mid-rebalance; the
             # seeder already capped $75 and REGIME-CASH already passed.
+            # L1b: under usdc_park regime_cap=$0, min(proposed,0)=0 starved the
+            # hard pass — use scoped clip when L1b live (BTC/ETH only).
             try:
                 flat_cap = factors.rebalance_cap_usd if factors.rebalance_cap_usd is not None else 75.0
-                step = min(proposed, _f(flat_cap, 75.0), 75.0)
+                try:
+                    from phase6.core.l1b_bear_ballast_exception import c2_seed_step_cap
+
+                    step = c2_seed_step_cap(proposed, flat_cap if factors.rebalance_cap_usd is not None else None)
+                except Exception:
+                    step = min(proposed, _f(flat_cap, 75.0), 75.0)
                 if step >= 25.0:
                     a = dict(a)
                     a["usd"] = round(step, 2)

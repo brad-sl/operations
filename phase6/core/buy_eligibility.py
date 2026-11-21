@@ -162,6 +162,7 @@ def filter_trade_plan_buy_eligibility(
     config_dict: Optional[Dict[str, Any]] = None,
     require_signals: bool = True,
     enforce: bool = True,
+    is_l1b_active: bool = False, # <--- NEW PARAMETER
 ) -> Any:
     """
     Drop BUY actions that fail basket membership and/or RSI+sentiment presence.
@@ -204,6 +205,29 @@ def filter_trade_plan_buy_eligibility(
         if action != "BUY" or not pair:
             kept.append(a)
             continue
+
+        # L1b override: if tagged C2 ballast seed, explicitly pass
+        is_c2_seed = bool(
+            a.get("c2_ballast_floor")
+            or a.get("c2_seeder")
+            or a.get("regime_cash_c2_seed_pass")
+            or a.get("add_risk_c2_seed_pass")
+            or a.get("rsi_primary_c2_seed_pass")
+            or a.get("run_phase_l1b_pass") # New tag from run_phase_deploy
+            or a.get("l1b_bear_ballast_pass")
+        )
+        pn = str(pair).upper().replace("_", "-")
+
+        if is_c2_seed and pn in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC") and _f(a.get("usd")) >= 25.0 - 1e-9:
+            if is_l1b_active: # <--- USE NEW PARAMETER
+                na = dict(a)
+                na["buy_eligibility"] = "L1b_override_pass"
+                kept.append(na)
+                logger.info("[BUY-ELIG] L1b explicit override PASS for %s $%.2f", pn, _f(a.get("usd")))
+                continue
+            else:
+                # If L1b is not active, but it's a C2 seed, log why it's not passing L1b
+                logger.debug("[BUY-ELIG] C2 seed %s $%.2f NOT passing L1b (is_l1b_active=False)", pn, _f(a.get("usd")))
 
         # Prefer live caches; fall back to action stamps (ignition may set them)
         rsi = rsi_flat.get(_norm(str(pair)))

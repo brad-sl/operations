@@ -1,0 +1,14 @@
+{
+  "schema": "l1b_bear_ballast_exception_v1",
+  "clip_usd": 35.0,
+  "hard_max_usd": 75.0,
+  "pairs": [
+    "BTC-USD",
+    "ETH-USD"
+  ],
+  "max_buys_per_plan": 1,
+  "brad_go": "2026-11-21_l1b_bear_ballast_exception",
+  "go_phrase": "GO L1b \u2014 scoped bear ballast exception BTC/ETH only; shell freeze stays; tryout KILL stays; tripwire stays; W2/bank-trail/tryouts off; clock C2 unchanged.",
+  "as_of": "2026-11-21T00:35:35.348088+00:00",
+  "note": "Scoped BTC/ETH micro under usdc_park; shell freeze stays; clock C2 Dec +1%"
+}

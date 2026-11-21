@@ -156,6 +156,14 @@ def _equity_and_cap(runner: Any, held: Dict[str, float], cash_usd: float) -> Tup
                 eq = _f(tot)
         except Exception:
             pass
+    # L1b: under full bear park (cap $0), seeder inherits starvation → zero_step.
+    # Scoped exception supplies micro clip for BTC/ETH floor only (shells stay frozen).
+    try:
+        from phase6.core.l1b_bear_ballast_exception import effective_flat_cap_for_c2
+
+        cap = effective_flat_cap_for_c2(cap)
+    except Exception:
+        pass
     return max(eq, 1.0), max(cap, 0.0)
 
 
@@ -345,9 +353,21 @@ def seed_trade_plan(
             pn = _norm_pair(str(a.get("pair") or ""))
             if act == "BUY" and pn in pair_set:
                 a2 = dict(a)
+                # Prefer proposed floor step; else L1b clip when live; else config flat.
+                fallback_cap = _f(c.get("default_flat_cap_usd"), 75.0)
+                try:
+                    from phase6.core.l1b_bear_ballast_exception import (
+                        clip_usd as l1b_clip,
+                        is_live as l1b_live,
+                    )
+
+                    if l1b_live():
+                        fallback_cap = min(fallback_cap, l1b_clip())
+                except Exception:
+                    pass
                 step = step_by_pair.get(pn) or min(
-                    _f(c.get("default_flat_cap_usd"), 75.0),
-                    _f(a2.get("usd") if a2.get("usd") is not None else a2.get("usd_amount"), 75.0),
+                    fallback_cap,
+                    _f(a2.get("usd") if a2.get("usd") is not None else a2.get("usd_amount"), fallback_cap),
                 )
                 # Clip oversized light_tilt down to flat ballast step
                 prev = _f(a2.get("usd") if a2.get("usd") is not None else a2.get("usd_amount"), 0.0)

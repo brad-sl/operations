@@ -326,6 +326,14 @@ def execute_tripwire(trip_result: Dict[str, Any]) -> Dict[str, Any]:
         except Exception as e:
             logger.error("seeder kill failed: %s", e)
             receipt["seeder_killed"] = False
+        # L1b scoped exception must not outlive a cascade freeze
+        try:
+            from phase6.core.l1b_bear_ballast_exception import clear_live_on_trip
+
+            receipt["l1b_cleared"] = bool(clear_live_on_trip(reason="tripwire"))
+        except Exception as e:
+            logger.warning("l1b clear on trip failed: %s", e)
+            receipt["l1b_cleared"] = False
 
     # Tier 2A: Alert (always on if trip)
     if cfg.get("tier2_alert", True):

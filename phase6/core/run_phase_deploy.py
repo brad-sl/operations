@@ -584,6 +584,28 @@ def apply_run_phase_to_actions(
         # 2026-09-19: use recovery_tryout_pairs_effective (v2 scoreboard), not legacy
         # static tryout_pairs only — else ZEC/HYPE/SUI die on extension while LINK passes.
         if gr.dropped or gr.final_usd <= 0:
+            # L1b override: if L1b is LIVE, we allow specific C2 seeds to pass run_phase
+            try:
+                from phase6.core.l1b_bear_ballast_exception import is_l1b_live, get_l1b_config  # type: ignore
+
+                if (
+                    is_l1b_live()
+                    and a.get("c2_ballast_floor")
+                    and pair in get_l1b_config().get("ballast_pairs", [])
+                ):
+                    logger.info(
+                        "[RUN-PHASE] L1b LIVE: PASS C2 seed %s $%.2f (skip run_phase gate)",
+                        pair,
+                        proposed,
+                    )
+                    na = dict(a)
+                    na["run_phase_gate"] = gr.evolve(dropped=False, final_usd=proposed, notes=["L1b_override_pass"])
+                    out.append(na)
+                    continue
+            except Exception as e:
+                logger.debug("L1b check failed for run_phase_deploy: %s", e)
+
+            # Default logic (without L1b override)
             try:
                 from phase6.core.regime_cash_policy import (
                     _recovery_rec,

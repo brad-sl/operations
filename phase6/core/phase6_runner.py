@@ -1506,6 +1506,7 @@ class Phase6Runner:
         try:
             from phase6.core.buy_eligibility import filter_trade_plan_buy_eligibility
             from phase6.core.sentiment_scorer import load_sentiment_scores
+            from phase6.core.l1b_bear_ballast_exception import is_live as is_l1b_active # Import is_live directly
 
             _sent = {}
             try:
@@ -1519,6 +1520,7 @@ class Phase6Runner:
                 config_dict=getattr(self, "config_dict", None),
                 require_signals=True,
                 enforce=True,
+                is_l1b_active=is_l1b_active(), # Pass the L1b active status directly
             )
         except Exception as _be:
             self.logger.warning("[BUY-ELIG] execute choke skipped: %s", _be)

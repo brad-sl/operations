@@ -49,6 +49,7 @@ class RebalanceCoordinator:
                         extra={
                             **park_plan.unwind_summary,
                             "transition": park_plan.transition_note,
+                            "operational_phase": park_plan.operational_phase,
                         },
                     )
 
@@ -291,30 +292,40 @@ class RebalanceCoordinator:
                                 cash_usd=float(alloc_cash or 0.0),
                                 runner=runner,
                             )
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before shell_freeze: actions={len(plan.actions)}")
                             plan = filter_trade_plan_shell_freeze(plan)
+                            logger.info(f"[DEBUG_PLAN_FLOW] After shell_freeze: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[C2-SEEDER/TRIPWIRE] skipped: %s", e)
 
+                        logger.info(f"[DEBUG_PLAN_FLOW] Before manual_cooldown: actions={len(plan.actions)}")
                         plan = filter_trade_plan_manual_cooldown(runner, plan)
+                        logger.info(f"[DEBUG_PLAN_FLOW] After manual_cooldown: actions={len(plan.actions)}")
                         # Soft/hard gap gates: no light_tilt/adds into bags sitting on their stop
+                        logger.info(f"[DEBUG_PLAN_FLOW] Before near_open_stop: actions={len(plan.actions)}")
                         plan = filter_trade_plan_near_open_stop(runner, plan)
+                        logger.info(f"[DEBUG_PLAN_FLOW] After near_open_stop: actions={len(plan.actions)}")
 
                         # REGIME-CASH: regime → cash park / entry gates (RSI+sentiment+lockout)
                         try:
                             from phase6.core.regime_cash_policy import apply_to_runner_plan
 
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before REGIME-CASH: actions={len(plan.actions)}")
                             plan = apply_to_runner_plan(
                                 runner,
                                 plan,
                                 sentiment_scores=sentiment_scores,
                                 rsi_values=getattr(runner, "rsi_values", {}) or {},
                             )
+                            logger.info(f"[DEBUG_PLAN_FLOW] After REGIME-CASH: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[REGIME-CASH] filter skipped: %s", e)
 
                         # Factor-based clip on BUY *adds* into existing stacks (regime-aware)
                         try:
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before add_risk: actions={len(plan.actions)}")
                             plan = filter_trade_plan_add_risk(runner, plan)
+                            logger.info(f"[DEBUG_PLAN_FLOW] After add_risk: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[ADD-RISK] filter skipped: %s", e)
 
@@ -324,7 +335,9 @@ class RebalanceCoordinator:
                                 filter_trade_plan_first_fill,
                             )
 
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before first_fill: actions={len(plan.actions)}")
                             plan = filter_trade_plan_first_fill(runner, plan)
+                            logger.info(f"[DEBUG_PLAN_FLOW] After first_fill: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[FIRST-FILL] filter skipped: %s", e)
 
@@ -335,12 +348,14 @@ class RebalanceCoordinator:
                                 filter_trade_plan_rsi_primary_deploy,
                             )
 
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before rsi_primary_deploy: actions={len(plan.actions)}")
                             plan = filter_trade_plan_rsi_primary_deploy(
                                 runner,
                                 plan,
                                 sentiment_scores=sentiment_scores,
                                 rsi_values=getattr(runner, "rsi_values", {}) or {},
                             )
+                            logger.info(f"[DEBUG_PLAN_FLOW] After rsi_primary_deploy: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[RSI-PRIMARY] filter skipped: %s", e)
 
@@ -350,7 +365,9 @@ class RebalanceCoordinator:
                                 filter_trade_plan_run_phase_deploy,
                             )
 
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before run_phase_deploy: actions={len(plan.actions)}")
                             plan = filter_trade_plan_run_phase_deploy(runner, plan)
+                            logger.info(f"[DEBUG_PLAN_FLOW] After run_phase_deploy: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[RUN-PHASE] filter skipped: %s", e)
 
@@ -360,16 +377,19 @@ class RebalanceCoordinator:
                             try:
                                 from phase6.core.regime_cash_policy import apply_to_runner_plan
 
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply Before REGIME-CASH ({reason}): actions={len(p.actions)}")
                                 p = apply_to_runner_plan(
                                     runner,
                                     p,
                                     sentiment_scores=sentiment_scores,
                                     rsi_values=getattr(runner, "rsi_values", {}) or {},
                                 )
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply After REGIME-CASH ({reason}): actions={len(p.actions)}")
                             except Exception as e:
                                 logger.warning("[REGIME-CASH] re-apply (%s) skipped: %s", reason, e)
                             try:
                                 p = filter_trade_plan_add_risk(runner, p)
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply After add_risk ({reason}): actions={len(p.actions)}")
                             except Exception as e:
                                 logger.warning("[ADD-RISK] re-apply (%s) skipped: %s", reason, e)
                             try:
@@ -378,6 +398,7 @@ class RebalanceCoordinator:
                                 )
 
                                 p = filter_trade_plan_first_fill(runner, p)
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply After first_fill ({reason}): actions={len(p.actions)}")
                             except Exception as e:
                                 logger.warning("[FIRST-FILL] re-apply (%s) skipped: %s", reason, e)
                             try:
@@ -391,6 +412,7 @@ class RebalanceCoordinator:
                                     sentiment_scores=sentiment_scores,
                                     rsi_values=getattr(runner, "rsi_values", {}) or {},
                                 )
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply After rsi_primary_deploy ({reason}): actions={len(p.actions)}")
                             except Exception as e:
                                 logger.warning("[RSI-PRIMARY] re-apply (%s) skipped: %s", reason, e)
                             try:
@@ -399,6 +421,7 @@ class RebalanceCoordinator:
                                 )
 
                                 p = filter_trade_plan_run_phase_deploy(runner, p)
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply After run_phase_deploy ({reason}): actions={len(p.actions)}")
                             except Exception as e:
                                 logger.warning("[RUN-PHASE] re-apply (%s) skipped: %s", reason, e)
                             # P0 basket + RSI/sent presence — last line before buffer/execute
@@ -407,6 +430,7 @@ class RebalanceCoordinator:
                                     filter_trade_plan_buy_eligibility,
                                 )
 
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply Before buy_eligibility ({reason}): actions={len(p.actions)}")
                                 p = filter_trade_plan_buy_eligibility(
                                     p,
                                     rsi_values=getattr(runner, "rsi_values", {}) or {},
@@ -415,6 +439,7 @@ class RebalanceCoordinator:
                                     require_signals=True,
                                     enforce=True,
                                 )
+                                logger.info(f"[DEBUG_PLAN_FLOW] Re-apply After buy_eligibility ({reason}): actions={len(p.actions)}")
                             except Exception as e:
                                 logger.warning("[BUY-ELIG] (%s) skipped: %s", reason, e)
                             return p
@@ -452,12 +477,16 @@ class RebalanceCoordinator:
                             )
                             # ALWAYS re-apply full hard gates after ignition (even if no adds —
                             # cheap safety; closes the OP-USD hole where only rsi/run-phase re-ran).
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before post_ignition re-apply: actions={len(plan.actions)}")
                             plan = _reapply_hard_buy_gates(plan, "post_ignition")
+                            logger.info(f"[DEBUG_PLAN_FLOW] After post_ignition re-apply: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[IGNITION-SCOUT] skipped: %s", e)
                             # Still enforce basket/signal even if ignition path failed mid-way
                             try:
+                                logger.info(f"[DEBUG_PLAN_FLOW] Before post_ignition_except re-apply: actions={len(plan.actions)}")
                                 plan = _reapply_hard_buy_gates(plan, "post_ignition_except")
+                                logger.info(f"[DEBUG_PLAN_FLOW] After post_ignition_except re-apply: actions={len(plan.actions)}")
                             except Exception:
                                 pass
 
@@ -467,6 +496,7 @@ class RebalanceCoordinator:
                                 filter_trade_plan_buy_eligibility,
                             )
 
+                            logger.info(f"[DEBUG_PLAN_FLOW] Before final buy_eligibility: actions={len(plan.actions)}")
                             plan = filter_trade_plan_buy_eligibility(
                                 plan,
                                 rsi_values=getattr(runner, "rsi_values", {}) or {},
@@ -475,6 +505,7 @@ class RebalanceCoordinator:
                                 require_signals=True,
                                 enforce=True,
                             )
+                            logger.info(f"[DEBUG_PLAN_FLOW] After final buy_eligibility: actions={len(plan.actions)}")
                         except Exception as e:
                             logger.warning("[BUY-ELIG] pre-execute skipped: %s", e)
 
@@ -496,6 +527,7 @@ class RebalanceCoordinator:
                                 logger.info(f"[TRADE BUFFER] Suppressed {suppressed} actions on pairs traded in last {buffer_hours}h to avoid churn: {recent_pairs}")
 
                         runner._last_plan = plan  # for dashboard and logs
+                        logger.info(f"[DEBUG_PLAN_FLOW] Before execute_trade_plan: actions={len(plan.actions)}")
                         executed, skipped = runner._execute_trade_plan(plan)
                         from phase6.core.decision_context import record_rebalance_decision
 
@@ -549,14 +581,6 @@ class RebalanceCoordinator:
                     # After boundary fix in get_enriched_positions, keys are now consistent -USD pairs
                     # and we must use "value_usd" (never "amount").
                     # Assertions enforce the contract required by Fable 5 review + standing sticky-rebalancing rules.
-                    norm_positions = {}
-                    for k, v in current_positions.items():
-                        if isinstance(v, dict):
-                            norm_positions[k] = float(v.get("value_usd", v.get("amount", 0.0)))
-                        else:
-                            norm_positions[k] = float(v) if v else 0.0
-
-                    # Contract assertions (fail fast if the P6-001 bug regresses)
                     if norm_positions:
                         bad_keys = [k for k in norm_positions if not k.endswith("-USD")]
                         if bad_keys:
@@ -682,4 +706,3 @@ class RebalanceCoordinator:
                     if "rebalance_cap" in locals() and "cash" in locals()
                     else 0.0,
                 )
-

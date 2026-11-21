@@ -24,22 +24,27 @@ class FakePlan:
 
 
 def test_propose_btc_under_target():
-    r = propose_seed_actions(
-        current_allocs={"BTC-USD": 50.0, "PAXG-USD": 75.0},
-        cash_usd=2000.0,
-        runner=None,
-        cfg={
-            "live_apply": True,
-            "shadow_only": False,
-            "require_c2_live": False,  # isolation without depending on live C2 file
-            "pairs_prefer": ["BTC-USD", "ETH-USD"],
-            "role": "ballast_core",
-            "default_target_w": 0.18,
-            "default_flat_cap_usd": 75.0,
-            "max_actions_per_plan": 1,
-            "tag_reason": "c2_ballast_floor",
-        },
-    )
+    # Do not inherit live bear park $0 cap / L1b flag — pin equity+flat_cap.
+    from unittest import mock
+    from phase6.core import c2_ballast_seeder as seeder
+
+    with mock.patch.object(seeder, "_equity_and_cap", return_value=(2200.0, 75.0)):
+        r = propose_seed_actions(
+            current_allocs={"BTC-USD": 50.0, "PAXG-USD": 75.0},
+            cash_usd=2000.0,
+            runner=None,
+            cfg={
+                "live_apply": True,
+                "shadow_only": False,
+                "require_c2_live": False,  # isolation without depending on live C2 file
+                "pairs_prefer": ["BTC-USD", "ETH-USD"],
+                "role": "ballast_core",
+                "default_target_w": 0.18,
+                "default_flat_cap_usd": 75.0,
+                "max_actions_per_plan": 1,
+                "tag_reason": "c2_ballast_floor",
+            },
+        )
     assert r["actions"], f"expected seed action, got {r}"
     assert r["actions"][0]["pair"] == "BTC-USD"
     assert r["actions"][0]["usd"] >= 25.0
@@ -48,6 +53,9 @@ def test_propose_btc_under_target():
 
 
 def test_seed_injects_when_live():
+    from unittest import mock
+    from phase6.core import c2_ballast_seeder as seeder
+
     plan = FakePlan(actions=[])
     cfg = {
         "live_apply": True,
@@ -60,12 +68,13 @@ def test_seed_injects_when_live():
         "max_actions_per_plan": 1,
         "tag_reason": "c2_ballast_floor",
     }
-    seed_trade_plan(
-        plan,
-        current_allocs={"BTC-USD": 40.0},
-        cash_usd=2000.0,
-        cfg=cfg,
-    )
+    with mock.patch.object(seeder, "_equity_and_cap", return_value=(2200.0, 75.0)):
+        seed_trade_plan(
+            plan,
+            current_allocs={"BTC-USD": 40.0},
+            cash_usd=2000.0,
+            cfg=cfg,
+        )
     assert any(a.get("pair") == "BTC-USD" and a.get("action") == "BUY" for a in plan.actions)
     print("PASS seed_injects_when_live", plan.actions)
 
@@ -88,6 +97,9 @@ def test_seed_shadow_no_inject():
 
 
 def test_no_double_when_ballast_buy_present():
+    from unittest import mock
+    from phase6.core import c2_ballast_seeder as seeder
+
     plan = FakePlan(actions=[{"pair": "BTC-USD", "action": "BUY", "usd": 75.0, "reason": "signal"}])
     cfg = {
         "live_apply": True,
@@ -99,7 +111,8 @@ def test_no_double_when_ballast_buy_present():
         "max_actions_per_plan": 1,
         "tag_reason": "c2_ballast_floor",
     }
-    seed_trade_plan(plan, current_allocs={"BTC-USD": 40.0}, cash_usd=2000.0, cfg=cfg)
+    with mock.patch.object(seeder, "_equity_and_cap", return_value=(2200.0, 75.0)):
+        seed_trade_plan(plan, current_allocs={"BTC-USD": 40.0}, cash_usd=2000.0, cfg=cfg)
     buys = [a for a in plan.actions if a.get("action") == "BUY"]
     assert len(buys) == 1
     assert buys[0].get("reason") == "c2_ballast_floor"

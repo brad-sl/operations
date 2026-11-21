@@ -392,6 +392,49 @@ def apply_gates_to_actions(
             continue
 
         proposed = _f(a.get("usd") if a.get("usd") is not None else a.get("usd_amount"), 0.0)
+        # Runway C / L1b: tagged C2 ballast seeds already passed REGIME-CASH + ADD-RISK.
+        # Under usdc_park, rebalance_cap_usd is $0 → ticket_cap=0 would drop them below min_move.
+        # Do not re-gate on RSI/sentiment ticket math; keep clip ≤ proposed (seeder already sized).
+        reason_s = str(a.get("reason") or "")
+        is_c2_seed = bool(
+            a.get("c2_ballast_floor")
+            or a.get("c2_seeder")
+            or a.get("regime_cash_c2_seed_pass")
+            or a.get("add_risk_c2_seed_pass")
+            or a.get("l1b_bear_ballast_pass")
+            or reason_s.split("|")[0] == "c2_ballast_floor"
+            or "c2_ballast_floor" in reason_s
+            or str(a.get("source") or "") == "c2_ballast_seeder"
+        )
+        pn = str(pair).upper().replace("_", "-")
+        if is_c2_seed and pn in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC") and proposed >= 25.0 - 1e-9:
+            step = proposed
+            try:
+                from phase6.core.l1b_bear_ballast_exception import clip_usd as l1b_clip, is_live as l1b_live
+
+                if l1b_live():
+                    step = min(step, float(l1b_clip()))
+            except Exception:
+                pass
+            step = max(0.0, min(step, proposed))
+            if step >= 25.0 - 1e-9:
+                na = dict(a)
+                na["usd"] = round(step, 2)
+                if "usd_amount" in na:
+                    na["usd_amount"] = na["usd"]
+                na["rsi_primary_c2_seed_pass"] = True
+                prev_r = str(na.get("reason") or "")
+                na["reason"] = (prev_r + "|rsi_primary:c2_seed_pass").strip("|")
+                logger.info(
+                    "[RSI-PRIMARY] PASS c2_seed %s $%.2f (skip ticket_cap under park/L1b)",
+                    pn,
+                    step,
+                )
+                out.append(na)
+                remaining_free = max(0.0, remaining_free - step)
+                pos[str(pair)] = pos.get(str(pair), 0.0) + step
+                continue
+
         # Ignition seats: allow ticket up to equity*deploy_frac (not rebalance_cap $150)
         ticket_cap = rebalance_cap_usd
         # Quality tryout shell must not be crushed by soft_down de-risk sleeve.

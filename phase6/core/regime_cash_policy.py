@@ -1321,7 +1321,20 @@ def filter_trade_plan_regime_cash(
         held_norm = {_normalize_pair_symbol(str(x)) for x in (held_pairs or set())}
         is_new = pair_n not in held_norm and str(pair) not in (held_pairs or set())
         if is_c2_seed and pair_n in ("BTC-USD", "ETH-USD", "BTC-USDC", "ETH-USDC"):
-            if not snap.allow_new_buys or snap.strategy_mode == "usdc_park":
+            # L1b: scoped exception — tagged C2 BTC/ETH may pass under usdc_park.
+            # Does NOT open allow_new_buys for shells / untagged risk.
+            l1b_on = False
+            try:
+                from phase6.core.l1b_bear_ballast_exception import (
+                    clip_usd as l1b_clip,
+                    is_live as l1b_is_live,
+                )
+
+                l1b_on = bool(l1b_is_live())
+            except Exception:
+                l1b_on = False
+            park_blocks = (not snap.allow_new_buys) or snap.strategy_mode == "usdc_park"
+            if park_blocks and not l1b_on:
                 blocked.append(
                     {
                         "pair": pair,
@@ -1355,12 +1368,25 @@ def filter_trade_plan_regime_cash(
                 continue
             a = dict(a)
             a["regime_cash_c2_seed_pass"] = True
+            if l1b_on and park_blocks:
+                try:
+                    clip = float(l1b_clip())
+                    prev_u = float(a.get("usd") or a.get("usd_amount") or 0.0)
+                    if prev_u > clip > 0:
+                        a["usd"] = round(clip, 2)
+                        if "usd_amount" in a:
+                            a["usd_amount"] = a["usd"]
+                    a["l1b_bear_ballast_pass"] = True
+                    a["l1b_clip_usd"] = clip
+                except Exception:
+                    a["l1b_bear_ballast_pass"] = True
             kept.append(a)
             logger.info(
-                "[REGIME-CASH] PASS c2_ballast_seed %s $%s held=%s (skip sent/RSI entry)",
+                "[REGIME-CASH] PASS c2_ballast_seed %s $%s held=%s l1b=%s (skip sent/RSI entry)",
                 pair,
                 a.get("usd") or a.get("usd_amount"),
                 not is_new,
+                l1b_on and park_blocks,
             )
             continue
         dec = evaluate_buy_entry(

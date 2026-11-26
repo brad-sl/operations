@@ -17,7 +17,13 @@ Escalation Path:
 1. Warning → Telegram alert
 2. Critical → Telegram + log to file
 3. Persistent failure → Human intervention required
+
+2026-11-25: rebalance miss uses slot SSOT (rebalance_slots_completed), absolute
+paths, and 6h TG cooldown — stops false "last_rebalance stale" spam when
+phase6_live_state lacks the date field / park days with executed=0.
 """
+
+from __future__ import annotations
 
 import os
 import sys
@@ -31,10 +37,27 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Absolute project root — cron/cwd must not break state reads (false "stale rebalance" spam).
+PROJECT_ROOT = os.environ.get(
+    "PHASE6_ROOT",
+    os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")),
+)
+if not os.path.isdir(os.path.join(PROJECT_ROOT, "phase6")):
+    PROJECT_ROOT = "/home/brad/projects/crypto-trading-bot"
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-RUNNER_LOG = "logs/phase6_runner.log"
-STATE_FILE = "data/state/phase6_live_state.json"  # prefer live state (updated for accuracy)
+RUNNER_LOG = os.path.join(PROJECT_ROOT, "logs/phase6_runner.log")
+# live_state is for book snapshot — it does NOT carry last_rebalance_date.
+# Slot SSOT is phase6_runner_state.json (rebalance_slots_completed).
+STATE_FILE = os.path.join(PROJECT_ROOT, "data/state/phase6_live_state.json")
+RUNNER_STATE_FILE = os.path.join(PROJECT_ROOT, "data/state/phase6_runner_state.json")
+CONFIG_FILE = os.path.join(PROJECT_ROOT, "config/trading_config_phase6.json")
+REBAL_MISS_ALERT_STATE = os.path.join(
+    PROJECT_ROOT, "data/state/monitor_rebalance_miss_alert.json"
+)
+REBAL_MISS_COOLDOWN_HOURS = 6.0
+REBAL_GRACE_HOURS = 1.0
 
 def send_telegram(message: str):
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID:
@@ -209,60 +232,155 @@ def restart_runner(project_root: str | None = None) -> bool:
         return False
 
 
-def check_last_rebalance() -> bool:
-    """Returns True if healthy (suppress alert).
-    Supports daily_rebalance_times list for 2x daily (9am & 9pm).
-    Uses latest target for grace period check.
-    """
-    if not os.path.exists(STATE_FILE):
-        return False
+def load_rebalance_times(config_path: str = CONFIG_FILE) -> list:
+    """Return configured daily rebalance HH:MM list (PT wall clock on host)."""
+    rebalance_times = ["09:00", "21:00"]
     try:
-        with open(STATE_FILE) as f:
-            state = json.load(f)
-        last = state.get("last_rebalance_date")
-        if not last:
-            # Fallback to runner_state (more authoritative for date)
-            try:
-                with open("data/state/phase6_runner_state.json") as rf:
-                    rs = json.load(rf)
-                last = rs.get("last_rebalance_date")
-            except:
-                pass
-        if not last:
-            return False
-        last_date = datetime.fromisoformat(last).date()
-        now = datetime.now()
-        today = now.date()
-
-        # Load real schedule - support list for 2x daily
-        rebalance_times = ["09:00", "21:00"]
-        try:
-            with open("config/trading_config_phase6.json") as cf:
-                cfg = json.load(cf)
-            rebalance_times = cfg.get("scheduler", {}).get("daily_rebalance_times", [cfg.get("scheduler", {}).get("daily_rebalance_time", "09:00")])
-        except Exception:
-            pass
-        # Use the latest time for today's window check
-        latest_time_str = sorted(rebalance_times)[-1]
-        target = dt_time.fromisoformat(latest_time_str)
-        grace_delta = timedelta(hours=1)
-
-        if last_date == today:
-            return True
-        days = (today - last_date).days
-        if days <= 0:
-            return True
-        if days == 1:
-            # Yesterday's last; today's latest window + grace not yet passed -> healthy
-            target_dt = datetime.combine(today, target) + grace_delta
-            if now < target_dt:
-                return True
-            else:
-                return False
-        # >1 day stale
-        return False
+        with open(config_path) as cf:
+            cfg = json.load(cf)
+        sched = cfg.get("scheduler", {}) or {}
+        times = sched.get("daily_rebalance_times")
+        if isinstance(times, list) and times:
+            rebalance_times = [str(t).strip() for t in times if str(t).strip()]
+        elif sched.get("daily_rebalance_time"):
+            rebalance_times = [str(sched.get("daily_rebalance_time")).strip()]
     except Exception:
-        return False
+        pass
+    return rebalance_times or ["09:00", "21:00"]
+
+
+def evaluate_rebalance_health(
+    *,
+    now: datetime,
+    rebalance_times: list,
+    completed_slots: list,
+    last_rebalance_date: str | None = None,
+    grace_hours: float = REBAL_GRACE_HOURS,
+) -> tuple:
+    """Pure check: True=healthy (no alert), False=overdue.
+
+    Prefer per-slot keys in rebalance_slots_completed (e.g. '2026-11-25|09:00').
+    Only the most recent full day of due slots (len(times), min 2) must be present —
+    runner slot lists are truncated, so requiring 3 calendar days of history false-alarms.
+    Date-only last_rebalance_date is fallback only when slot list is empty.
+    """
+    grace_delta = timedelta(hours=float(grace_hours))
+    times = [str(t).strip() for t in (rebalance_times or []) if str(t).strip()]
+    if not times:
+        times = ["09:00", "21:00"]
+    completed = set(str(x) for x in (completed_slots or []) if x is not None)
+
+    if completed:
+        due: list = []
+        # Look back enough calendar days to collect recent due windows.
+        for day_offset in range(0, 5):
+            day = now.date() - timedelta(days=day_offset)
+            for tstr in times:
+                try:
+                    target = dt_time.fromisoformat(tstr)
+                except ValueError:
+                    continue
+                deadline = datetime.combine(day, target) + grace_delta
+                if now < deadline:
+                    continue
+                key = f"{day.isoformat()}|{tstr}"
+                due.append((deadline, key))
+        due.sort(key=lambda x: x[0], reverse=True)
+        need_n = max(len(times), 2)
+        need = due[:need_n]
+        missed = [key for _, key in need if key not in completed]
+        if missed:
+            return False, f"missed_slots={missed}"
+        return True, "slots_ok"
+
+    # Fallback: no slot history — date-only (legacy). Use *latest* daily time + grace.
+    if not last_rebalance_date:
+        return False, "no_slots_no_last_date"
+    try:
+        last_date = datetime.fromisoformat(str(last_rebalance_date)).date()
+    except Exception:
+        return False, "bad_last_date"
+    today = now.date()
+    if last_date == today or (today - last_date).days <= 0:
+        return True, "date_today_fallback"
+    days = (today - last_date).days
+    latest = sorted(times)[-1]
+    try:
+        target = dt_time.fromisoformat(latest)
+    except ValueError:
+        target = dt_time(21, 0)
+    if days == 1:
+        target_dt = datetime.combine(today, target) + grace_delta
+        if now < target_dt:
+            return True, "date_yest_pre_latest_grace"
+        return False, "date_yest_post_grace"
+    return False, f"date_stale_days={days}"
+
+
+def check_last_rebalance(now: datetime | None = None) -> tuple:
+    """Returns (healthy: bool, detail: str). Absolute paths; slot SSOT."""
+    now = now or datetime.now()
+    times = load_rebalance_times()
+    completed: list = []
+    last = None
+    try:
+        with open(RUNNER_STATE_FILE) as rf:
+            rs = json.load(rf)
+        completed = list(rs.get("rebalance_slots_completed") or [])
+        last = rs.get("last_rebalance_date")
+    except Exception as e:
+        return False, f"runner_state_unreadable:{e}"
+    return evaluate_rebalance_health(
+        now=now,
+        rebalance_times=times,
+        completed_slots=completed,
+        last_rebalance_date=last,
+        grace_hours=REBAL_GRACE_HOURS,
+    )
+
+
+def maybe_alert_rebalance_miss(msg: str, fingerprint: str) -> bool:
+    """Telegram once per fingerprint within REBAL_MISS_COOLDOWN_HOURS. Returns True if sent."""
+    now = datetime.now()
+    try:
+        prev = {}
+        if os.path.exists(REBAL_MISS_ALERT_STATE):
+            with open(REBAL_MISS_ALERT_STATE) as f:
+                prev = json.load(f) or {}
+        last_fp = str(prev.get("fingerprint") or "")
+        last_ts = prev.get("sent_at")
+        if last_fp == fingerprint and last_ts:
+            try:
+                sent = datetime.fromisoformat(str(last_ts).replace("Z", "+00:00"))
+                if sent.tzinfo is not None:
+                    sent = sent.replace(tzinfo=None)
+                age_h = (now - sent).total_seconds() / 3600.0
+                if age_h < REBAL_MISS_COOLDOWN_HOURS:
+                    print(
+                        f"[MONITOR] rebalance-miss alert suppressed "
+                        f"(cooldown {age_h:.1f}h/{REBAL_MISS_COOLDOWN_HOURS}h fp={fingerprint})"
+                    )
+                    return False
+            except Exception:
+                pass
+        send_telegram(msg)
+        os.makedirs(os.path.dirname(REBAL_MISS_ALERT_STATE), exist_ok=True)
+        with open(REBAL_MISS_ALERT_STATE, "w") as f:
+            json.dump(
+                {
+                    "sent_at": now.isoformat(),
+                    "fingerprint": fingerprint,
+                    "message": msg[:500],
+                },
+                f,
+                indent=2,
+            )
+            f.write("\n")
+        return True
+    except Exception as e:
+        print(f"[MONITOR] rebalance-miss cooldown write failed: {e}; sending anyway")
+        send_telegram(msg)
+        return True
 
 def check_pid_files() -> list:
     """Report stale or mismatched pid files vs live processes."""
@@ -348,18 +466,19 @@ def main():
     if pid_issues:
         print("[MONITOR] PID file issues detected: " + "; ".join(pid_issues))
 
-    if not check_last_rebalance():
-        rebalance_times = ["09:00", "21:00"]
-        try:
-            with open("config/trading_config_phase6.json") as cf:
-                cfg = json.load(cf)
-            rebalance_times = cfg.get("scheduler", {}).get("daily_rebalance_times", [cfg.get("scheduler", {}).get("daily_rebalance_time", "09:00")])
-        except:
-            pass
+    healthy, detail = check_last_rebalance()
+    if not healthy:
+        rebalance_times = load_rebalance_times()
         times_str = ", ".join(rebalance_times) + " PT"
-        msg = f"⚠️ WARNING: Rebalance window missed for configured daily time ({times_str} + 1h grace; last_rebalance stale)"
+        msg = (
+            f"⚠️ WARNING: Rebalance window missed for configured daily time "
+            f"({times_str} + {int(REBAL_GRACE_HOURS)}h grace; {detail})"
+        )
         print(msg)
-        send_telegram(msg)
+        # Cooldown so 15m monitor does not spam TG on one sticky miss fingerprint.
+        maybe_alert_rebalance_miss(msg, fingerprint=str(detail)[:240])
+    else:
+        print(f"[MONITOR] rebalance schedule OK ({detail})")
 
     # Signal data-quality: defer streak + basket coverage (once per fingerprint / cooldown)
     try:

@@ -2,132 +2,178 @@
 """
 Code Isolation Test for Rebalance Monitor Logic (Phase 6)
 
-Verifies the schedule-aware check_last_rebalance function.
-Uses the actual config daily_rebalance_time ("21:00").
-Tests healthy vs overdue cases based on real runner scheduler rules.
+Imports pure evaluate_rebalance_health from monitor_phase6_runner.
+Slot SSOT + date fallback + grace windows. No Telegram / no live writes.
 
-Run standalone with real config. No side effects on live state.
-
-Expected: 
-- On rebalance day before target+grace: healthy (no false alarm)
-- After grace on rebalance day if last still previous: overdue
-- Last==today: healthy
-- >1 day: overdue
-
-This is the canonical isolation test per trading-bot-operations + code-isolation-testing.
+Run:
+  cd /home/brad/projects/crypto-trading-bot
+  .venv/bin/python3 scripts/phase6/test_rebalance_monitor_logic.py
 """
 
-import json
-from datetime import datetime, date, time as dt_time, timedelta
-import os
+from __future__ import annotations
+
+import importlib.util
 import sys
+from datetime import datetime
+from pathlib import Path
 
-# Paths relative to project root (crontab cds here)
-CONFIG_PATH = "config/trading_config_phase6.json"
-STATE_FILE = "data/state/phase6_runner_state.json"  # for reference only, not mutated
+ROOT = Path(__file__).resolve().parents[2]
+MOD_PATH = ROOT / "scripts" / "phase6" / "monitor_phase6_runner.py"
 
-def load_daily_rebalance_time(config_path=CONFIG_PATH):
-    try:
-        with open(config_path) as f:
-            cfg = json.load(f)
-        sched = cfg.get("scheduler", {})
-        return sched.get("daily_rebalance_time", "21:00")
-    except Exception as e:
-        print(f"[TEST] Failed to load config, defaulting to 21:00: {e}")
-        return "21:00"
 
-def check_last_rebalance(last_date_str, now_dt, rebalance_time_str):
-    """Improved schedule-aware version (matches runner's 21:00 target + grace).
-    Returns True if healthy (no alert), False if overdue (should alert).
-    """
-    if not last_date_str:
-        return False
-    try:
-        last_date = datetime.fromisoformat(last_date_str).date()
-    except Exception:
-        return False
+def _load_monitor():
+    spec = importlib.util.spec_from_file_location("monitor_phase6_runner", MOD_PATH)
+    mod = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    # Avoid side effects of load_dotenv requiring network — module import is fine.
+    spec.loader.exec_module(mod)
+    return mod
 
-    now = now_dt
-    today = now.date()
-    target = dt_time.fromisoformat(rebalance_time_str)
-    grace_delta = timedelta(hours=1)  # 1h after target window (e.g. 22:00 for 21:00)
 
-    if last_date == today:
-        return True
-
-    days = (today - last_date).days
-    if days <= 0:
-        return True
-
-    if days == 1:
-        # Yesterday's rebalance; today's window not yet passed or just in grace
-        target_dt = datetime.combine(today, target) + grace_delta
-        if now < target_dt:
-            return True
-        else:
-            return False
-
-    # More than 1 day stale
-    return False
-
-def main():
+def main() -> int:
     print("=== Phase 6 Rebalance Monitor Logic Isolation Test ===")
-    print(f"Config daily_rebalance_time: {load_daily_rebalance_time()}")
-    print(f"Test time base: simulated PDT (same as host)")
-    print()
+    mon = _load_monitor()
+    ev = mon.evaluate_rebalance_health
+    times = ["09:00", "21:00"]
+    cases = []
 
-    rebal_time = load_daily_rebalance_time()
-    test_cases = []
+    # Slot-based healthy: morning done, afternoon before evening grace
+    cases.append(
+        (
+            "slots: morning done, now 12:30 same day",
+            datetime(2026, 11, 25, 12, 30),
+            ["2026-11-24|09:00", "2026-11-24|21:00", "2026-11-25|09:00"],
+            None,
+            True,
+        )
+    )
+    # Evening not yet due
+    cases.append(
+        (
+            "slots: morning only, now 20:02 before 21:00+grace",
+            datetime(2026, 11, 25, 20, 2),
+            ["2026-11-24|09:00", "2026-11-24|21:00", "2026-11-25|09:00"],
+            None,
+            True,
+        )
+    )
+    # Evening missed after grace
+    cases.append(
+        (
+            "slots: morning only, now 22:30 evening missed",
+            datetime(2026, 11, 25, 22, 30),
+            ["2026-11-24|09:00", "2026-11-24|21:00", "2026-11-25|09:00"],
+            None,
+            False,
+        )
+    )
+    # Both today done late night
+    cases.append(
+        (
+            "slots: both today done, 23:00",
+            datetime(2026, 11, 25, 23, 0),
+            [
+                "2026-11-24|09:00",
+                "2026-11-24|21:00",
+                "2026-11-25|09:00",
+                "2026-11-25|21:00",
+            ],
+            None,
+            True,
+        )
+    )
+    # Yesterday evening missing at next-day 03:15 (past yest 22:00 grace)
+    cases.append(
+        (
+            "slots: missing yest 21:00, now next day 03:15",
+            datetime(2026, 11, 24, 3, 15),
+            ["2026-11-23|09:00"],  # no 21:00
+            None,
+            False,
+        )
+    )
+    # False-alarm class: full slots through yest, early next morning
+    cases.append(
+        (
+            "slots: full yest, now 03:15 next day (pre today windows)",
+            datetime(2026, 11, 24, 3, 15),
+            ["2026-11-23|09:00", "2026-11-23|21:00"],
+            None,
+            True,
+        )
+    )
+    # Date fallback legacy cases
+    cases.append(
+        (
+            "date fallback: last=today",
+            datetime(2026, 6, 16, 12, 3),
+            [],
+            "2026-06-16",
+            True,
+        )
+    )
+    cases.append(
+        (
+            "date fallback: last=yest, now pre-latest-grace",
+            datetime(2026, 6, 16, 12, 3),
+            [],
+            "2026-06-15",
+            True,
+        )
+    )
+    cases.append(
+        (
+            "date fallback: last=yest, now post-grace",
+            datetime(2026, 6, 16, 22, 30),
+            [],
+            "2026-06-15",
+            False,
+        )
+    )
+    cases.append(
+        (
+            "date fallback: last=2d ago",
+            datetime(2026, 6, 16, 12, 3),
+            [],
+            "2026-06-14",
+            False,
+        )
+    )
+    cases.append(
+        (
+            "no slots no date -> overdue",
+            datetime(2026, 6, 16, 12, 3),
+            [],
+            None,
+            False,
+        )
+    )
 
-    # Case 1: Last rebalance today -> healthy (no alert)
-    now = datetime(2026, 6, 16, 12, 3)  # today 12pm
-    test_cases.append(("last=today (16th 12pm)", "2026-06-16", now, True))
-
-    # Case 2: Last=yesterday (15th), now=16th 12pm (before 21:00+1h) -> healthy (waiting for 21:00 window)
-    now = datetime(2026, 6, 16, 12, 3)
-    test_cases.append(("last=yest (15th), now=16th 12pm (pre-21:00)", "2026-06-15", now, True))
-
-    # Case 3: Last=yesterday, now=16th 22:30 (after 21:00+1h grace) -> overdue (missed window)
-    now = datetime(2026, 6, 16, 22, 30)
-    test_cases.append(("last=yest, now=16th 22:30 (post-grace)", "2026-06-15", now, False))
-
-    # Case 4: Last=yesterday, now=16th 21:05 (just after target, within grace) -> healthy
-    now = datetime(2026, 6, 16, 21, 5)
-    test_cases.append(("last=yest, now=16th 21:05 (in window)", "2026-06-15", now, True))
-
-    # Case 5: Last=2 days ago -> overdue
-    now = datetime(2026, 6, 16, 12, 3)
-    test_cases.append(("last=14th (2d ago), now=16th 12pm", "2026-06-14", now, False))
-
-    # Case 6: Last=today at late night -> healthy
-    now = datetime(2026, 6, 16, 23, 0)
-    test_cases.append(("last=today (16th 23pm)", "2026-06-16", now, True))
-
-    # Case 7: Last=yest, now=17th early morning (before 21:00) -> healthy (new day but window pending)
-    now = datetime(2026, 6, 17, 8, 0)
-    test_cases.append(("last=16th, now=17th 08:00 (pre-window)", "2026-06-16", now, True))
-
-    passed = 0
-    failed = 0
-    for desc, last_str, now_dt, expected_healthy in test_cases:
-        result = check_last_rebalance(last_str, now_dt, rebal_time)
-        status = "PASS" if result == expected_healthy else "FAIL"
+    passed = failed = 0
+    for desc, now, slots, last, expect_ok in cases:
+        ok, detail = ev(
+            now=now,
+            rebalance_times=times,
+            completed_slots=slots,
+            last_rebalance_date=last,
+            grace_hours=1.0,
+        )
+        status = "PASS" if ok == expect_ok else "FAIL"
         if status == "PASS":
             passed += 1
         else:
             failed += 1
         print(f"[{status}] {desc}")
-        print(f"        last={last_str}, now={now_dt}, expected_healthy={expected_healthy}, got={result}")
+        print(f"        expect_healthy={expect_ok} got={ok} detail={detail}")
         print()
 
     print(f"=== Summary: {passed} passed, {failed} failed ===")
-    if failed == 0:
-        print("ALL TESTS PASSED - logic correctly suppresses false alarms before 21:00+grace and only alerts on true misses.")
-        print("This matches runner's _should_rebalance (target=21:00, no early morning false positives).")
-        sys.exit(0)
-    else:
-        print("TESTS FAILED - review logic.")
-        sys.exit(1)
+    if failed:
+        print("TESTS FAILED - review slot/date logic.")
+        return 1
+    print("ALL TESTS PASSED - slot SSOT + grace + date fallback OK.")
+    return 0
+
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
